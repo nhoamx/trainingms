@@ -1,0 +1,13 @@
+
+services:
+  training-and-ms:
+    build:
+      context:    .
+      dockerfile: Dockerfile
+    image: training-and-ms
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+    working_dir: /
+    container_name: training-and-ms

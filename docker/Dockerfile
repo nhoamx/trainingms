@@ -1,14 +1,15 @@
-# Usar una imagen de Python ligera
 FROM python:3.13.1-slim
 
-# Establecer el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copiar los scripts Python al contenedor
-COPY python-scripts /app/scripts
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instalar las dependencias de Python
-RUN pip install --no-cache-dir -r /app/scripts/requirements.txt
+COPY . /app
 
-# Comando por defecto (se puede sobreescribir al ejecutar el contenedor)
-CMD ["python", "/app/scripts/test.py"]
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+#CMD ["python", "main.py"]  # Asegúrate de que este sea el script correcto

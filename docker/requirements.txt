@@ -1,0 +1,7 @@
+#opencv-python
+#matplotlib
+opencv-python
+numpy
+imutils
+scipy
+pdf2image
