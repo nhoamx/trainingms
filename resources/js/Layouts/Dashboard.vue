@@ -163,6 +163,7 @@
             </div>
         </header>
         <main>
+            <Notification />
             <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                 <slot />
             </div>
@@ -174,10 +175,8 @@
 import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import { computed } from 'vue'
-import { usePage, usePoll } from '@inertiajs/vue3'
-
-
-usePoll(2000, {}, {}, )
+import { usePage } from '@inertiajs/vue3'
+import Notification from "../Components/Notification.vue";
 
 const page = usePage()
 
