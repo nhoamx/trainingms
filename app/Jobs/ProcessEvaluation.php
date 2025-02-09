@@ -2,8 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Models\Answer;
 use App\Models\Evaluation;
 use App\Models\Organization;
+use App\Models\Dimension;
 use Illuminate\Bus\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -18,8 +20,6 @@ class ProcessEvaluation implements ShouldQueue
 
     protected $fullPath;
     protected $containerName;
-
-    // Puedes aumentar el timeout si se requiere más tiempo (en segundos)
     public $timeout = 300;
 
     /**
@@ -32,6 +32,41 @@ class ProcessEvaluation implements ShouldQueue
     {
         $this->fullPath = $fullPath;
         $this->containerName = $containerName;
+    }
+
+    /**
+     * Encuentra la dimensión basada en el número de pregunta
+     */
+    protected function findDimensionForQuestion($questionNumber)
+    {
+        $dimensions = config('question_dimensions');
+        foreach ($dimensions as $domainName => $categories) {
+            foreach ($categories as $categoryName => $subcategories) {
+                foreach ($subcategories as $dimensionName => $questions) {
+                    if (in_array($questionNumber, $questions)) {
+                        // Buscar o crear la dimensión en la base de datos
+                        return Dimension::firstOrCreate([
+                            'name' => $dimensionName
+                        ]);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Calcula el score basado en la respuesta
+     */
+    protected function calculateScore($questionNumber, $answer)
+    {
+        $answerValues = config('answer_values');
+        
+        // Determinar a qué grupo pertenece la pregunta
+        $group = in_array($questionNumber, $answerValues['group1']['questions']) ? 'group1' : 'group2';
+        
+        // Obtener el valor correspondiente a la respuesta
+        return $answerValues[$group]['values'][$answer] ?? null;
     }
 
     /**
@@ -107,12 +142,50 @@ class ProcessEvaluation implements ShouldQueue
 
             // Guardar en base de datos
             try {
-                Evaluation::create([
+                $evaluation = Evaluation::create([
                     'document_id'    => $documentId,
                     'folio'          => $folio,
                     'organization_id'=> $organization ? $organization->id : null,
-                    'data'           => $data,  // Asumiendo que el campo en la base de datos es de tipo JSON
+                    'data'           => $data,
                 ]);
+
+                foreach ($data as $questionKey => $answer) {
+                    // Ignorar respuestas nulas
+                    if ($answer === null) {
+                        Log::info("Pregunta {$questionKey} sin respuesta, se omite");
+                        continue;
+                    }
+
+                    $dimensionId = null;
+                    $score = null;
+
+                    // Si es una pregunta numérica (01-72), procesamos dimensión y score
+                    if (preg_match('/^[0-9]{2}$/', $questionKey) && 
+                        intval($questionKey) >= 1 && 
+                        intval($questionKey) <= 72) {
+                        
+                        $questionNumber = intval($questionKey);
+                        
+                        // Encontrar la dimensión correspondiente
+                        $dimension = $this->findDimensionForQuestion($questionNumber);
+                        if ($dimension) {
+                            $dimensionId = $dimension->id;
+                            
+                            // Calcular el score
+                            $score = $this->calculateScore($questionNumber, $answer);
+                        }
+                    }
+
+                    // Guardar la respuesta
+                    Answer::create([
+                        'evaluation_id' => $evaluation->id,
+                        'dimension_id' => $dimensionId,
+                        'question' => $questionKey,
+                        'answer' => $answer,
+                        'score' => $score
+                    ]);
+                }
+
                 Log::info("Job - Evaluation guardada para archivo: " . $baseName);
             } catch (\Exception $e) {
                 Log::error("Job - Error al guardar evaluation para archivo {$baseName}: " . $e->getMessage());

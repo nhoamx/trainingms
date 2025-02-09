@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignUuid('dimension_id')->nullable()->constrained('dimensions')->onDelete('set null');
             $table->string('question');
             $table->string('answer');
-            $table->bigInteger('score');
+            $table->bigInteger('score')->nullable(); // Haciendo score nullable para preguntas especiales
             $table->timestamps();
         });
     }
