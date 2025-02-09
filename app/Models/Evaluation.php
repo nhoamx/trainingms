@@ -13,9 +13,20 @@ class Evaluation extends Model
         'folio',
         'organization_id',
         'data',
+        'reference_guide', // Agregar reference_guide a fillable
     ];
 
     protected $casts = [
         'data' => 'json',
     ];
+
+    public function answers()
+    {
+        return $this->hasMany(Answer::class);
+    }
+
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
+    }
 }

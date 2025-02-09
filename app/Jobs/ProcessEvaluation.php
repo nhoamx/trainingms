@@ -140,6 +140,16 @@ class ProcessEvaluation implements ShouldQueue
                 continue;
             }
 
+            // Determinar la guía de referencia según el folio
+            $referenceGuide = null;
+            if (str_starts_with($folio, '12')) {
+                $referenceGuide = 'III';
+            } elseif (str_starts_with($folio, '17')) {
+                $referenceGuide = 'V';
+            } elseif (str_starts_with($folio, '13')) {
+                $referenceGuide = 'I';
+            }
+
             // Guardar en base de datos
             try {
                 $evaluation = Evaluation::create([
@@ -147,6 +157,7 @@ class ProcessEvaluation implements ShouldQueue
                     'folio'          => $folio,
                     'organization_id'=> $organization ? $organization->id : null,
                     'data'           => $data,
+                    'reference_guide'=> $referenceGuide, // Asignar la guía de referencia
                 ]);
 
                 foreach ($data as $questionKey => $answer) {
