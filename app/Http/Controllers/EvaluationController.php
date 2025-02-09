@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\ProcessEvaluation;
+use App\Models\Evaluation;
+use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -12,8 +14,16 @@ class EvaluationController extends Controller
 
     public function index()
     {
+        // Get organizations with their evaluations
+        $organizations = \App\Models\Organization::with('evaluations')->get();
+
+        // Get evaluations without organization
+        $noOrgEvaluations = \App\Models\Evaluation::whereNull('organization_id')->get();
+
         return Inertia::render('Evaluations/Results', [
             'title' => 'Evaluaciones',
+            'organizations' => $organizations,
+            'noOrgEvaluations' => $noOrgEvaluations
         ]);
     }
 
@@ -44,7 +54,41 @@ class EvaluationController extends Controller
         // 3. Despachar el job que se encargará de copiar el archivo y ejecutar el comando
         ProcessEvaluation::dispatch($fullPath, $containerName);
 
-        return redirect()->back()->with('success', 'El proceso se ha iniciado en segundo plano.');
+        // Redirigir a la lista de evaluaciones con un mensaje de éxito
+        return redirect()
+            ->route('evaluations.index')
+            ->with('flash', [
+                'type' => 'success',
+                'title' => 'Evaluación cargada exitosamente',
+                'message' => 'El archivo PDF ha sido cargado y está siendo procesado. Los resultados estarán disponibles en breve.'
+            ]);
+    }
+
+    public function show(Evaluation $evaluation)
+    {
+        $evaluation->load(['answers.dimension', 'organization']);
+
+        return Inertia::render('Evaluations/EvaluationDetails', [
+            'title' => 'Detalles de Evaluación',
+            'evaluation' => $evaluation,
+            'answers' => $evaluation->answers
+        ]);
+    }
+
+    public function organizationEvaluations($organization)
+    {
+        if ($organization === 'no-org') {
+            $evaluations = Evaluation::whereNull('organization_id')->get();
+            $organization = ['id' => 'no-org', 'name' => 'Sin Organización'];
+        } else {
+            $organization = Organization::findOrFail($organization);
+            $evaluations = $organization->evaluations()->get();
+        }
+
+        return Inertia::render('Evaluations/EvaluationList', [
+            'organization' => $organization,
+            'evaluations' => $evaluations,
+        ]);
     }
 
 }

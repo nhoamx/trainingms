@@ -43,7 +43,12 @@ Route::middleware(['auth'])->group(function () {
                 Route::get('/', 'index')->name('evaluations.index');
                 Route::get('/cargar-evaluacion', 'loadEvaluation')->name('evaluations.load');
                 Route::post('/store', 'store')->name('evaluations.store');
+                Route::get('/{evaluation}', 'show')->name('evaluations.show');
             });
+
+        // Nueva ruta dedicada para evaluaciones por organización
+        Route::get('/organizaciones/{organization}/evaluaciones', [EvaluationController::class, 'organizationEvaluations'])
+            ->name('organizations.evaluations');
 
         Route::controller(\App\Http\Controllers\OrganizationController::class)->prefix('/organizaciones')->group(function() {
             Route::get('/', 'index')->name('organizations.index');
@@ -77,7 +82,7 @@ Route::middleware(['auth'])->group(function () {
         // Eliminar usuario
         Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-        Route::get('/process-status', function (Request $request) {
+        Route::get('/api/notifications', function (Request $request) {
             // Supongamos que el estado se guarda en cache o en un modelo.
             // Por ejemplo, podrías retornar algo como:
             $status = cache('process_status', [
