@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\EvaluationProcessingStatusChanged;
 use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;

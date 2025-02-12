@@ -8,11 +8,17 @@
                     <div class="p-4">
                         <div class="flex items-start">
                             <div class="flex-shrink-0">
-                                <CheckCircleIcon class="h-6 w-6 text-green-400" aria-hidden="true" />
+                                <CheckCircleIcon v-if="currentStatus === 'finished'" class="h-6 w-6 text-green-400" aria-hidden="true" />
+                                <ExclamationCircleIcon v-else-if="currentStatus === 'error'" class="h-6 w-6 text-red-400" aria-hidden="true" />
+                                <ArrowPathIcon v-else class="h-6 w-6 text-blue-400 animate-spin" aria-hidden="true" />
                             </div>
                             <div class="ml-3 w-0 flex-1 pt-0.5">
-                                <p class="text-sm font-medium text-gray-900">Successfully saved!</p>
-                                <p class="mt-1 text-sm text-gray-500">Anyone with a link can now view this file.</p>
+                                <p class="text-sm font-medium" :class="{
+                                    'text-green-900': currentStatus === 'finished',
+                                    'text-red-900': currentStatus === 'error',
+                                    'text-blue-900': currentStatus === 'running'
+                                }">{{ title }}</p>
+                                <p class="mt-1 text-sm text-gray-500">{{ message }}</p>
                             </div>
                             <div class="ml-4 flex flex-shrink-0">
                                 <button type="button" @click="show = false" class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
@@ -29,25 +35,39 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { CheckCircleIcon } from '@heroicons/vue/24/outline'
+import { onMounted, ref } from 'vue'
+import { CheckCircleIcon, ExclamationCircleIcon, ArrowPathIcon } from '@heroicons/vue/24/outline'
 import { XMarkIcon } from '@heroicons/vue/20/solid'
-import { usePoll } from '@inertiajs/vue3'
-
 
 const show = ref(false)
+const currentStatus = ref('')
+const message = ref('')
+const title = ref('')
 
-usePoll(2000)
+const updateNotificationContent = (status) => {
+    switch(status) {
+        case 'running':
+            title.value = 'Procesando evaluación'
+            break
+        case 'error':
+            title.value = 'Error en el proceso'
+            break
+        case 'finished':
+            title.value = 'Proceso completado'
+            break
+        default:
+            title.value = 'Estado desconocido'
+    }
+}
 
-fetch('/api/notifications')
-    .then(response => response.json())
-    .then(data => {
-        if (data.length > 0) {
-            show.value = true
-        }
-    })
-
-
-
-
+onMounted(() => {
+    Echo.channel('evaluation-processing')
+        .listen('.evaluation.status', (e) => {
+            console.log(e)
+            show.value = !e.finished
+            currentStatus.value = e.status
+            message.value = e.message
+            updateNotificationContent(e.status)
+        });
+})
 </script>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\EvaluationProcessingStatusChanged;
 use App\Jobs\ProcessEvaluation;
 use App\Models\Evaluation;
 use App\Models\Organization;
