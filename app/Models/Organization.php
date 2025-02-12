@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Organization extends Model
+{
+    use HasUuids, SoftDeletes;
+
+    protected $fillable = [
+        'name',
+        'logo',
+        'folio_organization'
+    ];
+
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function evaluations()
+    {
+        return $this->hasMany(Evaluation::class);
+    }
+}

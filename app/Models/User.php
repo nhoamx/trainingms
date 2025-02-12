@@ -58,4 +58,14 @@ class User extends Authenticatable
     {
         return $query->where('is_disabled', true);
     }
+
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
+    public function getRoleNameAttribute()
+    {
+        return $this->roles->first()->name ?? 'No role assigned';
+    }
 }

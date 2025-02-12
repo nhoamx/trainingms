@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Domain;
+use App\Models\Organization;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,40 +14,27 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard');
     }
 
-    public function evaluations()
-    {
-        return Inertia::render('Evaluations/Index', [
-            'title' => 'Evaluaciones',
-        ]);
-    }
-
     public function uploadFiles(Request $request)
     {
-        // Validar los archivos
-        $request->validate([
-            'files.*' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048', // Máximo 2MB por archivo
-        ]);
+        try {
+            $fileName = $request->file->getClientOriginalName();
+            $folioId = $request->folio_id;
+            $organizationId = $request->organization_id;
 
-        $uploadedFiles = [];
+            $request->file->storeAs('public/evaluations', $fileName);
 
-        // Almacenar los archivos
-        if ($request->hasFile('files')) {
-            foreach ($request->file('files') as $file) {
-                $path = $file->store('uploads', 'public'); // Guarda en storage/app/public/uploads
-                $uploadedFiles[] = $path;
-            }
+            return response()->json(['message' => 'Archivo subido correctamente']);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        return response()->json([
-            'message' => 'Archivos subidos con éxito.',
-            'files' => $uploadedFiles, // Devuelve las rutas de los archivos subidos
-        ]);
     }
 
     public function evaluationResults()
     {
         return Inertia::render('Evaluations/Results', [
-            'title' => 'Resultados de evaluaciones',
+            'title' => 'Resultados',
+            'organizations' => Organization::all()
         ]);
     }
 }
