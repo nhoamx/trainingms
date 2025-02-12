@@ -6,8 +6,8 @@ use App\Models\Answer;
 use App\Models\Evaluation;
 use App\Models\Organization;
 use App\Models\Dimension;
+use App\Events\EvaluationProcessingStatusChanged;
 use Illuminate\Bus\Queueable;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -61,10 +61,10 @@ class ProcessEvaluation implements ShouldQueue
     protected function calculateScore($questionNumber, $answer)
     {
         $answerValues = config('answer_values');
-        
+
         // Determinar a qué grupo pertenece la pregunta
         $group = in_array($questionNumber, $answerValues['group1']['questions']) ? 'group1' : 'group2';
-        
+
         // Obtener el valor correspondiente a la respuesta
         return $answerValues[$group]['values'][$answer] ?? null;
     }
@@ -76,11 +76,12 @@ class ProcessEvaluation implements ShouldQueue
      */
     public function handle()
     {
-        Cache::put('process_status', [
-            'status' => 'running',
-            'finished' => false,
-            'message' => 'El procesamiento ha iniciado'
-        ]);
+        // Broadcast initial status
+        broadcast(new EvaluationProcessingStatusChanged(
+            'running',
+            'El procesamiento ha iniciado',
+            false
+        ));
 
         // 1. Definir el destino fijo en el contenedor y copiar el PDF
         $destinationPath = "/app/input/evaluation.pdf";
@@ -89,6 +90,11 @@ class ProcessEvaluation implements ShouldQueue
         Log::info('Job - Comando ejecutado: ' . $copyCommand);
         if ($copyReturn !== 0) {
             Log::error('Job - Error al copiar el archivo al contenedor. Código: ' . $copyReturn . '. Salida: ' . json_encode($copyOutput));
+            broadcast(new EvaluationProcessingStatusChanged(
+                'error',
+                'Error al copiar el archivo al contenedor',
+                false
+            ));
             return;
         }
 
@@ -98,6 +104,11 @@ class ProcessEvaluation implements ShouldQueue
         Log::info('Job - Comando ejecutado: ' . $execCommand);
         if ($execReturn !== 0) {
             Log::error('Job - Error al ejecutar el comando en el contenedor. Código: ' . $execReturn . '. Salida: ' . json_encode($execOutput));
+            broadcast(new EvaluationProcessingStatusChanged(
+                'error',
+                'Error al ejecutar el procesamiento en el contenedor',
+                false
+            ));
             return;
         }
 
@@ -108,6 +119,11 @@ class ProcessEvaluation implements ShouldQueue
 
         if (!$jsonFiles) {
             Log::warning('Job - No se encontraron archivos JSON en la carpeta: ' . $outputFolder);
+            broadcast(new EvaluationProcessingStatusChanged(
+                'error',
+                'No se encontraron archivos JSON para procesar',
+                false
+            ));
             return;
         }
 
@@ -171,17 +187,17 @@ class ProcessEvaluation implements ShouldQueue
                     $score = null;
 
                     // Si es una pregunta numérica (01-72), procesamos dimensión y score
-                    if (preg_match('/^[0-9]{2}$/', $questionKey) && 
-                        intval($questionKey) >= 1 && 
+                    if (preg_match('/^[0-9]{2}$/', $questionKey) &&
+                        intval($questionKey) >= 1 &&
                         intval($questionKey) <= 72) {
-                        
+
                         $questionNumber = intval($questionKey);
-                        
+
                         // Encontrar la dimensión correspondiente
                         $dimension = $this->findDimensionForQuestion($questionNumber);
                         if ($dimension) {
                             $dimensionId = $dimension->id;
-                            
+
                             // Calcular el score
                             $score = $this->calculateScore($questionNumber, $answer);
                         }
@@ -203,10 +219,11 @@ class ProcessEvaluation implements ShouldQueue
             }
         }
 
-        Cache::put('process_status', [
-            'status' => 'finished',
-            'finished' => true,
-            'message' => 'El procesamiento ha finalizado'
-        ]);
+        // Broadcast completion status
+        broadcast(new EvaluationProcessingStatusChanged(
+            'finished',
+            'El procesamiento ha finalizado exitosamente',
+            false
+        ));
     }
 }

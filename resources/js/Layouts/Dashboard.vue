@@ -163,18 +163,19 @@
             </div>
         </header>
         <main>
-<!--            <Notification />-->
+            <Notification />
             <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                 <slot />
             </div>
         </main>
     </div>
+
 </template>
 
 <script setup>
 import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/vue/24/outline'
-import { computed } from 'vue'
+import {computed, onMounted} from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import Notification from "../Components/Notification.vue";
 
