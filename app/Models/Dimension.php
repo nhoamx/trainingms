@@ -14,4 +14,9 @@ class Dimension extends Model
     {
         return $this->belongsTo(Domain::class);
     }
+
+    public function answers()
+    {
+        return $this->hasMany(Answer::class);
+    }
 }
