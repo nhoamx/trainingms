@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EvaluationController;
+use App\Http\Controllers\ResultsController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Route;
@@ -60,6 +61,19 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/{organization}/restore', 'restore')->name('organizations.restore')->withTrashed();
         });
 
+        Route::controller(ResultsController::class)->prefix('/resultados')->group(function() {
+            Route::get('/', 'index')->name('results.index');
+            Route::get('/{organization}', 'organizationResults')->name('results.organization');
+        });
+
+        Route::get('/organizacion/{organization}/results', [ResultsController::class, 'organizationResults'])->name('organization.results');
+
+        // Rutas de resultados
+        Route::controller(ResultsController::class)->group(function() {
+            Route::get('/organizacion/{organization}/resultados', 'listResults')->name('organization.results.list');
+            Route::get('/organizacion/{organization}/resultados/{evaluation}', 'showDetailedResults')->name('organization.results.detail');
+        });
+
         Route::controller(UserController::class)
             ->prefix('/usuarios')
             ->group(function() {
@@ -67,9 +81,6 @@ Route::middleware(['auth'])->group(function () {
                 Route::get('/create', 'create')->name('users.create');
                 Route::get('/{user}/edit', 'edit')->name('users.edit');
             });
-
-
-
 
         Route::post('/usuarios', [UserController::class, 'store'])->name('users.store');
 
