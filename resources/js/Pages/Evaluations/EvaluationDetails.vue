@@ -16,8 +16,8 @@ const props = defineProps({
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-semibold">Detalles de Evaluación</h2>
                     <div class="flex items-center gap-4">
-                        <Link 
-                            :href="route('organizations.evaluations', evaluation.organization?.id || 'no-org')" 
+                        <Link
+                            :href="route('organizations.evaluations', evaluation.organization?.id || 'no-org')"
                             class="text-blue-600 hover:text-blue-800 flex items-center"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -30,6 +30,9 @@ const props = defineProps({
                 <p class="text-gray-600 mt-2">Folio: {{ evaluation.folio }}</p>
                 <p v-if="evaluation.organization" class="text-gray-600">
                     Organización: {{ evaluation.organization.name }}
+                </p>
+                <p class="text-gray-600">
+                    Guia de Referencia {{ evaluation.reference_guide }}
                 </p>
             </div>
 

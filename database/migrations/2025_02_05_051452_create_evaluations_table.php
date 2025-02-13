@@ -13,8 +13,9 @@ return new class extends Migration
     {
         Schema::create('evaluations', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->bigInteger('folio')->nullable();
             $table->bigInteger('document_id')->nullable();
-            $table->string('folio')->nullable();
+            $table->string('personal_id')->nullable();
             $table->foreignUuid('organization_id')->nullable();
             $table->json('data')->nullable();
             $table->timestamps();
