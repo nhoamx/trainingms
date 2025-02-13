@@ -138,7 +138,8 @@ class ProcessEvaluation implements ShouldQueue
             // - document_id: los dos primeros dígitos (o ajusta la lógica según evolucione el requisito)
             $documentId = substr($baseName, 0, 2);
             // - folio: los últimos 4 dígitos
-            $folio = substr($baseName, -4);
+            $folio = $baseName;
+            $personalId = substr($baseName, -4);
             // - organization: lo que quede en el medio
             $organizationNumber = substr($baseName, 2, strlen($baseName) - 2 - 4);
 
@@ -171,6 +172,7 @@ class ProcessEvaluation implements ShouldQueue
                 $evaluation = Evaluation::create([
                     'document_id'    => $documentId,
                     'folio'          => $folio,
+                    'personal_id'    => $personalId,
                     'organization_id'=> $organization ? $organization->id : null,
                     'data'           => $data,
                     'reference_guide'=> $referenceGuide, // Asignar la guía de referencia

@@ -22,6 +22,7 @@ def detect_folio(image_file, detector):
         folio_data = detector.detect_bubbles(image_file, config.folio_configuration)
         # Combinar los valores detectados en un único string
         folio = "".join(str(value) for value in folio_data.values() if value is not None)
+        print(f"Folio detectado en {image_file}: {folio}")
         if not folio:
             folio = "unknown"
         return folio
@@ -64,11 +65,12 @@ detector = BubbleDetector()
 # Procesar cada imagen generada
 print("Procesando imágenes y detectando folios...")
 for image_file in image_files:
+    print(f"===============================")
     print(f"Procesando imagen: {image_file}")
-    
+
     # Detectar el folio a partir de la imagen
     folio = detect_folio(image_file, detector)
-    
+
     # Renombrar la imagen utilizando el folio (se asume formato PNG)
     new_image_path = os.path.join(output_folder, f"{folio}.png")
     try:
@@ -80,20 +82,22 @@ for image_file in image_files:
 
     # Seleccionar la configuración de evaluación según el prefijo del folio
     if folio.startswith("12"):
+        # Referencia de evaluacion principal
         evaluation_config = config.evaluation_01
+        print(f"Folio {folio} referencia III")
     elif folio.startswith("13"):
-        #evaluation_config = config.evaluation_02
-        print(f"Folio {folio} en desarrollo")
-        continue
+        # Referencia de acontecimientos
+        evaluation_config = config.reference_i
+        print(f"Folio {folio} referencia I")
     elif folio.startswith("17"):
-        #evaluation_config = config.evaluation_03
-        print(f"Folio {folio} en desarrollo")
-        continue
+        # Datos del evaluado
+        evaluation_config = config.reference_v
+        print(f"Folio {folio} referencia V")
     else:
         # Si el folio no empieza con 12, 13 o 17, se puede asignar una configuración por defecto
         #evaluation_config = config.evaluation_01
-        print(f"Folio {folio} no corresponde a evaluación 01, 02 o 03. Usando evaluation_01 por defecto.")
+        print(f"Folio {folio} no hace match cno ninguna referencia")
         continue
-    
+
     # Obtener las respuestas de la evaluación y guardar el JSON
     get_main_answers(new_image_path, detector, evaluation_config, folio)

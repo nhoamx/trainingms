@@ -23,3 +23,6 @@ yarn-error.log
 /.zed
 /docker/output
 /docker/output_images
+/docker/.idea
+/docker/log.log
+/docker/__pycache__/

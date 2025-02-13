@@ -40,6 +40,7 @@ class BubbleDetector:
     
     def detect_bubbles(self, img_path, bubble_positions):
         """Detecta burbujas seleccionadas en la imagen."""
+        print(f"Detecting bubbles in {img_path}...")
         try:
             blurred_img = self.preprocess_image(img_path)
             binary_img = self.threshold_image(blurred_img)
