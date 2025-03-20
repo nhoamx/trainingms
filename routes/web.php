@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EvaluationController;
+use App\Http\Controllers\QuizController;
 use App\Http\Controllers\ResultsController;
+use App\Http\Controllers\TestController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Route;
@@ -70,6 +72,15 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{organization}', 'organizationResults')->name('results.organization');
         });
 
+        Route::controller(QuizController::class)->prefix('/examenes')->name('quiz.')->group(function() {
+            Route::get('/', 'index')->name('index');
+            Route::get('/create', 'create')->name('create');
+            Route::post('/store', 'store')->name('store');
+            Route::get('/{test}/edit', 'edit')->name('edit');
+            Route::put('/{test}', 'update')->name('update');
+            Route::delete('/{test}', 'destroy')->name('destroy');
+        });
+
         Route::controller(UserController::class)
             ->prefix('/usuarios')
             ->group(function() {
@@ -102,5 +113,15 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
+    Route::prefix('quizzes')->group(function () {
+        Route::get('/', [QuizController::class, 'index'])->name('quizzes.index');
+        Route::post('/', [QuizController::class, 'store'])->name('quizzes.store');
+        Route::post('/{quiz}/toggle', [QuizController::class, 'toggle'])->name('quizzes.toggle');
+    });
+
 });
+
+// Ruta pública para acceder al examen temporal
+Route::get('/q/{tempUrl}', [QuizController::class, 'showTemp'])->name('quiz.temp');
+Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])->name('quiz.submit');
 
