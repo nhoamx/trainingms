@@ -41,7 +41,7 @@ class QuizController extends Controller
         ]);
 
         $quiz = Quiz::create([
-            'name' => $ validated['name'],
+            'name' => $validated['name'],
             'temp_url' => Str::random(32),
             'expires_at' => $validated['expires_at'],
             'is_active' => true,
@@ -70,9 +70,9 @@ class QuizController extends Controller
                 'id' => $quiz->id,
                 'name' => $quiz->name,
                 'questions' => [
-                    'general' => config('quiz_questions.general'),
-                    'conditional_sections' => config('quiz_questions.conditional_sections'),
-                    'acontecimientos_traumaticos' => config('quiz_questions.acontecimientos_traumaticos')
+                    'general' => config('referencia_iii.general'),
+                    'conditional_sections' => config('referencia_iii.conditional_sections'),
+                    'acontecimientos_traumaticos' => config('referencia_iii.acontecimientos_traumaticos')
                 ],
                 'reference_i' => config('referencia_i'),
                 'reference_v' => config('referencia_v')
