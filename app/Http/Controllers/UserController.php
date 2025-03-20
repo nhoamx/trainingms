@@ -17,7 +17,21 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::with('organization', 'roles')->get();
+        $users = User::with(['organization', 'roles'])
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'role' => $user->role_name, // Using the accessor we already have
+                    'organization' => [
+                        'name' => $user->organization?->name ?? 'Sin organización',
+                        'logo' => $user->organization?->logo ?? null,
+                    ],
+                    'temporal_password' => $user->temporal_password,
+                ];
+            });
+
         return Inertia::render('Users/Index', [
             'title' => 'Usuarios',
             'action' => [
@@ -71,8 +85,8 @@ class UserController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'temporary_password' => $password,
-            'password' => Hash::make($request->password),
+            'temporal_password' => $password,
+            'password' => Hash::make($password), // Ahora usamos la misma contraseña temporal
         ]);
 
         // Asignar rol

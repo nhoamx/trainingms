@@ -10,6 +10,7 @@ const form = useForm({
 const submit = async () => {
     form.post(route("login"), {
         onSuccess: ({ props }) => {
+            console.log('success')
             if (props.success) {
                 // Redirigir al dashboard
                 window.location.href = props.redirect;
@@ -17,6 +18,7 @@ const submit = async () => {
         },
         onError: () => {
             // Los errores se manejarán automáticamente por useForm
+            console.log(form.errors);
             console.error("Error al iniciar sesión");
         },
     });

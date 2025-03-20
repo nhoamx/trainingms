@@ -28,15 +28,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/perfil', [UserController::class, 'showProfile'])->name('profile');
     Route::post('/perfil', [UserController::class, 'updateProfile']);
 
-    // Rutas para Company
-    Route::get('/reportes', [DashboardController::class, 'companyReports'])->name('company.reports');
+    // Rutas accesibles para usuarios de organización y administradores
+    Route::get('/organizacion/{organization}/resultados', [ResultsController::class, 'listResults'])
+        ->name('organization.results.list')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::get('/organizacion/{organization}/resultados/{evaluation}', [ResultsController::class, 'showDetailedResults'])
+        ->name('organization.results.detail')
+        ->middleware('can:view-organization-results,organization');
 
     // Rutas para Admin y Super Admin
     Route::middleware(['role:admin|super-admin'])->group(function () {
 
-        //Route::get('/evaluaciones', [DashboardController::class, 'evaluations'])->name('evaluations.index');
         Route::post('/evaluaciones/upload-files', [DashboardController::class, 'uploadFiles'])->name('evaluations.uploadFiles');
-        //Route::get('/evaluaciones/resultados', [DashboardController::class, 'evaluationResults'])->name('evaluations.results');
 
         Route::controller(EvaluationController::class)
             ->prefix('/evaluaciones')
@@ -64,14 +68,6 @@ Route::middleware(['auth'])->group(function () {
         Route::controller(ResultsController::class)->prefix('/resultados')->group(function() {
             Route::get('/', 'index')->name('results.index');
             Route::get('/{organization}', 'organizationResults')->name('results.organization');
-        });
-
-        Route::get('/organizacion/{organization}/results', [ResultsController::class, 'organizationResults'])->name('organization.results');
-
-        // Rutas de resultados
-        Route::controller(ResultsController::class)->group(function() {
-            Route::get('/organizacion/{organization}/resultados', 'listResults')->name('organization.results.list');
-            Route::get('/organizacion/{organization}/resultados/{evaluation}', 'showDetailedResults')->name('organization.results.detail');
         });
 
         Route::controller(UserController::class)

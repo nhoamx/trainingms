@@ -34,6 +34,9 @@ const props = defineProps({
                 <p class="text-gray-600">
                     Guia de Referencia {{ evaluation.reference_guide }}
                 </p>
+                <p v-if="evaluation.personal_id" class="text-gray-600">
+                    ID Personal: {{ evaluation.personal_id }}
+                </p>
             </div>
 
             <div class="space-y-6">
