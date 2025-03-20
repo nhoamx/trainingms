@@ -1,12 +1,4 @@
 <template>
-    <!--
-      This example requires updating your template:
-
-      ```
-      <html class="h-full bg-gray-100">
-      <body class="h-full">
-      ```
-    -->
     <div class="min-h-full">
         <Disclosure as="nav" class="bg-gray-800" v-slot="{ open }">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -182,22 +174,34 @@ import Notification from "../Components/Notification.vue";
 const page = usePage()
 
 const user = computed(() => page.props.auth.user)
+console.log(user.value)
 
 const title = computed(() => page.props.title || 'Dashboard');
 const action = computed(() => page.props.action || null);
 
-const navigation = [
-    { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
-    { name: 'Evaluaciones', href: '#', current: route().current('evaluations.*'), items: [
-        { name: 'Cargar resultados', href: route('evaluations.load'), current: route().current('evaluations.load') },
-        { name: 'Resultados', href: route('evaluations.index'), current: route().current('evaluations.index') },
-    ] },
-    { name: 'Organizaciones', href: '#', current: route().current('organizations.*'), items: [
-        { name: 'Listado', href: route('organizations.index'), current: route().current('organizations.index') },
-        { name: 'Crear', href: route('organizations.create'), current: route().current('organizations.create') },
-    ] },
-    { name: 'Usuarios', href: route('users.index'), current: route().current('users.index') },
-]
+const navigation = computed(() => {
+    // Check if user has organization role
+    const isOrganizationUser = user.value.roles?.some(role => role.name === 'organization');
+
+    if (isOrganizationUser) {
+        return [
+            { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
+        ];
+    }
+
+    return [
+        { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
+        { name: 'Evaluaciones', href: '#', current: route().current('evaluations.*'), items: [
+            { name: 'Cargar resultados', href: route('evaluations.load'), current: route().current('evaluations.load') },
+            { name: 'Resultados', href: route('evaluations.index'), current: route().current('evaluations.index') },
+        ] },
+        { name: 'Organizaciones', href: '#', current: route().current('organizations.*'), items: [
+            { name: 'Listado', href: route('organizations.index'), current: route().current('organizations.index') },
+            { name: 'Crear', href: route('organizations.create'), current: route().current('organizations.create') },
+        ] },
+        { name: 'Usuarios', href: route('users.index'), current: route().current('users.index') },
+    ];
+});
 const userNavigation = [
     { name: 'Editar', href: '#' },
     { name: 'Cerrar sesión', href: '#' },

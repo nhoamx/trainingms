@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Organization;
 use App\Models\Category;
 use App\Models\Evaluation;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ResultsController extends Controller
 {
+    use AuthorizesRequests;
+
     public function organizationResults(Organization $organization, Request $request)
     {
         // Si se proporciona un folio específico, buscar esa evaluación
@@ -76,6 +79,8 @@ class ResultsController extends Controller
 
     public function listResults(Organization $organization)
     {
+        $this->authorize('view-organization-results', $organization);
+
         $evaluations = $organization->evaluations()
             ->where('reference_guide', 'III')
             ->select('id', 'folio', 'created_at')
@@ -99,8 +104,48 @@ class ResultsController extends Controller
 
     public function showDetailedResults(Organization $organization, Evaluation $evaluation)
     {
+        $this->authorize('view-organization-results', $organization);
+
         if ($evaluation->organization_id !== $organization->id) {
             abort(403, 'La evaluación no pertenece a esta organización');
+        }
+
+        // Obtener resultados de otras guías si estamos viendo la guía III
+        $guideIResults = null;
+        $guideVResults = null;
+
+        if ($evaluation->reference_guide === 'III') {
+            // Buscar la evaluación más reciente de la guía I para el mismo personal_id
+            $guideIResults = Evaluation::where('organization_id', $organization->id)
+                ->where('reference_guide', 'I')
+                ->where('personal_id', $evaluation->personal_id)
+                ->latest()
+                ->first();
+
+            if ($guideIResults) {
+                $guideIResults = [
+                    'id' => $guideIResults->id,
+                    'folio' => $guideIResults->folio,
+                    'created_at' => $guideIResults->created_at->format('Y-m-d H:i:s'),
+                    'answers' => $guideIResults->data
+                ];
+            }
+
+            // Buscar la evaluación más reciente de la guía V para el mismo personal_id
+            $guideVResults = Evaluation::where('organization_id', $organization->id)
+                ->where('reference_guide', 'V')
+                ->where('personal_id', $evaluation->personal_id)
+                ->latest()
+                ->first();
+
+            if ($guideVResults) {
+                $guideVResults = [
+                    'id' => $guideVResults->id,
+                    'folio' => $guideVResults->folio,
+                    'created_at' => $guideVResults->created_at->format('Y-m-d H:i:s'),
+                    'answers' => $guideVResults->data
+                ];
+            }
         }
 
         $results = Category::with(['domains.dimensions.answers' => function($query) use ($evaluation) {
@@ -116,7 +161,7 @@ class ResultsController extends Controller
                 foreach ($domain->dimensions as $dimension) {
                     // Calcular score de la dimensión sumando los scores de sus respuestas
                     $dimensionScore = $dimension->answers->sum('score');
-                    
+
                     // Agregar al score del dominio
                     $domainScore += $dimensionScore;
 
@@ -166,8 +211,11 @@ class ResultsController extends Controller
                 'id' => $evaluation->id,
                 'folio' => $evaluation->folio,
                 'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
+                'reference_guide' => $evaluation->reference_guide,
             ],
-            'results' => $results
+            'results' => $results,
+            'guideIResults' => $guideIResults,
+            'guideVResults' => $guideVResults
         ]);
     }
 }
