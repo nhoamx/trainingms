@@ -3,6 +3,7 @@ import Dashboard from "../Layouts/Dashboard.vue";
 import { Link } from '@inertiajs/vue3';
 import { DocumentTextIcon } from '@heroicons/vue/24/outline'
 import DemographicCharts from '../Components/DemographicCharts.vue';
+import AdvancedReports from '../Components/AdvancedReports.vue';
 import { computed, ref } from 'vue';
 
 import { defineProps } from 'vue';
@@ -17,6 +18,10 @@ const props = defineProps({
         default: () => []
     },
     demographic_data: {
+        type: Object,
+        default: () => ({})
+    },
+    question_reports: {
         type: Object,
         default: () => ({})
     },
@@ -52,6 +57,7 @@ const organizationsWithGuideIII = computed(() => {
 
 // Debug logs
 console.log('demographic_data length:', demographicDataArray.value.length);
+console.log('question_reports:', props.question_reports);
 
 // Definición de tabs del dashboard
 const dashboardTabs = computed(() => {
@@ -110,12 +116,12 @@ const formatDate = (dateString) => {
                 <div class="space-y-6">
                     <!-- Tab de Análisis (solo visible para usuarios normales) -->
                     <div v-if="!isAdmin && !isSuperAdmin" v-show="currentTab === 'analysis'" class="space-y-6">
-                        <div v-if="demographicDataArray.length > 0">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Análisis Demográfico</h3>
-                            <DemographicCharts :demographic-data="demographicDataArray" />
+                        <div v-if="question_reports && Object.keys(question_reports).length > 0">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Análisis por Datos Demográficos</h3>
+                            <AdvancedReports :question-reports="question_reports" />
                         </div>
                         <div v-else class="text-gray-500 text-center py-4">
-                            No hay datos demográficos disponibles
+                            No hay datos suficientes para generar reportes
                         </div>
                     </div>
 
