@@ -40,6 +40,129 @@ const nivelAcademicoTableChart = ref(null);
 const answersDistributionChart = ref(null);
 const categoryScoresChart = ref(null);
 
+// Variables para controlar pestañas en cada análisis detallado
+const selectedEstadoCivil = ref(null);
+const selectedEdad = ref(null);
+const selectedNivelAcademico = ref(null);
+
+// Obtener valores disponibles para estado civil
+const estadoCivilValues = computed(() => {
+  if (!props.questionReports?.questionDetail?.estadoCivil) return [];
+
+  return Object.entries(props.questionReports.questionDetail.estadoCivil).map(([key, value]) => ({
+    key: key,
+    label: value.label,
+    total: value.total
+  }));
+});
+
+// Obtener valores disponibles para edad
+const edadValues = computed(() => {
+  if (!props.questionReports?.questionDetail?.edad) return [];
+
+  return Object.entries(props.questionReports.questionDetail.edad).map(([key, value]) => ({
+    key: key,
+    label: value.label,
+    total: value.total
+  }));
+});
+
+// Obtener valores disponibles para nivel académico
+const nivelAcademicoValues = computed(() => {
+  if (!props.questionReports?.questionDetail?.nivelAcademico) return [];
+
+  return Object.entries(props.questionReports.questionDetail.nivelAcademico).map(([key, value]) => ({
+    key: key,
+    label: value.label,
+    total: value.total
+  }));
+});
+
+// Inicializar los valores seleccionados cuando los datos estén disponibles
+watch(() => props.questionReports?.questionDetail, () => {
+  if (estadoCivilValues.value.length > 0 && !selectedEstadoCivil.value) {
+    selectedEstadoCivil.value = estadoCivilValues.value[0].key;
+  }
+  if (edadValues.value.length > 0 && !selectedEdad.value) {
+    selectedEdad.value = edadValues.value[0].key;
+  }
+  if (nivelAcademicoValues.value.length > 0 && !selectedNivelAcademico.value) {
+    selectedNivelAcademico.value = nivelAcademicoValues.value[0].key;
+  }
+}, { immediate: true });
+
+// Detalles seleccionados
+const selectedEstadoCivilDetail = computed(() => {
+  if (!props.questionReports?.questionDetail?.estadoCivil || !selectedEstadoCivil.value) return null;
+  return props.questionReports.questionDetail.estadoCivil[selectedEstadoCivil.value];
+});
+
+const selectedEdadDetail = computed(() => {
+  if (!props.questionReports?.questionDetail?.edad || !selectedEdad.value) return null;
+  return props.questionReports.questionDetail.edad[selectedEdad.value];
+});
+
+const selectedNivelAcademicoDetail = computed(() => {
+  if (!props.questionReports?.questionDetail?.nivelAcademico || !selectedNivelAcademico.value) return null;
+  return props.questionReports.questionDetail.nivelAcademico[selectedNivelAcademico.value];
+});
+
+// Preguntas disponibles para cada tipo
+const estadoCivilQuestions = computed(() => {
+  if (!selectedEstadoCivilDetail.value?.questions) return [];
+  return Object.keys(selectedEstadoCivilDetail.value.questions).sort((a, b) => parseInt(a) - parseInt(b));
+});
+
+const edadQuestions = computed(() => {
+  if (!selectedEdadDetail.value?.questions) return [];
+  return Object.keys(selectedEdadDetail.value.questions).sort((a, b) => parseInt(a) - parseInt(b));
+});
+
+const nivelAcademicoQuestions = computed(() => {
+  if (!selectedNivelAcademicoDetail.value?.questions) return [];
+  return Object.keys(selectedNivelAcademicoDetail.value.questions).sort((a, b) => parseInt(a) - parseInt(b));
+});
+
+// Datos para gráficos comparativos por pregunta
+const createQuestionComparisonData = (detail, questions) => {
+  if (!detail || !questions.length) return null;
+
+  // Seleccionar las primeras 5 preguntas para el gráfico (para no sobrecargar)
+  const selectedQuestions = questions.slice(0, 5);
+
+  const data = {
+    labels: ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'],
+    datasets: selectedQuestions.map((question, index) => {
+      const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#F97316'];
+      return {
+        label: `Pregunta ${question}`,
+        data: [
+          detail.questions[question].niveles.Nulo,
+          detail.questions[question].niveles.Bajo,
+          detail.questions[question].niveles.Medio,
+          detail.questions[question].niveles.Alto,
+          detail.questions[question].niveles['Muy Alto']
+        ],
+        backgroundColor: colors[index % colors.length]
+      };
+    })
+  };
+
+  return data;
+};
+
+const estadoCivilQuestionChartData = computed(() => {
+  return createQuestionComparisonData(selectedEstadoCivilDetail.value, estadoCivilQuestions.value);
+});
+
+const edadQuestionChartData = computed(() => {
+  return createQuestionComparisonData(selectedEdadDetail.value, edadQuestions.value);
+});
+
+const nivelAcademicoQuestionChartData = computed(() => {
+  return createQuestionComparisonData(selectedNivelAcademicoDetail.value, nivelAcademicoQuestions.value);
+});
+
 // Datos procesados para gráfico de estado civil
 const estadoCivilData = computed(() => {
   if (!props.questionReports?.estadoCivil?.length) return null;
@@ -937,63 +1060,19 @@ const stackedBarChartOptions = {
       </div>
     </div>
 
-    <!-- Análisis Detallado por Pregunta -->
-    <div v-if="questionReports?.questionDetail" class="bg-white p-4 rounded-lg shadow">
-      <h3 class="text-lg font-semibold mb-4">Análisis Detallado por Pregunta (Guía de Referencia III)</h3>
+    <!-- Análisis Detallado por Estado Civil -->
+    <div v-if="questionReports?.questionDetail?.estadoCivil" class="bg-white p-4 rounded-lg shadow">
+      <h3 class="text-lg font-semibold mb-4">Análisis Detallado por Estado Civil</h3>
 
-      <!-- Selector de tipo demográfico -->
-      <div class="flex space-x-4 mb-4">
-        <div class="inline-flex shadow-sm rounded-md" role="group">
-          <button
-            @click="selectedDemographicType = 'estadoCivil'"
-            type="button"
-            :class="[
-              'px-4 py-2 text-sm font-medium',
-              selectedDemographicType === 'estadoCivil'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            ]"
-          >
-            Estado Civil
-          </button>
-          <button
-            @click="selectedDemographicType = 'edad'"
-            type="button"
-            :class="[
-              'px-4 py-2 text-sm font-medium border-l border-gray-200',
-              selectedDemographicType === 'edad'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            ]"
-          >
-            Edad
-          </button>
-          <button
-            @click="selectedDemographicType = 'nivelAcademico'"
-            type="button"
-            :class="[
-              'px-4 py-2 text-sm font-medium border-l border-gray-200',
-              selectedDemographicType === 'nivelAcademico'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            ]"
-          >
-            Nivel Académico
-          </button>
-        </div>
-      </div>
-
-      <!-- Selector de valor demográfico -->
+      <!-- Selector de estado civil -->
       <div class="mb-6">
-        <label class="block text-sm font-medium text-gray-700 mb-1">
-          Seleccione {{ selectedDemographicType === 'estadoCivil' ? 'Estado Civil' : selectedDemographicType === 'edad' ? 'Rango de Edad' : 'Nivel Académico' }}:
-        </label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Seleccione Estado Civil:</label>
         <select
-          v-model="selectedDemographicValue"
+          v-model="selectedEstadoCivil"
           class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
         >
           <option
-            v-for="value in demographicValues"
+            v-for="value in estadoCivilValues"
             :key="value.key"
             :value="value.key"
           >
@@ -1002,17 +1081,29 @@ const stackedBarChartOptions = {
         </select>
       </div>
 
+      <!-- Gráfico de distribución de niveles por pregunta -->
+      <div v-if="selectedEstadoCivilDetail" class="h-96 mt-6">
+        <h4 class="text-md font-semibold mb-2">
+          Distribución de Niveles por Pregunta para {{ selectedEstadoCivilDetail.label }}
+        </h4>
+        <Bar
+          v-if="estadoCivilQuestionChartData"
+          :data="estadoCivilQuestionChartData"
+          :options="barChartOptions"
+        />
+      </div>
+
       <!-- Tabla de Análisis Detallado por Pregunta -->
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto mt-6">
         <h4 class="text-md font-semibold mb-2">
           Detalle de preguntas para
           <span class="text-blue-600">
-            {{ selectedDemographicDetail?.label }}
+            {{ selectedEstadoCivilDetail?.label }}
           </span>
-          ({{ selectedDemographicDetail?.total }} personas)
+          ({{ selectedEstadoCivilDetail?.total }} personas)
         </h4>
 
-        <table v-if="selectedDemographicDetail" class="min-w-full divide-y divide-gray-200 border">
+        <table v-if="selectedEstadoCivilDetail" class="min-w-full divide-y divide-gray-200 border">
           <thead class="bg-gray-50">
             <tr>
               <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">Pregunta</th>
@@ -1028,52 +1119,244 @@ const stackedBarChartOptions = {
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="question in availableQuestions" :key="question">
+            <tr v-for="question in estadoCivilQuestions" :key="question">
               <td class="px-3 py-2 text-sm text-gray-900 border font-medium">{{ question }}</td>
               <td class="px-3 py-2 text-sm text-center text-gray-900 border">
-                {{ selectedDemographicDetail.questions[question].total }}
+                {{ selectedEstadoCivilDetail.questions[question].total }}
               </td>
               <td class="px-3 py-2 text-sm text-center text-gray-900 border">
-                {{ selectedDemographicDetail.questions[question].niveles.Nulo }}
+                {{ selectedEstadoCivilDetail.questions[question].niveles.Nulo }}
               </td>
               <td class="px-3 py-2 text-sm text-center text-gray-900 border">
-                {{ selectedDemographicDetail.questions[question].niveles.Bajo }}
+                {{ selectedEstadoCivilDetail.questions[question].niveles.Bajo }}
               </td>
               <td class="px-3 py-2 text-sm text-center text-gray-900 border">
-                {{ selectedDemographicDetail.questions[question].niveles.Medio }}
+                {{ selectedEstadoCivilDetail.questions[question].niveles.Medio }}
               </td>
               <td class="px-3 py-2 text-sm text-center text-gray-900 border">
-                {{ selectedDemographicDetail.questions[question].niveles.Alto }}
+                {{ selectedEstadoCivilDetail.questions[question].niveles.Alto }}
               </td>
               <td class="px-3 py-2 text-sm text-center text-gray-900 border">
-                {{ selectedDemographicDetail.questions[question].niveles['Muy Alto'] }}
+                {{ selectedEstadoCivilDetail.questions[question].niveles['Muy Alto'] }}
               </td>
               <td class="px-3 py-2 text-sm text-center text-gray-900 border font-bold">
-                {{ selectedDemographicDetail.questions[question].nu_ba }}
+                {{ selectedEstadoCivilDetail.questions[question].nu_ba }}
               </td>
               <td class="px-3 py-2 text-sm text-center text-gray-900 border font-bold">
-                {{ selectedDemographicDetail.questions[question].me_al_ma }}
+                {{ selectedEstadoCivilDetail.questions[question].me_al_ma }}
               </td>
               <td class="px-3 py-2 text-sm text-center text-gray-900 border font-bold"
                   :class="{
-                    'bg-green-700 text-white': selectedDemographicDetail.questions[question].cf >= 80,
-                    'bg-green-500 text-white': selectedDemographicDetail.questions[question].cf >= 70 && selectedDemographicDetail.questions[question].cf < 80,
-                    'bg-yellow-400': selectedDemographicDetail.questions[question].cf >= 60 && selectedDemographicDetail.questions[question].cf < 70,
-                    'bg-red-600 text-white': selectedDemographicDetail.questions[question].cf < 60
+                    'bg-green-700 text-white': selectedEstadoCivilDetail.questions[question].cf >= 80,
+                    'bg-green-500 text-white': selectedEstadoCivilDetail.questions[question].cf >= 70 && selectedEstadoCivilDetail.questions[question].cf < 80,
+                    'bg-yellow-400': selectedEstadoCivilDetail.questions[question].cf >= 60 && selectedEstadoCivilDetail.questions[question].cf < 70,
+                    'bg-red-600 text-white': selectedEstadoCivilDetail.questions[question].cf < 60
                   }">
-                {{ selectedDemographicDetail.questions[question].cf }}
+                {{ selectedEstadoCivilDetail.questions[question].cf }}
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
 
-        <div v-else class="text-gray-500 text-center py-4">
-          No hay datos disponibles para este criterio demográfico
-        </div>
+    <!-- Análisis Detallado por Edad -->
+    <div v-if="questionReports?.questionDetail?.edad" class="bg-white p-4 rounded-lg shadow">
+      <h3 class="text-lg font-semibold mb-4">Análisis Detallado por Rango de Edad</h3>
+
+      <!-- Selector de rango de edad -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Seleccione Rango de Edad:</label>
+        <select
+          v-model="selectedEdad"
+          class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        >
+          <option
+            v-for="value in edadValues"
+            :key="value.key"
+            :value="value.key"
+          >
+            {{ value.label }} ({{ value.total }} personas)
+          </option>
+        </select>
       </div>
 
-      <div class="mt-4 text-sm text-gray-500">
-        <p class="italic">* CF = Calificación Final</p>
+      <!-- Gráfico de distribución de niveles por pregunta -->
+      <div v-if="selectedEdadDetail" class="h-96 mt-6">
+        <h4 class="text-md font-semibold mb-2">
+          Distribución de Niveles por Pregunta para {{ selectedEdadDetail.label }}
+        </h4>
+        <Bar
+          v-if="edadQuestionChartData"
+          :data="edadQuestionChartData"
+          :options="barChartOptions"
+        />
+      </div>
+
+      <!-- Tabla de Análisis Detallado por Pregunta -->
+      <div class="overflow-x-auto mt-6">
+        <h4 class="text-md font-semibold mb-2">
+          Detalle de preguntas para
+          <span class="text-blue-600">
+            {{ selectedEdadDetail?.label }}
+          </span>
+          ({{ selectedEdadDetail?.total }} personas)
+        </h4>
+
+        <table v-if="selectedEdadDetail" class="min-w-full divide-y divide-gray-200 border">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">Pregunta</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Total</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nulo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Bajo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Medio</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Muy Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nu+Ba</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Me+Al+MA</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">CF*</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="question in edadQuestions" :key="question">
+              <td class="px-3 py-2 text-sm text-gray-900 border font-medium">{{ question }}</td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedEdadDetail.questions[question].total }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedEdadDetail.questions[question].niveles.Nulo }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedEdadDetail.questions[question].niveles.Bajo }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedEdadDetail.questions[question].niveles.Medio }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedEdadDetail.questions[question].niveles.Alto }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedEdadDetail.questions[question].niveles['Muy Alto'] }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border font-bold">
+                {{ selectedEdadDetail.questions[question].nu_ba }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border font-bold">
+                {{ selectedEdadDetail.questions[question].me_al_ma }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border font-bold"
+                  :class="{
+                    'bg-green-700 text-white': selectedEdadDetail.questions[question].cf >= 80,
+                    'bg-green-500 text-white': selectedEdadDetail.questions[question].cf >= 70 && selectedEdadDetail.questions[question].cf < 80,
+                    'bg-yellow-400': selectedEdadDetail.questions[question].cf >= 60 && selectedEdadDetail.questions[question].cf < 70,
+                    'bg-red-600 text-white': selectedEdadDetail.questions[question].cf < 60
+                  }">
+                {{ selectedEdadDetail.questions[question].cf }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Análisis Detallado por Nivel Académico -->
+    <div v-if="questionReports?.questionDetail?.nivelAcademico" class="bg-white p-4 rounded-lg shadow">
+      <h3 class="text-lg font-semibold mb-4">Análisis Detallado por Nivel Académico</h3>
+
+      <!-- Selector de nivel académico -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Seleccione Nivel Académico:</label>
+        <select
+          v-model="selectedNivelAcademico"
+          class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        >
+          <option
+            v-for="value in nivelAcademicoValues"
+            :key="value.key"
+            :value="value.key"
+          >
+            {{ value.label }} ({{ value.total }} personas)
+          </option>
+        </select>
+      </div>
+
+      <!-- Gráfico de distribución de niveles por pregunta -->
+      <div v-if="selectedNivelAcademicoDetail" class="h-96 mt-6">
+        <h4 class="text-md font-semibold mb-2">
+          Distribución de Niveles por Pregunta para {{ selectedNivelAcademicoDetail.label }}
+        </h4>
+        <Bar
+          v-if="nivelAcademicoQuestionChartData"
+          :data="nivelAcademicoQuestionChartData"
+          :options="barChartOptions"
+        />
+      </div>
+
+      <!-- Tabla de Análisis Detallado por Pregunta -->
+      <div class="overflow-x-auto mt-6">
+        <h4 class="text-md font-semibold mb-2">
+          Detalle de preguntas para
+          <span class="text-blue-600">
+            {{ selectedNivelAcademicoDetail?.label }}
+          </span>
+          ({{ selectedNivelAcademicoDetail?.total }} personas)
+        </h4>
+
+        <table v-if="selectedNivelAcademicoDetail" class="min-w-full divide-y divide-gray-200 border">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">Pregunta</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Total</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nulo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Bajo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Medio</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Muy Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nu+Ba</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Me+Al+MA</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">CF*</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="question in nivelAcademicoQuestions" :key="question">
+              <td class="px-3 py-2 text-sm text-gray-900 border font-medium">{{ question }}</td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedNivelAcademicoDetail.questions[question].total }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedNivelAcademicoDetail.questions[question].niveles.Nulo }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedNivelAcademicoDetail.questions[question].niveles.Bajo }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedNivelAcademicoDetail.questions[question].niveles.Medio }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedNivelAcademicoDetail.questions[question].niveles.Alto }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border">
+                {{ selectedNivelAcademicoDetail.questions[question].niveles['Muy Alto'] }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border font-bold">
+                {{ selectedNivelAcademicoDetail.questions[question].nu_ba }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border font-bold">
+                {{ selectedNivelAcademicoDetail.questions[question].me_al_ma }}
+              </td>
+              <td class="px-3 py-2 text-sm text-center text-gray-900 border font-bold"
+                  :class="{
+                    'bg-green-700 text-white': selectedNivelAcademicoDetail.questions[question].cf >= 80,
+                    'bg-green-500 text-white': selectedNivelAcademicoDetail.questions[question].cf >= 70 && selectedNivelAcademicoDetail.questions[question].cf < 80,
+                    'bg-yellow-400': selectedNivelAcademicoDetail.questions[question].cf >= 60 && selectedNivelAcademicoDetail.questions[question].cf < 70,
+                    'bg-red-600 text-white': selectedNivelAcademicoDetail.questions[question].cf < 60
+                  }">
+                {{ selectedNivelAcademicoDetail.questions[question].cf }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
