@@ -199,6 +199,7 @@ const navigation = computed(() => {
             { name: 'Listado', href: route('organizations.index'), current: route().current('organizations.index') },
             { name: 'Crear', href: route('organizations.create'), current: route().current('organizations.create') },
         ] },
+        { name: 'Programar examen', href: route('quiz.index'), current: route().current('quiz.*') },
         { name: 'Usuarios', href: route('users.index'), current: route().current('users.index') },
     ];
 });

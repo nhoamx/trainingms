@@ -5,19 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Domain;
 use App\Models\Organization;
 use App\Services\EvaluationService;
-use App\Services\QuestionReportService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
     protected $evaluationService;
-    protected $questionReportService;
 
-    public function __construct(EvaluationService $evaluationService, QuestionReportService $questionReportService)
+    public function __construct(EvaluationService $evaluationService)
     {
         $this->evaluationService = $evaluationService;
-        $this->questionReportService = $questionReportService;
     }
 
     public function index(Request $request)
@@ -27,24 +24,11 @@ class DashboardController extends Controller
 
         if ($user->hasRole('organization') && $user->organization) {
             $data['evaluations'] = $this->evaluationService->getOrganizationEvaluations($user->organization);
-
-            // Datos antiguos
             $data['demographic_data'] = $this->evaluationService->getDemographicData($user->organization);
-
-            // Nuevo reporte basado en preguntas
-            $filters = $request->get('filters', []);
-            $data['question_reports'] = $this->questionReportService->getFilteredReportData($user->organization, $filters);
-
             $data['isAdmin'] = false;
-            $data['isSuperAdmin'] = false;
-        } else if ($user->hasRole('admin')) {
+        } else if ($user->hasRole(['admin', 'super-admin'])) {
             $data['organizations'] = $this->evaluationService->getAllEvaluationsByOrganization();
             $data['isAdmin'] = true;
-            $data['isSuperAdmin'] = false;
-        } else if ($user->hasRole('super-admin')) {
-            $data['organizations'] = $this->evaluationService->getAllEvaluationsByOrganization();
-            $data['isAdmin'] = false;
-            $data['isSuperAdmin'] = true;
         }
 
         return Inertia::render('Dashboard', $data);
