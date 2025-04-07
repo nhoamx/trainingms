@@ -678,7 +678,7 @@ watch(currentTab, (newTab) => {
                          </div>
                          <div v-else class="text-gray-500 text-center py-6 bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                              No hay datos demográficos disponibles para mostrar.
-                         </div>
+                        </div>
                     </div>
 
                     <!-- Tab de Evaluaciones -->

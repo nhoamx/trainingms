@@ -9,6 +9,7 @@ use App\Models\Dimension; // Add Dimension model
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log; // For debugging if needed
+use App\Models\Evaluation;
 
 class ReportService
 {
@@ -304,8 +305,21 @@ class ReportService
      */
     public function getCategoryAnswerDistribution(string $categoryId, string $referenceGuide = 'III'): Collection
     {
+        // Get personal_ids with Guide III evaluations to ensure consistency with people lists
+        $guideIIIPersonalIds = Evaluation::where('reference_guide', 'III')
+            ->whereNotNull('personal_id')
+            ->pluck('personal_id')
+            ->unique()
+            ->filter();
+
+        if ($guideIIIPersonalIds->isEmpty()) {
+            Log::warning("No personal_ids found with Guide III evaluations for category distribution {$categoryId}.");
+            return collect($this->getEmptyAnswerDistribution()); // Return empty distribution structure
+        }
+
         $results = Question::where('reference_guide', $referenceGuide)
             ->where('category_id', $categoryId)
+            ->whereIn('personal_id', $guideIIIPersonalIds) // Filter by people with Guide III evals
             ->select(
                 DB::raw("COALESCE(answer, 'INVALID') as answer_group"),
                 DB::raw('count(*) as count')
@@ -313,15 +327,30 @@ class ReportService
             ->groupBy('answer_group')
             ->pluck('count', 'answer_group'); // Returns a collection like ['A' => 10, 'B' => 25, ...]
 
-        // Ensure all expected answers are present, even if count is 0
-        $allAnswers = ['A', 'B', 'C', 'D', 'E', 'INVALID']; // Assuming these are all possible answers + our NULL handler
-        $completeResults = collect($allAnswers)->mapWithKeys(function($answer) use ($results) {
-            return [$answer => $results->get($answer, 0)];
-        });
+        $completeResults = $this->ensureCompleteDistribution($results);
 
         Log::info("Generated Answer Distribution for Category {$categoryId}:", $completeResults->toArray());
 
         return $completeResults;
+    }
+
+    /**
+     * Helper to ensure all standard answer keys exist in a distribution collection.
+     */
+    private function ensureCompleteDistribution(Collection $results): Collection
+    {
+        $allAnswers = ['A', 'B', 'C', 'D', 'E', 'INVALID'];
+        return collect($allAnswers)->mapWithKeys(function($answer) use ($results) {
+            return [$answer => $results->get($answer, 0)];
+        });
+    }
+
+    /**
+     * Helper to get an empty distribution structure.
+     */
+    private function getEmptyAnswerDistribution(): array
+    {
+        return ['A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0, 'INVALID' => 0];
     }
 
     /**
@@ -503,8 +532,21 @@ class ReportService
      */
     public function getDomainAnswerDistribution(string $domainId, string $referenceGuide = 'III'): Collection
     {
+        // Get personal_ids with Guide III evaluations
+        $guideIIIPersonalIds = Evaluation::where('reference_guide', 'III')
+            ->whereNotNull('personal_id')
+            ->pluck('personal_id')
+            ->unique()
+            ->filter();
+
+        if ($guideIIIPersonalIds->isEmpty()) {
+            Log::warning("No personal_ids found with Guide III evaluations for domain distribution {$domainId}.");
+            return collect($this->getEmptyAnswerDistribution());
+        }
+
         $results = Question::where('reference_guide', $referenceGuide)
             ->where('domain_id', $domainId) // Filter by domain_id
+            ->whereIn('personal_id', $guideIIIPersonalIds) // Filter by people with Guide III evals
             ->select(
                 DB::raw("COALESCE(answer, 'INVALID') as answer_group"),
                 DB::raw('count(*) as count')
@@ -512,8 +554,7 @@ class ReportService
             ->groupBy('answer_group')
             ->pluck('count', 'answer_group');
 
-        $allAnswers = ['A', 'B', 'C', 'D', 'E', 'INVALID'];
-        $completeResults = collect($allAnswers)->mapWithKeys(fn($answer) => [$answer => $results->get($answer, 0)]);
+        $completeResults = $this->ensureCompleteDistribution($results);
         Log::info("Generated Answer Distribution for Domain {$domainId}:", $completeResults->toArray());
         return $completeResults;
     }
@@ -690,8 +731,21 @@ class ReportService
      */
     public function getDimensionAnswerDistribution(string $dimensionId, string $referenceGuide = 'III'): Collection
     {
+        // Get personal_ids with Guide III evaluations
+        $guideIIIPersonalIds = Evaluation::where('reference_guide', 'III')
+            ->whereNotNull('personal_id')
+            ->pluck('personal_id')
+            ->unique()
+            ->filter();
+
+        if ($guideIIIPersonalIds->isEmpty()) {
+            Log::warning("No personal_ids found with Guide III evaluations for dimension distribution {$dimensionId}.");
+            return collect($this->getEmptyAnswerDistribution());
+        }
+
         $results = Question::where('reference_guide', $referenceGuide)
             ->where('dimension_id', $dimensionId) // Filter by dimension_id
+            ->whereIn('personal_id', $guideIIIPersonalIds) // Filter by people with Guide III evals
             ->select(
                 DB::raw("COALESCE(answer, 'INVALID') as answer_group"),
                 DB::raw('count(*) as count')
@@ -699,8 +753,7 @@ class ReportService
             ->groupBy('answer_group')
             ->pluck('count', 'answer_group');
 
-        $allAnswers = ['A', 'B', 'C', 'D', 'E', 'INVALID'];
-        $completeResults = collect($allAnswers)->mapWithKeys(fn($answer) => [$answer => $results->get($answer, 0)]);
+        $completeResults = $this->ensureCompleteDistribution($results);
         Log::info("Generated Answer Distribution for Dimension {$dimensionId}:", $completeResults->toArray());
         return $completeResults;
     }
@@ -735,16 +788,27 @@ class ReportService
     }
 
     /**
-     * Helper function to define the qualification ranges for Dimensions.
-     * Placeholder - Define actual ranges based on requirements.
+     * Helper function to normalize strings for comparison.
+     * Converts to lowercase, removes common accents, replaces underscores/hyphens with spaces.
      */
-    private function getDimensionQualificationRanges(): array
+    private function normalizeForComparison(?string $str): string
     {
-        // Example structure - Replace with actual values
-        return [
-            // 'Dimension Name 1' => ['Nulo' => [...], 'Bajo' => [...], ...],
-            // Add ranges for all relevant dimensions
+        if (is_null($str)) return '';
+
+        $str = mb_strtolower($str, 'UTF-8'); // Use mb_strtolower for UTF-8
+        $str = str_replace(['_', '-'], ' ', $str);
+
+        // More comprehensive accent removal
+        $unwanted_array = [
+            'á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u', 'ñ'=>'n',
+            'Á'=>'A', 'É'=>'E', 'Í'=>'I', 'Ó'=>'O', 'Ú'=>'U', 'Ñ'=>'N'
+            // Add more if needed
         ];
+        $str = strtr($str, $unwanted_array);
+
+        // Remove extra whitespace
+        $str = trim(preg_replace('/\s+/', ' ', $str));
+        return $str;
     }
 
     /**
@@ -757,14 +821,34 @@ class ReportService
     {
         Log::info('Starting demographic distribution calculation.', compact('personalIds'));
 
+        // First, get all personal_ids that have a completed Guide III evaluation
+        // This ensures counts only include people linkable from the people list
+        $guideIIIPersonalIds = Evaluation::where('reference_guide', 'III')
+            ->whereNotNull('personal_id')
+            ->pluck('personal_id')
+            ->unique()
+            ->filter();
+
+        if ($guideIIIPersonalIds->isEmpty()) {
+            Log::warning('No personal_ids found with Guide III evaluations. Demographic report will be empty.');
+            return [];
+        }
+
         $query = Question::where('reference_guide', 'V');
+
+        // Apply the Guide III filter
+        $query->whereIn('personal_id', $guideIIIPersonalIds);
+
+        // Apply the specific personalId filter if provided (e.g., for org scope)
         if (!empty($personalIds)) {
             $query->whereIn('personal_id', $personalIds);
         }
 
+        // Fetch all relevant Guide V answers efficiently (now pre-filtered)
         $guideVAnswers = $query->get(['personal_id', 'question', 'answer']);
         if ($guideVAnswers->isEmpty()) {
-             Log::warning('No Guide V answers found for demographic calculation.');
+             // Adjusted log message
+             Log::warning('No Guide V answers found for demographic calculation (after filtering for Guide III presence).');
             return [];
         }
 
@@ -961,29 +1045,5 @@ class ReportService
         Log::info("Found " . $peopleDetails->count() . " distinct people details for identifier '{$identifier}' in field {$fieldKey}");
 
         return $peopleDetails;
-    }
-
-    /**
-     * Helper function to normalize strings for comparison.
-     * Converts to lowercase, removes common accents, replaces underscores/hyphens with spaces.
-     */
-    private function normalizeForComparison(?string $str): string
-    {
-        if (is_null($str)) return '';
-
-        $str = mb_strtolower($str, 'UTF-8'); // Use mb_strtolower for UTF-8
-        $str = str_replace(['_', '-'], ' ', $str);
-
-        // More comprehensive accent removal
-        $unwanted_array = [
-            'á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u', 'ñ'=>'n',
-            'Á'=>'A', 'É'=>'E', 'Í'=>'I', 'Ó'=>'O', 'Ú'=>'U', 'Ñ'=>'N'
-            // Add more if needed
-        ];
-        $str = strtr($str, $unwanted_array);
-
-        // Remove extra whitespace
-        $str = trim(preg_replace('/\s+/', ' ', $str));
-        return $str;
     }
 }
