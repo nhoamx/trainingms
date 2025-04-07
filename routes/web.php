@@ -6,6 +6,7 @@ use App\Http\Controllers\QuizController;
 use App\Http\Controllers\ResultsController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PeopleListController;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -25,6 +26,37 @@ Route::controller(\App\Http\Controllers\AuthController::class)->group(function()
 Route::middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // API route for raw answer distribution by category
+    Route::get('/dashboard/report/category-answer-distribution/{categoryId}', [DashboardController::class, 'getCategoryAnswerDistribution'])
+        ->name('dashboard.report.categoryAnswerDistribution');
+
+    Route::get('/dashboard/report/domain-answer-distribution/{domainId}', [DashboardController::class, 'getDomainAnswerDistribution'])
+        ->name('dashboard.report.domainAnswerDistribution');
+
+    // API routes for detail charts
+    Route::get('/dashboard/report/dimension-answer-distribution/{dimensionId}', [DashboardController::class, 'getDimensionAnswerDistribution'])
+        ->name('dashboard.report.dimensionAnswerDistribution');
+
+    // API route for dimension qualifications (loaded when domain is selected)
+    Route::get('/dashboard/report/dimension-qualifications/{domainId}', [DashboardController::class, 'getDimensionQualifications'])
+        ->name('dashboard.report.dimensionQualifications');
+
+    // Web Route for Category People List Page
+    Route::get('/reports/people-list/{categoryId}/{answerKey}', [PeopleListController::class, 'show'])
+        ->name('reports.peopleList');
+
+    // NEW Web Route for Domain People List Page
+    Route::get('/reports/people-list-domain/{domainId}/{answerKey}', [PeopleListController::class, 'showDomainList'])
+        ->name('reports.peopleListDomain');
+
+    // NEW Web Route for Dimension People List Page
+    Route::get('/reports/people-list-dimension/{dimensionId}/{answerKey}', [PeopleListController::class, 'showDimensionList'])
+        ->name('reports.peopleListDimension');
+
+    // NEW Web Route for Demographic People List Page
+    Route::get('/reports/people-list-demographic/{fieldKey}/{identifier}', [PeopleListController::class, 'showDemographicList'])
+        ->name('reports.peopleListDemographic');
 
     // Perfil
     Route::get('/perfil', [UserController::class, 'showProfile'])->name('profile');

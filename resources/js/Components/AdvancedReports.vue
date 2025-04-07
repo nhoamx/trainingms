@@ -44,6 +44,10 @@ const categoryScoresChart = ref(null);
 const selectedEstadoCivil = ref(null);
 const selectedEdad = ref(null);
 const selectedNivelAcademico = ref(null);
+const selectedSexo = ref(null);
+const selectedTipoContratacion = ref(null);
+const selectedTipoPersonal = ref(null);
+const selectedTipoJornada = ref(null);
 
 // Obtener valores disponibles para estado civil
 const estadoCivilValues = computed(() => {
@@ -78,6 +82,50 @@ const nivelAcademicoValues = computed(() => {
   }));
 });
 
+// Obtener valores disponibles para sexo
+const sexoValues = computed(() => {
+  if (!props.questionReports?.questionDetail?.sexo) return [];
+
+  return Object.entries(props.questionReports.questionDetail.sexo).map(([key, value]) => ({
+    key: key,
+    label: value.label,
+    total: value.total
+  }));
+});
+
+// Obtener valores disponibles para tipo de contratación
+const tipoContratacionValues = computed(() => {
+  if (!props.questionReports?.questionDetail?.tipoContratacion) return [];
+
+  return Object.entries(props.questionReports.questionDetail.tipoContratacion).map(([key, value]) => ({
+    key: key,
+    label: value.label,
+    total: value.total
+  }));
+});
+
+// Obtener valores disponibles para tipo de personal
+const tipoPersonalValues = computed(() => {
+  if (!props.questionReports?.questionDetail?.tipoPersonal) return [];
+
+  return Object.entries(props.questionReports.questionDetail.tipoPersonal).map(([key, value]) => ({
+    key: key,
+    label: value.label,
+    total: value.total
+  }));
+});
+
+// Obtener valores disponibles para tipo de jornada
+const tipoJornadaValues = computed(() => {
+  if (!props.questionReports?.questionDetail?.tipoJornada) return [];
+
+  return Object.entries(props.questionReports.questionDetail.tipoJornada).map(([key, value]) => ({
+    key: key,
+    label: value.label,
+    total: value.total
+  }));
+});
+
 // Inicializar los valores seleccionados cuando los datos estén disponibles
 watch(() => props.questionReports?.questionDetail, () => {
   if (estadoCivilValues.value.length > 0 && !selectedEstadoCivil.value) {
@@ -88,6 +136,18 @@ watch(() => props.questionReports?.questionDetail, () => {
   }
   if (nivelAcademicoValues.value.length > 0 && !selectedNivelAcademico.value) {
     selectedNivelAcademico.value = nivelAcademicoValues.value[0].key;
+  }
+  if (sexoValues.value.length > 0 && !selectedSexo.value) {
+    selectedSexo.value = sexoValues.value[0].key;
+  }
+  if (tipoContratacionValues.value.length > 0 && !selectedTipoContratacion.value) {
+    selectedTipoContratacion.value = tipoContratacionValues.value[0].key;
+  }
+  if (tipoPersonalValues.value.length > 0 && !selectedTipoPersonal.value) {
+    selectedTipoPersonal.value = tipoPersonalValues.value[0].key;
+  }
+  if (tipoJornadaValues.value.length > 0 && !selectedTipoJornada.value) {
+    selectedTipoJornada.value = tipoJornadaValues.value[0].key;
   }
 }, { immediate: true });
 
@@ -107,6 +167,26 @@ const selectedNivelAcademicoDetail = computed(() => {
   return props.questionReports.questionDetail.nivelAcademico[selectedNivelAcademico.value];
 });
 
+const selectedSexoDetail = computed(() => {
+  if (!props.questionReports?.questionDetail?.sexo || !selectedSexo.value) return null;
+  return props.questionReports.questionDetail.sexo[selectedSexo.value];
+});
+
+const selectedTipoContratacionDetail = computed(() => {
+  if (!props.questionReports?.questionDetail?.tipoContratacion || !selectedTipoContratacion.value) return null;
+  return props.questionReports.questionDetail.tipoContratacion[selectedTipoContratacion.value];
+});
+
+const selectedTipoPersonalDetail = computed(() => {
+  if (!props.questionReports?.questionDetail?.tipoPersonal || !selectedTipoPersonal.value) return null;
+  return props.questionReports.questionDetail.tipoPersonal[selectedTipoPersonal.value];
+});
+
+const selectedTipoJornadaDetail = computed(() => {
+  if (!props.questionReports?.questionDetail?.tipoJornada || !selectedTipoJornada.value) return null;
+  return props.questionReports.questionDetail.tipoJornada[selectedTipoJornada.value];
+});
+
 // Preguntas disponibles para cada tipo
 const estadoCivilQuestions = computed(() => {
   if (!selectedEstadoCivilDetail.value?.questions) return [];
@@ -121,6 +201,26 @@ const edadQuestions = computed(() => {
 const nivelAcademicoQuestions = computed(() => {
   if (!selectedNivelAcademicoDetail.value?.questions) return [];
   return Object.keys(selectedNivelAcademicoDetail.value.questions).sort((a, b) => parseInt(a) - parseInt(b));
+});
+
+const sexoQuestions = computed(() => {
+  if (!selectedSexoDetail.value?.questions) return [];
+  return Object.keys(selectedSexoDetail.value.questions).sort((a, b) => parseInt(a) - parseInt(b));
+});
+
+const tipoContratacionQuestions = computed(() => {
+  if (!selectedTipoContratacionDetail.value?.questions) return [];
+  return Object.keys(selectedTipoContratacionDetail.value.questions).sort((a, b) => parseInt(a) - parseInt(b));
+});
+
+const tipoPersonalQuestions = computed(() => {
+  if (!selectedTipoPersonalDetail.value?.questions) return [];
+  return Object.keys(selectedTipoPersonalDetail.value.questions).sort((a, b) => parseInt(a) - parseInt(b));
+});
+
+const tipoJornadaQuestions = computed(() => {
+  if (!selectedTipoJornadaDetail.value?.questions) return [];
+  return Object.keys(selectedTipoJornadaDetail.value.questions).sort((a, b) => parseInt(a) - parseInt(b));
 });
 
 // Datos para gráficos comparativos por pregunta
@@ -161,6 +261,22 @@ const edadQuestionChartData = computed(() => {
 
 const nivelAcademicoQuestionChartData = computed(() => {
   return createQuestionComparisonData(selectedNivelAcademicoDetail.value, nivelAcademicoQuestions.value);
+});
+
+const sexoQuestionChartData = computed(() => {
+  return createQuestionComparisonData(selectedSexoDetail.value, sexoQuestions.value);
+});
+
+const tipoContratacionQuestionChartData = computed(() => {
+  return createQuestionComparisonData(selectedTipoContratacionDetail.value, tipoContratacionQuestions.value);
+});
+
+const tipoPersonalQuestionChartData = computed(() => {
+  return createQuestionComparisonData(selectedTipoPersonalDetail.value, tipoPersonalQuestions.value);
+});
+
+const tipoJornadaQuestionChartData = computed(() => {
+  return createQuestionComparisonData(selectedTipoJornadaDetail.value, tipoJornadaQuestions.value);
 });
 
 // Datos procesados para gráfico de estado civil
@@ -598,6 +714,143 @@ const estadoCivilDistributionData = computed(() => {
   };
 });
 
+// Datos para gráfico de CF por grupo demográfico
+const cfComparisonData = computed(() => {
+  if (!props.questionReports) return null;
+
+  const datasets = [];
+  const labels = [];
+
+  // Estado Civil
+  if (props.questionReports.estadoCivil?.length) {
+    labels.push('Estado Civil');
+    datasets.push({
+      label: 'Estado Civil',
+      data: [props.questionReports.estadoCivil.reduce((sum, item) => sum + item.cf, 0) / props.questionReports.estadoCivil.length],
+      backgroundColor: '#4F46E5', // Indigo
+    });
+  }
+
+  // Edad
+  if (props.questionReports.edadDistribution) {
+    const validRanges = Object.values(props.questionReports.edadDistribution).filter(range => range.count > 0);
+
+    if (validRanges.length > 0) {
+      labels.push('Edad');
+      const avgCF = validRanges.reduce((sum, range) => sum + (range.analysis?.cf || 0), 0) / validRanges.length;
+      datasets.push({
+        label: 'Edad',
+        data: [avgCF],
+        backgroundColor: '#60A5FA', // Azul
+      });
+    }
+  }
+
+  // Nivel Académico
+  if (props.questionReports.nivelAcademico?.length) {
+    labels.push('Nivel Académico');
+    datasets.push({
+      label: 'Nivel Académico',
+      data: [props.questionReports.nivelAcademico.reduce((sum, item) => sum + item.cf, 0) / props.questionReports.nivelAcademico.length],
+      backgroundColor: '#8B5CF6', // Morado
+    });
+  }
+
+  // Sexo
+  if (props.questionReports.sexo?.length) {
+    labels.push('Sexo');
+    datasets.push({
+      label: 'Sexo',
+      data: [props.questionReports.sexo.reduce((sum, item) => sum + item.cf, 0) / props.questionReports.sexo.length],
+      backgroundColor: '#10B981', // Verde
+    });
+  }
+
+  // Tipo de Contratación
+  if (props.questionReports.tipoContratacion?.length) {
+    labels.push('Tipo de Contratación');
+    datasets.push({
+      label: 'Tipo de Contratación',
+      data: [props.questionReports.tipoContratacion.reduce((sum, item) => sum + item.cf, 0) / props.questionReports.tipoContratacion.length],
+      backgroundColor: '#EC4899', // Rosa
+    });
+  }
+
+  // Tipo de Personal
+  if (props.questionReports.tipoPersonal?.length) {
+    labels.push('Tipo de Personal');
+    datasets.push({
+      label: 'Tipo de Personal',
+      data: [props.questionReports.tipoPersonal.reduce((sum, item) => sum + item.cf, 0) / props.questionReports.tipoPersonal.length],
+      backgroundColor: '#F97316', // Naranja
+    });
+  }
+
+  // Tipo de Jornada
+  if (props.questionReports.tipoJornada?.length) {
+    labels.push('Tipo de Jornada');
+    datasets.push({
+      label: 'Tipo de Jornada',
+      data: [props.questionReports.tipoJornada.reduce((sum, item) => sum + item.cf, 0) / props.questionReports.tipoJornada.length],
+      backgroundColor: '#F59E0B', // Ámbar
+    });
+  }
+
+  return {
+    labels: labels,
+    datasets: datasets
+  };
+});
+
+// Opciones para gráficos de barras apiladas
+const stackedBarChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    x: {
+      stacked: true,
+    },
+    y: {
+      stacked: true,
+      beginAtZero: true
+    }
+  },
+  plugins: {
+    legend: {
+      position: 'top'
+    },
+    datalabels: {
+      color: '#FFFFFF',
+      font: {
+        weight: 'bold'
+      },
+      display: function(context) {
+        return context.dataset.data[context.dataIndex] > 0;
+      }
+    }
+  }
+};
+
+// Datos para distribución por sexo
+const sexoData = computed(() => {
+  if (!props.questionReports?.sexo?.length) return null;
+
+  const labels = props.questionReports.sexo.map(item => item.sexo);
+  const counts = props.questionReports.sexo.map(item => item.total);
+
+  return {
+    labels: labels,
+    datasets: [{
+      label: 'Distribución por Sexo',
+      data: counts,
+      backgroundColor: [
+        '#4F46E5', // Indigo
+        '#10B981', // Emerald
+      ]
+    }]
+  };
+});
+
 // Datos para gráfico de distribución de niveles de Edad
 const edadLevelDistributionData = computed(() => {
   if (!props.questionReports?.edadDistribution) return null;
@@ -687,83 +940,6 @@ const nivelAcademicoDistributionData = computed(() => {
     ]
   };
 });
-
-// Datos para gráfico de CF por grupo demográfico
-const cfComparisonData = computed(() => {
-  if (!props.questionReports) return null;
-
-  const datasets = [];
-  const labels = [];
-
-  // Estado Civil
-  if (props.questionReports.estadoCivil?.length) {
-    labels.push('Estado Civil');
-    datasets.push({
-      label: 'Estado Civil',
-      data: [props.questionReports.estadoCivil.reduce((sum, item) => sum + item.cf, 0) / props.questionReports.estadoCivil.length],
-      backgroundColor: '#4F46E5', // Indigo
-    });
-  }
-
-  // Edad
-  if (props.questionReports.edadDistribution) {
-    const validRanges = Object.values(props.questionReports.edadDistribution).filter(range => range.count > 0);
-
-    if (validRanges.length > 0) {
-      labels.push('Edad');
-      const avgCF = validRanges.reduce((sum, range) => sum + (range.analysis?.cf || 0), 0) / validRanges.length;
-      datasets.push({
-        label: 'Edad',
-        data: [avgCF],
-        backgroundColor: '#60A5FA', // Azul
-      });
-    }
-  }
-
-  // Nivel Académico
-  if (props.questionReports.nivelAcademico?.length) {
-    labels.push('Nivel Académico');
-    datasets.push({
-      label: 'Nivel Académico',
-      data: [props.questionReports.nivelAcademico.reduce((sum, item) => sum + item.cf, 0) / props.questionReports.nivelAcademico.length],
-      backgroundColor: '#8B5CF6', // Morado
-    });
-  }
-
-  return {
-    labels: labels,
-    datasets: datasets
-  };
-});
-
-// Opciones para gráficos de barras apiladas
-const stackedBarChartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  scales: {
-    x: {
-      stacked: true,
-    },
-    y: {
-      stacked: true,
-      beginAtZero: true
-    }
-  },
-  plugins: {
-    legend: {
-      position: 'top'
-    },
-    datalabels: {
-      color: '#FFFFFF',
-      font: {
-        weight: 'bold'
-      },
-      display: function(context) {
-        return context.dataset.data[context.dataIndex] > 0;
-      }
-    }
-  }
-};
 </script>
 
 <template>
@@ -1354,6 +1530,262 @@ const stackedBarChartOptions = {
                   }">
                 {{ selectedNivelAcademicoDetail.questions[question].cf }}
               </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Datos para distribución por sexo -->
+    <div v-if="questionReports?.sexo?.length" class="bg-white p-4 rounded-lg shadow">
+      <h3 class="text-lg font-semibold mb-4">Distribución por Sexo</h3>
+      <div class="h-96">
+        <Pie
+          v-if="sexoData"
+          :data="sexoData"
+          :options="chartOptions"
+          ref="sexoChart"
+        />
+      </div>
+
+      <!-- Análisis por Sexo (Distribución Niveles) -->
+      <div class="mt-6 h-96">
+        <h4 class="text-md font-semibold mb-2">Distribución de Niveles por Sexo</h4>
+        <Bar
+          v-if="sexoDistributionData"
+          :data="sexoDistributionData"
+          :options="stackedBarChartOptions"
+        />
+      </div>
+
+      <!-- Tabla de Sexo -->
+      <div class="mt-6 overflow-x-auto">
+        <h4 class="text-md font-semibold mb-2">Análisis por Sexo</h4>
+        <table class="min-w-full divide-y divide-gray-200 border">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">Sexo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Total</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nulo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Bajo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Medio</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Muy Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nu+Ba</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Me+Al+MA</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">CF*</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="(item, index) in sexoTableData?.datasets" :key="index">
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900 border">{{ item.sexo }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.total }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.nulo }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.bajo }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.medio }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.alto }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.muy_alto }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold">{{ item.nu_ba }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold">{{ item.me_al_ma }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold"
+                  :class="{
+                    'bg-green-700 text-white': item.cf >= 80,
+                    'bg-green-500 text-white': item.cf >= 70 && item.cf < 80,
+                    'bg-yellow-400': item.cf >= 60 && item.cf < 70,
+                    'bg-red-600 text-white': item.cf < 60
+                  }">{{ item.cf }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Datos para tipo de contratación -->
+    <div v-if="questionReports?.tipoContratacion?.length" class="bg-white p-4 rounded-lg shadow">
+      <h3 class="text-lg font-semibold mb-4">Distribución por Tipo de Contratación</h3>
+      <div class="h-96">
+        <Pie
+          v-if="tipoContratacionData"
+          :data="tipoContratacionData"
+          :options="chartOptions"
+          ref="tipoContratacionChart"
+        />
+      </div>
+
+      <!-- Análisis por Tipo de Contratación (Distribución Niveles) -->
+      <div class="mt-6 h-96">
+        <h4 class="text-md font-semibold mb-2">Distribución de Niveles por Tipo de Contratación</h4>
+        <Bar
+          v-if="tipoContratacionDistributionData"
+          :data="tipoContratacionDistributionData"
+          :options="stackedBarChartOptions"
+        />
+      </div>
+
+      <!-- Tabla de Tipo de Contratación -->
+      <div class="mt-6 overflow-x-auto">
+        <h4 class="text-md font-semibold mb-2">Análisis por Tipo de Contratación</h4>
+        <table class="min-w-full divide-y divide-gray-200 border">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">Tipo de Contratación</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Total</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nulo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Bajo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Medio</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Muy Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nu+Ba</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Me+Al+MA</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">CF*</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="(item, index) in tipoContratacionTableData?.datasets" :key="index">
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900 border">{{ item.tipo_contratacion }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.total }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.nulo }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.bajo }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.medio }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.alto }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.muy_alto }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold">{{ item.nu_ba }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold">{{ item.me_al_ma }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold"
+                  :class="{
+                    'bg-green-700 text-white': item.cf >= 80,
+                    'bg-green-500 text-white': item.cf >= 70 && item.cf < 80,
+                    'bg-yellow-400': item.cf >= 60 && item.cf < 70,
+                    'bg-red-600 text-white': item.cf < 60
+                  }">{{ item.cf }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Datos para tipo de personal -->
+    <div v-if="questionReports?.tipoPersonal?.length" class="bg-white p-4 rounded-lg shadow">
+      <h3 class="text-lg font-semibold mb-4">Distribución por Tipo de Personal</h3>
+      <div class="h-96">
+        <Pie
+          v-if="tipoPersonalData"
+          :data="tipoPersonalData"
+          :options="chartOptions"
+          ref="tipoPersonalChart"
+        />
+      </div>
+
+      <!-- Análisis por Tipo de Personal (Distribución Niveles) -->
+      <div class="mt-6 h-96">
+        <h4 class="text-md font-semibold mb-2">Distribución de Niveles por Tipo de Personal</h4>
+        <Bar
+          v-if="tipoPersonalDistributionData"
+          :data="tipoPersonalDistributionData"
+          :options="stackedBarChartOptions"
+        />
+      </div>
+
+      <!-- Tabla de Tipo de Personal -->
+      <div class="mt-6 overflow-x-auto">
+        <h4 class="text-md font-semibold mb-2">Análisis por Tipo de Personal</h4>
+        <table class="min-w-full divide-y divide-gray-200 border">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">Tipo de Personal</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Total</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nulo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Bajo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Medio</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Muy Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nu+Ba</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Me+Al+MA</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">CF*</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="(item, index) in tipoPersonalTableData?.datasets" :key="index">
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900 border">{{ item.tipo_personal }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.total }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.nulo }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.bajo }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.medio }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.alto }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.muy_alto }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold">{{ item.nu_ba }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold">{{ item.me_al_ma }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold"
+                  :class="{
+                    'bg-green-700 text-white': item.cf >= 80,
+                    'bg-green-500 text-white': item.cf >= 70 && item.cf < 80,
+                    'bg-yellow-400': item.cf >= 60 && item.cf < 70,
+                    'bg-red-600 text-white': item.cf < 60
+                  }">{{ item.cf }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Datos para tipo de jornada -->
+    <div v-if="questionReports?.tipoJornada?.length" class="bg-white p-4 rounded-lg shadow">
+      <h3 class="text-lg font-semibold mb-4">Distribución por Tipo de Jornada</h3>
+      <div class="h-96">
+        <Pie
+          v-if="tipoJornadaData"
+          :data="tipoJornadaData"
+          :options="chartOptions"
+          ref="tipoJornadaChart"
+        />
+      </div>
+
+      <!-- Análisis por Tipo de Jornada (Distribución Niveles) -->
+      <div class="mt-6 h-96">
+        <h4 class="text-md font-semibold mb-2">Distribución de Niveles por Tipo de Jornada</h4>
+        <Bar
+          v-if="tipoJornadaDistributionData"
+          :data="tipoJornadaDistributionData"
+          :options="stackedBarChartOptions"
+        />
+      </div>
+
+      <!-- Tabla de Tipo de Jornada -->
+      <div class="mt-6 overflow-x-auto">
+        <h4 class="text-md font-semibold mb-2">Análisis por Tipo de Jornada</h4>
+        <table class="min-w-full divide-y divide-gray-200 border">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">Tipo de Jornada</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Total</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nulo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Bajo</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Medio</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Muy Alto</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Nu+Ba</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Me+Al+MA</th>
+              <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">CF*</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="(item, index) in tipoJornadaTableData?.datasets" :key="index">
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900 border">{{ item.tipo_jornada }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.total }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.nulo }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.bajo }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.medio }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.alto }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border">{{ item.muy_alto }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold">{{ item.nu_ba }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold">{{ item.me_al_ma }}</td>
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-900 border font-bold"
+                  :class="{
+                    'bg-green-700 text-white': item.cf >= 80,
+                    'bg-green-500 text-white': item.cf >= 70 && item.cf < 80,
+                    'bg-yellow-400': item.cf >= 60 && item.cf < 70,
+                    'bg-red-600 text-white': item.cf < 60
+                  }">{{ item.cf }}</td>
             </tr>
           </tbody>
         </table>

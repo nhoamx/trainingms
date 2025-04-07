@@ -177,6 +177,99 @@
 
                     <!-- Tab de Interpretaciones -->
                     <div v-if="currentTab === 'interpretations'" class="space-y-6">
+            <!-- Gráficas de resultados -->
+            <div class="space-y-4">
+                <h3 class="text-lg font-semibold text-gray-900">Visualización de Resultados</h3>
+                <div class="grid grid-cols-1 gap-6">
+                    <!-- Gráfica de calificación final -->
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h4 class="text-md font-semibold text-gray-900 mb-4">Calificación Final</h4>
+                        <div class="relative pt-2">
+                            <div class="flex items-center mb-6">
+                                <div class="w-32 text-sm font-medium text-gray-700">Total</div>
+                                <div class="flex-1 h-8">
+                                    <div class="h-full flex items-center">
+                                        <div
+                                            class="h-full transition-all duration-500 ease-in-out rounded-r-sm flex items-center"
+                                            :class="getScoreColorClass(totalScore)"
+                                            :style="{ width: `${(totalScore / 200) * 100}%` }"
+                                        >
+                                            <span class="px-2 text-white font-bold">{{ totalScore }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Escala de interpretación -->
+                            <div class="mt-4 flex justify-between text-xs text-gray-500">
+                                <div class="text-center">
+                                    <div class="h-3 w-3 bg-green-500 inline-block"></div>
+                                    <div>Nulo (&lt;50)</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="h-3 w-3 bg-yellow-500 inline-block"></div>
+                                    <div>Bajo (50-74)</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="h-3 w-3 bg-orange-500 inline-block"></div>
+                                    <div>Medio (75-98)</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="h-3 w-3 bg-red-500 inline-block"></div>
+                                    <div>Alto (99-139)</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="h-3 w-3 bg-red-600 inline-block"></div>
+                                    <div>Muy alto (≥140)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfica de categorías -->
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h4 class="text-md font-semibold text-gray-900 mb-4">Puntaje por Categoría</h4>
+                        <div class="space-y-6">
+                            <div v-for="category in categoryScores" :key="category.name" class="flex items-center">
+                                <div class="w-56 pr-4 text-sm font-medium text-gray-700 truncate">{{ category.name }}</div>
+                                <div class="flex-1 h-6">
+                                    <div class="h-full flex items-center">
+                                        <div
+                                            class="h-full transition-all duration-500 ease-in-out rounded-r-sm flex items-center"
+                                            :class="getCategoryBarClass(category.name, category.score)"
+                                            :style="{ width: `${(category.score / getCategoryMaxScore(category.name)) * 100}%` }"
+                                        >
+                                            <span class="px-2 text-white text-xs font-bold">{{ category.score }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfica de dominios -->
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h4 class="text-md font-semibold text-gray-900 mb-4">Puntaje por Dominio</h4>
+                        <div class="space-y-4">
+                            <div v-for="domain in domainScores" :key="domain.name" class="flex items-center">
+                                <div class="w-56 pr-4 text-sm font-medium text-gray-700 truncate">{{ domain.name }}</div>
+                                <div class="flex-1 h-6">
+                                    <div class="h-full flex items-center">
+                                        <div
+                                            class="h-full transition-all duration-500 ease-in-out rounded-r-sm flex items-center"
+                                            :class="getDomainBarClass(domain.name, domain.score)"
+                                            :style="{ width: `${(domain.score / getDomainMaxScore(domain.name)) * 100}%` }"
+                                        >
+                                            <span class="px-2 text-white text-xs font-bold">{{ domain.score }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tabla de interpretación final -->
                         <div class="space-y-4">
                             <h3 class="text-lg font-semibold text-gray-900">Interpretación de Resultados Finales</h3>
@@ -882,6 +975,49 @@ const getGuideVTranslatedValue = (key, value) => {
     return guideVLabels[key]?.values[value] || value;
 };
 
+// Funciones para las gráficas
+const getScoreColorClass = (score) => {
+    if (score < 50) return 'bg-green-500';
+    if (score < 75) return 'bg-yellow-500';
+    if (score < 99) return 'bg-orange-500';
+    if (score < 140) return 'bg-red-500';
+    return 'bg-red-600';
+};
+
+const getCategoryMaxScore = (categoryName) => {
+    const range = categoryRanges[categoryName]?.muy_alto?.min;
+    // Multiplicamos por 1.2 para dar espacio visual en la gráfica
+    return range ? range * 1.2 : 100;
+};
+
+const getCategoryBarClass = (categoryName, score) => {
+    const ranges = categoryRanges[categoryName];
+    if (!ranges) return 'bg-gray-500';
+
+    if (score < ranges.nulo.max) return 'bg-green-500';
+    if (score < ranges.bajo.max) return 'bg-yellow-500';
+    if (score < ranges.medio.max) return 'bg-orange-500';
+    if (score < ranges.alto.max) return 'bg-red-500';
+    return 'bg-red-600';
+};
+
+const getDomainMaxScore = (domainName) => {
+    const range = domainRanges[domainName]?.muy_alto?.min;
+    // Multiplicamos por 1.2 para dar espacio visual en la gráfica
+    return range ? range * 1.2 : 100;
+};
+
+const getDomainBarClass = (domainName, score) => {
+    const ranges = domainRanges[domainName];
+    if (!ranges) return 'bg-gray-500';
+
+    if (score < ranges.nulo.max) return 'bg-green-500';
+    if (score < ranges.bajo.max) return 'bg-yellow-500';
+    if (score < ranges.medio.max) return 'bg-orange-500';
+    if (score < ranges.alto.max) return 'bg-red-500';
+    return 'bg-red-600';
+};
+
 // Definición de tabs
 const tabs = [
     { key: 'summary', label: 'Resumen' },
@@ -939,5 +1075,23 @@ td[rowspan] {
 
 .overflow-x-auto {
     overflow: visible;
+}
+
+/* Estilos para las gráficas */
+.transition-all {
+    transition-property: all;
+    transition-duration: 0.5s;
+}
+
+/* Efecto de hover para las barras de las gráficas */
+[class*="bg-"].transition-all:hover {
+    filter: brightness(110%);
+    transform: scaleX(1.01);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Bordes redondeados para las barras */
+.rounded-r-sm {
+    border-radius: 0 0.125rem 0.125rem 0;
 }
 </style>

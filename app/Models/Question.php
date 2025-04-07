@@ -11,6 +11,7 @@ class Question extends Model
 
     protected $fillable = [
         'evaluation_id',
+        'personal_id',
         'question',
         'answer',
         'domain_id',
