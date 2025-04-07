@@ -119,6 +119,7 @@ class PopulateQuestionsTable extends Command
             // Crear la pregunta
             Question::create([
                 'evaluation_id' => $evaluation->id,
+                'personal_id' => $evaluation->personal_id,
                 'question' => $questionKey,
                 'answer' => $answer,
                 'reference_guide' => $evaluation->reference_guide,
@@ -145,6 +146,7 @@ class PopulateQuestionsTable extends Command
             // Crear la pregunta
             Question::create([
                 'evaluation_id' => $evaluation->id,
+                'personal_id' => $evaluation->personal_id,
                 'question' => $questionKey,
                 'answer' => $answer,
                 'domain_id' => $dimensionInfo['domain_id'] ?? null,
@@ -169,6 +171,7 @@ class PopulateQuestionsTable extends Command
             // Crear la pregunta
             Question::create([
                 'evaluation_id' => $evaluation->id,
+                'personal_id' => $evaluation->personal_id,
                 'question' => $questionKey,
                 'answer' => $answer,
                 'reference_guide' => $evaluation->reference_guide,
@@ -189,6 +192,7 @@ class PopulateQuestionsTable extends Command
             // Crear la pregunta
             Question::create([
                 'evaluation_id' => $evaluation->id,
+                'personal_id' => $evaluation->personal_id,
                 'question' => $questionKey,
                 'answer' => $answer,
                 'reference_guide' => $evaluation->reference_guide,
