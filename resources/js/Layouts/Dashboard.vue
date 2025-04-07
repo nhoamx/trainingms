@@ -1,12 +1,4 @@
 <template>
-    <!--
-      This example requires updating your template:
-
-      ```
-      <html class="h-full bg-gray-100">
-      <body class="h-full">
-      ```
-    -->
     <div class="min-h-full">
         <Disclosure as="nav" class="bg-gray-800" v-slot="{ open }">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -103,7 +95,15 @@
                                 <transition enter-active-class="transition ease-out duration-100" enter-from-class="transform opacity-0 scale-95" enter-to-class="transform opacity-100 scale-100" leave-active-class="transition ease-in duration-75" leave-from-class="transform opacity-100 scale-100" leave-to-class="transform opacity-0 scale-95">
                                     <MenuItems class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-none">
                                         <MenuItem v-for="item in userNavigation" :key="item.name" v-slot="{ active }">
-                                            <a :href="item.href" :class="[active ? 'bg-gray-100 outline-none' : '', 'block px-4 py-2 text-sm text-gray-700']">{{ item.name }}</a>
+                                            <template v-if="item.method">
+                                                <form :action="item.href" method="post">
+                                                    <input type="hidden" name="_token" :value="csrfToken">
+                                                    <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-gray-700">{{ item.name }}</button>
+                                                </form>
+                                            </template>
+                                            <template v-else>
+                                                <a :href="item.href" :class="[active ? 'bg-gray-100 outline-none' : '', 'block px-4 py-2 text-sm text-gray-700']">{{ item.name }}</a>
+                                            </template>
                                         </MenuItem>
                                     </MenuItems>
                                 </transition>
@@ -182,24 +182,39 @@ import Notification from "../Components/Notification.vue";
 const page = usePage()
 
 const user = computed(() => page.props.auth.user)
+console.log(user.value)
 
 const title = computed(() => page.props.title || 'Dashboard');
 const action = computed(() => page.props.action || null);
 
-const navigation = [
-    { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
-    { name: 'Evaluaciones', href: '#', current: route().current('evaluations.*'), items: [
-        { name: 'Cargar resultados', href: route('evaluations.load'), current: route().current('evaluations.load') },
-        { name: 'Resultados', href: route('evaluations.index'), current: route().current('evaluations.index') },
-    ] },
-    { name: 'Organizaciones', href: '#', current: route().current('organizations.*'), items: [
-        { name: 'Listado', href: route('organizations.index'), current: route().current('organizations.index') },
-        { name: 'Crear', href: route('organizations.create'), current: route().current('organizations.create') },
-    ] },
-    { name: 'Usuarios', href: route('users.index'), current: route().current('users.index') },
-]
+const csrfToken = computed(() => page.props.csrf_token);
+
+const navigation = computed(() => {
+    // Check if user has organization role
+    const isOrganizationUser = user.value.roles?.some(role => role.name === 'organization');
+
+    if (isOrganizationUser) {
+        return [
+            { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
+        ];
+    }
+
+    return [
+        { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
+        { name: 'Evaluaciones', href: '#', current: route().current('evaluations.*'), items: [
+            { name: 'Cargar resultados', href: route('evaluations.load'), current: route().current('evaluations.load') },
+            { name: 'Resultados', href: route('evaluations.index'), current: route().current('evaluations.index') },
+        ] },
+        { name: 'Organizaciones', href: '#', current: route().current('organizations.*'), items: [
+            { name: 'Listado', href: route('organizations.index'), current: route().current('organizations.index') },
+            { name: 'Crear', href: route('organizations.create'), current: route().current('organizations.create') },
+        ] },
+        { name: 'Programar examen', href: route('quiz.index'), current: route().current('quiz.*') },
+        { name: 'Usuarios', href: route('users.index'), current: route().current('users.index') },
+    ];
+});
 const userNavigation = [
     { name: 'Editar', href: '#' },
-    { name: 'Cerrar sesión', href: '#' },
+    { name: 'Cerrar sesión', href: route('logout'), method: 'post' },
 ]
 </script>

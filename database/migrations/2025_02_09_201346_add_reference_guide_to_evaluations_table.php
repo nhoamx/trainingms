@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('evaluations', function (Blueprint $table) {
-            $table->string('reference_guide')->nullable(); // Agregar la columna reference_guide
+            $table->string('reference_guide')->after('folio')->nullable(); // Agregar la columna reference_guide
         });
     }
 

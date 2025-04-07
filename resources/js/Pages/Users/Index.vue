@@ -11,6 +11,20 @@ const { users } = defineProps({
     },
 });
 
+const userRole = (role) => {
+    console.log(role);
+    switch (role) {
+        case 'super-admin':
+            return 'Super Admin';
+        case 'admin':
+            return 'Administrador';
+        case 'organization':
+            return 'Organización';
+        default:
+            return 'Invitado';
+    }
+}
+
 </script>
 
 <template>
@@ -21,9 +35,16 @@ const { users } = defineProps({
                     <div class="flex-1 truncate">
                         <div class="flex items-center space-x-3">
                             <h3 class="truncate text-sm font-medium text-gray-900">{{ user.name }}</h3>
-                            <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">{{ user.roles[0].name }}</span>
+                            <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">{{ userRole(user.role) }}</span>
                         </div>
-                        <p class="mt-1 truncate text-sm text-gray-500">{{ user.organization ? `Empresa: `+ user.organization.name : 'Sin organización asignada' }}</p>
+                        <p class="mt-1 truncate text-sm text-gray-500">
+                            <span class="flex items-center gap-2">
+                                <img v-if="user.organization?.logo" :src="user.organization.logo" alt="Logo" class="h-4 w-4 object-contain" />
+                                <div>
+                                    {{ user.organization.name }} <template v-if="user.temporal_password"> | Contraseña temporal: <span class="font-medium">{{ user.temporal_password }}</span></template>
+                                </div>
+                            </span>
+                        </p>
                     </div>
                 </div>
                 <div>

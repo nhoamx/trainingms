@@ -2,7 +2,11 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EvaluationController;
+use App\Http\Controllers\QuizController;
+use App\Http\Controllers\ResultsController;
+use App\Http\Controllers\TestController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PeopleListController;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -23,19 +27,54 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // API route for raw answer distribution by category
+    Route::get('/dashboard/report/category-answer-distribution/{categoryId}', [DashboardController::class, 'getCategoryAnswerDistribution'])
+        ->name('dashboard.report.categoryAnswerDistribution');
+
+    Route::get('/dashboard/report/domain-answer-distribution/{domainId}', [DashboardController::class, 'getDomainAnswerDistribution'])
+        ->name('dashboard.report.domainAnswerDistribution');
+
+    // API routes for detail charts
+    Route::get('/dashboard/report/dimension-answer-distribution/{dimensionId}', [DashboardController::class, 'getDimensionAnswerDistribution'])
+        ->name('dashboard.report.dimensionAnswerDistribution');
+
+    // API route for dimension qualifications (loaded when domain is selected)
+    Route::get('/dashboard/report/dimension-qualifications/{domainId}', [DashboardController::class, 'getDimensionQualifications'])
+        ->name('dashboard.report.dimensionQualifications');
+
+    // Web Route for Category People List Page
+    Route::get('/reports/people-list/{categoryId}/{answerKey}', [PeopleListController::class, 'show'])
+        ->name('reports.peopleList');
+
+    // NEW Web Route for Domain People List Page
+    Route::get('/reports/people-list-domain/{domainId}/{answerKey}', [PeopleListController::class, 'showDomainList'])
+        ->name('reports.peopleListDomain');
+
+    // NEW Web Route for Dimension People List Page
+    Route::get('/reports/people-list-dimension/{dimensionId}/{answerKey}', [PeopleListController::class, 'showDimensionList'])
+        ->name('reports.peopleListDimension');
+
+    // NEW Web Route for Demographic People List Page
+    Route::get('/reports/people-list-demographic/{fieldKey}/{identifier}', [PeopleListController::class, 'showDemographicList'])
+        ->name('reports.peopleListDemographic');
+
     // Perfil
     Route::get('/perfil', [UserController::class, 'showProfile'])->name('profile');
     Route::post('/perfil', [UserController::class, 'updateProfile']);
 
-    // Rutas para Company
-    Route::get('/reportes', [DashboardController::class, 'companyReports'])->name('company.reports');
+    // Rutas accesibles para usuarios de organización y administradores
+    Route::get('/organizacion/{organization}/resultados', [ResultsController::class, 'listResults'])
+        ->name('organization.results.list')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::get('/organizacion/{organization}/resultados/{evaluation}', [ResultsController::class, 'showDetailedResults'])
+        ->name('organization.results.detail')
+        ->middleware('can:view-organization-results,organization');
 
     // Rutas para Admin y Super Admin
     Route::middleware(['role:admin|super-admin'])->group(function () {
 
-        //Route::get('/evaluaciones', [DashboardController::class, 'evaluations'])->name('evaluations.index');
         Route::post('/evaluaciones/upload-files', [DashboardController::class, 'uploadFiles'])->name('evaluations.uploadFiles');
-        //Route::get('/evaluaciones/resultados', [DashboardController::class, 'evaluationResults'])->name('evaluations.results');
 
         Route::controller(EvaluationController::class)
             ->prefix('/evaluaciones')
@@ -60,6 +99,20 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/{organization}/restore', 'restore')->name('organizations.restore')->withTrashed();
         });
 
+        Route::controller(ResultsController::class)->prefix('/resultados')->group(function() {
+            Route::get('/', 'index')->name('results.index');
+            Route::get('/{organization}', 'organizationResults')->name('results.organization');
+        });
+
+        Route::controller(QuizController::class)->prefix('/examenes')->name('quiz.')->group(function() {
+            Route::get('/', 'index')->name('index');
+            Route::get('/create', 'create')->name('create');
+            Route::post('/store', 'store')->name('store');
+            Route::get('/{test}/edit', 'edit')->name('edit');
+            Route::put('/{test}', 'update')->name('update');
+            Route::delete('/{test}', 'destroy')->name('destroy');
+        });
+
         Route::controller(UserController::class)
             ->prefix('/usuarios')
             ->group(function() {
@@ -67,9 +120,6 @@ Route::middleware(['auth'])->group(function () {
                 Route::get('/create', 'create')->name('users.create');
                 Route::get('/{user}/edit', 'edit')->name('users.edit');
             });
-
-
-
 
         Route::post('/usuarios', [UserController::class, 'store'])->name('users.store');
 
@@ -95,5 +145,15 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
+    Route::prefix('quizzes')->group(function () {
+        Route::get('/', [QuizController::class, 'index'])->name('quizzes.index');
+        Route::post('/', [QuizController::class, 'store'])->name('quizzes.store');
+        Route::post('/{quiz}/toggle', [QuizController::class, 'toggle'])->name('quizzes.toggle');
+    });
+
 });
+
+// Ruta pública para acceder al examen temporal
+Route::get('/q/{tempUrl}', [QuizController::class, 'showTemp'])->name('quiz.temp');
+Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])->name('quiz.submit');
 

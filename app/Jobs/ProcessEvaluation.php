@@ -135,12 +135,23 @@ class ProcessEvaluation implements ShouldQueue
                 continue;
             }
             // Extraer datos:
-            // - document_id: los dos primeros dígitos (o ajusta la lógica según evolucione el requisito)
+            // - document_id: los dos primeros dígitos
             $documentId = substr($baseName, 0, 2);
-            // - folio: los últimos 4 dígitos
-            $folio = substr($baseName, -4);
-            // - organization: lo que quede en el medio
+            // - organization: los dígitos del medio después del document_id
             $organizationNumber = substr($baseName, 2, strlen($baseName) - 2 - 4);
+            // - personal_id: los últimos 4 dígitos
+            $personalId = substr($baseName, -4);
+
+            // Validar que el personal_id sea numérico y tenga 4 dígitos
+            if (!is_numeric($personalId) || strlen($personalId) !== 4) {
+                Log::error("Job - personal_id inválido para el archivo: " . $baseName);
+                continue;
+            }
+
+            Log::info("Job - Procesando archivo con personal_id: " . $personalId);
+
+            // El folio es el número completo del documento
+            $folio = $baseName;
 
             // Buscar la organización según el folio de la organización
             $organization = Organization::where('folio_organization', $organizationNumber)->first();
@@ -171,10 +182,13 @@ class ProcessEvaluation implements ShouldQueue
                 $evaluation = Evaluation::create([
                     'document_id'    => $documentId,
                     'folio'          => $folio,
+                    'personal_id'    => $personalId,
                     'organization_id'=> $organization ? $organization->id : null,
                     'data'           => $data,
                     'reference_guide'=> $referenceGuide, // Asignar la guía de referencia
                 ]);
+
+                Log::info("Job - Evaluation creada con personal_id: " . $evaluation->personal_id);
 
                 foreach ($data as $questionKey => $answer) {
                     // Ignorar respuestas nulas

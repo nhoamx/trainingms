@@ -23,7 +23,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'is_disabled'
+        'is_disabled',
+        'temporal_password'
     ];
 
     /**
