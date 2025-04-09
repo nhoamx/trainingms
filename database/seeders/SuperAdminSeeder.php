@@ -17,6 +17,8 @@ class SuperAdminSeeder extends Seeder
         // Crear el rol de Super Admin
         $role = Role::firstOrCreate(['name' => 'super-admin']);
 
+        $admin = Role::firstOrCreate(['name' => 'admin']);
+
         // Crear un usuario con rol de Super Admin
         $user = User::firstOrCreate(
             ['email' => 'alfredo@nhoamx.com'], // Cambiar por el correo deseado
@@ -28,5 +30,14 @@ class SuperAdminSeeder extends Seeder
 
         // Asignar el rol al usuario
         $user->assignRole($role);
+
+        $adminUser = User::firstOrCreate(
+            ['email' => 'jaime@trainingyms.com'],
+            [
+                'name' => 'Jaime',
+                'password' => bcrypt('password'), // Cambiar por una contraseña segura
+            ]
+        );
+        $adminUser->assignRole($admin);
     }
 }
