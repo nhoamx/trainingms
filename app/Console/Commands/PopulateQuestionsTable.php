@@ -116,16 +116,20 @@ class PopulateQuestionsTable extends Command
                 continue;
             }
 
-            // Crear la pregunta
-            Question::create([
-                'evaluation_id' => $evaluation->id,
-                'personal_id' => $evaluation->personal_id,
-                'question' => $questionKey,
-                'answer' => $answer,
-                'reference_guide' => $evaluation->reference_guide,
-                // Nota: domain_id, dimension_id, category_id se pueden agregar
-                // cuando se defina la estructura de categorización
-            ]);
+            // Buscar o crear la pregunta
+            Question::firstOrCreate(
+                [
+                    'evaluation_id' => $evaluation->id,
+                    'question' => $questionKey,
+                ],
+                [
+                    'personal_id' => $evaluation->personal_id,
+                    'answer' => $answer,
+                    'reference_guide' => $evaluation->reference_guide,
+                    // Nota: domain_id, dimension_id, category_id se pueden agregar
+                    // cuando se defina la estructura de categorización
+                ]
+            );
         }
     }
 
@@ -143,18 +147,22 @@ class PopulateQuestionsTable extends Command
             // Obtener información sobre la dimensión/dominio/categoría
             $dimensionInfo = $this->getDimensionInfo($questionKey, $evaluation->reference_guide);
 
-            // Crear la pregunta
-            Question::create([
-                'evaluation_id' => $evaluation->id,
-                'personal_id' => $evaluation->personal_id,
-                'question' => $questionKey,
-                'answer' => $answer,
-                'domain_id' => $dimensionInfo['domain_id'] ?? null,
-                'dimension_id' => $dimensionInfo['dimension_id'] ?? null,
-                'category_id' => $dimensionInfo['category_id'] ?? null,
-                'value' => $this->getValueForAnswer($answer, $evaluation->reference_guide),
-                'reference_guide' => $evaluation->reference_guide,
-            ]);
+            // Buscar o crear la pregunta
+            Question::firstOrCreate(
+                [
+                    'evaluation_id' => $evaluation->id,
+                    'question' => $questionKey,
+                ],
+                [
+                    'personal_id' => $evaluation->personal_id,
+                    'answer' => $answer,
+                    'domain_id' => $dimensionInfo['domain_id'] ?? null,
+                    'dimension_id' => $dimensionInfo['dimension_id'] ?? null,
+                    'category_id' => $dimensionInfo['category_id'] ?? null,
+                    'value' => $this->getValueForAnswer($answer, $evaluation->reference_guide),
+                    'reference_guide' => $evaluation->reference_guide,
+                ]
+            );
         }
     }
 
@@ -168,14 +176,18 @@ class PopulateQuestionsTable extends Command
                 continue;
             }
 
-            // Crear la pregunta
-            Question::create([
-                'evaluation_id' => $evaluation->id,
-                'personal_id' => $evaluation->personal_id,
-                'question' => $questionKey,
-                'answer' => $answer,
-                'reference_guide' => $evaluation->reference_guide,
-            ]);
+            // Buscar o crear la pregunta
+            Question::firstOrCreate(
+                [
+                    'evaluation_id' => $evaluation->id,
+                    'question' => $questionKey,
+                ],
+                [
+                    'personal_id' => $evaluation->personal_id,
+                    'answer' => $answer,
+                    'reference_guide' => $evaluation->reference_guide,
+                ]
+            );
         }
     }
 
@@ -189,14 +201,18 @@ class PopulateQuestionsTable extends Command
                 continue;
             }
 
-            // Crear la pregunta
-            Question::create([
-                'evaluation_id' => $evaluation->id,
-                'personal_id' => $evaluation->personal_id,
-                'question' => $questionKey,
-                'answer' => $answer,
-                'reference_guide' => $evaluation->reference_guide,
-            ]);
+            // Buscar o crear la pregunta
+            Question::firstOrCreate(
+                [
+                    'evaluation_id' => $evaluation->id,
+                    'question' => $questionKey,
+                ],
+                [
+                    'personal_id' => $evaluation->personal_id,
+                    'answer' => $answer,
+                    'reference_guide' => $evaluation->reference_guide,
+                ]
+            );
         }
     }
 
