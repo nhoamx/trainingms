@@ -1,5 +1,6 @@
 from pdf2image import convert_from_path
 import os
+from PyPDF2 import PdfReader
 
 class PDFToImageConverter:
     def __init__(self, pdf_path, output_folder="output_images", dpi=300):
@@ -21,12 +22,15 @@ class PDFToImageConverter:
         Convierte el PDF en imágenes y las guarda en la carpeta de salida.
         :return: Lista de rutas de las imágenes generadas.
         """
-        images = convert_from_path(self.pdf_path, dpi=self.dpi)
         image_paths = []
-        
-        for i, image in enumerate(images):
-            image_path = os.path.join(self.output_folder, f"page_{i + 1}.png")
-            image.save(image_path, "PNG")
+
+        # Obtener número total de páginas del PDF
+        total_pages = len(PdfReader(self.pdf_path).pages)
+
+        for i in range(1, total_pages + 1):
+            images = convert_from_path(self.pdf_path, dpi=self.dpi, first_page=i, last_page=i)
+            image_path = os.path.join(self.output_folder, f"page_{i}.png")
+            images[0].save(image_path, "PNG")
             image_paths.append(image_path)
             
         return image_paths
