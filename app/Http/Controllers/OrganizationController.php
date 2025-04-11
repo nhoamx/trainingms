@@ -131,5 +131,13 @@ class OrganizationController extends Controller
             ]);
     }
 
-
+    // Method to provide a list of organizations for dropdowns
+    public function listForDropdown()
+    {
+        $organizations = Organization::select('id', 'name')
+                                        ->whereNull('deleted_at')
+                                        ->orderBy('name')
+                                        ->get();
+        return response()->json($organizations);
+    }
 }

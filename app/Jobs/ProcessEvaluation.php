@@ -13,6 +13,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Support\Facades\Artisan;
 
 class ProcessEvaluation implements ShouldQueue
 {
@@ -156,7 +157,23 @@ class ProcessEvaluation implements ShouldQueue
             // Buscar la organización según el folio de la organización
             $organization = Organization::where('folio_organization', $organizationNumber)->first();
             if (!$organization) {
-                Log::warning("Job - No se encontró organización para el número: " . $organizationNumber);
+                Log::warning("Job - No se encontró organización para el número: " . $organizationNumber . ". Creando una nueva.");
+                // Si no existe, crearla
+                try {
+                    $organization = Organization::create([
+                        'name' => 'Organización ' . $organizationNumber, // Usamos el número como nombre
+                        'folio_organization' => $organizationNumber,
+                        // Puedes añadir valores por defecto para otros campos requeridos aquí
+                        // 'field_name' => 'default_value',
+                    ]);
+                    Log::info("Job - Nueva organización creada con ID: " . $organization->id);
+                } catch (\Exception $e) {
+                    Log::error("Job - Error al crear la organización para el número {$organizationNumber}: " . $e->getMessage());
+                    // Si hay error al crear la organización, podemos decidir si continuar
+                    // sin organization_id o detener el procesamiento para este archivo.
+                    // Por ahora, continuaremos sin organization_id (se asignará null más adelante).
+                    $organization = null; // Aseguramos que organization sea null para el guardado
+                }
             }
 
             // Leer el contenido del archivo JSON
@@ -233,10 +250,28 @@ class ProcessEvaluation implements ShouldQueue
             }
         }
 
+        // Una vez procesados todos los archivos JSON, ejecutar el comando para poblar Questions
+        try {
+            Log::info('Job - Ejecutando comando questions:populate...');
+            Artisan::call('questions:populate');
+            Log::info('Job - Comando questions:populate finalizado.');
+        } catch (\Exception $e) {
+            Log::error('Job - Error al ejecutar questions:populate: ' . $e->getMessage());
+            // Decidir si el fallo en poblar questions debe marcar el job como fallido
+            // Por ahora, solo lo registramos y continuamos para marcar el job principal como exitoso.
+            broadcast(new EvaluationProcessingStatusChanged(
+                'error',
+                'Error al poblar la tabla de preguntas después del procesamiento.',
+                false
+            ));
+            // Podrías querer retornar aquí o lanzar una excepción si este paso es crítico
+            // return;
+        }
+
         // Broadcast completion status
         broadcast(new EvaluationProcessingStatusChanged(
             'finished',
-            'El procesamiento ha finalizado exitosamente',
+            'El procesamiento ha finalizado exitosamente', // O actualizar mensaje si questions:populate falló
             false
         ));
     }

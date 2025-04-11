@@ -58,6 +58,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports/people-list-demographic/{fieldKey}/{identifier}', [PeopleListController::class, 'showDemographicList'])
         ->name('reports.peopleListDemographic');
 
+    // API Route to get organization list for dropdowns
+    Route::get('/api/organizations-list', [\App\Http\Controllers\OrganizationController::class, 'listForDropdown'])
+        ->name('api.organizations.list');
+
     // Perfil
     Route::get('/perfil', [UserController::class, 'showProfile'])->name('profile');
     Route::post('/perfil', [UserController::class, 'updateProfile']);
@@ -88,6 +92,10 @@ Route::middleware(['auth'])->group(function () {
         // Nueva ruta dedicada para evaluaciones por organización
         Route::get('/organizaciones/{organization}/evaluaciones', [EvaluationController::class, 'organizationEvaluations'])
             ->name('organizations.evaluations');
+
+        // Nueva ruta POST para reasignar evaluaciones
+        Route::post('/organizaciones/{organization}/evaluations/reassign', [EvaluationController::class, 'reassignEvaluations'])
+            ->name('organizations.evaluations.reassign');
 
         Route::controller(\App\Http\Controllers\OrganizationController::class)->prefix('/organizaciones')->group(function() {
             Route::get('/', 'index')->name('organizations.index');
@@ -156,4 +164,3 @@ Route::middleware(['auth'])->group(function () {
 // Ruta pública para acceder al examen temporal
 Route::get('/q/{tempUrl}', [QuizController::class, 'showTemp'])->name('quiz.temp');
 Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])->name('quiz.submit');
-
