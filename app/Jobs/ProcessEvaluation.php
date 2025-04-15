@@ -268,6 +268,18 @@ class ProcessEvaluation implements ShouldQueue
             // return;
         }
 
+        // Al final del método handle() de tu Job:
+        $evaluationsPath = storage_path('app/public/evaluations');
+        try {
+            $files = File::files($evaluationsPath);
+            foreach ($files as $file) {
+                File::delete($file);
+            }
+            Log::info("Job - Carpeta de evaluations limpiada tras el procesamiento.");
+        } catch (\Exception $e) {
+            Log::error("Job - Error al limpiar carpeta evaluations: " . $e->getMessage());
+        }
+
         // Broadcast completion status
         broadcast(new EvaluationProcessingStatusChanged(
             'finished',
