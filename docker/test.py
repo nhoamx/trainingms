@@ -58,9 +58,9 @@ def draw_bubble_positions(img_path, bubble_positions, output_path):
     cv2.imwrite(output_path, img)
 
 # Run the function with an image path
-img_path = 'test_reference_3.png'
+img_path = 'test_1.png'
 folio = config.folio_configuration
-evaluation_01 = config.reference_i
+evaluation_01 = config.evaluation_01
 
 results = detect_bubbles(img_path, evaluation_01)
 draw_bubble_positions(img_path, evaluation_01, 'output/output_with_bubbles.png')

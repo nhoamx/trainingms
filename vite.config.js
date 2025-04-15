@@ -1,8 +1,19 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
+import fs from 'fs';
 
 export default defineConfig({
+    server: {
+        https: {
+            key: fs.readFileSync('/Users/alfredo/Library/Application Support/Herd/config/valet/Certificates/trainingms.test.key'),
+            cert: fs.readFileSync('/Users/alfredo/Library/Application Support/Herd/config/valet/Certificates/trainingms.test.crt'),
+        },
+        cors: {
+            origin: 'https://trainingms.test',
+            credentials: true,
+        }
+    },
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.js'],

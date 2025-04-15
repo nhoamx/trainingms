@@ -23,6 +23,9 @@ yarn-error.log
 /.zed
 /docker/output
 /docker/output_images
+/docker/output_original
+/docker/outputs_aligned
 /docker/.idea
 /docker/log.log
 /docker/__pycache__/
+.DS_Store

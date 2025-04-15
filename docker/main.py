@@ -45,12 +45,19 @@ def get_main_answers(image_file, detector, evaluation_config, folio):
     except Exception as e:
         print(f"Error procesando {image_file}: {e}")
 
-# Limpieza de la carpeta de imágenes de salida
-if os.path.exists(output_folder):
-    if os.listdir(output_folder):
-        print(f"{output_folder} no está vacío. Vaciando la carpeta...")
-        shutil.rmtree(output_folder)
-os.makedirs(output_folder, exist_ok=True)
+# Limpieza de las carpetas de salida (output, outputs_aligned, output_original)
+def limpiar_carpeta(path):
+    import shutil, os
+    if os.path.exists(path):
+        if os.listdir(path):
+            print(f"{path} no está vacío. Vaciando la carpeta...")
+            shutil.rmtree(path)
+    os.makedirs(path, exist_ok=True)
+
+limpiar_carpeta(output_folder)
+limpiar_carpeta(output_json_folder)
+limpiar_carpeta("/app/outputs_aligned")
+limpiar_carpeta("/app/output_original")
 
 # Convertir PDF en imágenes
 print(f"La carpeta {output_folder} está vacía. Convirtiendo PDF en imágenes...")
@@ -64,21 +71,78 @@ detector = BubbleDetector()
 
 # Procesar cada imagen generada
 print("Procesando imágenes y detectando folios...")
-for image_file in image_files:
-    print(f"===============================")
-    print(f"Procesando imagen: {image_file}")
+import cv2
+import logging
+from alinear_con_marcadores import detectar_marcadores, alinear_imagen, IDEAL_POSITIONS, LABELS
 
-    # Detectar el folio a partir de la imagen
+# Configurar logging
+#logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+
+# Cargar la imagen de referencia una sola vez
+ref_img = cv2.imread("/app/reference-test-page.png")  # Cambia por tu imagen de referencia real
+ref_marcadores = detectar_marcadores(ref_img, debug_path=None, n_points=6)
+ref_esquinas = [ref_marcadores[0], ref_marcadores[1], ref_marcadores[4], ref_marcadores[5]]
+
+aligned_image_files = []
+outputs_aligned_folder = "/app/outputs_aligned"
+output_original_folder = "/app/output_original"
+os.makedirs(outputs_aligned_folder, exist_ok=True)
+os.makedirs(output_original_folder, exist_ok=True)
+
+for image_file in image_files:
+#    logging.info("==============================")
+#    logging.info(f"Procesando imagen: {image_file}")
+    try:
+        # Guardar copia de la imagen original
+        original_save_path = os.path.join(output_original_folder, os.path.basename(image_file))
+        if not os.path.exists(original_save_path):
+            import shutil
+            shutil.copy(image_file, original_save_path)
+#            logging.info(f"Imagen original guardada en: {original_save_path}")
+        # --- Paso 1: Alinear la imagen ---
+        img = cv2.imread(image_file)
+        img_marcadores = detectar_marcadores(img, debug_path=None, n_points=6)
+        img_esquinas = [img_marcadores[0], img_marcadores[1], img_marcadores[4], img_marcadores[5]]
+        alineada = alinear_imagen(img, ref_esquinas, img_esquinas, (ref_img.shape[1], ref_img.shape[0]))
+        aligned_filename = os.path.basename(image_file).replace(".png", "_aligned.png")
+        aligned_save_path = os.path.join(outputs_aligned_folder, aligned_filename)
+        cv2.imwrite(aligned_save_path, alineada)
+#        logging.info(f"Imagen alineada guardada en: {aligned_save_path}")
+        aligned_image_files.append(aligned_save_path)
+    except Exception as e:
+#        logging.warning(f"No se pudo alinear {image_file}: {e}. Se omite esta imagen.")
+        continue
+
+# --- El resto del pipeline usa las imágenes alineadas ---
+for image_file in aligned_image_files:
+#    logging.info(f"Procesando imagen alineada: {image_file}")
+
+    # Detectar el folio a partir de la imagen alineada
     folio = detect_folio(image_file, detector)
 
-    # Renombrar la imagen utilizando el folio (se asume formato PNG)
+    # Validar que el folio inicie con 12, 13 o 17
+    if not (folio.startswith('12') or folio.startswith('13') or folio.startswith('17')):
+#        logging.warning(f"Imagen {image_file} skipeada: folio '{folio}' no inicia con 12, 13 o 17.")
+        continue
+
+    # Guardar la imagen alineada con el folio en output_images
     new_image_path = os.path.join(output_folder, f"{folio}.png")
     try:
-        os.rename(image_file, new_image_path)
-        print(f"Imagen renombrada a: {new_image_path}")
+        import shutil
+        shutil.copy(image_file, new_image_path)
+#        logging.info(f"Imagen alineada copiada y guardada como: {new_image_path}")
     except Exception as e:
-        print(f"Error renombrando {image_file} a {new_image_path}: {e}")
-        new_image_path = image_file  # Continuar con el nombre original en caso de error
+#        logging.error(f"No se pudo copiar {image_file} a {new_image_path}: {e}")
+        continue
+
+    # --- Limpiar archivos page_#.png de output_images y dejar solo los {folio}.png ---
+    import glob
+    page_pattern = os.path.join(output_folder, "page_*.png")
+    for page_file in glob.glob(page_pattern):
+        try:
+            os.remove(page_file)
+        except Exception as e:
+            pass  # O puedes loguear el error si lo deseas
 
     # Seleccionar la configuración de evaluación según el prefijo del folio
     if folio.startswith("12"):
