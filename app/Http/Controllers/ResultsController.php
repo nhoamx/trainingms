@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Organization;
 use App\Models\Category;
 use App\Models\Evaluation;
+use App\Models\Question;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -113,6 +114,7 @@ class ResultsController extends Controller
         // Obtener resultados de otras guías si estamos viendo la guía III
         $guideIResults = null;
         $guideVResults = null;
+        $guideIIIResults = null;
 
         if ($evaluation->reference_guide === 'III') {
             // Buscar la evaluación más reciente de la guía I para el mismo personal_id
@@ -139,13 +141,23 @@ class ResultsController extends Controller
                 ->first();
 
             if ($guideVResults) {
+                $questions = $guideVResults->questions()->select('id', 'question', 'answer')->get();
                 $guideVResults = [
                     'id' => $guideVResults->id,
                     'folio' => $guideVResults->folio,
                     'created_at' => $guideVResults->created_at->format('Y-m-d H:i:s'),
-                    'answers' => $guideVResults->data
+                    'questions' => $questions
                 ];
             }
+
+            // Obtener las preguntas y respuestas de la guía III (actual)
+            $questions = $evaluation->questions()->select('id', 'question', 'answer')->get();
+            $guideIIIResults = [
+                'id' => $evaluation->id,
+                'folio' => $evaluation->folio,
+                'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
+                'questions' => $questions
+            ];
         }
 
         $results = Category::with(['domains.dimensions.answers' => function($query) use ($evaluation) {
@@ -215,7 +227,82 @@ class ResultsController extends Controller
             ],
             'results' => $results,
             'guideIResults' => $guideIResults,
-            'guideVResults' => $guideVResults
+            'guideVResults' => $guideVResults,
+            'guideIIIResults' => $guideIIIResults
+        ]);
+    }
+
+    /**
+     * Actualiza la respuesta de una pregunta de la Guía de Referencia V.
+     *
+     * @param Request $request
+     * @param Evaluation $evaluation
+     * @param string $question
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateGuideVQuestion(Request $request, Evaluation $evaluation, Question $question)
+    {
+        // Validar que la evaluación sea de la guía V
+        if ($evaluation->reference_guide !== 'V') {
+            return response()->json(['error' => 'La evaluación no pertenece a la Guía de Referencia V'], 400);
+        }
+
+        // Validar que la pregunta pertenezca a esta evaluación
+        if ($question->evaluation_id !== $evaluation->id) {
+            return response()->json(['error' => 'La pregunta no pertenece a esta evaluación'], 400);
+        }
+
+        // Validar datos de entrada
+        $validated = $request->validate([
+            'answer' => 'required|string|max:1000',
+        ]);
+
+        // Actualizar la respuesta
+        $question->update([
+            'answer' => $validated['answer']
+        ]);
+
+        return redirect()->back()->with([
+            'success' => true,
+            'message' => 'Respuesta actualizada correctamente',
+            'question' => $question->only('id', 'question', 'answer')
+        ]);
+    }
+    
+    /**
+     * Actualiza la respuesta de una pregunta de la Guía de Referencia III.
+     *
+     * @param Request $request
+     * @param Evaluation $evaluation
+     * @param Question $question
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function updateGuideIIIQuestion(Request $request, Evaluation $evaluation, Question $question)
+    {
+        // Validar que la evaluación sea de la guía III
+        if ($evaluation->reference_guide !== 'III') {
+            return response()->json(['error' => 'La evaluación no pertenece a la Guía de Referencia III'], 400);
+        }
+
+        // Validar que la pregunta pertenezca a esta evaluación
+        if ($question->evaluation_id !== $evaluation->id) {
+            return response()->json(['error' => 'La pregunta no pertenece a esta evaluación'], 400);
+        }
+
+        // Validar datos de entrada
+        $validated = $request->validate([
+            'answer' => 'required|string|max:1000',
+        ]);
+
+        // Actualizar la respuesta
+        $question->update([
+            'answer' => $validated['answer']
+        ]);
+
+        return redirect()->back()->with([
+            'success' => true,
+            'message' => 'Respuesta actualizada correctamente',
+            'question' => $question->only('id', 'question', 'answer')
         ]);
     }
 }

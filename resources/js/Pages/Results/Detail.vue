@@ -486,9 +486,82 @@
                         </div>
                     </div>
 
+                    <!-- Tab de Guía III -->
+                    <div v-if="currentTab === 'guide_iii'" class="space-y-4">
+                        <div v-if="guideIIIResults" class="space-y-4">
+                            <!-- Información del encabezado -->
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Fecha:</span>
+                                <span class="font-medium">{{ guideIIIResults.created_at }}</span>
+                            </div>
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-gray-600">Folio:</span>
+                                <span class="font-medium">{{ guideIIIResults.folio }}</span>
+                            </div>
+                            
+                            <!-- Preguntas y respuestas -->
+                            <div v-if="guideIIIResults.questions && guideIIIResults.questions.length" class="mb-6">
+                                <h3 class="text-lg font-semibold mb-4 text-gray-900">Preguntas y respuestas de la Guía de Referencia III</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pregunta</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Respuesta</th>
+                                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            <tr v-for="(q, idx) in guideIIIResults.questions" :key="idx" class="hover:bg-gray-50">
+                                                <td class="px-6 py-4 whitespace-pre-line text-sm text-gray-900">{{ q.question }}</td>
+                                                <td class="px-6 py-4 text-sm text-gray-900">
+                                                    <div v-if="editingQuestionIdx === idx && currentEditingGuide === 'III'" class="flex items-center space-x-2">
+                                                        <textarea 
+                                                            v-model="editingAnswer" 
+                                                            class="border border-gray-300 rounded px-3 py-2 w-full"
+                                                            rows="3"
+                                                        ></textarea>
+                                                    </div>
+                                                    <div v-else>{{ q.answer || 'Sin Respuesta' }}</div>
+                                                </td>
+                                                <td class="px-6 py-4 text-sm text-right space-x-2 text-center">
+                                                    <div v-if="editingQuestionIdx === idx && currentEditingGuide === 'III'" class="flex justify-center space-x-2">
+                                                        <button 
+                                                            @click="saveGuideIIIQuestionEdit(q.id || idx)" 
+                                                            class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                                                        >
+                                                            Guardar
+                                                        </button>
+                                                        <button 
+                                                            @click="cancelQuestionEdit" 
+                                                            class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-2 py-1 rounded text-xs"
+                                                        >
+                                                            Cancelar
+                                                        </button>
+                                                    </div>
+                                                    <button 
+                                                        v-else
+                                                        @click="startGuideIIIQuestionEdit(idx, q.answer)" 
+                                                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs"
+                                                    >
+                                                        Editar
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="text-gray-500 text-center py-4">
+                            No hay resultados disponibles para la Guía III
+                        </div>
+                    </div>
+
                     <!-- Tab de Guía V -->
                     <div v-if="currentTab === 'guide_v'" class="space-y-4">
                         <div v-if="guideVResults" class="space-y-4">
+                            <!-- Información del encabezado -->
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-600">Fecha:</span>
                                 <span class="font-medium">{{ guideVResults.created_at }}</span>
@@ -497,34 +570,98 @@
                                 <span class="text-gray-600">Folio:</span>
                                 <span class="font-medium">{{ guideVResults.folio }}</span>
                             </div>
-
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Campo</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        <template v-for="(value, key) in guideVResults.answers" :key="key">
-                                            <!-- Manejo especial para edad -->
-                                            <tr v-if="key === 'edad_d1'" class="hover:bg-gray-50">
-                                                <td class="px-4 py-2 text-sm text-gray-900">Edad</td>
-                                                <td class="px-4 py-2 text-sm text-gray-900">
-                                                    {{ getFullAge(guideVResults.answers.edad_d1, guideVResults.answers.edad_d2) }}
-                                                </td>
+                            
+                            <!-- Preguntas y respuestas (formato antiguo) -->
+                            <div v-if="guideVResults.questions && guideVResults.questions.length" class="mb-6">
+                                <h3 class="text-lg font-semibold mb-4 text-gray-900">Preguntas y respuestas de la Guía de Referencia V</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pregunta</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Respuesta</th>
+                                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                             </tr>
-                                            <!-- Saltar edad_d2 ya que se maneja con edad_d1 -->
-                                            <tr v-else-if="key !== 'edad_d2' && guideVLabels[key]" class="hover:bg-gray-50">
-                                                <td class="px-4 py-2 text-sm text-gray-900">{{ guideVLabels[key].label }}</td>
-                                                <td class="px-4 py-2 text-sm text-gray-900">
-                                                    {{ getGuideVTranslatedValue(key, value) }}
-                                                </td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            <!-- Ocultar los campos individuales de edad y solo mostrar la edad combinada una vez -->
+                                            <template v-for="(q, idx) in guideVResults?.questions || []" :key="idx">
+                                                <tr v-if="q && q.question !== 'edad_d2'" class="hover:bg-gray-50">
+                                                    <!-- Título especial para edad_d1 (mostramos solo "Edad") -->
+                                                    <td class="px-6 py-4 whitespace-pre-line text-sm text-gray-900">
+                                                        {{ q.question === 'edad_d1' ? 'Edad' : (guideVQuestions[q.question] || q.question) }}
+                                                    </td>
+                                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                                        <!-- Caso especial para campos de edad -->
+                                                        <div v-if="q.question === 'edad_d1'">
+                                                            <div v-if="editingQuestionIdx === idx && currentEditingGuide === 'V'" class="flex items-center space-x-4">
+                                                                <!-- Mostrar dos inputs para editar la edad -->
+                                                                <div>
+                                                                    <label class="block text-sm text-gray-600 mb-1">Decenas:</label>
+                                                                    <input 
+                                                                        v-model="editingAnswer"
+                                                                        type="number" 
+                                                                        min="0" 
+                                                                        max="9" 
+                                                                        class="border border-gray-300 rounded px-3 py-2 w-20"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label class="block text-sm text-gray-600 mb-1">Unidades:</label>
+                                                                    <input 
+                                                                        v-model="editingAnswerUnits"
+                                                                        type="number" 
+                                                                        min="0" 
+                                                                        max="9" 
+                                                                        class="border border-gray-300 rounded px-3 py-2 w-20"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div v-else>
+                                                                <!-- Mostrar edad combinada -->
+                                                                {{ getCombinedAge(q.answer, getEdad_d2(idx)) }}
+                                                            </div>
+                                                        </div>
+                                                        <!-- Para el resto de preguntas -->
+                                                        <div v-else>
+                                                            <div v-if="editingQuestionIdx === idx && currentEditingGuide === 'V'" class="flex items-center space-x-2">
+                                                                <textarea 
+                                                                    v-model="editingAnswer" 
+                                                                    class="border border-gray-300 rounded px-3 py-2 w-full"
+                                                                    rows="3"
+                                                                ></textarea>
+                                                            </div>
+                                                            <div v-else>{{ guideVAnswers[q.question]?.[q.answer] || q.answer }}</div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-6 py-4 text-sm text-right space-x-2 text-center">
+                                                        <div v-if="editingQuestionIdx === idx && currentEditingGuide === 'V'" class="flex justify-center space-x-2">
+                                                            <button 
+                                                                @click="saveGuideVQuestionEdit(q.id || idx)" 
+                                                                class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                                                            >
+                                                                Guardar
+                                                            </button>
+                                                            <button 
+                                                                @click="cancelQuestionEdit" 
+                                                                class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-2 py-1 rounded text-xs"
+                                                            >
+                                                                Cancelar
+                                                            </button>
+                                                        </div>
+                                                        <button 
+                                                            v-else
+                                                            @click="startGuideVQuestionEdit(idx, q.answer)" 
+                                                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs"
+                                                        >
+                                                            Editar
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                         <div v-else class="text-gray-500 text-center py-4">
@@ -540,7 +677,104 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3'
 import Dashboard from "../../Layouts/Dashboard.vue";
-import { computed, ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useForm } from '@inertiajs/vue3';
+
+// Variables reactivas para la edición de preguntas
+const editingQuestionIdx = ref(null);
+const editingAnswer = ref('');
+const editingAnswerUnits = ref(''); // Para el segundo dígito de la edad (unidades)
+const currentEditingGuide = ref(null); // 'III' o 'V' dependiendo de qué guía se está editando
+const showCombinedAge = ref(true); // Controla si mostrar la edad combinada o los dígitos separados
+
+// Método para iniciar la edición de una pregunta de la Guía V
+function startGuideVQuestionEdit(index, answer) {
+    editingQuestionIdx.value = index;
+    editingAnswer.value = answer || '';
+    currentEditingGuide.value = 'V';
+}
+
+// Método para iniciar la edición de una pregunta de la Guía III
+function startGuideIIIQuestionEdit(index, answer) {
+    editingQuestionIdx.value = index;
+    editingAnswer.value = answer || '';
+    currentEditingGuide.value = 'III';
+}
+
+// Método para cancelar la edición
+function cancelQuestionEdit() {
+    editingQuestionIdx.value = null;
+    editingAnswer.value = '';
+    currentEditingGuide.value = null;
+}
+
+// Método para guardar los cambios a una pregunta de la Guía V
+function saveGuideVQuestionEdit(questionId) {
+    // Crear un formulario con useForm (siguiendo la documentación de Inertia)
+    const form = useForm({
+        answer: editingAnswer.value
+    });
+
+    // Enviar el formulario con put
+    form.put(route('results.guide-v.question.update', {
+        evaluation: props.guideVResults?.id,
+        question: questionId
+    }), {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            // Actualizar la respuesta en el estado local
+            if (props.guideVResults && props.guideVResults.questions) {
+                props.guideVResults.questions[editingQuestionIdx.value].answer = editingAnswer.value;
+            }
+            
+            // Mostrar mensaje de éxito
+            alert('Respuesta actualizada correctamente');
+            
+            // Salir del modo edición
+            cancelQuestionEdit();
+        },
+        onError: (errors) => {
+            console.error('Error al actualizar la respuesta:', errors);
+            alert('Error al actualizar la respuesta: ' + 
+                  (Object.values(errors)[0] || 'Por favor, inténtelo de nuevo.'));
+        }
+    });
+}
+
+// Método para guardar los cambios a una pregunta de la Guía III
+function saveGuideIIIQuestionEdit(questionId) {
+    // Crear un formulario con useForm (siguiendo la documentación de Inertia)
+    const form = useForm({
+        answer: editingAnswer.value
+    });
+
+    // Enviar el formulario con put
+    form.put(route('results.guide-iii.question.update', {
+        evaluation: props.guideIIIResults?.id,
+        question: questionId
+    }), {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            // Actualizar la respuesta en el estado local
+            if (props.guideIIIResults && props.guideIIIResults.questions) {
+                props.guideIIIResults.questions[editingQuestionIdx.value].answer = editingAnswer.value;
+            }
+            
+            // Mostrar mensaje de éxito
+            alert('Respuesta actualizada correctamente');
+            
+            // Salir del modo edición
+            cancelQuestionEdit();
+        },
+        onError: (errors) => {
+            console.error('Error al actualizar la respuesta:', errors);
+            alert('Error al actualizar la respuesta: ' + 
+                  (Object.values(errors)[0] || 'Por favor, inténtelo de nuevo.'));
+        }
+    });
+}
 
 const props = defineProps({
     organization: {
@@ -560,6 +794,10 @@ const props = defineProps({
         default: null
     },
     guideVResults: {
+        type: Object,
+        default: null
+    },
+    guideIIIResults: {
         type: Object,
         default: null
     }
@@ -968,6 +1206,25 @@ const getFullAge = (d1, d2) => {
     return `${d1}${d2}`;
 };
 
+// Función para obtener la edad combinada para mostrar en la tabla
+const getCombinedAge = (d1, d2) => {
+    if (!d1 || !d2) return 'No especificada';
+    return `${d1}${d2} años`;
+};
+
+// Función para encontrar el otro dígito de la edad
+const getEdad_d2 = (currentIdx) => {
+    if (!props.guideVResults || !props.guideVResults.questions) return '';
+    
+    // Si el actual es edad_d1, buscar edad_d2 y viceversa
+    const currentQuestion = props.guideVResults.questions[currentIdx].question;
+    const lookFor = currentQuestion === 'edad_d1' ? 'edad_d2' : 'edad_d1';
+    
+    // Buscar la pregunta correspondiente al otro dígito
+    const otherDigit = props.guideVResults.questions.find(q => q.question === lookFor);
+    return otherDigit ? otherDigit.answer : '';
+};
+
 // Función para obtener el valor traducido de la Guía V
 const getGuideVTranslatedValue = (key, value) => {
     if (key === 'edad_d1' || key === 'edad_d2') return value;
@@ -1023,6 +1280,7 @@ const tabs = [
     { key: 'summary', label: 'Resumen' },
     { key: 'interpretations', label: 'Interpretaciones' },
     { key: 'guide_i', label: 'Guía de Referencia I' },
+    { key: 'guide_iii', label: 'Guía de Referencia III' },
     { key: 'guide_v', label: 'Guía de Referencia V' }
 ];
 
@@ -1061,6 +1319,130 @@ const guideIQuestions = {
     pregunta_12: '¿Ha tenido dificultad para concentrarse?',
     pregunta_13: '¿Ha estado nervioso o constantemente en alerta?',
     pregunta_14: '¿Se ha sobresaltado fácilmente por cualquier cosa?',
+};
+
+// Preguntas de la Guía de Referencia V
+const guideVQuestions = {
+    sexo: 'Sexo',
+    edad_d1: 'Edad (Decenas)',
+    edad_d2: 'Edad (Unidades)',
+    tipo_puesto: 'Tipo de Puesto',
+    estado_civil: 'Estado Civil',
+    tipo_jornada: 'Tipo de Jornada',
+    tipo_personal: 'Tipo de Personal',
+    rotacion_turnos: 'Rotación de Turnos',
+    tipo_contratacion: 'Tipo de Contratación',
+    tiempo_puesto_actual: 'Tiempo en el Puesto Actual',
+    ultimo_nivel_estudio: 'Último Nivel de Estudios',
+    experiencia_vida_laboral: 'Experiencia en Vida Laboral',
+    departamento_seccion_area: 'Departamento/Sección/Área',
+    ocupacion_profesion_puesto: 'Ocupación/Profesión/Puesto'
+};
+
+// Respuestas posibles para la Guía de Referencia V
+const guideVAnswers = {
+    sexo: {
+        masculino: 'Masculino',
+        femenino: 'Femenino'
+    },
+    edad_d1: {
+        '0': '0', '1': '1', '2': '2', '3': '3', '4': '4', 
+        '5': '5', '6': '6', '7': '7', '8': '8', '9': '9'
+    },
+    edad_d2: {
+        '0': '0', '1': '1', '2': '2', '3': '3', '4': '4', 
+        '5': '5', '6': '6', '7': '7', '8': '8', '9': '9'
+    },
+    tipo_puesto: {
+        operativo: 'Operativo',
+        profesional: 'Profesional/Técnico',
+        supervisor: 'Supervisor',
+        gerente: 'Gerente'
+    },
+    estado_civil: {
+        soltero: 'Soltero(a)',
+        casado: 'Casado(a)',
+        union_libre: 'Unión libre',
+        divorciado: 'Divorciado(a)',
+        viudo: 'Viudo(a)'
+    },
+    tipo_jornada: {
+        fijo_diurno: 'Fijo Diurno',
+        fijo_nocturno: 'Fijo Nocturno',
+        fijo_mixto: 'Fijo Mixto',
+        fijo_6_20: 'Fijo de 6:00 a 20:00 hrs',
+        fijo_20_6: 'Fijo de 20:00 a 6:00 hrs'
+    },
+    tipo_personal: {
+        sindicalizado: 'Sindicalizado',
+        confianza: 'Confianza',
+        ninguno: 'Ninguno'
+    },
+    rotacion_turnos: {
+        si: 'Sí',
+        no: 'No'
+    },
+    tipo_contratacion: {
+        indeterminado: 'Por tiempo indeterminado',
+        temporal: 'Temporal',
+        honorarios: 'Por honorarios',
+        subcontratacion: 'Por subcontratación'
+    },
+    tiempo_puesto_actual: {
+        '0-6_meses': 'Menos de 6 meses',
+        '6-12_meses': '6 meses a 1 año',
+        '1-4-anos': '1 a 4 años',
+        '5-9-anos': '5 a 9 años',
+        '10-14-anos': '10 a 14 años',
+        '15-19-anos': '15 a 19 años',
+        '20-24-anos': '20 a 24 años',
+        '25-anos_o_mas': '25 años o más'
+    },
+    ultimo_nivel_estudio: {
+        ninguno: 'Ninguno',
+        primaria_terminado: 'Primaria terminada',
+        secundaria_inconcluso: 'Secundaria sin terminar',
+        secundaria_terminado: 'Secundaria terminada',
+        preparatoria_terminado: 'Preparatoria o bachillerato terminado',
+        tecnico_superior_inconcluso: 'Técnico superior sin terminar',
+        tecnico_superior_terminado: 'Técnico superior terminado',
+        licenciatura_terminado: 'Licenciatura terminada',
+        maestria_inconcluso: 'Maestría sin terminar',
+        maestria_terminado: 'Maestría terminada',
+        doctorado_inconcluso: 'Doctorado sin terminar',
+        doctorado_terminado: 'Doctorado terminado'
+    },
+    experiencia_vida_laboral: {
+        '1-4-anos': '1 a 4 años',
+        '5-9-anos': '5 a 9 años',
+        '10-14-anos': '10 a 14 años',
+        '15-19-anos': '15 a 19 años',
+        '20-24-anos': '20 a 24 años',
+        '25-anos_o_mas': '25 años o más'
+    },
+    departamento_seccion_area: {
+        '1_a': 'Opción 1A',
+        '1_b': 'Opción 1B',
+        '1_c': 'Opción 1C',
+        '1_d': 'Opción 1D',
+        '1_e': 'Opción 1E',
+        '2_a': 'Opción 2A',
+        '2_b': 'Opción 2B',
+        '2_c': 'Opción 2C',
+        '2_d': 'Opción 2D',
+        '2_e': 'Opción 2E'
+    },
+    ocupacion_profesion_puesto: {
+        '1': 'Opción 1',
+        '2': 'Opción 2',
+        '3': 'Opción 3',
+        '4': 'Opción 4',
+        '5': 'Opción 5',
+        '6': 'Opción 6',
+        '7': 'Opción 7',
+        '8': 'Opción 8',
+        '9': 'Opción 9'
+    }
 };
 </script>
 

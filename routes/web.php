@@ -110,6 +110,8 @@ Route::middleware(['auth'])->group(function () {
         Route::controller(ResultsController::class)->prefix('/resultados')->group(function() {
             Route::get('/', 'index')->name('results.index');
             Route::get('/{organization}', 'organizationResults')->name('results.organization');
+            Route::put('/evaluacion/{evaluation}/guia-v/preguntas/{question}', 'updateGuideVQuestion')->name('results.guide-v.question.update');
+            Route::put('/evaluacion/{evaluation}/guia-iii/preguntas/{question}', 'updateGuideIIIQuestion')->name('results.guide-iii.question.update');
         });
 
         Route::controller(QuizController::class)->prefix('/examenes')->name('quiz.')->group(function() {
