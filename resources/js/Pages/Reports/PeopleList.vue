@@ -41,13 +41,18 @@ const goBack = () => {
         <div class="bg-white shadow overflow-hidden sm:rounded-lg">
             <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
                  <div class="flex items-center justify-between">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900">
-                        Personal que respondió '{{ answerDisplay }}' en {{ contextName }}
-                    </h3>
-                     <button @click="goBack" class="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    <div>
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">
+                            Personal que respondió '{{ answerDisplay }}' en {{ contextName }}
+                        </h3>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Mostrando {{ peopleDetails.length }} personas únicas que dieron al menos una respuesta de tipo '{{ answerDisplay }}' en este {{ contextType.toLowerCase() }}.
+                        </p>
+                    </div>
+                    <button @click="goBack" class="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                         <ArrowUturnLeftIcon class="-ml-1 mr-2 h-5 w-5 text-gray-500" aria-hidden="true" />
-                         Volver
-                     </button>
+                        Volver
+                    </button>
                 </div>
             </div>
             <div class="px-4 py-5 sm:p-6">
