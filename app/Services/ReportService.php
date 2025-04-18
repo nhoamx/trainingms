@@ -298,6 +298,7 @@ class ReportService
 
     /**
      * Gets the distribution of raw answers for a specific category.
+     * Now includes both answer counts and unique person counts.
      *
      * @param string $categoryId
      * @param string $referenceGuide
@@ -314,10 +315,14 @@ class ReportService
 
         if ($guideIIIPersonalIds->isEmpty()) {
             Log::warning("No personal_ids found with Guide III evaluations for category distribution {$categoryId}.");
-            return collect($this->getEmptyAnswerDistribution()); // Return empty distribution structure
+            return collect([
+                'answers' => $this->getEmptyAnswerDistribution(),
+                'people' => $this->getEmptyAnswerDistribution()
+            ]); // Return empty distribution structure
         }
 
-        $results = Question::where('reference_guide', $referenceGuide)
+        // Original query: Count of individual answers grouped by answer type
+        $answerResults = Question::where('reference_guide', $referenceGuide)
             ->where('category_id', $categoryId)
             ->whereIn('personal_id', $guideIIIPersonalIds) // Filter by people with Guide III evals
             ->select(
@@ -327,11 +332,36 @@ class ReportService
             ->groupBy('answer_group')
             ->pluck('count', 'answer_group'); // Returns a collection like ['A' => 10, 'B' => 25, ...]
 
-        $completeResults = $this->ensureCompleteDistribution($results);
+        // New query: Count of unique persons grouped by answer type
+        // For each person, count them once per answer type they've given in this category
+        $peopleResults = Question::where('reference_guide', $referenceGuide)
+            ->where('category_id', $categoryId)
+            ->whereIn('personal_id', $guideIIIPersonalIds)
+            ->select(
+                'personal_id',
+                DB::raw("COALESCE(answer, 'INVALID') as answer_group")
+            )
+            ->distinct() // Only count each person once per answer type
+            ->get()
+            ->groupBy('answer_group')
+            ->map(function ($group) {
+                return $group->count(); // Count unique persons for this answer type
+            });
 
-        Log::info("Generated Answer Distribution for Category {$categoryId}:", $completeResults->toArray());
+        // Ensure both results have complete distribution (all possible answer keys)
+        $completeAnswerResults = $this->ensureCompleteDistribution($answerResults);
+        $completePeopleResults = $this->ensureCompleteDistribution($peopleResults);
 
-        return $completeResults;
+        Log::info("Generated Answer Distribution for Category {$categoryId}:", [
+            'answers' => $completeAnswerResults->toArray(),
+            'people' => $completePeopleResults->toArray()
+        ]);
+
+        // Return both distributions in a single collection
+        return collect([
+            'answers' => $completeAnswerResults,
+            'people' => $completePeopleResults
+        ]);
     }
 
     /**
@@ -370,7 +400,8 @@ class ReportService
             ->where('questions.reference_guide', $referenceGuide)
             ->where('questions.category_id', $categoryId)
             ->whereNotNull('questions.personal_id')
-            ->where('eval_guide_iii.reference_guide', 'III'); // Ensure the second join targets Guide III
+            ->where('eval_guide_iii.reference_guide', 'III')
+            ->groupBy('personal_id'); // Ensure the second join targets Guide III
 
         if ($answerKey === 'INVALID') {
             $query->whereNull('questions.answer');
@@ -383,15 +414,30 @@ class ReportService
             }
         }
 
-        $peopleDetails = $query->select(
-                'questions.personal_id',
-                'eval_guide_iii.id as guide_iii_evaluation_id', // Select the ID of the Guide III evaluation
-                'eval_guide_iii.organization_id' // Get org ID from the Guide III evaluation
-            )
+        // First get all the personal_ids that match our criteria
+        $personalIds = $query->select('questions.personal_id')
             ->distinct()
-            ->get();
+            ->pluck('personal_id');
+            
+        // Then find the most recent evaluation for each person
+        $peopleDetails = collect();
+        
+        foreach ($personalIds as $personalId) {
+            $evaluation = \App\Models\Evaluation::where('personal_id', $personalId)
+                ->where('reference_guide', 'III')
+                ->orderBy('created_at', 'desc') // Get the most recent evaluation
+                ->first();
+                
+            if ($evaluation) {
+                $peopleDetails->push([
+                    'personal_id' => $personalId,
+                    'guide_iii_evaluation_id' => $evaluation->id,
+                    'organization_id' => $evaluation->organization_id
+                ]);
+            }
+        }
 
-        Log::info("Found " . $peopleDetails->count() . " distinct people details for answer '{$answerKey}' in category {$categoryId}");
+        Log::info("Found " . $peopleDetails->count() . " unique people for answer '{$answerKey}' in category {$categoryId}");
 
         return $peopleDetails; // Returns collection of objects
     }
@@ -413,7 +459,9 @@ class ReportService
             ->where('questions.reference_guide', $referenceGuide)
             ->where('questions.domain_id', $domainId) // Filter by domain_id
             ->whereNotNull('questions.personal_id')
-            ->where('eval_guide_iii.reference_guide', 'III'); // Ensure Guide III target
+            ->where('eval_guide_iii.reference_guide', 'III') // Ensure Guide III target
+            ->groupBy('personal_id');
+
 
         if ($answerKey === 'INVALID') {
             $query->whereNull('questions.answer');
@@ -426,15 +474,30 @@ class ReportService
             }
         }
 
-        $peopleDetails = $query->select(
-                'questions.personal_id',
-                'eval_guide_iii.id as guide_iii_evaluation_id',
-                'eval_guide_iii.organization_id'
-            )
+        // First get all the personal_ids that match our criteria
+        $personalIds = $query->select('questions.personal_id')
             ->distinct()
-            ->get();
+            ->pluck('personal_id');
+            
+        // Then find the most recent evaluation for each person
+        $peopleDetails = collect();
+        
+        foreach ($personalIds as $personalId) {
+            $evaluation = \App\Models\Evaluation::where('personal_id', $personalId)
+                ->where('reference_guide', 'III')
+                ->orderBy('created_at', 'desc') // Get the most recent evaluation
+                ->first();
+                
+            if ($evaluation) {
+                $peopleDetails->push([
+                    'personal_id' => $personalId,
+                    'guide_iii_evaluation_id' => $evaluation->id,
+                    'organization_id' => $evaluation->organization_id
+                ]);
+            }
+        }
 
-        Log::info("Found " . $peopleDetails->count() . " distinct people details for answer '{$answerKey}' in domain {$domainId}");
+        Log::info("Found " . $peopleDetails->count() . " unique people for answer '{$answerKey}' in domain {$domainId}");
 
         return $peopleDetails;
     }
@@ -541,10 +604,14 @@ class ReportService
 
         if ($guideIIIPersonalIds->isEmpty()) {
             Log::warning("No personal_ids found with Guide III evaluations for domain distribution {$domainId}.");
-            return collect($this->getEmptyAnswerDistribution());
+            return collect([
+                'answers' => $this->getEmptyAnswerDistribution(),
+                'people' => $this->getEmptyAnswerDistribution()
+            ]);
         }
 
-        $results = Question::where('reference_guide', $referenceGuide)
+        // Original query: Count of individual answers grouped by answer type
+        $answerResults = Question::where('reference_guide', $referenceGuide)
             ->where('domain_id', $domainId) // Filter by domain_id
             ->whereIn('personal_id', $guideIIIPersonalIds) // Filter by people with Guide III evals
             ->select(
@@ -554,9 +621,34 @@ class ReportService
             ->groupBy('answer_group')
             ->pluck('count', 'answer_group');
 
-        $completeResults = $this->ensureCompleteDistribution($results);
-        Log::info("Generated Answer Distribution for Domain {$domainId}:", $completeResults->toArray());
-        return $completeResults;
+        // New query: Count of unique persons grouped by answer type
+        $peopleResults = Question::where('reference_guide', $referenceGuide)
+            ->where('domain_id', $domainId)
+            ->whereIn('personal_id', $guideIIIPersonalIds)
+            ->select(
+                'personal_id',
+                DB::raw("COALESCE(answer, 'INVALID') as answer_group")
+            )
+            ->distinct() // Only count each person once per answer type
+            ->get()
+            ->groupBy('answer_group')
+            ->map(function ($group) {
+                return $group->count(); // Count unique persons for this answer type
+            });
+
+        // Ensure both results have complete distribution
+        $completeAnswerResults = $this->ensureCompleteDistribution($answerResults);
+        $completePeopleResults = $this->ensureCompleteDistribution($peopleResults);
+
+        Log::info("Generated Answer Distribution for Domain {$domainId}:", [
+            'answers' => $completeAnswerResults->toArray(),
+            'people' => $completePeopleResults->toArray()
+        ]);
+        
+        return collect([
+            'answers' => $completeAnswerResults,
+            'people' => $completePeopleResults
+        ]);
     }
 
     /**
@@ -740,10 +832,14 @@ class ReportService
 
         if ($guideIIIPersonalIds->isEmpty()) {
             Log::warning("No personal_ids found with Guide III evaluations for dimension distribution {$dimensionId}.");
-            return collect($this->getEmptyAnswerDistribution());
+            return collect([
+                'answers' => $this->getEmptyAnswerDistribution(),
+                'people' => $this->getEmptyAnswerDistribution()
+            ]);
         }
 
-        $results = Question::where('reference_guide', $referenceGuide)
+        // Original query: Count of individual answers grouped by answer type
+        $answerResults = Question::where('reference_guide', $referenceGuide)
             ->where('dimension_id', $dimensionId) // Filter by dimension_id
             ->whereIn('personal_id', $guideIIIPersonalIds) // Filter by people with Guide III evals
             ->select(
@@ -753,9 +849,34 @@ class ReportService
             ->groupBy('answer_group')
             ->pluck('count', 'answer_group');
 
-        $completeResults = $this->ensureCompleteDistribution($results);
-        Log::info("Generated Answer Distribution for Dimension {$dimensionId}:", $completeResults->toArray());
-        return $completeResults;
+        // New query: Count of unique persons grouped by answer type
+        $peopleResults = Question::where('reference_guide', $referenceGuide)
+            ->where('dimension_id', $dimensionId)
+            ->whereIn('personal_id', $guideIIIPersonalIds)
+            ->select(
+                'personal_id',
+                DB::raw("COALESCE(answer, 'INVALID') as answer_group")
+            )
+            ->distinct() // Only count each person once per answer type
+            ->get()
+            ->groupBy('answer_group')
+            ->map(function ($group) {
+                return $group->count(); // Count unique persons for this answer type
+            });
+
+        // Ensure both results have complete distribution
+        $completeAnswerResults = $this->ensureCompleteDistribution($answerResults);
+        $completePeopleResults = $this->ensureCompleteDistribution($peopleResults);
+
+        Log::info("Generated Answer Distribution for Dimension {$dimensionId}:", [
+            'answers' => $completeAnswerResults->toArray(),
+            'people' => $completePeopleResults->toArray()
+        ]);
+        
+        return collect([
+            'answers' => $completeAnswerResults,
+            'people' => $completePeopleResults
+        ]);
     }
 
     /**
@@ -771,19 +892,44 @@ class ReportService
             ->where('questions.reference_guide', $referenceGuide)
             ->where('questions.dimension_id', $dimensionId) // Filter by dimension_id
             ->whereNotNull('questions.personal_id')
-            ->where('eval_guide_iii.reference_guide', 'III'); // Ensure Guide III target
+            ->where('eval_guide_iii.reference_guide', 'III')
+            ->groupBy('personal_id'); // Ensure Guide III target
 
-        if ($answerKey === 'INVALID') { /* ... */ $query->whereNull('questions.answer'); }
-        else { /* ... */ if (in_array($answerKey, ['A', 'B', 'C', 'D', 'E'])) { $query->where('questions.answer', $answerKey); } else { return collect();} }
+        if ($answerKey === 'INVALID') {
+            $query->whereNull('questions.answer'); 
+        } else { 
+            if (in_array($answerKey, ['A', 'B', 'C', 'D', 'E'])) { 
+                $query->where('questions.answer', $answerKey); 
+            } else { 
+                Log::warning("Invalid answer key requested for dimension people list: {$answerKey}");
+                return collect();
+            } 
+        }
 
-        $peopleDetails = $query->select(
-                'questions.personal_id',
-                'eval_guide_iii.id as guide_iii_evaluation_id',
-                'eval_guide_iii.organization_id'
-            )
+        // First get all the personal_ids that match our criteria
+        $personalIds = $query->select('questions.personal_id')
             ->distinct()
-            ->get();
-        Log::info("Found " . $peopleDetails->count() . " distinct people details for answer '{$answerKey}' in dimension {$dimensionId}");
+            ->pluck('personal_id');
+            
+        // Then find the most recent evaluation for each person
+        $peopleDetails = collect();
+        
+        foreach ($personalIds as $personalId) {
+            $evaluation = \App\Models\Evaluation::where('personal_id', $personalId)
+                ->where('reference_guide', 'III')
+                ->orderBy('created_at', 'desc') // Get the most recent evaluation
+                ->first();
+                
+            if ($evaluation) {
+                $peopleDetails->push([
+                    'personal_id' => $personalId,
+                    'guide_iii_evaluation_id' => $evaluation->id,
+                    'organization_id' => $evaluation->organization_id
+                ]);
+            }
+        }
+
+        Log::info("Found " . $peopleDetails->count() . " unique people for answer '{$answerKey}' in dimension {$dimensionId}");
         return $peopleDetails;
     }
 

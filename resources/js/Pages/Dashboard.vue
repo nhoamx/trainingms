@@ -385,7 +385,7 @@ watch(currentTab, (newTab) => {
                             </div>
                             <CategoryDetailChart
                                 v-else
-                                :answer-distribution="categoryAnswerDistribution"
+                                :answer-distribution="categoryAnswerDistribution.answers || {}"
                                 :category-name="selectedCategoryName"
                             />
                             <!-- Buttons below chart to show people list -->
@@ -393,7 +393,7 @@ watch(currentTab, (newTab) => {
                                  <h4 class="text-md font-semibold mb-2 text-gray-700">Ver lista de personal por tipo de respuesta:</h4>
                                 <div class="flex flex-wrap gap-2">
                                     <!-- Iterate over the answer keys used in the chart -->
-                                    <a v-for="(count, key) in categoryAnswerDistribution" :key="key"
+                                    <a v-for="(count, key) in categoryAnswerDistribution.people || {}" :key="key"
                                             :href="count > 0 ? route('reports.peopleList', { categoryId: selectedCategoryId, answerKey: key }) : '#'"
                                             target="_blank"
                                             :class="[
@@ -404,7 +404,7 @@ watch(currentTab, (newTab) => {
                                             :disabled="count === 0"
                                             :aria-disabled="count === 0"
                                        >
-                                        {{ answerKeyToLabelMap[key] || key }} ({{ count }})
+                                        {{ answerKeyToLabelMap[key] || key }} ({{ count }} personas)
                                     </a>
                                 </div>
                             </div>
@@ -478,12 +478,12 @@ watch(currentTab, (newTab) => {
                             <!-- Domain Detail Chart Section (shows when a domain button is clicked) -->
                             <div v-if="selectedDomainId" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mt-6">
                                 <div v-if="isLoadingDomainDetail">...</div>
-                                <DomainDetailChart v-else :answer-distribution="domainAnswerDistribution" :domain-name="selectedDomainName" />
+                                <DomainDetailChart v-else :answer-distribution="domainAnswerDistribution.answers || {}" :domain-name="selectedDomainName" />
                                 <!-- Links below chart to show people list for Domain -->
                                 <div v-if="!isLoadingDomainDetail && Object.keys(domainAnswerDistribution).length > 0" class="mt-4 pt-4 border-t border-gray-200">
                                      <h4 class="text-md font-semibold mb-2 text-gray-700">Ver lista de personal que respondió:</h4>
                                     <div class="flex flex-wrap gap-2">
-                                        <a v-for="(count, key) in domainAnswerDistribution" :key="key"
+                                        <a v-for="(count, key) in domainAnswerDistribution.people || {}" :key="key"
                                                 :href="count > 0 ? route('reports.peopleListDomain', { domainId: selectedDomainId, answerKey: key }) : '#'"
                                                 target="_blank"
                                                 :class="[
@@ -493,62 +493,13 @@ watch(currentTab, (newTab) => {
                                                 ]"
                                                 :aria-disabled="count === 0"
                                            >
-                                            {{ answerKeyToLabelMap[key] || key }} ({{ count }})
+                                            {{ answerKeyToLabelMap[key] || key }} ({{ count }} personas)
                                         </a>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- *** NEW: Dimension Section (shows below Domain Chart if a Domain is selected) *** -->
-                            <div v-if="selectedDomainId" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mt-6">
-                                 <div v-if="isLoadingDimensionData" class="text-center text-gray-500 p-4">Cargando dimensiones...</div>
-                                 <div v-else>
-                                      <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                                         Calificación por Dimensión (Dominio: {{ selectedDomainName }})
-                                      </h3>
-                                      <DimensionQualificationTable :qualifications-data="dimensionQualifications" />
-                                     <!-- Dimension Buttons -->
-                                      <div v-if="dimensionQualifications.length > 0" class="mt-6">
-                                         <h4 class="text-md font-semibold mb-2 text-gray-700">Ver detalle de respuestas por dimensión:</h4>
-                                         <div class="flex flex-wrap gap-2">
-                                             <button v-for="dimension in dimensionQualifications" :key="dimension.id"
-                                                     @click="handleDimensionButtonClick(dimension.id)"
-                                                     :class="[
-                                                         'px-3 py-1 border rounded-md shadow-sm text-sm font-medium transition-colors duration-150',
-                                                         selectedDimensionId === dimension.id
-                                                             ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700'
-                                                             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                                     ]">
-                                                 {{ dimension.name }}
-                                             </button>
-                                         </div>
-                                     </div>
-                                       <div v-else class="text-gray-500 mt-4">No hay dimensiones para mostrar para este dominio.</div>
-                                 </div>
-                            </div>
-                             <!-- Dimension Detail Chart Section -->
-                             <div v-if="selectedDimensionId" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mt-6">
-                                 <div v-if="isLoadingDimensionDetail" class="text-center text-gray-500 p-4">Cargando detalle dimensión...</div>
-                                 <DimensionDetailChart v-else :answer-distribution="dimensionAnswerDistribution" :dimension-name="selectedDimensionName" />
-                                  <!-- Dimension People List Links -->
-                                <div v-if="!isLoadingDimensionDetail && Object.keys(dimensionAnswerDistribution).length > 0" class="mt-4 pt-4 border-t">
-                                    <h4 class="text-md font-semibold mb-2 text-gray-700">Ver lista de personal que respondió:</h4>
-                                    <div class="flex flex-wrap gap-2">
-                                        <a v-for="(count, key) in dimensionAnswerDistribution" :key="key"
-                                            :href="count > 0 ? route('reports.peopleListDimension', { dimensionId: selectedDimensionId, answerKey: key }) : '#'"
-                                            target="_blank"
-                                            :class="[
-                                                'px-3 py-1 border rounded-md shadow-sm text-sm font-medium transition-colors duration-150',
-                                                count === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none' :
-                                                'bg-white text-indigo-600 border-gray-300 hover:bg-indigo-50 hover:border-indigo-300'
-                                            ]"
-                                            :disabled="count === 0"
-                                            :aria-disabled="count === 0">
-                                            {{ answerKeyToLabelMap[key] || key }} ({{ count }})
-                                        </a>
-                                    </div>
-                                </div>
-                             </div>
+                            <!-- Sección de dimensiones eliminada para evitar redundancia con la pestaña de análisis por dimensión -->
                         </div>
                     </div>
 
@@ -623,13 +574,13 @@ watch(currentTab, (newTab) => {
                                 <div v-if="isLoadingDimensionDetail" class="text-center text-gray-500 p-4">Cargando detalle de dimensión...</div>
                                 <DimensionDetailChart
                                     v-else
-                                    :answer-distribution="dimensionAnswerDistribution"
+                                    :answer-distribution="dimensionAnswerDistribution.answers || {}"
                                     :dimension-name="getDimensionNameById(selectedDimensionId)" />
                                 <!-- Links to People List for Dimension -->
                                 <div v-if="!isLoadingDimensionDetail && Object.keys(dimensionAnswerDistribution).length > 0" class="mt-4 pt-4 border-t border-gray-200">
                                     <h4 class="text-md font-semibold mb-2 text-gray-700">Ver lista de personal por tipo de respuesta:</h4>
                                     <div class="flex flex-wrap gap-2">
-                                        <a v-for="(count, key) in dimensionAnswerDistribution" :key="key"
+                                        <a v-for="(count, key) in dimensionAnswerDistribution.people || {}" :key="key"
                                             :href="count > 0 ? route('reports.peopleListDimension', { dimensionId: selectedDimensionId, answerKey: key }) : '#'"
                                             target="_blank"
                                             :class="[
@@ -639,7 +590,7 @@ watch(currentTab, (newTab) => {
                                             ]"
                                             :disabled="count === 0"
                                             :aria-disabled="count === 0">
-                                            {{ answerKeyToLabelMap[key] || key }} ({{ count }})
+                                            {{ answerKeyToLabelMap[key] || key }} ({{ count }} personas)
                                         </a>
                                     </div>
                                 </div>
