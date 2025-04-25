@@ -12,7 +12,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Registrar los servicios para la gestión de puestos y departamentos
+        $this->app->singleton(\App\Services\OccupationPositionService::class);
+        $this->app->singleton(\App\Services\DepartmentAreaService::class);
     }
 
     /**

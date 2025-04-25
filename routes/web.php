@@ -106,6 +106,18 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{organization}', 'destroy')->name('organizations.destroy');
             Route::put('/{organization}/restore', 'restore')->name('organizations.restore')->withTrashed();
         });
+        
+        // Rutas para puestos de ocupación
+        Route::post('/occupation-positions', [\App\Http\Controllers\OccupationPositionController::class, 'store'])
+            ->name('occupation-positions.store');
+        Route::delete('/occupation-positions/{occupationPosition}', [\App\Http\Controllers\OccupationPositionController::class, 'destroy'])
+            ->name('occupation-positions.destroy');
+            
+        // Rutas para áreas de departamento
+        Route::post('/department-areas', [\App\Http\Controllers\DepartmentAreaController::class, 'store'])
+            ->name('department-areas.store');
+        Route::delete('/department-areas/{departmentArea}', [\App\Http\Controllers\DepartmentAreaController::class, 'destroy'])
+            ->name('department-areas.destroy');
 
         Route::controller(ResultsController::class)->prefix('/resultados')->group(function() {
             Route::get('/', 'index')->name('results.index');
