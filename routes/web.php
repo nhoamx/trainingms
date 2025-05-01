@@ -1,12 +1,16 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DimensionReportController;
+use App\Http\Controllers\DomainReportController;
 use App\Http\Controllers\EvaluationController;
+use App\Http\Controllers\GlobalResponseController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\ResultsController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PeopleListController;
+use App\Http\Controllers\CategoryReportController;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +45,51 @@ Route::middleware(['auth'])->group(function () {
     // API route for dimension qualifications (loaded when domain is selected)
     Route::get('/dashboard/report/dimension-qualifications/{domainId}', [DashboardController::class, 'getDimensionQualifications'])
         ->name('dashboard.report.dimensionQualifications');
+        
+    // Nuevas rutas para los reportes de categoría
+    Route::get('/reports/category-distribution', [CategoryReportController::class, 'getCategoryAnswerTypeDistribution'])
+        ->name('reports.category.distribution');
+    // Rutas para reportes globales de respuestas
+    Route::get('/reports/global-response-counts', [GlobalResponseController::class, 'getGlobalResponseCounts'])
+        ->name('reports.global.responseCounts');
+    Route::get('/reports/category-response-counts', [GlobalResponseController::class, 'getCategoryResponseCounts'])
+        ->name('reports.global.categoryResponseCounts');
+    Route::get('/reports/global', [GlobalResponseController::class, 'showGlobalResponseReport'])
+        ->name('reports.global.show');
+
+    // Rutas para reportes por categoría    
+    Route::get('/reports/category', [CategoryReportController::class, 'showCategoryReport'])
+        ->name('reports.category.show');
+        
+    // Rutas para reporte de suma total por categoría
+    Route::get('/reports/category-total-scores', [CategoryReportController::class, 'getCategoryTotalScores'])
+        ->name('reports.category.totalScores');
+    Route::get('/reports/category-total-scores-report', [CategoryReportController::class, 'showCategoryTotalScoreReport'])
+        ->name('reports.category.totalScores.show');
+        
+    // Rutas para reportes de dominio
+    Route::get('/reports/domain-distribution', [DomainReportController::class, 'getDomainAnswerTypeDistribution'])
+        ->name('reports.domain.distribution');
+    Route::get('/reports/domain', [DomainReportController::class, 'showDomainReport'])
+        ->name('reports.domain.show');
+        
+    // Rutas para reporte de suma total por dominio
+    Route::get('/reports/domain-total-scores', [DomainReportController::class, 'getDomainTotalScores'])
+        ->name('reports.domain.totalScores');
+    Route::get('/reports/domain-total-scores-report', [DomainReportController::class, 'showDomainTotalScoreReport'])
+        ->name('reports.domain.totalScores.show');
+        
+    // Rutas para reportes de dimensión
+    Route::get('/reports/dimension-distribution', [DimensionReportController::class, 'getDimensionAnswerTypeDistribution'])
+        ->name('reports.dimension.distribution');
+    Route::get('/reports/dimension', [DimensionReportController::class, 'showDimensionReport'])
+        ->name('reports.dimension.show');
+        
+    // Rutas para reporte de suma total por dimensión
+    Route::get('/reports/dimension-total-scores', [DimensionReportController::class, 'getDimensionTotalScores'])
+        ->name('reports.dimension.totalScores');
+    Route::get('/reports/dimension-total-scores-report', [DimensionReportController::class, 'showDimensionTotalScoreReport'])
+        ->name('reports.dimension.totalScores.show');
 
     // Web Route for Category People List Page
     Route::get('/reports/people-list/{categoryId}/{answerKey}', [PeopleListController::class, 'show'])
@@ -106,6 +155,18 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{organization}', 'destroy')->name('organizations.destroy');
             Route::put('/{organization}/restore', 'restore')->name('organizations.restore')->withTrashed();
         });
+        
+        // Rutas para puestos de ocupación
+        Route::post('/occupation-positions', [\App\Http\Controllers\OccupationPositionController::class, 'store'])
+            ->name('occupation-positions.store');
+        Route::delete('/occupation-positions/{occupationPosition}', [\App\Http\Controllers\OccupationPositionController::class, 'destroy'])
+            ->name('occupation-positions.destroy');
+            
+        // Rutas para áreas de departamento
+        Route::post('/department-areas', [\App\Http\Controllers\DepartmentAreaController::class, 'store'])
+            ->name('department-areas.store');
+        Route::delete('/department-areas/{departmentArea}', [\App\Http\Controllers\DepartmentAreaController::class, 'destroy'])
+            ->name('department-areas.destroy');
 
         Route::controller(ResultsController::class)->prefix('/resultados')->group(function() {
             Route::get('/', 'index')->name('results.index');

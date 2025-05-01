@@ -25,4 +25,14 @@ class Organization extends Model
     {
         return $this->hasMany(Evaluation::class);
     }
+    
+    public function occupationPositions()
+    {
+        return $this->hasMany(OccupationPosition::class);
+    }
+    
+    public function departmentAreas()
+    {
+        return $this->hasMany(DepartmentArea::class);
+    }
 }

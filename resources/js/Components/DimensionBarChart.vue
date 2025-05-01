@@ -1,79 +1,125 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
-import { Bar } from 'vue-chartjs';
-import {
-    Chart as ChartJS,
-    Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, Colors
-} from 'chart.js';
+import { ref, computed, onMounted } from 'vue';
+import { Chart, registerables } from 'chart.js';
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, Colors);
-
-// No emits needed for now
+// Registrar todos los componentes de Chart.js que necesitamos
+Chart.register(...registerables);
 
 const props = defineProps({
-    chartData: { type: Array, required: true, default: () => [] },
-    domainName: { type: String, default: '' }
+  dimension: {
+    type: Object,
+    required: true
+  }
 });
 
-const answerLabels = {
-    'A': 'Siempre', 'B': 'Casi siempre', 'C': 'Algunas veces',
-    'D': 'Casi nunca', 'E': 'Nunca', 'INVALID': 'Inválido / Sin Respuesta'
+const canvasRef = ref(null);
+const chart = ref(null);
+
+// Arreglo de colores para los tipos de respuestas - usando los colores solicitados
+const typeColors = {
+  'A': '#F44336', // Rojo para "Siempre" (Muy Alto)
+  'B': '#FFB300', // Naranja para "Casi Siempre" (Alto)
+  'C': '#FFEB3B', // Amarillo para "Algunas Veces" (Medio)
+  'D': '#8BC34A', // Verde para "Casi Nunca" (Bajo)
+  'E': '#4DD0C6', // Turquesa para "Nunca" (Nulo)
 };
 
-const processedChartData = computed(() => {
-    const dimensions = props.chartData.map(item => item.name);
-    if (dimensions.length === 0) return { labels: [], datasets: [] };
+// Etiquetas para los tipos de respuestas
+const typeLabels = {
+  'A': 'Siempre',
+  'B': 'Casi siempre',
+  'C': 'Algunas veces',
+  'D': 'Casi nunca',
+  'E': 'Nunca',
+};
 
-    const allAnswerKeys = new Set();
-    props.chartData.forEach(item => { Object.keys(item.answers).forEach(ans => allAnswerKeys.add(ans)); });
-    const sortedAnswerKeys = Array.from(allAnswerKeys).sort();
-
-    const datasets = sortedAnswerKeys.map(answerKey => ({
-        label: answerLabels[answerKey] || `Respuesta ${answerKey}`,
-        data: props.chartData.map(item => item.answers[answerKey] || 0)
-    }));
-
-    return { labels: dimensions, datasets: datasets };
+const chartData = computed(() => {
+  // Ordenamos los tipos de respuesta de E a A (de Nulo a Muy Alto)
+  const answerTypes = ['E', 'D', 'C', 'B', 'A'];
+  
+  const data = {
+    labels: answerTypes.map(type => typeLabels[type]),
+    datasets: [{
+      label: 'Respuestas',
+      data: answerTypes.map(type => props.dimension.responses[type] || 0),
+      backgroundColor: answerTypes.map(type => typeColors[type]),
+      borderColor: answerTypes.map(type => typeColors[type]),
+      borderWidth: 1
+    }]
+  };
+  
+  return data;
 });
 
-const chartRef = ref(null);
-
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: { position: 'top' },
-        title: {
-            display: true,
-            text: `Distribución por Dimensión (Dominio: ${props.domainName || '-'})`
-        },
-        tooltip: { enabled: true, mode: 'index', intersect: false }
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
     },
-    scales: {
-        x: { stacked: true, title: { display: true, text: 'Dimensión' } },
-        y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Número de Respuestas' } }
+    tooltip: {
+      callbacks: {
+        label: function(context) {
+          const value = context.raw;
+          const total = props.dimension.total;
+          const percentage = ((value / total) * 100).toFixed(1);
+          return `${value} respuestas (${percentage}%)`;
+        }
+      }
+    },
+    datalabels: {
+      // Color del texto según el color de fondo para mejor legibilidad
+      color: function(context) {
+        const index = context.dataIndex;
+        const type = ['E', 'D', 'C', 'B', 'A'][index];
+        // Para fondos claros (amarillo) usamos texto negro, para el resto texto blanco
+        return type === 'C' || type === 'E' ? '#000000' : '#FFFFFF';
+      },
+      font: {
+        weight: 'bold'
+      },
+      formatter: function(value, context) {
+        const total = props.dimension.total;
+        return value > 0 ? `${((value / total) * 100).toFixed(0)}%` : '';
+      }
     }
-}));
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      title: {
+        display: true,
+        text: 'Número de respuestas'
+      }
+    }
+  }
+};
 
-onMounted(() => { console.log("DimensionBarChart mounted:", props.chartData); });
-watch(() => props.chartData, (newData) => { console.log("DimensionBarChart updated:", newData); }, { deep: true });
-
+onMounted(() => {
+  if (canvasRef.value) {
+    // Destruir el gráfico anterior si existe
+    if (chart.value) {
+      chart.value.destroy();
+    }
+    
+    // Crear el nuevo gráfico
+    const ctx = canvasRef.value.getContext('2d');
+    chart.value = new Chart(ctx, {
+      type: 'bar',
+      data: chartData.value,
+      options: chartOptions
+    });
+  }
+});
 </script>
 
 <template>
-    <div style="height: 400px; position: relative;">
-        <Bar
-            ref="chartRef"
-            v-if="processedChartData.labels.length > 0"
-            :data="processedChartData"
-            :options="chartOptions"
-        />
-        <div v-else class="text-center text-gray-500 p-4">
-            No hay datos de dimensión para mostrar para este dominio.
-        </div>
-    </div>
+  <div class="h-full">
+    <canvas ref="canvasRef"></canvas>
+  </div>
 </template>
 
 <style scoped>
-/* Add any necessary scoped styles */
+/* Estilos adicionales si son necesarios */
 </style>
