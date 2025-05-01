@@ -1,131 +1,125 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
-import { Bar, getElementAtEvent } from 'vue-chartjs';
-import {
-    Chart as ChartJS,
-    Title,
-    Tooltip,
-    Legend,
-    BarElement,
-    CategoryScale, // Using CategoryScale for domain names on X-axis
-    LinearScale,
-    Colors
-} from 'chart.js';
+import { ref, computed, onMounted } from 'vue';
+import { Chart, registerables } from 'chart.js';
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, Colors);
-
-// Define emitted events
-const emit = defineEmits(['domain-click']);
+// Registrar todos los componentes de Chart.js que necesitamos
+Chart.register(...registerables);
 
 const props = defineProps({
-    chartData: {
-        type: Array, // Expect an array of objects {id, name, answers}
-        required: true,
-        default: () => []
-    },
-    categoryName: { // Add prop to display the selected category name in the title
-        type: String,
-        default: ''
-    }
+  domain: {
+    type: Object,
+    required: true
+  }
 });
 
-// Reusable answer labels (could be moved to a shared utility)
-const answerLabels = {
-    'A': 'Siempre',
-    'B': 'Casi siempre',
-    'C': 'Algunas veces',
-    'D': 'Casi nunca',
-    'E': 'Nunca',
-    'INVALID': 'Inválido / Sin Respuesta'
+const canvasRef = ref(null);
+const chart = ref(null);
+
+// Arreglo de colores para los tipos de respuestas - usando los colores solicitados
+const typeColors = {
+  'A': '#F44336', // Rojo para "Siempre" (Muy Alto)
+  'B': '#FFB300', // Naranja para "Casi Siempre" (Alto)
+  'C': '#FFEB3B', // Amarillo para "Algunas Veces" (Medio)
+  'D': '#8BC34A', // Verde para "Casi Nunca" (Bajo)
+  'E': '#4DD0C6', // Turquesa para "Nunca" (Nulo)
 };
 
-// Store domain IDs corresponding to labels index
-const domainIdsByIndex = ref([]);
+// Etiquetas para los tipos de respuestas
+const typeLabels = {
+  'A': 'Siempre',
+  'B': 'Casi siempre',
+  'C': 'Algunas veces',
+  'D': 'Casi nunca',
+  'E': 'Nunca',
+};
 
-const processedChartData = computed(() => {
-    const domains = props.chartData.map(item => item.name);
-    domainIdsByIndex.value = props.chartData.map(item => item.id); // Store IDs
-
-    if (domains.length === 0) {
-        return { labels: [], datasets: [] };
-    }
-
-    const allAnswerKeys = new Set();
-    props.chartData.forEach(item => {
-        Object.keys(item.answers).forEach(ans => allAnswerKeys.add(ans));
-    });
-    const sortedAnswerKeys = Array.from(allAnswerKeys).sort();
-
-    const datasets = sortedAnswerKeys.map(answerKey => ({
-        label: answerLabels[answerKey] || `Respuesta ${answerKey}`,
-        data: props.chartData.map(item => item.answers[answerKey] || 0)
-    }));
-
-    return {
-        labels: domains, // Use domain names as labels
-        datasets: datasets
-    };
+const chartData = computed(() => {
+  // Ordenamos los tipos de respuesta de E a A (de Nulo a Muy Alto)
+  const answerTypes = ['E', 'D', 'C', 'B', 'A'];
+  
+  const data = {
+    labels: answerTypes.map(type => typeLabels[type]),
+    datasets: [{
+      label: 'Respuestas',
+      data: answerTypes.map(type => props.domain.responses[type] || 0),
+      backgroundColor: answerTypes.map(type => typeColors[type]),
+      borderColor: answerTypes.map(type => typeColors[type]),
+      borderWidth: 1
+    }]
+  };
+  
+  return data;
 });
 
-const chartRef = ref(null);
-
-// Click handler for the chart
-const handleChartClick = (event) => {
-    const chart = chartRef.value?.chart;
-    if (!chart) return;
-    const elements = getElementAtEvent(chart, event);
-    if (elements.length > 0) {
-        const { index } = elements[0];
-        const domainId = domainIdsByIndex.value[index]; // Get the ID
-        console.log('Clicked Domain Index:', index, 'Domain ID:', domainId);
-        if (domainId) {
-            emit('domain-click', domainId);
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
+    },
+    tooltip: {
+      callbacks: {
+        label: function(context) {
+          const value = context.raw;
+          const total = props.domain.total;
+          const percentage = ((value / total) * 100).toFixed(1);
+          return `${value} respuestas (${percentage}%)`;
         }
-    }
-};
-
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    onClick: handleChartClick, // Add the click handler
-    plugins: {
-        legend: { position: 'top' },
-        title: {
-            display: true,
-            text: `Distribución por Dominio (Categoría: ${props.categoryName || '-'}) - Haz clic para ver Dimensiones`
-        },
-        tooltip: { enabled: true, mode: 'index', intersect: false }
+      }
     },
-    scales: {
-        x: { stacked: true, title: { display: true, text: 'Dominio' } },
-        y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Número de Respuestas' } }
+    datalabels: {
+      // Color del texto según el color de fondo para mejor legibilidad
+      color: function(context) {
+        const index = context.dataIndex;
+        const type = ['E', 'D', 'C', 'B', 'A'][index];
+        // Para fondos claros (amarillo) usamos texto negro, para el resto texto blanco
+        return type === 'C' || type === 'E' ? '#000000' : '#FFFFFF';
+      },
+      font: {
+        weight: 'bold'
+      },
+      formatter: function(value, context) {
+        const total = props.domain.total;
+        return value > 0 ? `${((value / total) * 100).toFixed(0)}%` : '';
+      }
     }
-}));
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      title: {
+        display: true,
+        text: 'Número de respuestas'
+      }
+    }
+  }
+};
 
 onMounted(() => {
-    console.log("DomainBarChart mounted. Received data:", props.chartData);
+  if (canvasRef.value) {
+    // Destruir el gráfico anterior si existe
+    if (chart.value) {
+      chart.value.destroy();
+    }
+    
+    // Crear el nuevo gráfico
+    const ctx = canvasRef.value.getContext('2d');
+    chart.value = new Chart(ctx, {
+      type: 'bar',
+      data: chartData.value,
+      options: chartOptions
+    });
+  }
 });
-
-watch(() => props.chartData, (newData) => {
-    console.log("DomainBarChart data updated:", newData);
-}, { deep: true });
-
 </script>
 
 <template>
-    <div style="height: 400px; position: relative;">
-        <Bar
-            ref="chartRef"
-            v-if="processedChartData.labels.length > 0"
-            :data="processedChartData"
-            :options="chartOptions"
-        />
-        <div v-else class="text-center text-gray-500 p-4">
-            No hay datos de dominio para mostrar para esta categoría.
-        </div>
-    </div>
+  <div class="h-full">
+    <canvas ref="canvasRef"></canvas>
+  </div>
 </template>
 
 <style scoped>
-/* Add any necessary scoped styles */
+/* Estilos adicionales si son necesarios */
 </style>

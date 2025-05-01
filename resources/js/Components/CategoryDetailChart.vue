@@ -9,6 +9,10 @@ import ChartDataLabels from 'chartjs-plugin-datalabels'; // Import datalabels pl
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, Colors, ChartDataLabels); // Register plugin
 
+// Bandera para desactivar la visualización de gráficas actuales
+// NOTA: Esta gráfica está desactivada, usar el nuevo reporte de categorías accesible desde el menú de navegación
+const disableChart = true;
+
 const props = defineProps({
     // Expects { 'A': count, 'B': count, 'C': count, 'D': count, 'E': count, 'INVALID': count }
     answerDistribution: { type: Object, required: true, default: () => ({}) },
@@ -117,9 +121,22 @@ const chartOptions = computed(() => ({
 
 <template>
     <div style="height: 350px; position: relative;">
+        <div v-if="disableChart" class="text-center p-4 h-full flex flex-col items-center justify-center bg-blue-50 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <p class="text-blue-700 font-medium mb-1">¡Tenemos un nuevo reporte de categorías mejorado!</p>
+            <p class="text-gray-600">Por favor, utiliza el nuevo reporte accesible desde el menú de navegación.</p>
+            <a :href="route('reports.category.show')" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors inline-flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Ir al nuevo reporte
+            </a>
+        </div>
         <Bar
+            v-else-if="processedChartData.labels.length > 0 && processedChartData.datasets[0].data.some(d => d > 0)"
             ref="chartRef"
-            v-if="processedChartData.labels.length > 0 && processedChartData.datasets[0].data.some(d => d > 0)"
             :data="processedChartData"
             :options="chartOptions"
         />
