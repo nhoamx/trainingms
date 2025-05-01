@@ -1,139 +1,125 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
-import { Bar, getElementAtEvent } from 'vue-chartjs';
-import {
-    Chart as ChartJS,
-    Title,
-    Tooltip,
-    Legend,
-    BarElement,
-    CategoryScale,
-    LinearScale,
-    Colors
-} from 'chart.js';
+import { ref, computed, onMounted } from 'vue';
+import { Chart, registerables } from 'chart.js';
 
-ChartJS.register(
-    Title,
-    Tooltip,
-    Legend,
-    BarElement,
-    CategoryScale,
-    LinearScale,
-    Colors
-);
-
-// Define emitted events
-const emit = defineEmits(['category-click']);
+// Registrar todos los componentes de Chart.js que necesitamos
+Chart.register(...registerables);
 
 const props = defineProps({
-    chartData: {
-        type: Array,
-        required: true,
-        default: () => []
-    }
+  category: {
+    type: Object,
+    required: true
+  }
 });
 
-// Define readable names for answers
-const answerLabels = {
-    'A': 'Siempre',
-    'B': 'Casi siempre',
-    'C': 'Algunas veces',
-    'D': 'Casi nunca',
-    'E': 'Nunca',
-    'INVALID': 'Inválido / Sin Respuesta'
+const canvasRef = ref(null);
+const chart = ref(null);
+
+// Arreglo de colores para los tipos de respuestas - nuevos colores solicitados
+const typeColors = {
+  'A': '#F44336', // Rojo para "Siempre" (Muy Alto)
+  'B': '#FFB300', // Naranja para "Casi Siempre" (Alto)
+  'C': '#FFEB3B', // Amarillo para "Algunas Veces" (Medio)
+  'D': '#8BC34A', // Verde para "Casi Nunca" (Bajo)
+  'E': '#4DD0C6', // Turquesa para "Nunca" (Nulo)
 };
 
-// Store category IDs corresponding to labels index
-const categoryIdsByIndex = ref([]);
+// Etiquetas para los tipos de respuestas
+const typeLabels = {
+  'A': 'Siempre',
+  'B': 'Casi siempre',
+  'C': 'Algunas veces',
+  'D': 'Casi nunca',
+  'E': 'Nunca',
+};
 
-const processedChartData = computed(() => {
-    const categories = props.chartData.map(item => item.name);
-    categoryIdsByIndex.value = props.chartData.map(item => item.id);
-
-    if (categories.length === 0) {
-        return { labels: [], datasets: [] };
-    }
-
-    const allAnswerKeys = new Set();
-    props.chartData.forEach(item => {
-        Object.keys(item.answers).forEach(ans => allAnswerKeys.add(ans));
-    });
-    const sortedAnswerKeys = Array.from(allAnswerKeys).sort();
-
-    const datasets = sortedAnswerKeys.map(answerKey => ({
-        label: answerLabels[answerKey] || `Respuesta ${answerKey}`,
-        data: props.chartData.map(item => item.answers[answerKey] || 0)
-    }));
-
-    return {
-        labels: categories,
-        datasets: datasets
-    };
+const chartData = computed(() => {
+  // Ordenamos los tipos de respuesta de E a A (de Nulo a Muy Alto)
+  const answerTypes = ['E', 'D', 'C', 'B', 'A'];
+  
+  const data = {
+    labels: answerTypes.map(type => typeLabels[type]),
+    datasets: [{
+      label: 'Respuestas',
+      data: answerTypes.map(type => props.category.responses[type] || 0),
+      backgroundColor: answerTypes.map(type => typeColors[type]),
+      borderColor: answerTypes.map(type => typeColors[type]),
+      borderWidth: 1
+    }]
+  };
+  
+  return data;
 });
 
-const chartRef = ref(null);
-
-// Click handler for the chart
-const handleChartClick = (event) => {
-    const chart = chartRef.value?.chart;
-    if (!chart) return;
-
-    const elements = getElementAtEvent(chart, event);
-
-    if (elements.length > 0) {
-        const { index } = elements[0];
-        const categoryId = categoryIdsByIndex.value[index];
-        console.log('Clicked Category Index:', index, 'Category ID:', categoryId);
-        if (categoryId) {
-            emit('category-click', categoryId);
-        }
-    }
-};
-
-const chartOptions = ref({
-    responsive: true,
-    maintainAspectRatio: false,
-    onClick: handleChartClick,
-    plugins: {
-        legend: { position: 'top' },
-        title: {
-            display: true,
-            text: 'Distribución de Respuestas por Categoría (Haz clic en una categoría para ver Dominios)'
-        },
-        tooltip: { enabled: true, mode: 'index', intersect: false }
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
     },
-    scales: {
-        x: { stacked: true, title: { display: true, text: 'Categoría' } },
-        y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Número de Respuestas' } }
+    tooltip: {
+      callbacks: {
+        label: function(context) {
+          const value = context.raw;
+          const total = props.category.total;
+          const percentage = ((value / total) * 100).toFixed(1);
+          return `${value} respuestas (${percentage}%)`;
+        }
+      }
+    },
+    datalabels: {
+      // Color del texto según el color de fondo para mejor legibilidad
+      color: function(context) {
+        const index = context.dataIndex;
+        const type = ['E', 'D', 'C', 'B', 'A'][index];
+        // Para fondos claros (amarillo) usamos texto negro, para el resto texto blanco
+        return type === 'C' || type === 'E' ? '#000000' : '#FFFFFF';
+      },
+      font: {
+        weight: 'bold'
+      },
+      formatter: function(value, context) {
+        const total = props.category.total;
+        return value > 0 ? `${((value / total) * 100).toFixed(0)}%` : '';
+      }
     }
-});
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      title: {
+        display: true,
+        text: 'Número de respuestas'
+      }
+    }
+  }
+};
 
 onMounted(() => {
-    console.log("CategoryBarChart mounted. Received data (array format expected):", props.chartData);
-    console.log("Processed chart data:", processedChartData.value);
+  if (canvasRef.value) {
+    // Destruir el gráfico anterior si existe
+    if (chart.value) {
+      chart.value.destroy();
+    }
+    
+    // Crear el nuevo gráfico
+    const ctx = canvasRef.value.getContext('2d');
+    chart.value = new Chart(ctx, {
+      type: 'bar',
+      data: chartData.value,
+      options: chartOptions
+    });
+  }
 });
-
-watch(() => props.chartData, (newData) => {
-    console.log("CategoryBarChart data updated:", newData);
-    console.log("Processed chart data updated:", processedChartData.value);
-}, { deep: true });
-
 </script>
 
 <template>
-    <div style="height: 400px; position: relative;">
-        <Bar
-            ref="chartRef"
-            v-if="processedChartData.labels.length > 0"
-            :data="processedChartData"
-            :options="chartOptions"
-        />
-        <div v-else class="text-center text-gray-500 p-4">
-            No hay datos suficientes para mostrar la gráfica.
-        </div>
-    </div>
+  <div class="h-full">
+    <canvas ref="canvasRef"></canvas>
+  </div>
 </template>
 
 <style scoped>
-/* Add any necessary scoped styles */
+/* Estilos adicionales si son necesarios */
 </style>
