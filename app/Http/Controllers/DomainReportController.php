@@ -31,12 +31,18 @@ class DomainReportController extends Controller
                 return response()->json(['error' => 'No autorizado'], 403);
             }
 
+            // Obtener el organization_id del usuario autenticado o del request
+            $organizationId = $user->organization_id ?? $request->input('organization_id');
+            if (!$organizationId) {
+                return response()->json(['error' => 'No se encontró organization_id'], 400);
+            }
+
             // Obtener los datos desde el servicio
-            $distribution = $this->domainReportService->getDomainAnswerTypeDistribution();
+            $distribution = $this->domainReportService->getDomainAnswerTypeDistribution('III', $organizationId);
 
             return response()->json($distribution);
         } catch (\Exception $e) {
-            Log::error("Error al obtener la distribución de respuestas por dominio: " . $e->getMessage());
+            Log::error("Error al obtener la distribución de personas por dominio y nivel de riesgo: " . $e->getMessage());
             return response()->json(['error' => 'Error al procesar la solicitud'], 500);
         }
     }

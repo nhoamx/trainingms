@@ -16,12 +16,52 @@ const props = defineProps({
     }
 });
 
+// NUEVO: Mapeo de niveles de riesgo a tipos de respuesta para visualización
+const riskToType = {
+    'Muy Alto': 'A',
+    'Alto': 'B',
+    'Medio': 'C',
+    'Bajo': 'D',
+    'Nulo': 'E',
+};
+const typeToRisk = {
+    'A': 'Muy Alto',
+    'B': 'Alto',
+    'C': 'Medio',
+    'D': 'Bajo',
+    'E': 'Nulo',
+};
+
 // Estado para alternar entre vista de tabla y gráficas
 const viewMode = ref('chart');
 
 // Estado para manejar la carga de datos
 const isLoading = ref(false);
-const dimensionData = ref(props.dimensionDistribution || []);
+// Adaptar la estructura de datos para la visualización (igual que dominios)
+const dimensionData = ref(
+    (props.dimensionDistribution || []).map((dim, idx) => {
+        // dim: { dimension_name, risk_levels }
+        const responses = {
+            'A': dim.risk_levels['Muy Alto'] || 0,
+            'B': dim.risk_levels['Alto'] || 0,
+            'C': dim.risk_levels['Medio'] || 0,
+            'D': dim.risk_levels['Bajo'] || 0,
+            'E': dim.risk_levels['Nulo'] || 0,
+        };
+        const total = Object.values(responses).reduce((a, b) => a + b, 0);
+        const percentages = {};
+        Object.entries(responses).forEach(([type, count]) => {
+            percentages[type] = total > 0 ? (count / total) * 100 : 0;
+        });
+        return {
+            id: idx,
+            name: dim.dimension_name,
+            responses,
+            percentages,
+            total
+        };
+    })
+);
 
 // Función para cargar los datos desde el API
 const loadDimensionData = async () => {
@@ -97,42 +137,26 @@ onMounted(() => {
                     <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                         <div v-for="(dimension, index) in dimensionData" :key="index" class="bg-white p-6 rounded-lg shadow-lg">
                             <h3 class="text-lg font-semibold mb-4">{{ dimension.name }}</h3>
-                            
-                            <!-- Resumen numérico -->
+                            <!-- Resumen numérico por nivel de riesgo -->
                             <div class="grid grid-cols-5 gap-2 mb-4">
-                                <div v-for="(count, type) in dimension.responses" :key="type" 
+                                <div v-for="risk in ['Nulo','Bajo','Medio','Alto','Muy Alto']" :key="risk"
                                     :style="{
-                                        backgroundColor: type === 'A' ? '#F44336' : 
-                                                         type === 'B' ? '#FFB300' :
-                                                         type === 'C' ? '#FFEB3B' :
-                                                         type === 'D' ? '#8BC34A' : 
-                                                         '#4DD0C6',
-                                        color: ['C', 'E'].includes(type) ? '#000' : '#fff'
+                                        backgroundColor: risk === 'Nulo' ? '#4DD0C6' :
+                                                         risk === 'Bajo' ? '#8BC34A' :
+                                                         risk === 'Medio' ? '#FFEB3B' :
+                                                         risk === 'Alto' ? '#FFB300' :
+                                                         '#F44336',
+                                        color: risk === 'Medio' || risk === 'Nulo' ? '#000' : '#fff'
                                     }"
                                     class="text-center p-2 rounded-md">
-                                    <div class="text-xs font-medium mb-1" :style="{ color: ['C', 'E'].includes(type) ? '#000' : '#fff' }">
-                                        {{ type === 'A' ? 'Siempre' : 
-                                           type === 'B' ? 'Casi siempre' : 
-                                           type === 'C' ? 'Algunas veces' : 
-                                           type === 'D' ? 'Casi nunca' : 'Nunca' }}
-                                    </div>
-                                    <div class="font-bold">{{ count }}</div>
-                                    <div class="text-xs">{{ dimension.percentages[type].toFixed(1) }}%</div>
+                                    <div class="text-xs font-medium mb-1">{{ risk }}</div>
+                                    <div class="font-bold">{{ dimension.responses[riskToType[risk]] || 0 }}</div>
+                                    <div class="text-xs">{{ dimension.percentages[riskToType[risk]].toFixed(1) }}%</div>
                                 </div>
                             </div>
-                            
                             <!-- Gráfico para dimensión individual -->
                             <div class="h-60 relative">
                                 <DimensionBarChart :dimension="dimension" />
-                            </div>
-                            
-                            <!-- Enlace a lista de personal -->
-                            <div class="mt-4 text-right">
-                                <a :href="route('reports.peopleListDimension', { dimensionId: dimension.id, answerKey: 'A' })" 
-                                   target="_blank"
-                                   class="text-sm text-blue-600 hover:underline">
-                                    Ver personal
-                                </a>
                             </div>
                         </div>
                     </div>

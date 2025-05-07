@@ -11,52 +11,113 @@ use Illuminate\Support\Facades\Log;
 
 class DomainReportService
 {
+
     /**
-     * Obtiene el conteo de respuestas por dominio y tipo de respuesta
-     * Implementa el Query #3 de la guía III: Conteo de respuestas por dominio y tipo de respuesta
+     * Obtiene la distribución de personas por dominio y nivel de riesgo (Nulo, Bajo, Medio, Alto, Muy Alto)
+     * Implementa el query oficial de la NOM-035 para dominios (ver instrucciones)
      *
      * @param string $referenceGuide
+     * @param int|null $organizationId
      * @return Collection
      */
-    public function getDomainAnswerTypeDistribution(string $referenceGuide = 'III'): Collection
+    public function getDomainAnswerTypeDistribution(string $referenceGuide = 'III', $organizationId = null): Collection
     {
+        /*
+         * Obtiene la distribución de personas por nivel de riesgo y dominio según la NOM-035 (Guía III).
+         * Devuelve una colección donde cada elemento es:
+         *   [
+         *     'domain_name' => string,
+         *     'risk_levels' => [
+         *         'Nulo' => int,
+         *         'Bajo' => int,
+         *         'Medio' => int,
+         *         'Alto' => int,
+         *         'Muy Alto' => int
+         *     ]
+         *   ]
+         * Siempre incluye todos los niveles de riesgo, aunque sean cero.
+         */
         try {
-            // Obtenemos todos los IDs de personal con evaluaciones de la guía especificada para consistencia
-            $guidePersonalIds = Evaluation::where('reference_guide', $referenceGuide)
-                ->whereNotNull('personal_id')
-                ->pluck('personal_id')
-                ->unique()
-                ->filter();
-
-            if ($guidePersonalIds->isEmpty()) {
-                Log::warning("No se encontraron IDs de personal con evaluaciones de la Guía {$referenceGuide}.");
+            if (!$organizationId && auth()->check() && auth()->user()->organization_id) {
+                $organizationId = auth()->user()->organization_id;
+            }
+            if (!$organizationId) {
+                Log::warning('No se proporcionó organization_id para el reporte de dominios.');
                 return collect();
             }
 
-            // Ejecutamos la consulta que obtiene el conteo de respuestas por dominio y tipo
-            // La relación es directa: questions -> domain_id -> domains (según las instrucciones)
-            $results = Question::join('evaluations', 'questions.evaluation_id', '=', 'evaluations.id')
-                ->join('domains', 'questions.domain_id', '=', 'domains.id')
-                ->where('questions.reference_guide', $referenceGuide)
-                ->whereNotNull('questions.answer')
-                ->whereIn('questions.personal_id', $guidePersonalIds)
-                ->select(
-                    'domains.id as domain_id',
-                    'domains.name as domain_name',
-                    'questions.answer',
-                    DB::raw('COUNT(*) as total_responses')
-                )
-                ->groupBy('domains.id', 'domains.name', 'questions.answer')
-                ->orderBy('domains.name')
-                ->orderBy('questions.answer')
-                ->get();
+            $sql = "SELECT
+                r.dominio_nombre,
+                r.nivel AS nivel_riesgo,
+                COUNT(e.personal_id) AS total_personas
+            FROM (
+                SELECT DISTINCT 
+                    d.name AS dominio_nombre,
+                    nivel.nivel
+                FROM domains d
+                CROSS JOIN (
+                    SELECT 'Nulo' AS nivel UNION ALL
+                    SELECT 'Bajo' UNION ALL
+                    SELECT 'Medio' UNION ALL
+                    SELECT 'Alto' UNION ALL
+                    SELECT 'Muy Alto'
+                ) nivel
+            ) r
+            LEFT JOIN (
+                SELECT
+                    q.domain_id,
+                    e.personal_id,
+                    d.name AS dominio_nombre,
+                    SUM(q.value) AS puntuacion_total,
+                    CASE
+                        WHEN SUM(q.value) <= 49 THEN 'Nulo'
+                        WHEN SUM(q.value) BETWEEN 50 AND 75 THEN 'Bajo'
+                        WHEN SUM(q.value) BETWEEN 76 AND 99 THEN 'Medio'
+                        WHEN SUM(q.value) BETWEEN 100 AND 139 THEN 'Alto'
+                        ELSE 'Muy Alto'
+                    END AS nivel_riesgo
+                FROM questions q
+                JOIN evaluations e ON q.evaluation_id = e.id
+                JOIN domains d ON q.domain_id = d.id
+                WHERE q.reference_guide = ?
+                  AND q.value IS NOT NULL
+                  AND e.organization_id = ?
+                GROUP BY e.personal_id, q.domain_id, d.name
+            ) e
+              ON r.dominio_nombre = e.dominio_nombre AND r.nivel = e.nivel_riesgo
+            GROUP BY r.dominio_nombre, r.nivel
+            ORDER BY r.dominio_nombre,
+                     FIELD(r.nivel, 'Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto');";
 
-            // Procesamos los resultados para agruparlos por dominio
-            $processedData = $this->processDomainResults($results);
+            $results = DB::select($sql, [$referenceGuide, $organizationId]);
 
-            return $processedData;
-        } catch (\Exception $e) {
-            Log::error("Error al obtener el conteo de respuestas por dominio: " . $e->getMessage());
+            // Procesar resultados: asegurar que todos los niveles estén presentes para cada dominio
+            $niveles = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
+            $data = [];
+            foreach ($results as $row) {
+                $dom = $row->dominio_nombre;
+                if (!isset($data[$dom])) {
+                    // Inicializa todos los niveles en cero
+                    $data[$dom] = [
+                        'domain_name' => $dom,
+                        'risk_levels' => array_fill_keys($niveles, 0)
+                    ];
+                }
+                $data[$dom]['risk_levels'][$row->nivel_riesgo] = (int) $row->total_personas;
+            }
+            // Si algún dominio no tiene todos los niveles, los completa en cero
+            foreach ($data as &$domData) {
+                foreach ($niveles as $nivel) {
+                    if (!isset($domData['risk_levels'][$nivel])) {
+                        $domData['risk_levels'][$nivel] = 0;
+                    }
+                }
+            }
+            unset($domData);
+            // Devuelve colección indexada
+            return collect(array_values($data));
+        } catch (\Throwable $e) {
+            Log::error("Error al obtener la distribución de personas por nivel de riesgo y dominio: " . $e->getMessage());
             return collect();
         }
     }
@@ -67,7 +128,7 @@ class DomainReportService
      * @param Collection $results
      * @return Collection
      */
-    private function processDomainResults(Collection $results): Collection
+    private function processDomainResults(Collection $results, string $referenceGuide, $guidePersonalIds): Collection
     {
         $domainData = collect();
 
@@ -76,39 +137,44 @@ class DomainReportService
 
         foreach ($groupedResults as $domainId => $domainResponses) {
             $domainName = $domainResponses->first()->domain_name;
-            
+
             // Inicializamos contadores para cada tipo de respuesta
             $responsesByType = [
-                'A' => 0, // Siempre
-                'B' => 0, // Casi siempre
-                'C' => 0, // Algunas veces
-                'D' => 0, // Casi nunca
-                'E' => 0, // Nunca
+                'A' => 0, // Muy alto
+                'B' => 0, // Alto
+                'C' => 0, // Medio
+                'D' => 0, // Bajo
+                'E' => 0, // Nulo
             ];
-            
-            // Sumamos las respuestas por tipo
+
+            // Sumamos las personas únicas por tipo de respuesta
             foreach ($domainResponses as $response) {
                 if (isset($responsesByType[$response->answer])) {
-                    $responsesByType[$response->answer] = $response->total_responses;
+                    $responsesByType[$response->answer] = $response->count;
                 }
             }
-            
-            // Calculamos el total de respuestas para este dominio
-            $totalResponses = array_sum($responsesByType);
-            
+
+            // Calcular el total de personas únicas que respondieron cualquier pregunta en este dominio
+            $totalUniquePersonsInDomain = Question::where('reference_guide', $referenceGuide)
+                ->where('domain_id', $domainId)
+                ->whereNotNull('answer')
+                ->whereIn('personal_id', $guidePersonalIds)
+                ->distinct('evaluation_id')
+                ->count('evaluation_id');
+
             // Calculamos porcentajes
             $percentages = [];
             foreach ($responsesByType as $type => $count) {
-                $percentages[$type] = $totalResponses > 0 ? ($count / $totalResponses) * 100 : 0;
+                $percentages[$type] = $totalUniquePersonsInDomain > 0 ? ($count / $totalUniquePersonsInDomain) * 100 : 0;
             }
-            
+
             // Añadimos al resultado
             $domainData->push([
                 'id' => $domainId,
                 'name' => $domainName,
                 'responses' => $responsesByType,
                 'percentages' => $percentages,
-                'total' => $totalResponses
+                'total' => $totalUniquePersonsInDomain
             ]);
         }
 

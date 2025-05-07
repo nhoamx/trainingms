@@ -57,6 +57,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports/global', [GlobalResponseController::class, 'showGlobalResponseReport'])
         ->name('reports.global.show');
 
+    // Rutas para reportes globales de personas (conteo de personas únicas)
+    Route::get('/reports/global-person-counts', [GlobalResponseController::class, 'getGlobalPersonCounts'])
+        ->name('reports.global.personCounts');
+    Route::get('/reports/category-person-counts', [GlobalResponseController::class, 'getPersonCountByCategoryAndResponse'])
+        ->name('reports.global.categoryPersonCounts');
+    Route::get('/reports/global-person', [GlobalResponseController::class, 'showGlobalPersonReport'])
+        ->name('reports.global.person.show');
+
     // Rutas para reportes por categoría    
     Route::get('/reports/category', [CategoryReportController::class, 'showCategoryReport'])
         ->name('reports.category.show');
@@ -80,8 +88,9 @@ Route::middleware(['auth'])->group(function () {
         ->name('reports.domain.totalScores.show');
         
     // Rutas para reportes de dimensión
-    Route::get('/reports/dimension-distribution', [DimensionReportController::class, 'getDimensionAnswerTypeDistribution'])
-        ->name('reports.dimension.distribution');
+    // NUEVO: Distribución por nivel de riesgo y dimensión
+    Route::get('/reports/dimension-risk-distribution', [DimensionReportController::class, 'getDimensionRiskLevelDistribution'])
+        ->name('reports.dimension.riskDistribution');
     Route::get('/reports/dimension', [DimensionReportController::class, 'showDimensionReport'])
         ->name('reports.dimension.show');
         
