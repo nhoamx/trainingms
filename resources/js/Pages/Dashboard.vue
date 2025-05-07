@@ -22,6 +22,8 @@ import DimensionBarChart from '../Components/DimensionBarChart.vue';
 import DimensionResponseTable from '../Components/DimensionResponseTable.vue';
 import DimensionTotalScoreChart from '../Components/DimensionTotalScoreChart.vue';
 import DimensionTotalScoreTable from '../Components/DimensionTotalScoreTable.vue';
+import GlobalResponseChart from '../Components/GlobalResponseChart.vue';
+import CategoryResponseAnalysisChart from '../Components/CategoryResponseAnalysisChart.vue';
 import { computed, ref, watch, onMounted } from 'vue';
 
 const props = defineProps({
@@ -566,6 +568,7 @@ const dashboardTabs = computed(() => {
         ];
     }
     return [
+        { key: 'globalAnalysis', label: 'Análisis Global' },
         { key: 'categoryAnalysis', label: 'Análisis por Categoría' },
         { key: 'domainAnalysis', label: 'Análisis por Dominio' },
         { key: 'dimensionAnalysis', label: 'Análisis por Dimensión' },
@@ -1317,140 +1320,114 @@ watch(currentTab, (newTab) => {
                         </div>
                     </div>
 
-                    <!-- NEW TAB: Análisis Demográfico -->
-                    <div v-if="!isAdmin && !isSuperAdmin" v-show="currentTab === 'demographicAnalysis'" class="space-y-8">
-                         <div v-if="demographic_distributions && demographic_distributions.length > 0" class="space-y-8">
-                             <h2 class="text-xl font-semibold text-gray-900 mb-0 text-center">Análisis Demográfico General</h2>
-
-                            <div v-for="category in demographic_distributions" :key="category.key" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                                <h3 class="text-lg font-medium text-gray-800 mb-4 text-center">{{ category.label }}</h3>
-                                <DemographicChart :title="category.label" :chart-data="category.data" />
-
-                                 <div v-if="category.data.length > 0" class="mt-6 pt-4 border-t border-gray-200">
-                                     <h4 class="text-md font-semibold mb-3 text-gray-700 text-center">Ver lista de personal por respuesta:</h4>
-                                     <div class="flex flex-wrap justify-center gap-2">
-                                         <!-- Iterate over the data points for this category -->
-                                         <a v-for="item in category.data" :key="item.identifier"
-                                                :href="item.count > 0 ? route('reports.peopleListDemographic', { fieldKey: category.key, identifier: item.identifier }) : '#'"
-                                                target="_blank"
-                                                :class="[
-                                                    'inline-block px-3 py-1 border rounded-md shadow-sm text-sm font-medium transition-colors duration-150',
-                                                    item.count === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none' :
-                                                    'bg-white text-indigo-600 border-gray-300 hover:bg-indigo-50 hover:border-indigo-300'
-                                                ]"
-                                                :aria-disabled="item.count === 0"
-                                           >
-                                             {{ item.label }} ({{ item.count }})
-                                         </a>
-                                     </div>
-                                 </div>
-                             </div>
-                         </div>
-                         <div v-else class="text-gray-500 text-center py-6 bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                             No hay datos demográficos disponibles para mostrar.
-                        </div>
-                    </div>
-
-                    <!-- Tab de Evaluaciones -->
-                    <div v-show="currentTab === 'evaluations' || isAdmin || isSuperAdmin" class="space-y-6">
-                        <!-- Para usuarios de organización -->
-                        <div v-if="!isAdmin && !isSuperAdmin">
-                            <div v-if="guideIIIEvaluations.length > 0">
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <div v-for="evaluation in guideIIIEvaluations"
-                                         :key="evaluation.id"
-                                         class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:border-blue-500 transition-colors duration-300">
-                                        <div class="border-b border-gray-200 bg-sky-50 px-4 py-3">
-                                            <div class="flex items-center justify-between">
-                                                <h3 class="text-lg font-semibold text-gray-900">
-                                                    Folio: {{ evaluation.folio }}
-                                                </h3>
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-blue-800">
-                                                    Guía III
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="px-4 py-4 sm:px-6">
-                                            <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
-                                                <div class="sm:col-span-1">
-                                                    <dt class="text-sm font-medium text-gray-500">Fecha de creación</dt>
-                                                    <dd class="mt-1 text-sm text-gray-900">{{ formatDate(evaluation.created_at) }}</dd>
-                                                </div>
-                                                <div class="sm:col-span-1">
-                                                    <dt class="text-sm font-medium text-gray-500">Estado</dt>
-                                                    <dd class="mt-1 text-sm text-gray-900">Completada</dd>
-                                                </div>
-                                            </dl>
-                                            <div class="mt-4 flex justify-end">
-                                                <Link
-                                                    :href="route('organization.results.detail', {
-                                                        organization: evaluation.organization_id,
-                                                        evaluation: evaluation.id
-                                                    })"
-                                                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                                >
-                                                    <DocumentTextIcon class="h-5 w-5 mr-2 text-gray-500" />
-                                                    Ver detalle
-                                                </Link>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div v-else class="text-gray-500 text-center py-4">
-                                No hay evaluaciones registradas
+                    <!-- TAB: Análisis Global de Respuestas -->
+                    <div v-if="!isAdmin && !isSuperAdmin" v-show="currentTab === 'globalAnalysis'" class="space-y-6">
+                        <!-- Subtabs para los diferentes reportes globales -->
+                        <div class="border-b border-gray-200">
+                            <div class="flex flex-wrap -mb-px">
+                                <button 
+                                    @click="globalResponseSubTab = 'globalCounts'" 
+                                    :class="[
+                                        'inline-flex items-center py-4 px-4 text-sm font-medium border-b-2 whitespace-nowrap',
+                                        globalResponseSubTab === 'globalCounts' 
+                                            ? 'border-blue-500 text-blue-600' 
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ]"
+                                >
+                                    <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                                    </svg>
+                                    Conteo Global de Respuestas
+                                </button>
+                                <button 
+                                    @click="globalResponseSubTab = 'categoryResponses'" 
+                                    :class="[
+                                        'inline-flex items-center py-4 px-4 text-sm font-medium border-b-2 whitespace-nowrap',
+                                        globalResponseSubTab === 'categoryResponses' 
+                                            ? 'border-blue-500 text-blue-600' 
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ]"
+                                >
+                                    <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                    Respuestas por Categoría
+                                </button>
                             </div>
                         </div>
-
-                        <!-- Para admin/superadmin -->
-                        <div v-else class="space-y-8">
-                            <div v-for="organization in organizationsWithGuideIII" :key="organization.id">
-                                <h3 class="text-xl font-semibold text-gray-900 mb-4">{{ organization.name }}</h3>
-                                <div v-if="organization.evaluations.length > 0">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        <div v-for="evaluation in organization.evaluations"
-                                             :key="evaluation.id"
-                                             class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:border-blue-500 transition-colors duration-300">
-                                            <div class="border-b border-gray-200 bg-sky-50 px-4 py-3">
-                                                <div class="flex items-center justify-between">
-                                                    <h3 class="text-lg font-semibold text-gray-900">
-                                                        Folio: {{ evaluation.folio }}
-                                                    </h3>
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-blue-800">
-                                                        Guía III
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="px-4 py-4 sm:px-6">
-                                                <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
-                                                    <div class="sm:col-span-1">
-                                                        <dt class="text-sm font-medium text-gray-500">Fecha de creación</dt>
-                                                        <dd class="mt-1 text-sm text-gray-900">{{ formatDate(evaluation.created_at) }}</dd>
-                                                    </div>
-                                                    <div class="sm:col-span-1">
-                                                        <dt class="text-sm font-medium text-gray-500">Estado</dt>
-                                                        <dd class="mt-1 text-sm text-gray-900">Completada</dd>
-                                                    </div>
-                                                </dl>
-                                                <div class="mt-4 flex justify-end">
-                                                    <Link
-                                                        :href="route('organization.results.detail', {
-                                                            organization: organization.id,
-                                                            evaluation: evaluation.id
-                                                        })"
-                                                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                                    >
-                                                        <DocumentTextIcon class="h-5 w-5 mr-2 text-gray-500" />
-                                                        Ver detalle
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                        
+                        <!-- Subtab: Conteo global de respuestas por opción -->
+                        <div v-if="globalResponseSubTab === 'globalCounts'" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Conteo Global de Respuestas por Opción</h3>
+                                    <p class="text-sm text-gray-500">
+                                        Visualización del conteo global de respuestas por opción (A, B, C, D, E) en todo el cuestionario.
+                                    </p>
                                 </div>
-                                <div v-else class="text-gray-500 text-center py-4">
-                                    No hay evaluaciones registradas para esta organización
+                                <div class="flex items-center space-x-2">
+                                    <button 
+                                        @click="globalViewMode = 'chart'" 
+                                        :class="[
+                                            'inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium',
+                                            globalViewMode === 'chart' 
+                                                ? 'bg-blue-600 text-white border-blue-600' 
+                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ]"
+                                    >
+                                        <ChartPieIcon class="h-5 w-5 mr-2" />
+                                        Gráfica
+                                    </button>
                                 </div>
+                            </div>
+                            
+                            <!-- Estado de carga -->
+                            <div v-if="isLoadingGlobalCounts" class="flex justify-center items-center h-64">
+                                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                                <span class="ml-3 text-gray-600">Cargando datos...</span>
+                            </div>
+                            
+                            <!-- Contenido del reporte -->
+                            <div v-else>
+                                <GlobalResponseChart :response-data="globalResponseCounts" />
+                            </div>
+                        </div>
+                        
+                        <!-- Subtab: Conteo de respuestas por categoría y opción -->
+                        <div v-if="globalResponseSubTab === 'categoryResponses'" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Conteo de Respuestas por Categoría y Opción</h3>
+                                    <p class="text-sm text-gray-500">
+                                        Desglose detallado del conteo de respuestas por categoría y opción (A-E).
+                                    </p>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button 
+                                        @click="categoryResponseViewMode = 'chart'" 
+                                        :class="[
+                                            'inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium',
+                                            categoryResponseViewMode === 'chart' 
+                                                ? 'bg-blue-600 text-white border-blue-600' 
+                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ]"
+                                    >
+                                        <ChartPieIcon class="h-5 w-5 mr-2" />
+                                        Gráfica
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Estado de carga -->
+                            <div v-if="isLoadingCategoryResponseCounts" class="flex justify-center items-center h-64">
+                                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                                <span class="ml-3 text-gray-600">Cargando datos...</span>
+                            </div>
+                            
+                            <!-- Contenido del reporte -->
+                            <div v-else>
+                                <CategoryResponseAnalysisChart :category-data="categoryResponseCounts" />
                             </div>
                         </div>
                     </div>
