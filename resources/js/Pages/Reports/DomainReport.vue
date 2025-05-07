@@ -96,44 +96,62 @@ onMounted(() => {
                     <!-- Gráficos individuales por dominio, 2 por fila -->
                     <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                         <div v-for="(domain, index) in domainData" :key="index" class="bg-white p-6 rounded-lg shadow-lg">
-                            <h3 class="text-lg font-semibold mb-4">{{ domain.name }}</h3>
-                            
-                            <!-- Resumen numérico -->
-                            <div class="grid grid-cols-5 gap-2 mb-4">
-                                <div v-for="(count, type) in domain.responses" :key="type" 
-                                    :style="{
-                                        backgroundColor: type === 'A' ? '#F44336' : 
-                                                         type === 'B' ? '#FFB300' :
-                                                         type === 'C' ? '#FFEB3B' :
-                                                         type === 'D' ? '#8BC34A' : 
-                                                         '#4DD0C6',
-                                        color: ['C', 'E'].includes(type) ? '#000' : '#fff'
-                                    }"
-                                    class="text-center p-2 rounded-md">
-                                    <div class="text-xs font-medium mb-1" :style="{ color: ['C', 'E'].includes(type) ? '#000' : '#fff' }">
-                                        {{ type === 'A' ? 'Siempre' : 
-                                           type === 'B' ? 'Casi siempre' : 
-                                           type === 'C' ? 'Algunas veces' : 
-                                           type === 'D' ? 'Casi nunca' : 'Nunca' }}
+                            <h3 class="text-lg font-semibold mb-4">{{ domain.domain_name || domain.name }}</h3>
+
+                            <!-- Transformar risk_levels a responses tipo A-E para el gráfico y resumen -->
+                            <template v-if="domain.risk_levels">
+                                <div class="grid grid-cols-5 gap-2 mb-4">
+                                    <div v-for="type in ['A','B','C','D','E']" :key="type"
+                                        :style="{
+                                            backgroundColor: type === 'A' ? '#F44336' : 
+                                                             type === 'B' ? '#FFB300' :
+                                                             type === 'C' ? '#FFEB3B' :
+                                                             type === 'D' ? '#8BC34A' : 
+                                                             '#4DD0C6',
+                                            color: ['C', 'E'].includes(type) ? '#000' : '#fff'
+                                        }"
+                                        class="text-center p-2 rounded-md">
+                                        <div class="text-xs font-medium mb-1" :style="{ color: ['C', 'E'].includes(type) ? '#000' : '#fff' }">
+                                            {{ type === 'A' ? 'Siempre' : 
+                                               type === 'B' ? 'Casi siempre' : 
+                                               type === 'C' ? 'Algunas veces' : 
+                                               type === 'D' ? 'Casi nunca' : 'Nunca' }}
+                                        </div>
+                                        <div class="font-bold">{{
+                                            type === 'A' ? (domain.risk_levels['Muy Alto'] || 0) :
+                                            type === 'B' ? (domain.risk_levels['Alto'] || 0) :
+                                            type === 'C' ? (domain.risk_levels['Medio'] || 0) :
+                                            type === 'D' ? (domain.risk_levels['Bajo'] || 0) :
+                                            (domain.risk_levels['Nulo'] || 0)
+                                        }}</div>
+                                        <div class="text-xs">{{
+                                            (() => {
+                                                const total = Object.values(domain.risk_levels).reduce((a,b) => a+b, 0);
+                                                const val = type === 'A' ? (domain.risk_levels['Muy Alto'] || 0) :
+                                                    type === 'B' ? (domain.risk_levels['Alto'] || 0) :
+                                                    type === 'C' ? (domain.risk_levels['Medio'] || 0) :
+                                                    type === 'D' ? (domain.risk_levels['Bajo'] || 0) :
+                                                    (domain.risk_levels['Nulo'] || 0);
+                                                return total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+                                            })() 
+                                        }}%</div>
                                     </div>
-                                    <div class="font-bold">{{ count }}</div>
-                                    <div class="text-xs">{{ domain.percentages[type].toFixed(1) }}%</div>
                                 </div>
-                            </div>
-                            
-                            <!-- Gráfico para dominio individual -->
-                            <div class="h-60 relative">
-                                <DomainBarChart :domain="domain" />
-                            </div>
-                            
-                            <!-- Enlace a lista de personal -->
-                            <div class="mt-4 text-right">
-                                <a :href="route('reports.peopleListDomain', { domainId: domain.id, answerKey: 'A' })" 
-                                   target="_blank"
-                                   class="text-sm text-blue-600 hover:underline">
-                                    Ver personal
-                                </a>
-                            </div>
+                                <!-- Gráfico para dominio individual -->
+                                <div class="h-60 relative">
+                                    <DomainBarChart :domain="{
+                                        name: domain.domain_name || domain.name,
+                                        responses: {
+                                            'A': domain.risk_levels['Muy Alto'] || 0,
+                                            'B': domain.risk_levels['Alto'] || 0,
+                                            'C': domain.risk_levels['Medio'] || 0,
+                                            'D': domain.risk_levels['Bajo'] || 0,
+                                            'E': domain.risk_levels['Nulo'] || 0
+                                        },
+                                        total: Object.values(domain.risk_levels).reduce((a,b) => a+b, 0)
+                                    }" />
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>

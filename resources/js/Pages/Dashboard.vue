@@ -22,6 +22,8 @@ import DimensionBarChart from '../Components/DimensionBarChart.vue';
 import DimensionResponseTable from '../Components/DimensionResponseTable.vue';
 import DimensionTotalScoreChart from '../Components/DimensionTotalScoreChart.vue';
 import DimensionTotalScoreTable from '../Components/DimensionTotalScoreTable.vue';
+import GlobalResponseChart from '../Components/GlobalResponseChart.vue';
+import CategoryResponseAnalysisChart from '../Components/CategoryResponseAnalysisChart.vue';
 import { computed, ref, watch, onMounted } from 'vue';
 
 const props = defineProps({
@@ -65,6 +67,26 @@ const currentTab = ref(props.isAdmin || props.isSuperAdmin ? 'evaluations' : 'gl
 // Subtab activo para reportes de categoría
 const categorySubTab = ref('distribution');
 
+// Cargar automáticamente los datos de distribución y puntaje total al entrar a la subpestaña correspondiente
+watch(categorySubTab, (newTab) => {
+    if (newTab === 'distribution') {
+        loadCategoryReportData();
+    } else if (newTab === 'totalScore') {
+        loadCategoryTotalScores();
+    }
+});
+
+// También cargar al montar si la tab está activa
+onMounted(() => {
+    if (currentTab.value === 'categoryAnalysis') {
+        if (categorySubTab.value === 'distribution') {
+            loadCategoryReportData();
+        } else if (categorySubTab.value === 'totalScore') {
+            loadCategoryTotalScores();
+        }
+    }
+});
+
 // State for selected category and domain data
 const selectedCategoryId = ref(null);
 const selectedCategoryName = ref('');
@@ -77,6 +99,15 @@ const isLoadingCategoryReport = ref(false);
 const categoryReportData = ref([]);
 
 // Estado para el reporte de puntuación total por categoría
+
+// Niveles de riesgo en orden oficial NOM-035
+const riskLevels = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
+
+// Función para obtener el total de personas por categoría (suma de todos los niveles de riesgo)
+function totalRespondents(category) {
+    if (!category || !category.risk_levels) return 0;
+    return riskLevels.reduce((sum, level) => sum + (category.risk_levels[level] || 0), 0);
+}
 const totalScoreViewMode = ref('chart');
 const isLoadingCategoryTotalScores = ref(false);
 const categoryTotalScores = ref([]);
@@ -84,10 +115,19 @@ const categoryTotalScores = ref([]);
 // Subtab activo para reportes de dominio
 const domainSubTab = ref('distribution');
 
-// Estado para el reporte de distribución de respuestas por dominio
+// Estado para el reporte de distribución de respuestas por dominio (por nivel de riesgo)
 const domainViewMode = ref('chart');
 const isLoadingDomainReport = ref(false);
 const domainReportData = ref([]);
+
+// Niveles de riesgo para dominios (igual que categorías)
+const domainRiskLevels = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
+
+// Función para obtener el total de personas por dominio (suma de todos los niveles de riesgo)
+function totalDomainRespondents(domain) {
+    if (!domain || !domain.risk_levels) return 0;
+    return domainRiskLevels.reduce((sum, level) => sum + (domain.risk_levels[level] || 0), 0);
+}
 
 // Estado para el reporte de puntuación total por dominio
 const domainTotalScoreViewMode = ref('chart');
@@ -150,10 +190,9 @@ const loadCategoryTotalScores = async () => {
     }
 };
 
-// Función para cargar los datos de distribución de respuestas por dominio
+// Función para cargar los datos de distribución de respuestas por dominio (por nivel de riesgo)
 const loadDomainReportData = async () => {
     if (domainReportData.value.length > 0) return;
-    
     isLoadingDomainReport.value = true;
     try {
         const response = await window.axios.get('/reports/domain-distribution');
@@ -183,11 +222,32 @@ const loadDomainTotalScores = async () => {
 // Función para cargar los datos de distribución de respuestas por dimensión
 const loadDimensionReportData = async () => {
     if (dimensionDistributionData.value.length > 0) return;
-    
     isLoadingDimensionReport.value = true;
     try {
-        const response = await window.axios.get('/reports/dimension-distribution');
-        dimensionDistributionData.value = response.data;
+        // NUEVO: Usar el endpoint de distribución por nivel de riesgo
+        const response = await window.axios.get('/reports/dimension-risk-distribution');
+        // Adaptar la estructura para la visualización (igual que en el reporte de dominio)
+        dimensionDistributionData.value = (response.data || []).map((dim, idx) => {
+            const responses = {
+                'A': dim.risk_levels['Muy Alto'] || 0,
+                'B': dim.risk_levels['Alto'] || 0,
+                'C': dim.risk_levels['Medio'] || 0,
+                'D': dim.risk_levels['Bajo'] || 0,
+                'E': dim.risk_levels['Nulo'] || 0,
+            };
+            const total = Object.values(responses).reduce((a, b) => a + b, 0);
+            const percentages = {};
+            Object.entries(responses).forEach(([type, count]) => {
+                percentages[type] = total > 0 ? (count / total) * 100 : 0;
+            });
+            return {
+                id: idx,
+                name: dim.dimension_name,
+                responses,
+                percentages,
+                total
+            };
+        });
     } catch (error) {
         console.error('Error al cargar los datos del reporte de dimensiones:', error);
     } finally {
@@ -413,7 +473,7 @@ watch(globalResponseSubTab, (newSubTab) => {
     if (currentTab.value === 'globalAnalysis') {
         if (newSubTab === 'globalCounts') {
             loadGlobalResponseCounts();
-        } else if (newSubTab === 'categoryResponses') {
+        } else if (newTab === 'categoryResponses') {
             loadCategoryResponseCounts();
         }
     }
@@ -566,6 +626,7 @@ const dashboardTabs = computed(() => {
         ];
     }
     return [
+        { key: 'globalAnalysis', label: 'Análisis Global' },
         { key: 'categoryAnalysis', label: 'Análisis por Categoría' },
         { key: 'domainAnalysis', label: 'Análisis por Dominio' },
         { key: 'dimensionAnalysis', label: 'Análisis por Dimensión' },
@@ -625,6 +686,15 @@ watch(currentTab, (newTab) => {
     selectedDimensionId.value = null;
     dimensionAnswerDistribution.value = {};
 });
+
+// NEW: Objeto para mapear las claves de respuesta a etiquetas y colores
+const responseTypes = {
+  A: { label: 'Muy alto', bgColor: '#F44336', textColor: '#fff', borderColor: '#F44336' },
+  B: { label: 'Alto', bgColor: '#FFB300', textColor: '#fff', borderColor: '#FFB300' },
+  C: { label: 'Medio', bgColor: '#FFC107', textColor: '#000', borderColor: '#FFC107' }, // Amarillo actualizado
+  D: { label: 'Bajo', bgColor: '#8BC34A', textColor: '#fff', borderColor: '#8BC34A' },
+  E: { label: 'Nulo', bgColor: '#4DD0C6', textColor: '#000', borderColor: '#4DD0C6' }
+};
 </script>
 
 <template>
@@ -692,7 +762,10 @@ watch(currentTab, (newTab) => {
                         <div v-if="categorySubTab === 'distribution'" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Distribución de Respuestas por Categoría</h3>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Distribución de Personas por Categoría y Nivel de Riesgo</h3>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        Este reporte muestra cuántas personas se ubican en cada nivel de riesgo psicosocial (Nulo, Bajo, Medio, Alto, Muy Alto) para cada categoría, de acuerdo con la suma de sus respuestas y los rangos normativos de la NOM-035-STPS-2018.
+                                    </p>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <button 
@@ -730,71 +803,61 @@ watch(currentTab, (newTab) => {
                             
                             <!-- Contenido del reporte -->
                             <div v-else>
-                                <!-- Vista de gráficas -->
-                                <div v-if="viewMode === 'chart'" class="space-y-8">
-                                    <div v-if="categoryReportData.length === 0" class="bg-gray-50 p-6 rounded-lg text-center text-gray-500">
-                                        No hay datos disponibles para mostrar.
-                                    </div>
-                                    
-                                    <!-- Gráficos por categoría -->
-                                    <div v-else>
-                                        <!-- Gráficos individuales por categoría, 2 por fila -->
-                                        <h4 class="text-md font-medium text-gray-700 mb-4">Distribución por categoría</h4>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div v-for="(category, index) in categoryReportData" :key="index" class="bg-white p-6 rounded-lg shadow">
-                                                <h3 class="text-lg font-semibold mb-4">{{ category.name }}</h3>
-                                                
-                                                <!-- Resumen numérico -->
-                                                <div class="grid grid-cols-5 gap-2 mb-4">
-                                                    <div v-for="(count, type) in category.responses" :key="type" 
-                                                        :class="[
-                                                            'text-center p-2 rounded-md',
-                                                            type === 'A' ? 'bg-red-100 text-red-800' : 
-                                                            type === 'B' ? 'bg-amber-100 text-amber-800' :
-                                                            type === 'C' ? 'bg-yellow-100 text-yellow-800' :
-                                                            type === 'D' ? 'bg-green-100 text-green-800' :
-                                                            'bg-teal-100 text-teal-800'
-                                                        ]"
-                                                        :style="{
-                                                            backgroundColor: type === 'A' ? '#F44336' : 
-                                                                             type === 'B' ? '#FFB300' :
-                                                                             type === 'C' ? '#FFEB3B' :
-                                                                             type === 'D' ? '#8BC34A' : 
-                                                                             '#4DD0C6',
-                                                            color: ['C', 'E'].includes(type) ? '#000' : '#fff'
-                                                        }">
-                                                        <div class="text-xs font-medium mb-1" :style="{ color: ['C', 'E'].includes(type) ? '#000' : '#fff' }">
-                                                            {{ type === 'A' ? 'Siempre' : 
-                                                               type === 'B' ? 'Casi siempre' : 
-                                                               type === 'C' ? 'Algunas veces' : 
-                                                               type === 'D' ? 'Casi nunca' : 'Nunca' }}
-                                                        </div>
-                                                        <div class="font-bold">{{ count }}</div>
-                                                        <div class="text-xs">{{ category.percentages[type].toFixed(1) }}%</div>
+                                <!-- Vista de tabla de personas por nivel de riesgo y categoría -->
+                                <!-- Gráfico de barras apiladas -->
+                                <div v-if="categoryReportData.length > 0" class="my-8">
+                                    <h4 class="text-md font-medium text-gray-700 mb-4">Personas por nivel de riesgo y categoría</h4>
+                                    <CategoryStackedBarChart :categoryData="categoryReportData" />
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                                        <div v-for="(category, index) in categoryReportData" :key="index" class="bg-white p-6 rounded-lg shadow-lg">
+                                            <h3 class="text-lg font-semibold mb-2">{{ category.name }}</h3>
+                                            <!-- Etiqueta con total de personas -->
+                                            <div class="mb-2 text-sm text-gray-600">Total de personas: <span class="font-semibold">{{ totalRespondents(category) }}</span></div>
+                                            <!-- Gráfico de barras para cada categoría individual -->
+                                            <div class="h-80">
+                                                <CategoryBarChart :category="category" />
+                                            </div>
+                                            <!-- Tarjetas de resumen por nivel de riesgo -->
+                                            <div class="mt-4 grid grid-cols-5 gap-2">
+                                                <div v-for="risk in riskLevels" :key="risk"
+                                                    :class="[
+                                                        'text-center p-2 rounded-md shadow border-2',
+                                                        risk === 'Nulo' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                                                        risk === 'Bajo' ? 'bg-green-100 text-green-800 border-green-300' :
+                                                        risk === 'Medio' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                                                        risk === 'Alto' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                                                        'bg-red-100 text-red-800 border-red-300'
+                                                    ]"
+                                                    :title="`Personas en nivel ${risk}`"
+                                                >
+                                                    <div class="text-xs font-medium mb-1">{{ risk }}</div>
+                                                    <div class="font-bold">{{ category.risk_levels && category.risk_levels[risk] ? category.risk_levels[risk] : 0 }}</div>
+                                                    <div class="text-xs">
+                                                        {{ totalRespondents(category) > 0 ? ((category.risk_levels && category.risk_levels[risk] ? (category.risk_levels[risk] / totalRespondents(category) * 100) : 0).toFixed(1)) : '0.0' }}%
                                                     </div>
-                                                </div>
-                                                
-                                                <!-- Gráfico para categoría individual -->
-                                                <div class="h-60 relative">
-                                                    <CategoryBarChart :category="category" />
-                                                </div>
-                                                
-                                                <!-- Enlace a lista de personal -->
-                                                <div class="mt-4 text-right">
-                                                    <a :href="route('reports.peopleList', { categoryId: category.id, answerKey: 'A' })" 
-                                                       target="_blank"
-                                                       class="text-sm text-blue-600 hover:underline">
-                                                        Ver personal
-                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
+
+
                                 </div>
-                                
-                                <!-- Vista de tabla -->
-                                <div v-else-if="viewMode === 'table'" class="my-4">
-                                    <CategoryResponseTable :category-data="categoryReportData" />
+                                <!-- Interpretación y Contexto para Distribución por Categoría -->
+                                <div class="bg-white p-6 rounded-lg shadow mt-6">
+                                    <h4 class="text-md font-medium text-gray-700 mb-3">Interpretación de la Distribución de Personas por Nivel de Riesgo</h4>
+                                    <p class="text-sm text-gray-600 mb-4">
+                                        Este reporte permite identificar la distribución de personas por nivel de riesgo en cada categoría, según la NOM-035-STPS-2018. Prioriza las categorías con mayor número de personas en los niveles "Alto" y "Muy Alto" para acciones preventivas.
+                                    </p>
+                                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+                                        <div class="flex">
+                                            <div class="ml-3">
+                                                <p class="text-sm text-yellow-700">
+                                                    <strong>Importante:</strong> Analiza la concentración de personas en los niveles superiores para enfocar intervenciones.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -917,11 +980,14 @@ watch(currentTab, (newTab) => {
                             </div>
                         </div>
                         
-                        <!-- Subtab: Distribución de respuestas por dominio -->
+                        <!-- Subtab: Distribución de personas por dominio y nivel de riesgo -->
                         <div v-if="domainSubTab === 'distribution'" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Distribución de Respuestas por Dominio</h3>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Distribución de Personas por Dominio y Nivel de Riesgo</h3>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        Este reporte muestra cuántas personas se ubican en cada nivel de riesgo psicosocial (Nulo, Bajo, Medio, Alto, Muy Alto) para cada dominio, de acuerdo con la suma de sus respuestas y los rangos normativos de la NOM-035-STPS-2018.
+                                    </p>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <button 
@@ -936,83 +1002,62 @@ watch(currentTab, (newTab) => {
                                         <ChartPieIcon class="h-5 w-5 mr-2" />
                                         Gráficas
                                     </button>
-                                    <button 
-                                        @click="domainViewMode = 'table'" 
-                                        :class="[
-                                            'inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium',
-                                            domainViewMode === 'table' 
-                                                ? 'bg-blue-600 text-white border-blue-600' 
-                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                        ]"
-                                    >
-                                        <TableCellsIcon class="h-5 w-5 mr-2" />
-                                        Tabla
-                                    </button>
                                 </div>
                             </div>
-                            
                             <!-- Estado de carga -->
                             <div v-if="isLoadingDomainReport" class="flex justify-center items-center h-64">
                                 <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                                 <span class="ml-3 text-gray-600">Cargando datos...</span>
                             </div>
-                            
                             <!-- Contenido del reporte -->
                             <div v-else>
-                                <!-- Vista de gráficas -->
-                                <div v-if="domainViewMode === 'chart'" class="space-y-8">
-                                    <div v-if="domainReportData.length === 0" class="bg-gray-50 p-6 rounded-lg text-center text-gray-500">
-                                        No hay datos disponibles para mostrar.
-                                    </div>
-                                    
-                                    <!-- Gráficos individuales por dominio, 2 por fila -->
-                                    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div v-for="(domain, index) in domainReportData" :key="index" class="bg-white p-6 rounded-lg shadow">
-                                            <h3 class="text-lg font-semibold mb-4">{{ domain.name }}</h3>
-                                            
-                                            <!-- Resumen numérico -->
-                                            <div class="grid grid-cols-5 gap-2 mb-4">
-                                                <div v-for="(count, type) in domain.responses" :key="type" 
-                                                    :style="{
-                                                        backgroundColor: type === 'A' ? '#F44336' : 
-                                                                         type === 'B' ? '#FFB300' :
-                                                                         type === 'C' ? '#FFEB3B' :
-                                                                         type === 'D' ? '#8BC34A' : 
-                                                                         '#4DD0C6',
-                                                        color: ['C', 'E'].includes(type) ? '#000' : '#fff'
-                                                    }"
-                                                    class="text-center p-2 rounded-md">
-                                                    <div class="text-xs font-medium mb-1" :style="{ color: ['C', 'E'].includes(type) ? '#000' : '#fff' }">
-                                                        {{ type === 'A' ? 'Siempre' : 
-                                                           type === 'B' ? 'Casi siempre' : 
-                                                           type === 'C' ? 'Algunas veces' : 
-                                                           type === 'D' ? 'Casi nunca' : 'Nunca' }}
+                                <div v-if="domainReportData.length > 0" class="my-8">
+                                    <h4 class="text-md font-medium text-gray-700 mb-4">Personas por nivel de riesgo y dominio</h4>
+                                    <!-- Aquí podrías agregar un DomainStackedBarChart si lo implementas -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                                        <div v-for="(domain, index) in domainReportData" :key="index" class="bg-white p-6 rounded-lg shadow-lg">
+                                            <h3 class="text-lg font-semibold mb-2">{{ domain.name }}</h3>
+                                            <!-- Etiqueta con total de personas -->
+                                            <div class="mb-2 text-sm text-gray-600">Total de personas: <span class="font-semibold">{{ totalDomainRespondents(domain) }}</span></div>
+                                            <!-- Gráfico de barras por nivel de riesgo (visualización tipo DomainBarChart) -->
+                                            <div class="mb-4">
+                                                <DomainBarChart :domain="{
+                                                    name: domain.name,
+                                                    responses: {
+                                                        'A': domain.risk_levels['Muy Alto'] || 0,
+                                                        'B': domain.risk_levels['Alto'] || 0,
+                                                        'C': domain.risk_levels['Medio'] || 0,
+                                                        'D': domain.risk_levels['Bajo'] || 0,
+                                                        'E': domain.risk_levels['Nulo'] || 0
+                                                    },
+                                                    total: totalDomainRespondents(domain)
+                                                }" />
+                                            </div>
+                                            <!-- Tarjetas de resumen por nivel de riesgo -->
+                                            <div class="mt-4 grid grid-cols-5 gap-2">
+                                                <div v-for="risk in domainRiskLevels" :key="risk"
+                                                    :class="[
+                                                        'text-center p-2 rounded-md shadow border-2',
+                                                        risk === 'Nulo' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                                                        risk === 'Bajo' ? 'bg-green-100 text-green-800 border-green-300' :
+                                                        risk === 'Medio' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                                                        risk === 'Alto' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                                                        'bg-red-100 text-red-800 border-red-300'
+                                                    ]"
+                                                    :title="`Personas en nivel ${risk}`"
+                                                >
+                                                    <div class="text-xs font-medium mb-1">{{ risk }}</div>
+                                                    <div class="font-bold">{{ domain.risk_levels && domain.risk_levels[risk] ? domain.risk_levels[risk] : 0 }}</div>
+                                                    <div class="text-xs">
+                                                        {{ totalDomainRespondents(domain) > 0 ? ((domain.risk_levels && domain.risk_levels[risk] ? (domain.risk_levels[risk] / totalDomainRespondents(domain) * 100) : 0).toFixed(1)) : '0.0' }}%
                                                     </div>
-                                                    <div class="font-bold">{{ count }}</div>
-                                                    <div class="text-xs">{{ domain.percentages[type].toFixed(1) }}%</div>
                                                 </div>
-                                            </div>
-                                            
-                                            <!-- Gráfico para dominio individual -->
-                                            <div class="h-60 relative">
-                                                <DomainBarChart :domain="domain" />
-                                            </div>
-                                            
-                                            <!-- Enlace a lista de personal -->
-                                            <div class="mt-4 text-right">
-                                                <a :href="route('reports.peopleListDomain', { domainId: domain.id, answerKey: 'A' })" 
-                                                   target="_blank"
-                                                   class="text-sm text-blue-600 hover:underline">
-                                                    Ver personal
-                                                </a>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Vista de tabla -->
-                                <div v-else-if="domainViewMode === 'table'" class="my-4">
-                                    <DomainResponseTable :domain-data="domainReportData" />
+                                <div v-else class="bg-gray-50 p-6 rounded-lg text-center text-gray-500">
+                                    No hay datos disponibles para mostrar.
                                 </div>
                             </div>
                         </div>
@@ -1317,140 +1362,114 @@ watch(currentTab, (newTab) => {
                         </div>
                     </div>
 
-                    <!-- NEW TAB: Análisis Demográfico -->
-                    <div v-if="!isAdmin && !isSuperAdmin" v-show="currentTab === 'demographicAnalysis'" class="space-y-8">
-                         <div v-if="demographic_distributions && demographic_distributions.length > 0" class="space-y-8">
-                             <h2 class="text-xl font-semibold text-gray-900 mb-0 text-center">Análisis Demográfico General</h2>
-
-                            <div v-for="category in demographic_distributions" :key="category.key" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                                <h3 class="text-lg font-medium text-gray-800 mb-4 text-center">{{ category.label }}</h3>
-                                <DemographicChart :title="category.label" :chart-data="category.data" />
-
-                                 <div v-if="category.data.length > 0" class="mt-6 pt-4 border-t border-gray-200">
-                                     <h4 class="text-md font-semibold mb-3 text-gray-700 text-center">Ver lista de personal por respuesta:</h4>
-                                     <div class="flex flex-wrap justify-center gap-2">
-                                         <!-- Iterate over the data points for this category -->
-                                         <a v-for="item in category.data" :key="item.identifier"
-                                                :href="item.count > 0 ? route('reports.peopleListDemographic', { fieldKey: category.key, identifier: item.identifier }) : '#'"
-                                                target="_blank"
-                                                :class="[
-                                                    'inline-block px-3 py-1 border rounded-md shadow-sm text-sm font-medium transition-colors duration-150',
-                                                    item.count === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none' :
-                                                    'bg-white text-indigo-600 border-gray-300 hover:bg-indigo-50 hover:border-indigo-300'
-                                                ]"
-                                                :aria-disabled="item.count === 0"
-                                           >
-                                             {{ item.label }} ({{ item.count }})
-                                         </a>
-                                     </div>
-                                 </div>
-                             </div>
-                         </div>
-                         <div v-else class="text-gray-500 text-center py-6 bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                             No hay datos demográficos disponibles para mostrar.
-                        </div>
-                    </div>
-
-                    <!-- Tab de Evaluaciones -->
-                    <div v-show="currentTab === 'evaluations' || isAdmin || isSuperAdmin" class="space-y-6">
-                        <!-- Para usuarios de organización -->
-                        <div v-if="!isAdmin && !isSuperAdmin">
-                            <div v-if="guideIIIEvaluations.length > 0">
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <div v-for="evaluation in guideIIIEvaluations"
-                                         :key="evaluation.id"
-                                         class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:border-blue-500 transition-colors duration-300">
-                                        <div class="border-b border-gray-200 bg-sky-50 px-4 py-3">
-                                            <div class="flex items-center justify-between">
-                                                <h3 class="text-lg font-semibold text-gray-900">
-                                                    Folio: {{ evaluation.folio }}
-                                                </h3>
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-blue-800">
-                                                    Guía III
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="px-4 py-4 sm:px-6">
-                                            <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
-                                                <div class="sm:col-span-1">
-                                                    <dt class="text-sm font-medium text-gray-500">Fecha de creación</dt>
-                                                    <dd class="mt-1 text-sm text-gray-900">{{ formatDate(evaluation.created_at) }}</dd>
-                                                </div>
-                                                <div class="sm:col-span-1">
-                                                    <dt class="text-sm font-medium text-gray-500">Estado</dt>
-                                                    <dd class="mt-1 text-sm text-gray-900">Completada</dd>
-                                                </div>
-                                            </dl>
-                                            <div class="mt-4 flex justify-end">
-                                                <Link
-                                                    :href="route('organization.results.detail', {
-                                                        organization: evaluation.organization_id,
-                                                        evaluation: evaluation.id
-                                                    })"
-                                                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                                >
-                                                    <DocumentTextIcon class="h-5 w-5 mr-2 text-gray-500" />
-                                                    Ver detalle
-                                                </Link>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div v-else class="text-gray-500 text-center py-4">
-                                No hay evaluaciones registradas
+                    <!-- TAB: Análisis Global de Respuestas -->
+                    <div v-if="!isAdmin && !isSuperAdmin" v-show="currentTab === 'globalAnalysis'" class="space-y-6">
+                        <!-- Subtabs para los diferentes reportes globales -->
+                        <div class="border-b border-gray-200">
+                            <div class="flex flex-wrap -mb-px">
+                                <button 
+                                    @click="globalResponseSubTab = 'globalCounts'" 
+                                    :class="[
+                                        'inline-flex items-center py-4 px-4 text-sm font-medium border-b-2 whitespace-nowrap',
+                                        globalResponseSubTab === 'globalCounts' 
+                                            ? 'border-blue-500 text-blue-600' 
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ]"
+                                >
+                                    <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                                    </svg>
+                                    Conteo Global de Respuestas
+                                </button>
+                                <button 
+                                    @click="globalResponseSubTab = 'categoryResponses'" 
+                                    :class="[
+                                        'inline-flex items-center py-4 px-4 text-sm font-medium border-b-2 whitespace-nowrap',
+                                        globalResponseSubTab === 'categoryResponses' 
+                                            ? 'border-blue-500 text-blue-600' 
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ]"
+                                >
+                                    <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                    Respuestas por Categoría
+                                </button>
                             </div>
                         </div>
-
-                        <!-- Para admin/superadmin -->
-                        <div v-else class="space-y-8">
-                            <div v-for="organization in organizationsWithGuideIII" :key="organization.id">
-                                <h3 class="text-xl font-semibold text-gray-900 mb-4">{{ organization.name }}</h3>
-                                <div v-if="organization.evaluations.length > 0">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        <div v-for="evaluation in organization.evaluations"
-                                             :key="evaluation.id"
-                                             class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:border-blue-500 transition-colors duration-300">
-                                            <div class="border-b border-gray-200 bg-sky-50 px-4 py-3">
-                                                <div class="flex items-center justify-between">
-                                                    <h3 class="text-lg font-semibold text-gray-900">
-                                                        Folio: {{ evaluation.folio }}
-                                                    </h3>
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-blue-800">
-                                                        Guía III
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="px-4 py-4 sm:px-6">
-                                                <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
-                                                    <div class="sm:col-span-1">
-                                                        <dt class="text-sm font-medium text-gray-500">Fecha de creación</dt>
-                                                        <dd class="mt-1 text-sm text-gray-900">{{ formatDate(evaluation.created_at) }}</dd>
-                                                    </div>
-                                                    <div class="sm:col-span-1">
-                                                        <dt class="text-sm font-medium text-gray-500">Estado</dt>
-                                                        <dd class="mt-1 text-sm text-gray-900">Completada</dd>
-                                                    </div>
-                                                </dl>
-                                                <div class="mt-4 flex justify-end">
-                                                    <Link
-                                                        :href="route('organization.results.detail', {
-                                                            organization: organization.id,
-                                                            evaluation: evaluation.id
-                                                        })"
-                                                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                                    >
-                                                        <DocumentTextIcon class="h-5 w-5 mr-2 text-gray-500" />
-                                                        Ver detalle
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                        
+                        <!-- Subtab: Conteo global de respuestas por opción -->
+                        <div v-if="globalResponseSubTab === 'globalCounts'" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Conteo Global de Respuestas por Opción</h3>
+                                    <p class="text-sm text-gray-500">
+                                        Visualización del conteo global de respuestas por opción (A, B, C, D, E) en todo el cuestionario.
+                                    </p>
                                 </div>
-                                <div v-else class="text-gray-500 text-center py-4">
-                                    No hay evaluaciones registradas para esta organización
+                                <div class="flex items-center space-x-2">
+                                    <button 
+                                        @click="globalViewMode = 'chart'" 
+                                        :class="[
+                                            'inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium',
+                                            globalViewMode === 'chart' 
+                                                ? 'bg-blue-600 text-white border-blue-600' 
+                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ]"
+                                    >
+                                        <ChartPieIcon class="h-5 w-5 mr-2" />
+                                        Gráfica
+                                    </button>
                                 </div>
+                            </div>
+                            
+                            <!-- Estado de carga -->
+                            <div v-if="isLoadingGlobalCounts" class="flex justify-center items-center h-64">
+                                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                                <span class="ml-3 text-gray-600">Cargando datos...</span>
+                            </div>
+                            
+                            <!-- Contenido del reporte -->
+                            <div v-else>
+                                <GlobalResponseChart :response-data="globalResponseCounts" />
+                            </div>
+                        </div>
+                        
+                        <!-- Subtab: Conteo de respuestas por categoría y opción -->
+                        <div v-if="globalResponseSubTab === 'categoryResponses'" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Conteo de Respuestas por Categoría y Opción</h3>
+                                    <p class="text-sm text-gray-500">
+                                        Desglose detallado del conteo de respuestas por categoría y opción (A-E).
+                                    </p>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button 
+                                        @click="categoryResponseViewMode = 'chart'" 
+                                        :class="[
+                                            'inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium',
+                                            categoryResponseViewMode === 'chart' 
+                                                ? 'bg-blue-600 text-white border-blue-600' 
+                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ]"
+                                    >
+                                        <ChartPieIcon class="h-5 w-5 mr-2" />
+                                        Gráfica
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Estado de carga -->
+                            <div v-if="isLoadingCategoryResponseCounts" class="flex justify-center items-center h-64">
+                                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                                <span class="ml-3 text-gray-600">Cargando datos...</span>
+                            </div>
+                            
+                            <!-- Contenido del reporte -->
+                            <div v-else>
+                                <CategoryResponseAnalysisChart :category-data="categoryResponseCounts" />
                             </div>
                         </div>
                     </div>

@@ -8,6 +8,9 @@ Utiliza las mejores practicas de UI/UX para la visualización de los reportes. A
 Para el backend manten la separación de responsabilidades y la arquitectura limpia. Utiliza controladores y servicios para manejar la lógica de negocio y la interacción con la base de datos.
 Asegúrate de que el código sea limpio, legible y siga las convenciones de Laravel. Utiliza Eloquent para interactuar con la base de datos y mantener la lógica de negocio separada de la lógica de presentación.
 
+
+Aplicaras los cambios basado en los errores o solicitudes que te haga, a menos que explicitamente te diga que no hagas ningun cambio.
+
 ### SQL Queries por Categoría – NOM-035-STPS-2018 (Guía III)
 
 ---
@@ -31,6 +34,53 @@ ORDER BY categories.name, questions.answer;
 **Visualización:** Se recomienda una gráfica de barras apiladas, una barra por categoría segmentada por tipo de respuesta (A–E).
 **Resumen tabular:** Una tabla donde cada fila es una categoría y cada columna una opción de respuesta con su conteo respectivo.
 **Uso:** Ideal para visualizar distribución de percepciones por tema macro.
+
+NOTA: Cambiaremos este query anterior por este: 
+```sql
+SELECT
+  r.categoria_nombre,
+  r.nivel AS nivel_riesgo,
+  COUNT(e.personal_id) AS total_personas
+FROM (
+  SELECT DISTINCT 
+    c.name AS categoria_nombre,
+    nivel.nivel
+  FROM categories c
+  CROSS JOIN (
+    SELECT 'Nulo' AS nivel UNION ALL
+    SELECT 'Bajo' UNION ALL
+    SELECT 'Medio' UNION ALL
+    SELECT 'Alto' UNION ALL
+    SELECT 'Muy Alto'
+  ) nivel
+) r
+LEFT JOIN (
+  SELECT
+    q.category_id,
+    e.personal_id,
+    c.name AS categoria_nombre,
+    SUM(q.value) AS puntuacion_total,
+    CASE
+      WHEN SUM(q.value) <= 49 THEN 'Nulo'
+      WHEN SUM(q.value) BETWEEN 50 AND 75 THEN 'Bajo'
+      WHEN SUM(q.value) BETWEEN 76 AND 99 THEN 'Medio'
+      WHEN SUM(q.value) BETWEEN 100 AND 139 THEN 'Alto'
+      ELSE 'Muy Alto'
+    END AS nivel_riesgo
+  FROM questions q
+  JOIN evaluations e ON q.evaluation_id = e.id
+  JOIN categories c ON q.category_id = c.id
+  WHERE q.reference_guide = 'III'
+    AND q.value IS NOT NULL
+    AND e.organization_id = :organization_id
+  GROUP BY e.personal_id, q.category_id, c.name
+) e
+  ON r.categoria_nombre = e.categoria_nombre AND r.nivel = e.nivel_riesgo
+GROUP BY r.categoria_nombre, r.nivel
+ORDER BY r.categoria_nombre,
+         FIELD(r.nivel, 'Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto');
+
+```
 
 ---
 
@@ -62,9 +112,62 @@ ORDER BY total_score DESC;
 #### 3. Conteo de respuestas por dominio y tipo de respuesta
 ```sql
 SELECT
+  r.dominio_nombre,
+  r.nivel AS nivel_riesgo,
+  COUNT(e.personal_id) AS total_personas
+FROM (
+  SELECT DISTINCT 
+    d.name AS dominio_nombre,
+    nivel.nivel
+  FROM domains d
+  CROSS JOIN (
+    SELECT 'Nulo' AS nivel UNION ALL
+    SELECT 'Bajo' UNION ALL
+    SELECT 'Medio' UNION ALL
+    SELECT 'Alto' UNION ALL
+    SELECT 'Muy Alto'
+  ) nivel
+) r
+LEFT JOIN (
+  SELECT
+    q.domain_id,
+    e.personal_id,
+    d.name AS dominio_nombre,
+    SUM(q.value) AS puntuacion_total,
+    CASE
+      WHEN SUM(q.value) <= 49 THEN 'Nulo'
+      WHEN SUM(q.value) BETWEEN 50 AND 75 THEN 'Bajo'
+      WHEN SUM(q.value) BETWEEN 76 AND 99 THEN 'Medio'
+      WHEN SUM(q.value) BETWEEN 100 AND 139 THEN 'Alto'
+      ELSE 'Muy Alto'
+    END AS nivel_riesgo
+  FROM questions q
+  JOIN evaluations e ON q.evaluation_id = e.id
+  JOIN domains d ON q.domain_id = d.id
+  WHERE q.reference_guide = 'III'
+    AND q.value IS NOT NULL
+    AND e.organization_id = :organization_id
+  GROUP BY e.personal_id, q.domain_id, d.name
+) e
+  ON r.dominio_nombre = e.dominio_nombre AND r.nivel = e.nivel_riesgo
+GROUP BY r.dominio_nombre, r.nivel
+ORDER BY r.dominio_nombre,
+         FIELD(r.nivel, 'Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto');
+
+```
+**Descripción:** Muestra cuántas veces se eligió cada respuesta (A, B, C, D, E) por cada dominio.
+
+**Visualización:** Gráfica de barras apiladas por dominio.
+**Resumen tabular:** Dominio vs. conteo de respuestas por opción.
+**Uso:** Diagnóstico fino en agrupaciones temáticas.
+
+NOTA: Cambiaremos el query anterior por este: 
+
+```sql
+SELECT
     domains.name AS domain_name,
     questions.answer,
-    COUNT(*) AS total_responses
+    COUNT(DISTINCT questions.evaluation_id) AS total_personas
 FROM questions
 JOIN evaluations ON questions.evaluation_id = evaluations.id
 JOIN domains ON questions.domain_id = domains.id
@@ -73,12 +176,6 @@ WHERE questions.reference_guide = 'III'
 GROUP BY domains.name, questions.answer
 ORDER BY domains.name, questions.answer;
 ```
-**Descripción:** Muestra cuántas veces se eligió cada respuesta (A, B, C, D, E) por cada dominio.
-
-**Visualización:** Gráfica de barras apiladas por dominio.
-**Resumen tabular:** Dominio vs. conteo de respuestas por opción.
-**Uso:** Diagnóstico fino en agrupaciones temáticas.
-
 ---
 
 #### 4. Suma total del valor de respuestas por dominio
@@ -131,15 +228,48 @@ ORDER BY dimensions.name, questions.answer;
 #### 6. Suma total del valor de respuestas por dimensión
 ```sql
 SELECT
-    dimensions.name AS dimension_name,
-    SUM(questions.value) AS total_score
-FROM questions
-JOIN evaluations ON questions.evaluation_id = evaluations.id
-JOIN dimensions ON questions.dimension_id = dimensions.id
-WHERE questions.reference_guide = 'III'
-  AND questions.value IS NOT NULL
-GROUP BY dimensions.name
-ORDER BY total_score DESC;
+  r.dimension_nombre,
+  r.nivel AS nivel_riesgo,
+  COUNT(e.personal_id) AS total_personas
+FROM (
+  SELECT DISTINCT 
+    d.name AS dimension_nombre,
+    nivel.nivel
+  FROM dimensions d
+  CROSS JOIN (
+    SELECT 'Nulo' AS nivel UNION ALL
+    SELECT 'Bajo' UNION ALL
+    SELECT 'Medio' UNION ALL
+    SELECT 'Alto' UNION ALL
+    SELECT 'Muy Alto'
+  ) nivel
+) r
+LEFT JOIN (
+  SELECT
+    q.dimension_id,
+    e.personal_id,
+    d.name AS dimension_nombre,
+    SUM(q.value) AS puntuacion_total,
+    CASE
+      WHEN SUM(q.value) <= 49 THEN 'Nulo'
+      WHEN SUM(q.value) BETWEEN 50 AND 75 THEN 'Bajo'
+      WHEN SUM(q.value) BETWEEN 76 AND 99 THEN 'Medio'
+      WHEN SUM(q.value) BETWEEN 100 AND 139 THEN 'Alto'
+      ELSE 'Muy Alto'
+    END AS nivel_riesgo
+  FROM questions q
+  JOIN evaluations e ON q.evaluation_id = e.id
+  JOIN dimensions d ON q.dimension_id = d.id
+  WHERE q.reference_guide = 'III'
+    AND q.value IS NOT NULL
+    AND e.organization_id = :organization_id
+  GROUP BY e.personal_id, q.dimension_id, d.name
+) e
+  ON r.dimension_nombre = e.dimension_nombre AND r.nivel = e.nivel_riesgo
+GROUP BY r.dimension_nombre, r.nivel
+ORDER BY r.dimension_nombre,
+         FIELD(r.nivel, 'Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto');
+
 ```
 **Descripción:** Muestra el puntaje total acumulado por dimensión.
 

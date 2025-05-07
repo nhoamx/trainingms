@@ -15,39 +15,35 @@ const props = defineProps({
 const canvasRef = ref(null);
 const chart = ref(null);
 
-// Arreglo de colores para los tipos de respuestas - nuevos colores solicitados
-const typeColors = {
-  'A': '#F44336', // Rojo para "Siempre" (Muy Alto)
-  'B': '#FFB300', // Naranja para "Casi Siempre" (Alto)
-  'C': '#FFEB3B', // Amarillo para "Algunas Veces" (Medio)
-  'D': '#8BC34A', // Verde para "Casi Nunca" (Bajo)
-  'E': '#4DD0C6', // Turquesa para "Nunca" (Nulo)
-};
 
-// Etiquetas para los tipos de respuestas
-const typeLabels = {
-  'A': 'Siempre',
-  'B': 'Casi siempre',
-  'C': 'Algunas veces',
-  'D': 'Casi nunca',
-  'E': 'Nunca',
+// Colores y etiquetas para niveles de riesgo NOM-035
+const riskLevels = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
+const riskColors = {
+  'Nulo': '#3B82F6',      // Azul
+  'Bajo': '#10B981',      // Verde
+  'Medio': '#F59E0B',     // Amarillo
+  'Alto': '#F97316',      // Naranja
+  'Muy Alto': '#EF4444'   // Rojo
+};
+const riskLabels = {
+  'Nulo': 'Nulo',
+  'Bajo': 'Bajo',
+  'Medio': 'Medio',
+  'Alto': 'Alto',
+  'Muy Alto': 'Muy Alto'
 };
 
 const chartData = computed(() => {
-  // Ordenamos los tipos de respuesta de E a A (de Nulo a Muy Alto)
-  const answerTypes = ['E', 'D', 'C', 'B', 'A'];
-  
   const data = {
-    labels: answerTypes.map(type => typeLabels[type]),
+    labels: riskLevels.map(risk => riskLabels[risk]),
     datasets: [{
-      label: 'Respuestas',
-      data: answerTypes.map(type => props.category.responses[type] || 0),
-      backgroundColor: answerTypes.map(type => typeColors[type]),
-      borderColor: answerTypes.map(type => typeColors[type]),
+      label: 'Personas',
+      data: riskLevels.map(risk => (props.category.risk_levels && props.category.risk_levels[risk]) ? props.category.risk_levels[risk] : 0),
+      backgroundColor: riskLevels.map(risk => riskColors[risk]),
+      borderColor: riskLevels.map(risk => riskColors[risk]),
       borderWidth: 1
     }]
   };
-  
   return data;
 });
 
@@ -62,26 +58,26 @@ const chartOptions = {
       callbacks: {
         label: function(context) {
           const value = context.raw;
-          const total = props.category.total;
-          const percentage = ((value / total) * 100).toFixed(1);
-          return `${value} respuestas (${percentage}%)`;
+          // Sumar el total de personas en todos los niveles de riesgo
+          const total = Object.values(props.category.risk_levels || {}).reduce((acc, v) => acc + v, 0);
+          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+          return `${value} personas (${percentage}%)`;
         }
       }
     },
     datalabels: {
       // Color del texto según el color de fondo para mejor legibilidad
       color: function(context) {
-        const index = context.dataIndex;
-        const type = ['E', 'D', 'C', 'B', 'A'][index];
-        // Para fondos claros (amarillo) usamos texto negro, para el resto texto blanco
-        return type === 'C' || type === 'E' ? '#000000' : '#FFFFFF';
+        // Para amarillo y azul, usar texto negro, para los demás blanco
+        const risk = riskLevels[context.dataIndex];
+        return (risk === 'Medio' || risk === 'Nulo') ? '#000000' : '#FFFFFF';
       },
       font: {
         weight: 'bold'
       },
       formatter: function(value, context) {
-        const total = props.category.total;
-        return value > 0 ? `${((value / total) * 100).toFixed(0)}%` : '';
+        const total = Object.values(props.category.risk_levels || {}).reduce((acc, v) => acc + v, 0);
+        return value > 0 && total > 0 ? `${((value / total) * 100).toFixed(0)}%` : '';
       }
     }
   },

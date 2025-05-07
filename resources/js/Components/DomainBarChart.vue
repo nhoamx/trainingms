@@ -15,29 +15,29 @@ const props = defineProps({
 const canvasRef = ref(null);
 const chart = ref(null);
 
-// Arreglo de colores para los tipos de respuestas - usando los colores solicitados
+
+// Paleta UI/UX recomendada para máximo contraste y claridad
+// Orden: Muy Alto (A), Alto (B), Medio (C), Bajo (D), Nulo (E)
 const typeColors = {
-  'A': '#F44336', // Rojo para "Siempre" (Muy Alto)
-  'B': '#FFB300', // Naranja para "Casi Siempre" (Alto)
-  'C': '#FFEB3B', // Amarillo para "Algunas Veces" (Medio)
-  'D': '#8BC34A', // Verde para "Casi Nunca" (Bajo)
-  'E': '#4DD0C6', // Turquesa para "Nunca" (Nulo)
+  'A': '#EF4444', // Muy alto - Rojo fuerte
+  'B': '#F97316', // Alto - Naranja intenso
+  'C': '#F59E0B', // Medio - Amarillo dorado
+  'D': '#10B981', // Bajo - Verde
+  'E': '#3B82F6', // Nulo - Azul
 };
 
-// Etiquetas para los tipos de respuestas
 const typeLabels = {
-  'A': 'Siempre',
-  'B': 'Casi siempre',
-  'C': 'Algunas veces',
-  'D': 'Casi nunca',
-  'E': 'Nunca',
+  'A': 'Muy Alto',
+  'B': 'Alto',
+  'C': 'Medio',
+  'D': 'Bajo',
+  'E': 'Nulo',
 };
 
 const chartData = computed(() => {
-  // Ordenamos los tipos de respuesta de E a A (de Nulo a Muy Alto)
+  // Orden E, D, C, B, A (Nulo a Muy alto)
   const answerTypes = ['E', 'D', 'C', 'B', 'A'];
-  
-  const data = {
+  return {
     labels: answerTypes.map(type => typeLabels[type]),
     datasets: [{
       label: 'Respuestas',
@@ -47,8 +47,6 @@ const chartData = computed(() => {
       borderWidth: 1
     }]
   };
-  
-  return data;
 });
 
 const chartOptions = {
@@ -73,7 +71,7 @@ const chartOptions = {
       color: function(context) {
         const index = context.dataIndex;
         const type = ['E', 'D', 'C', 'B', 'A'][index];
-        // Para fondos claros (amarillo) usamos texto negro, para el resto texto blanco
+        // Para fondos claros (amarillo C y turquesa E) usamos texto negro
         return type === 'C' || type === 'E' ? '#000000' : '#FFFFFF';
       },
       font: {

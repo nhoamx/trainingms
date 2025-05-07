@@ -9,33 +9,41 @@ const props = defineProps({
   }
 });
 
-// Mapeo de respuestas a etiquetas
-const answerLabels = {
-  'A': 'Siempre',
-  'B': 'Casi siempre',
-  'C': 'Algunas veces', 
-  'D': 'Casi nunca',
-  'E': 'Nunca'
+// Mapeo de respuestas a etiquetas y colores
+const answerDetails = {
+  'A': { label: 'Muy alto', bgColor: '#F44336', textColor: '#fff' },
+  'B': { label: 'Alto', bgColor: '#FFB300', textColor: '#fff' },
+  'C': { label: 'Medio', bgColor: '#FFC107', textColor: '#000' },
+  'D': { label: 'Bajo', bgColor: '#8BC34A', textColor: '#fff' },
+  'E': { label: 'Nulo', bgColor: '#4DD0C6', textColor: '#000' }
 };
+const atenderColor = { bgColor: '#B71C1C', textColor: '#fff' }; // Rojo marrón para "Atender"
 
 // Ordenamos los tipos de respuesta para mostrarlos en la tabla
-const answerTypes = ['E', 'D', 'C', 'B', 'A'];
+const answerTypes = ['E', 'D', 'C', 'B', 'A']; // Nulo, Bajo, Medio, Alto, Muy Alto
 
-// Computar totales por tipo de respuesta
+// Computar totales por tipo de respuesta y columna "Atender"
 const columnTotals = computed(() => {
   const totals = {
-    'A': 0, 'B': 0, 'C': 0, 'D': 0, 'E': 0, 'total': 0
+    'A': 0, 'B': 0, 'C': 0, 'D': 0, 'E': 0, atender: 0 // Se eliminó total
   };
   
   props.categoryData.forEach(category => {
     answerTypes.forEach(type => {
       totals[type] += category.responses[type] || 0;
     });
-    totals.total += category.total || 0;
+    const atenderValue = (category.responses['A'] || 0) + (category.responses['B'] || 0);
+    totals.atender += atenderValue;
+    // Se eliminó la suma de category.total
   });
   
   return totals;
 });
+
+const getAtenderValue = (category) => {
+  return (category.responses['A'] || 0) + (category.responses['B'] || 0);
+};
+
 </script>
 
 <template>
@@ -53,12 +61,18 @@ const columnTotals = computed(() => {
             :key="type" 
             scope="col" 
             class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border"
+            :style="{ backgroundColor: answerDetails[type].bgColor, color: answerDetails[type].textColor }"
           >
-            {{ answerLabels[type] || type }}
+            {{ answerDetails[type].label }}
           </th>
-          <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">
-            Total
+          <th 
+            scope="col" 
+            class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border"
+            :style="{ backgroundColor: atenderColor.bgColor, color: atenderColor.textColor }"
+          >
+            Atender
           </th>
+          <!-- Columna Total Respuestas eliminada del encabezado -->
         </tr>
       </thead>
       
@@ -70,14 +84,18 @@ const columnTotals = computed(() => {
           <td 
             v-for="type in answerTypes" 
             :key="type" 
-            class="px-4 py-4 text-center text-sm text-gray-900 border"
+            class="px-4 py-4 text-center text-sm border"
+            :style="{ backgroundColor: answerDetails[type].bgColor, color: answerDetails[type].textColor }"
           >
             <div>{{ category.responses[type] || 0 }}</div>
-            <div class="text-xs text-gray-500">{{ category.percentages && category.percentages[type] ? `${category.percentages[type].toFixed(1)}%` : '0.0%' }}</div>
           </td>
-          <td class="px-4 py-4 text-center text-sm font-bold text-gray-900 border">
-            {{ category.total }}
+          <td 
+            class="px-4 py-4 text-center text-sm border"
+            :style="{ backgroundColor: atenderColor.bgColor, color: atenderColor.textColor }"
+          >
+            <div>{{ getAtenderValue(category) }}</div>
           </td>
+          <!-- Celda category.total eliminada -->
         </tr>
         
         <!-- Fila de totales -->
@@ -88,22 +106,20 @@ const columnTotals = computed(() => {
           <td 
             v-for="type in answerTypes" 
             :key="type" 
-            class="px-4 py-4 text-center text-sm text-gray-900 border"
+            class="px-4 py-4 text-center text-sm border"
+            :style="{ backgroundColor: answerDetails[type].bgColor, color: answerDetails[type].textColor }"
           >
             <div>{{ columnTotals[type] }}</div>
-            <div class="text-xs text-gray-600">
-              {{ columnTotals.total > 0 ? `${((columnTotals[type] / columnTotals.total) * 100).toFixed(1)}%` : '0.0%' }}
-            </div>
           </td>
-          <td class="px-4 py-4 text-center text-sm text-gray-900 border">
-            {{ columnTotals.total }}
+          <td 
+            class="px-4 py-4 text-center text-sm border"
+            :style="{ backgroundColor: atenderColor.bgColor, color: atenderColor.textColor }"
+          >
+            <div>{{ columnTotals.atender }}</div>
           </td>
+          <!-- Celda columnTotals.total eliminada -->
         </tr>
       </tbody>
     </table>
-    
-    <div class="mt-4 text-sm text-gray-500">
-      <p>* Los porcentajes se calculan sobre el total de respuestas por categoría</p>
-    </div>
   </div>
 </template>

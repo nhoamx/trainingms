@@ -67,6 +67,56 @@ class GlobalResponseController extends Controller
     }
 
     /**
+     * Obtiene y devuelve el conteo global de personas únicas por opción (A-E)
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getGlobalPersonCounts(Request $request)
+    {
+        try {
+            // Verificación de autorización
+            $user = $request->user();
+            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
+
+            // Obtener los datos desde el servicio
+            $personCounts = $this->globalResponseService->getGlobalPersonCounts();
+
+            return response()->json($personCounts);
+        } catch (\Exception $e) {
+            Log::error("Error al obtener el conteo global de personas: " . $e->getMessage());
+            return response()->json(['error' => 'Error al procesar la solicitud'], 500);
+        }
+    }
+
+    /**
+     * Obtiene y devuelve el conteo de personas únicas por categoría y opción
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPersonCountByCategoryAndResponse(Request $request)
+    {
+        try {
+            // Verificación de autorización
+            $user = $request->user();
+            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
+
+            // Obtener los datos desde el servicio
+            $categoryPersonCounts = $this->globalResponseService->getPersonCountByCategoryAndResponse();
+
+            return response()->json($categoryPersonCounts);
+        } catch (\Exception $e) {
+            Log::error("Error al obtener el conteo de personas por categoría: " . $e->getMessage());
+            return response()->json(['error' => 'Error al procesar la solicitud'], 500);
+        }
+    }
+
+    /**
      * Muestra la vista del reporte global de respuestas
      *
      * @param Request $request
@@ -92,6 +142,36 @@ class GlobalResponseController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error("Error al mostrar el reporte global de respuestas: " . $e->getMessage());
+            abort(500, 'Error al procesar la solicitud');
+        }
+    }
+
+    /**
+     * Muestra la vista del reporte global de personas
+     *
+     * @param Request $request
+     * @return \Inertia\Response
+     */
+    public function showGlobalPersonReport(Request $request)
+    {
+        try {
+            // Verificación de autorización
+            $user = $request->user();
+            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+                abort(403, 'No autorizado');
+            }
+
+            // Obtener los datos desde el servicio para la carga inicial
+            $globalPersonCounts = $this->globalResponseService->getGlobalPersonCounts();
+            $categoryPersonCounts = $this->globalResponseService->getPersonCountByCategoryAndResponse();
+
+            return Inertia::render('Reports/GlobalPersonReport', [
+                'globalPersonCounts' => $globalPersonCounts,
+                'categoryPersonCounts' => $categoryPersonCounts,
+                'title' => 'Análisis Global de Personas'
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al mostrar el reporte global de personas: " . $e->getMessage());
             abort(500, 'Error al procesar la solicitud');
         }
     }
