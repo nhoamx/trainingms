@@ -67,6 +67,26 @@ const currentTab = ref(props.isAdmin || props.isSuperAdmin ? 'evaluations' : 'gl
 // Subtab activo para reportes de categoría
 const categorySubTab = ref('distribution');
 
+// Cargar automáticamente los datos de distribución y puntaje total al entrar a la subpestaña correspondiente
+watch(categorySubTab, (newTab) => {
+    if (newTab === 'distribution') {
+        loadCategoryReportData();
+    } else if (newTab === 'totalScore') {
+        loadCategoryTotalScores();
+    }
+});
+
+// También cargar al montar si la tab está activa
+onMounted(() => {
+    if (currentTab.value === 'categoryAnalysis') {
+        if (categorySubTab.value === 'distribution') {
+            loadCategoryReportData();
+        } else if (categorySubTab.value === 'totalScore') {
+            loadCategoryTotalScores();
+        }
+    }
+});
+
 // State for selected category and domain data
 const selectedCategoryId = ref(null);
 const selectedCategoryName = ref('');
@@ -79,6 +99,15 @@ const isLoadingCategoryReport = ref(false);
 const categoryReportData = ref([]);
 
 // Estado para el reporte de puntuación total por categoría
+
+// Niveles de riesgo en orden oficial NOM-035
+const riskLevels = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
+
+// Función para obtener el total de personas por categoría (suma de todos los niveles de riesgo)
+function totalRespondents(category) {
+    if (!category || !category.risk_levels) return 0;
+    return riskLevels.reduce((sum, level) => sum + (category.risk_levels[level] || 0), 0);
+}
 const totalScoreViewMode = ref('chart');
 const isLoadingCategoryTotalScores = ref(false);
 const categoryTotalScores = ref([]);
@@ -86,10 +115,19 @@ const categoryTotalScores = ref([]);
 // Subtab activo para reportes de dominio
 const domainSubTab = ref('distribution');
 
-// Estado para el reporte de distribución de respuestas por dominio
+// Estado para el reporte de distribución de respuestas por dominio (por nivel de riesgo)
 const domainViewMode = ref('chart');
 const isLoadingDomainReport = ref(false);
 const domainReportData = ref([]);
+
+// Niveles de riesgo para dominios (igual que categorías)
+const domainRiskLevels = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
+
+// Función para obtener el total de personas por dominio (suma de todos los niveles de riesgo)
+function totalDomainRespondents(domain) {
+    if (!domain || !domain.risk_levels) return 0;
+    return domainRiskLevels.reduce((sum, level) => sum + (domain.risk_levels[level] || 0), 0);
+}
 
 // Estado para el reporte de puntuación total por dominio
 const domainTotalScoreViewMode = ref('chart');
@@ -152,10 +190,9 @@ const loadCategoryTotalScores = async () => {
     }
 };
 
-// Función para cargar los datos de distribución de respuestas por dominio
+// Función para cargar los datos de distribución de respuestas por dominio (por nivel de riesgo)
 const loadDomainReportData = async () => {
     if (domainReportData.value.length > 0) return;
-    
     isLoadingDomainReport.value = true;
     try {
         const response = await window.axios.get('/reports/domain-distribution');
@@ -185,11 +222,32 @@ const loadDomainTotalScores = async () => {
 // Función para cargar los datos de distribución de respuestas por dimensión
 const loadDimensionReportData = async () => {
     if (dimensionDistributionData.value.length > 0) return;
-    
     isLoadingDimensionReport.value = true;
     try {
-        const response = await window.axios.get('/reports/dimension-distribution');
-        dimensionDistributionData.value = response.data;
+        // NUEVO: Usar el endpoint de distribución por nivel de riesgo
+        const response = await window.axios.get('/reports/dimension-risk-distribution');
+        // Adaptar la estructura para la visualización (igual que en el reporte de dominio)
+        dimensionDistributionData.value = (response.data || []).map((dim, idx) => {
+            const responses = {
+                'A': dim.risk_levels['Muy Alto'] || 0,
+                'B': dim.risk_levels['Alto'] || 0,
+                'C': dim.risk_levels['Medio'] || 0,
+                'D': dim.risk_levels['Bajo'] || 0,
+                'E': dim.risk_levels['Nulo'] || 0,
+            };
+            const total = Object.values(responses).reduce((a, b) => a + b, 0);
+            const percentages = {};
+            Object.entries(responses).forEach(([type, count]) => {
+                percentages[type] = total > 0 ? (count / total) * 100 : 0;
+            });
+            return {
+                id: idx,
+                name: dim.dimension_name,
+                responses,
+                percentages,
+                total
+            };
+        });
     } catch (error) {
         console.error('Error al cargar los datos del reporte de dimensiones:', error);
     } finally {
@@ -415,7 +473,7 @@ watch(globalResponseSubTab, (newSubTab) => {
     if (currentTab.value === 'globalAnalysis') {
         if (newSubTab === 'globalCounts') {
             loadGlobalResponseCounts();
-        } else if (newSubTab === 'categoryResponses') {
+        } else if (newTab === 'categoryResponses') {
             loadCategoryResponseCounts();
         }
     }
@@ -628,6 +686,15 @@ watch(currentTab, (newTab) => {
     selectedDimensionId.value = null;
     dimensionAnswerDistribution.value = {};
 });
+
+// NEW: Objeto para mapear las claves de respuesta a etiquetas y colores
+const responseTypes = {
+  A: { label: 'Muy alto', bgColor: '#F44336', textColor: '#fff', borderColor: '#F44336' },
+  B: { label: 'Alto', bgColor: '#FFB300', textColor: '#fff', borderColor: '#FFB300' },
+  C: { label: 'Medio', bgColor: '#FFC107', textColor: '#000', borderColor: '#FFC107' }, // Amarillo actualizado
+  D: { label: 'Bajo', bgColor: '#8BC34A', textColor: '#fff', borderColor: '#8BC34A' },
+  E: { label: 'Nulo', bgColor: '#4DD0C6', textColor: '#000', borderColor: '#4DD0C6' }
+};
 </script>
 
 <template>
@@ -695,7 +762,10 @@ watch(currentTab, (newTab) => {
                         <div v-if="categorySubTab === 'distribution'" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Distribución de Respuestas por Categoría</h3>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Distribución de Personas por Categoría y Nivel de Riesgo</h3>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        Este reporte muestra cuántas personas se ubican en cada nivel de riesgo psicosocial (Nulo, Bajo, Medio, Alto, Muy Alto) para cada categoría, de acuerdo con la suma de sus respuestas y los rangos normativos de la NOM-035-STPS-2018.
+                                    </p>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <button 
@@ -733,71 +803,61 @@ watch(currentTab, (newTab) => {
                             
                             <!-- Contenido del reporte -->
                             <div v-else>
-                                <!-- Vista de gráficas -->
-                                <div v-if="viewMode === 'chart'" class="space-y-8">
-                                    <div v-if="categoryReportData.length === 0" class="bg-gray-50 p-6 rounded-lg text-center text-gray-500">
-                                        No hay datos disponibles para mostrar.
-                                    </div>
-                                    
-                                    <!-- Gráficos por categoría -->
-                                    <div v-else>
-                                        <!-- Gráficos individuales por categoría, 2 por fila -->
-                                        <h4 class="text-md font-medium text-gray-700 mb-4">Distribución por categoría</h4>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div v-for="(category, index) in categoryReportData" :key="index" class="bg-white p-6 rounded-lg shadow">
-                                                <h3 class="text-lg font-semibold mb-4">{{ category.name }}</h3>
-                                                
-                                                <!-- Resumen numérico -->
-                                                <div class="grid grid-cols-5 gap-2 mb-4">
-                                                    <div v-for="(count, type) in category.responses" :key="type" 
-                                                        :class="[
-                                                            'text-center p-2 rounded-md',
-                                                            type === 'A' ? 'bg-red-100 text-red-800' : 
-                                                            type === 'B' ? 'bg-amber-100 text-amber-800' :
-                                                            type === 'C' ? 'bg-yellow-100 text-yellow-800' :
-                                                            type === 'D' ? 'bg-green-100 text-green-800' :
-                                                            'bg-teal-100 text-teal-800'
-                                                        ]"
-                                                        :style="{
-                                                            backgroundColor: type === 'A' ? '#F44336' : 
-                                                                             type === 'B' ? '#FFB300' :
-                                                                             type === 'C' ? '#FFEB3B' :
-                                                                             type === 'D' ? '#8BC34A' : 
-                                                                             '#4DD0C6',
-                                                            color: ['C', 'E'].includes(type) ? '#000' : '#fff'
-                                                        }">
-                                                        <div class="text-xs font-medium mb-1" :style="{ color: ['C', 'E'].includes(type) ? '#000' : '#fff' }">
-                                                            {{ type === 'A' ? 'Siempre' : 
-                                                               type === 'B' ? 'Casi siempre' : 
-                                                               type === 'C' ? 'Algunas veces' : 
-                                                               type === 'D' ? 'Casi nunca' : 'Nunca' }}
-                                                        </div>
-                                                        <div class="font-bold">{{ count }}</div>
-                                                        <div class="text-xs">{{ category.percentages[type].toFixed(1) }}%</div>
+                                <!-- Vista de tabla de personas por nivel de riesgo y categoría -->
+                                <!-- Gráfico de barras apiladas -->
+                                <div v-if="categoryReportData.length > 0" class="my-8">
+                                    <h4 class="text-md font-medium text-gray-700 mb-4">Personas por nivel de riesgo y categoría</h4>
+                                    <CategoryStackedBarChart :categoryData="categoryReportData" />
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                                        <div v-for="(category, index) in categoryReportData" :key="index" class="bg-white p-6 rounded-lg shadow-lg">
+                                            <h3 class="text-lg font-semibold mb-2">{{ category.name }}</h3>
+                                            <!-- Etiqueta con total de personas -->
+                                            <div class="mb-2 text-sm text-gray-600">Total de personas: <span class="font-semibold">{{ totalRespondents(category) }}</span></div>
+                                            <!-- Gráfico de barras para cada categoría individual -->
+                                            <div class="h-80">
+                                                <CategoryBarChart :category="category" />
+                                            </div>
+                                            <!-- Tarjetas de resumen por nivel de riesgo -->
+                                            <div class="mt-4 grid grid-cols-5 gap-2">
+                                                <div v-for="risk in riskLevels" :key="risk"
+                                                    :class="[
+                                                        'text-center p-2 rounded-md shadow border-2',
+                                                        risk === 'Nulo' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                                                        risk === 'Bajo' ? 'bg-green-100 text-green-800 border-green-300' :
+                                                        risk === 'Medio' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                                                        risk === 'Alto' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                                                        'bg-red-100 text-red-800 border-red-300'
+                                                    ]"
+                                                    :title="`Personas en nivel ${risk}`"
+                                                >
+                                                    <div class="text-xs font-medium mb-1">{{ risk }}</div>
+                                                    <div class="font-bold">{{ category.risk_levels && category.risk_levels[risk] ? category.risk_levels[risk] : 0 }}</div>
+                                                    <div class="text-xs">
+                                                        {{ totalRespondents(category) > 0 ? ((category.risk_levels && category.risk_levels[risk] ? (category.risk_levels[risk] / totalRespondents(category) * 100) : 0).toFixed(1)) : '0.0' }}%
                                                     </div>
-                                                </div>
-                                                
-                                                <!-- Gráfico para categoría individual -->
-                                                <div class="h-60 relative">
-                                                    <CategoryBarChart :category="category" />
-                                                </div>
-                                                
-                                                <!-- Enlace a lista de personal -->
-                                                <div class="mt-4 text-right">
-                                                    <a :href="route('reports.peopleList', { categoryId: category.id, answerKey: 'A' })" 
-                                                       target="_blank"
-                                                       class="text-sm text-blue-600 hover:underline">
-                                                        Ver personal
-                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
+
+
                                 </div>
-                                
-                                <!-- Vista de tabla -->
-                                <div v-else-if="viewMode === 'table'" class="my-4">
-                                    <CategoryResponseTable :category-data="categoryReportData" />
+                                <!-- Interpretación y Contexto para Distribución por Categoría -->
+                                <div class="bg-white p-6 rounded-lg shadow mt-6">
+                                    <h4 class="text-md font-medium text-gray-700 mb-3">Interpretación de la Distribución de Personas por Nivel de Riesgo</h4>
+                                    <p class="text-sm text-gray-600 mb-4">
+                                        Este reporte permite identificar la distribución de personas por nivel de riesgo en cada categoría, según la NOM-035-STPS-2018. Prioriza las categorías con mayor número de personas en los niveles "Alto" y "Muy Alto" para acciones preventivas.
+                                    </p>
+                                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+                                        <div class="flex">
+                                            <div class="ml-3">
+                                                <p class="text-sm text-yellow-700">
+                                                    <strong>Importante:</strong> Analiza la concentración de personas en los niveles superiores para enfocar intervenciones.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -920,11 +980,14 @@ watch(currentTab, (newTab) => {
                             </div>
                         </div>
                         
-                        <!-- Subtab: Distribución de respuestas por dominio -->
+                        <!-- Subtab: Distribución de personas por dominio y nivel de riesgo -->
                         <div v-if="domainSubTab === 'distribution'" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Distribución de Respuestas por Dominio</h3>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Distribución de Personas por Dominio y Nivel de Riesgo</h3>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        Este reporte muestra cuántas personas se ubican en cada nivel de riesgo psicosocial (Nulo, Bajo, Medio, Alto, Muy Alto) para cada dominio, de acuerdo con la suma de sus respuestas y los rangos normativos de la NOM-035-STPS-2018.
+                                    </p>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <button 
@@ -939,83 +1002,62 @@ watch(currentTab, (newTab) => {
                                         <ChartPieIcon class="h-5 w-5 mr-2" />
                                         Gráficas
                                     </button>
-                                    <button 
-                                        @click="domainViewMode = 'table'" 
-                                        :class="[
-                                            'inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium',
-                                            domainViewMode === 'table' 
-                                                ? 'bg-blue-600 text-white border-blue-600' 
-                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                        ]"
-                                    >
-                                        <TableCellsIcon class="h-5 w-5 mr-2" />
-                                        Tabla
-                                    </button>
                                 </div>
                             </div>
-                            
                             <!-- Estado de carga -->
                             <div v-if="isLoadingDomainReport" class="flex justify-center items-center h-64">
                                 <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                                 <span class="ml-3 text-gray-600">Cargando datos...</span>
                             </div>
-                            
                             <!-- Contenido del reporte -->
                             <div v-else>
-                                <!-- Vista de gráficas -->
-                                <div v-if="domainViewMode === 'chart'" class="space-y-8">
-                                    <div v-if="domainReportData.length === 0" class="bg-gray-50 p-6 rounded-lg text-center text-gray-500">
-                                        No hay datos disponibles para mostrar.
-                                    </div>
-                                    
-                                    <!-- Gráficos individuales por dominio, 2 por fila -->
-                                    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div v-for="(domain, index) in domainReportData" :key="index" class="bg-white p-6 rounded-lg shadow">
-                                            <h3 class="text-lg font-semibold mb-4">{{ domain.name }}</h3>
-                                            
-                                            <!-- Resumen numérico -->
-                                            <div class="grid grid-cols-5 gap-2 mb-4">
-                                                <div v-for="(count, type) in domain.responses" :key="type" 
-                                                    :style="{
-                                                        backgroundColor: type === 'A' ? '#F44336' : 
-                                                                         type === 'B' ? '#FFB300' :
-                                                                         type === 'C' ? '#FFEB3B' :
-                                                                         type === 'D' ? '#8BC34A' : 
-                                                                         '#4DD0C6',
-                                                        color: ['C', 'E'].includes(type) ? '#000' : '#fff'
-                                                    }"
-                                                    class="text-center p-2 rounded-md">
-                                                    <div class="text-xs font-medium mb-1" :style="{ color: ['C', 'E'].includes(type) ? '#000' : '#fff' }">
-                                                        {{ type === 'A' ? 'Siempre' : 
-                                                           type === 'B' ? 'Casi siempre' : 
-                                                           type === 'C' ? 'Algunas veces' : 
-                                                           type === 'D' ? 'Casi nunca' : 'Nunca' }}
+                                <div v-if="domainReportData.length > 0" class="my-8">
+                                    <h4 class="text-md font-medium text-gray-700 mb-4">Personas por nivel de riesgo y dominio</h4>
+                                    <!-- Aquí podrías agregar un DomainStackedBarChart si lo implementas -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                                        <div v-for="(domain, index) in domainReportData" :key="index" class="bg-white p-6 rounded-lg shadow-lg">
+                                            <h3 class="text-lg font-semibold mb-2">{{ domain.name }}</h3>
+                                            <!-- Etiqueta con total de personas -->
+                                            <div class="mb-2 text-sm text-gray-600">Total de personas: <span class="font-semibold">{{ totalDomainRespondents(domain) }}</span></div>
+                                            <!-- Gráfico de barras por nivel de riesgo (visualización tipo DomainBarChart) -->
+                                            <div class="mb-4">
+                                                <DomainBarChart :domain="{
+                                                    name: domain.name,
+                                                    responses: {
+                                                        'A': domain.risk_levels['Muy Alto'] || 0,
+                                                        'B': domain.risk_levels['Alto'] || 0,
+                                                        'C': domain.risk_levels['Medio'] || 0,
+                                                        'D': domain.risk_levels['Bajo'] || 0,
+                                                        'E': domain.risk_levels['Nulo'] || 0
+                                                    },
+                                                    total: totalDomainRespondents(domain)
+                                                }" />
+                                            </div>
+                                            <!-- Tarjetas de resumen por nivel de riesgo -->
+                                            <div class="mt-4 grid grid-cols-5 gap-2">
+                                                <div v-for="risk in domainRiskLevels" :key="risk"
+                                                    :class="[
+                                                        'text-center p-2 rounded-md shadow border-2',
+                                                        risk === 'Nulo' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                                                        risk === 'Bajo' ? 'bg-green-100 text-green-800 border-green-300' :
+                                                        risk === 'Medio' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                                                        risk === 'Alto' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                                                        'bg-red-100 text-red-800 border-red-300'
+                                                    ]"
+                                                    :title="`Personas en nivel ${risk}`"
+                                                >
+                                                    <div class="text-xs font-medium mb-1">{{ risk }}</div>
+                                                    <div class="font-bold">{{ domain.risk_levels && domain.risk_levels[risk] ? domain.risk_levels[risk] : 0 }}</div>
+                                                    <div class="text-xs">
+                                                        {{ totalDomainRespondents(domain) > 0 ? ((domain.risk_levels && domain.risk_levels[risk] ? (domain.risk_levels[risk] / totalDomainRespondents(domain) * 100) : 0).toFixed(1)) : '0.0' }}%
                                                     </div>
-                                                    <div class="font-bold">{{ count }}</div>
-                                                    <div class="text-xs">{{ domain.percentages[type].toFixed(1) }}%</div>
                                                 </div>
-                                            </div>
-                                            
-                                            <!-- Gráfico para dominio individual -->
-                                            <div class="h-60 relative">
-                                                <DomainBarChart :domain="domain" />
-                                            </div>
-                                            
-                                            <!-- Enlace a lista de personal -->
-                                            <div class="mt-4 text-right">
-                                                <a :href="route('reports.peopleListDomain', { domainId: domain.id, answerKey: 'A' })" 
-                                                   target="_blank"
-                                                   class="text-sm text-blue-600 hover:underline">
-                                                    Ver personal
-                                                </a>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Vista de tabla -->
-                                <div v-else-if="domainViewMode === 'table'" class="my-4">
-                                    <DomainResponseTable :domain-data="domainReportData" />
+                                <div v-else class="bg-gray-50 p-6 rounded-lg text-center text-gray-500">
+                                    No hay datos disponibles para mostrar.
                                 </div>
                             </div>
                         </div>

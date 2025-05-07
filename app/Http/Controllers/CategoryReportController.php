@@ -31,8 +31,8 @@ class CategoryReportController extends Controller
                 return response()->json(['error' => 'No autorizado'], 403);
             }
 
-            // Obtener los datos desde el servicio
-            $distribution = $this->categoryReportService->getCategoryAnswerTypeDistribution();
+            // Obtener los datos desde el servicio (por nivel de riesgo)
+            $distribution = $this->categoryReportService->getCategoryRiskLevelDistribution();
 
             return response()->json($distribution);
         } catch (\Exception $e) {
@@ -56,8 +56,9 @@ class CategoryReportController extends Controller
                 abort(403, 'No autorizado');
             }
 
-            // Obtener los datos desde el servicio para la carga inicial
-            $distribution = $this->categoryReportService->getCategoryAnswerTypeDistribution();
+            // Obtener los datos desde el servicio para la carga inicial (por nivel de riesgo)
+            $distribution = $this->categoryReportService->getCategoryRiskLevelDistribution();
+            Log::info("Distribución de personas por nivel de riesgo y categoría: ", $distribution->toArray());
 
             return Inertia::render('Reports/CategoryReport', [
                 'categoryDistribution' => $distribution,

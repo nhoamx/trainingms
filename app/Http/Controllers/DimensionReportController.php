@@ -22,7 +22,7 @@ class DimensionReportController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getDimensionAnswerTypeDistribution(Request $request)
+    public function getDimensionRiskLevelDistribution(Request $request)
     {
         try {
             // Verificación de autorización - ajusta según tus necesidades
@@ -32,11 +32,11 @@ class DimensionReportController extends Controller
             }
 
             // Obtener los datos desde el servicio
-            $distribution = $this->dimensionReportService->getDimensionAnswerTypeDistribution();
+            $distribution = $this->dimensionReportService->getDimensionRiskLevelDistribution();
 
             return response()->json($distribution);
         } catch (\Exception $e) {
-            Log::error("Error al obtener la distribución de respuestas por dimensión: " . $e->getMessage());
+            Log::error("Error al obtener la distribución de personas por nivel de riesgo y dimensión: " . $e->getMessage());
             return response()->json(['error' => 'Error al procesar la solicitud'], 500);
         }
     }
@@ -57,7 +57,7 @@ class DimensionReportController extends Controller
             }
 
             // Obtener los datos desde el servicio para la carga inicial
-            $distribution = $this->dimensionReportService->getDimensionAnswerTypeDistribution();
+            $distribution = $this->dimensionReportService->getDimensionRiskLevelDistribution();
 
             return Inertia::render('Reports/DimensionReport', [
                 'dimensionDistribution' => $distribution,

@@ -197,7 +197,8 @@ const navigation = computed(() => {
         return [
             { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
             { name: 'Reportes', href: '#', current: route().current('reports.*'), items: [
-                { name: 'Análisis Global', href: route('reports.global.show'), current: route().current('reports.global.show') },
+                { name: 'Análisis Global de Respuestas', href: route('reports.global.show'), current: route().current('reports.global.show') },
+                { name: 'Análisis Global de Personas', href: route('reports.global.person.show'), current: route().current('reports.global.person.show') },
                 { name: 'Categorías', href: route('reports.category.show'), current: route().current('reports.category.show') },
                 { name: 'Puntuación por Categoría', href: route('reports.category.totalScores.show'), current: route().current('reports.category.totalScores.show') },
                 { name: 'Dominios', href: route('reports.domain.show'), current: route().current('reports.domain.show') },

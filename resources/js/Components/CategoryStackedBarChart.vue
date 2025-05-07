@@ -32,47 +32,40 @@ const props = defineProps({
   }
 });
 
-// Define colores para cada tipo de respuesta
-const answerColors = {
-  'A': '#EF4444', // Rojo para "Siempre" (Muy Alto)
-  'B': '#F97316', // Naranja para "Casi Siempre" (Alto)
-  'C': '#F59E0B', // Amarillo para "Algunas Veces" (Medio)
-  'D': '#10B981', // Verde para "Casi Nunca" (Bajo)
-  'E': '#3B82F6', // Azul para "Nunca" (Nulo)
-};
 
-// Mapeo de respuestas a etiquetas
-const answerLabels = {
-  'A': 'Siempre',
-  'B': 'Casi siempre',
-  'C': 'Algunas veces', 
-  'D': 'Casi nunca',
-  'E': 'Nunca'
+// Colores y etiquetas para niveles de riesgo NOM-035
+const riskLevels = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
+const riskColors = {
+  'Nulo': '#3B82F6',      // Azul
+  'Bajo': '#10B981',      // Verde
+  'Medio': '#F59E0B',     // Amarillo
+  'Alto': '#F97316',      // Naranja
+  'Muy Alto': '#EF4444'   // Rojo
+};
+const riskLabels = {
+  'Nulo': 'Nulo',
+  'Bajo': 'Bajo',
+  'Medio': 'Medio',
+  'Alto': 'Alto',
+  'Muy Alto': 'Muy Alto'
 };
 
 const processedChartData = computed(() => {
-  // Si no hay datos, retornamos estructura vacía
   if (!props.categoryData || props.categoryData.length === 0) {
     return { labels: [], datasets: [] };
   }
-
-  // Ordenamos los tipos de respuesta de E a A (de Nulo a Muy Alto)
-  const answerTypes = ['E', 'D', 'C', 'B', 'A'];
-  
   // Nombres de categorías para el eje X
-  const labels = props.categoryData.map(category => category.name);
-  
-  // Crear un dataset para cada tipo de respuesta
-  const datasets = answerTypes.map(answerType => {
+  const labels = props.categoryData.map(category => category.category_name);
+  // Crear un dataset para cada nivel de riesgo
+  const datasets = riskLevels.map(risk => {
     return {
-      label: answerLabels[answerType] || `Respuesta ${answerType}`,
-      data: props.categoryData.map(category => category.responses[answerType] || 0),
-      backgroundColor: answerColors[answerType],
-      borderColor: answerColors[answerType],
+      label: riskLabels[risk],
+      data: props.categoryData.map(category => (category.risk_levels && category.risk_levels[risk]) ? category.risk_levels[risk] : 0),
+      backgroundColor: riskColors[risk],
+      borderColor: riskColors[risk],
       borderWidth: 1,
     };
   });
-
   return { labels, datasets };
 });
 
@@ -130,7 +123,7 @@ const chartOptions = computed(() => ({
     },
     title: {
       display: true,
-      text: 'Distribución de Respuestas por Categoría'
+      text: 'Distribución de Personas por Nivel de Riesgo y Categoría'
     },
     datalabels: {
       color: 'white',
