@@ -166,7 +166,7 @@ class ReportService
      * @param string $referenceGuide
      * @return Collection
      */
-    public function calculateCategoryQualifications(string $referenceGuide = 'III'): Collection
+    public function calculateCategoryQualifications(string $referenceGuide = 'III', $organizationId = null): Collection
     {
         // 1. Get all categories
         $categories = Category::pluck('name', 'id');

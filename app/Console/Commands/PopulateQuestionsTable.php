@@ -159,7 +159,7 @@ class PopulateQuestionsTable extends Command
                     'domain_id' => $dimensionInfo['domain_id'] ?? null,
                     'dimension_id' => $dimensionInfo['dimension_id'] ?? null,
                     'category_id' => $dimensionInfo['category_id'] ?? null,
-                    'value' => $this->getValueForAnswer($answer, $evaluation->reference_guide),
+                    'value' => $this->getValueForAnswer($answer, $evaluation->reference_guide, $questionKey),
                     'reference_guide' => $evaluation->reference_guide,
                 ]
             );
@@ -261,15 +261,40 @@ class PopulateQuestionsTable extends Command
     /**
      * Obtiene el valor numérico para una respuesta.
      */
-    private function getValueForAnswer($answer, $referenceGuide)
+    private function getValueForAnswer($answer, $referenceGuide, $questionKey = null)
     {
-        // Basado en la referencia guía y la respuesta, determinar el valor
+        // Si la respuesta es nula, retornar null
+        if ($answer === null) {
+            return null;
+        }
+
+        // Obtener la configuración de valores de respuesta
         $answerValues = config('answer_values', []);
 
+        // Determinar a qué grupo pertenece la pregunta
+        $questionNumber = null;
+        
+        // Usar el questionKey pasado como parámetro
+        // Comprobar si la pregunta está en el grupo 1
+        if (in_array($questionKey, $answerValues['group1']['questions'] ?? [])) {
+            return $answerValues['group1']['values'][$answer] ?? null;
+        }
+        
+        // Comprobar si la pregunta está en el grupo 2
+        if (in_array($questionKey, $answerValues['group2']['questions'] ?? [])) {
+            return $answerValues['group2']['values'][$answer] ?? null;
+        }
+
+        // Si no se pudo determinar el grupo, comprobar ambos grupos
         if (isset($answerValues['group1']['values'][$answer])) {
             return $answerValues['group1']['values'][$answer];
         } elseif (isset($answerValues['group2']['values'][$answer])) {
             return $answerValues['group2']['values'][$answer];
+        }
+
+        // Si la respuesta ya es numérica, devolverla como está
+        if (is_numeric($answer)) {
+            return (float)$answer;
         }
 
         return null;

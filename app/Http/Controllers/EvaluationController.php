@@ -40,7 +40,7 @@ class EvaluationController extends Controller
     {
         // 1. Validar que se envíe un archivo y que sea un PDF de hasta 10MB
         $validated = $request->validate([
-            'file' => 'required|file|mimes:pdf|max:10240', // 10240 KB = 10 MB
+            'file' => 'required|file|mimes:pdf', // 10240 KB = 10 MB
         ]);
 
         // 2. Guardar el archivo en el disco 'public' en la carpeta "evaluations"

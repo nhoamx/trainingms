@@ -1,9 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import Dashboard from "../../Layouts/Dashboard.vue";
-import CategoryStackedBarChart from '../../Components/CategoryStackedBarChart.vue';
+import BarChart from '../../Components/BarChart.vue';
 import CategoryResponseTable from '../../Components/CategoryResponseTable.vue';
-import CategoryBarChart from '../../Components/CategoryBarChart.vue';
 import { ChartPieIcon, TableCellsIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -95,7 +94,7 @@ onMounted(() => {
                     </div>
                     
                     <!-- Gráfico general con todas las categorías -->
-                    <CategoryStackedBarChart :category-data="categoryData" />
+                    <BarChart :category-data="categoryData" />
                     
                     <!-- Gráficos individuales por categoría, 2 por fila -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
@@ -104,7 +103,7 @@ onMounted(() => {
                             
                             <!-- Gráfico de barras para cada categoría individual -->
                             <div class="h-80">
-                                <CategoryBarChart :category="category" />
+                                <BarChart :data="category" type="category" />
                             </div>
                             
                             <!-- Resumen numérico -->
