@@ -43,6 +43,7 @@ class HandleInertiaRequests extends Middleware
                 : null,
             'flash' => fn () => $request->session()->get('flash'),
             'csrf_token' => fn () => csrf_token(),
+            'currentOrganization' => fn () => $request->user() && $request->user()->organization ? $request->user()->organization : null,
         ]);
     }
 }

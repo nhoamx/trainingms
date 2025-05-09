@@ -28,6 +28,16 @@ Route::controller(\App\Http\Controllers\AuthController::class)->group(function()
 
 
 Route::middleware(['auth'])->group(function () {
+    
+    Route::get('/organization/{id}/report', function($id) {
+        return \Inertia\Inertia::render('Reports/AdminOrganizationReport', [
+            'organizationId' => $id,
+            'title' => 'Reporte de Organización'
+        ]);
+    })->name('organization.report');
+
+    Route::get('/reports/dimension-report-summary', [\App\Http\Controllers\DimensionItemSummaryController::class, 'byOrganization'])
+        ->name('reports.dimension.summary');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -133,10 +143,16 @@ Route::middleware(['auth'])->group(function () {
         ->name('organization.results.detail')
         ->middleware('can:view-organization-results,organization');
 
+    Route::get('/{organizationId}/respuestas/{personalId}', [GlobalResponseController::class, 'showPersonResponses'])
+        ->name('responses.personal');
+
     // Rutas para Admin y Super Admin
     Route::middleware(['role:admin|super-admin'])->group(function () {
 
         Route::post('/evaluaciones/upload-files', [DashboardController::class, 'uploadFiles'])->name('evaluations.uploadFiles');
+
+        Route::get('/reporte', [DashboardController::class, 'reportByOrganization'])
+            ->name('admin.report');
 
         Route::controller(EvaluationController::class)
             ->prefix('/evaluaciones')

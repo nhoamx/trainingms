@@ -29,24 +29,16 @@ class EvaluationService
 
     public function getAllEvaluationsByOrganization()
     {
-        return Organization::with(['evaluations.answers'])
+        // Solo traemos las organizaciones y un conteo de evaluaciones
+        return Organization::withCount('evaluations')
             ->get()
             ->map(function ($organization) {
                 return [
                     'id' => $organization->id,
                     'name' => $organization->name,
                     'logo' => $organization->logo,
-                    'evaluations' => $organization->evaluations->map(function ($evaluation) {
-                        return [
-                            'id' => $evaluation->id,
-                            'folio' => $evaluation->folio,
-                            'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
-                            'reference_guide' => $evaluation->reference_guide,
-                            'organization_id' => $evaluation->organization_id,
-                            'personal_id' => $evaluation->personal_id,
-                            'total_score' => $evaluation->answers->sum('score')
-                        ];
-                    })
+                    'evaluations_count' => $organization->evaluations_count,
+                    // Indicador para ver el reporte, el frontend usará el id
                 ];
             });
     }

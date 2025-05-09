@@ -161,4 +161,12 @@ class DashboardController extends Controller
         $distribution = $this->reportService->getDimensionAnswerDistribution($dimensionId);
         return response()->json($distribution);
     }
+
+    public function reportByOrganization(Request $request)
+    {
+        $orgaization = $request->organization_id;
+
+        $data['evaluations'] = $this->evaluationService->getOrganizationEvaluations($orgaization);
+        
+    }
 }
