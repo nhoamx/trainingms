@@ -35,4 +35,9 @@ class Organization extends Model
     {
         return $this->hasMany(DepartmentArea::class);
     }
+
+    public function folioBatches()
+    {
+        return $this->hasMany(FolioBatch::class);
+    }
 }

@@ -36,6 +36,10 @@ Route::middleware(['auth'])->group(function () {
         ]);
     })->name('organization.report');
 
+    Route::post('/folio-batches', [App\Http\Controllers\FolioBatchController::class, 'store'])->name('folio-batches.store');
+    Route::get('/folio-batches/{batchId}/folios', [App\Http\Controllers\FolioBatchController::class, 'getFolios'])->name('folio-batches.folios');
+    Route::delete('/folio-batches/{batchId}', [App\Http\Controllers\FolioBatchController::class, 'destroy'])->name('folio-batches.destroy');
+
     Route::get('/reports/dimension-report-summary', [\App\Http\Controllers\DimensionItemSummaryController::class, 'byOrganization'])
         ->name('reports.dimension.summary');
 

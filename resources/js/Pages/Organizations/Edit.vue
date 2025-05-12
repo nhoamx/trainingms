@@ -1,9 +1,11 @@
+
 <script setup>
 import { reactive, ref } from 'vue'
 import { useForm, router } from '@inertiajs/vue3'
 import { PhotoIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/solid'
 import Dashboard from '../../Layouts/Dashboard.vue'
 import Alert from '../../Components/Alert.vue'
+import Folios from './components/Folios.vue'
 import { defineProps } from 'vue'
 
 // Recibimos la organización desde el backend
@@ -265,6 +267,13 @@ const toggleOrganization = () => {
                     >
                         Departamentos
                     </button>
+                    <button
+                        @click="changeTab('folios')"
+                        class="px-3 py-2 text-sm font-medium rounded-md transition-colors"
+                        :class="activeTab === 'folios' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700'"
+                    >
+                        Folios
+                    </button>
                 </div>
             </div>
 
@@ -522,6 +531,11 @@ const toggleOrganization = () => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+
+            <div v-else-if="activeTab === 'folios'" class="space-y-6">
+                <Folios :organization="organization" />
             </div>
 
             <!-- Modal de confirmación de eliminación -->
