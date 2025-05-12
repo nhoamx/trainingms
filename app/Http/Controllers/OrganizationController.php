@@ -58,8 +58,17 @@ class OrganizationController extends Controller
     public function edit(Organization $organization)
     {
         // Cargar relaciones de puestos y departamentos
-        $organization->load(['occupationPositions', 'departmentAreas']);
-        
+        $organization->load([
+                'occupationPositions',
+                'departmentAreas',
+                'folioBatches' => function ($query) {
+                    $query->withCount([
+                        'folios as used_count' => function ($q) {
+                            $q->where('used', true);
+                        }
+                    ]);
+                }
+            ]);        
         return Inertia::render('Organizations/Edit', [
             'title' => 'Editar organización',
             'organization' => $organization,
