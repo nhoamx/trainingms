@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DimensionItemSummaryService
 {
@@ -11,73 +12,73 @@ class DimensionItemSummaryService
      */
     private $domainRiskLevels = [
         'Condiciones en el ambiente de trabajo' => [
-            ['max' => 5, 'level' => 'Nulo'],
-            ['min' => 5, 'max' => 9, 'level' => 'Bajo'],
-            ['min' => 9, 'max' => 11, 'level' => 'Medio'],
-            ['min' => 11, 'max' => 14, 'level' => 'Alto'],
+            ['max' => 4, 'level' => 'Nulo'],
+            ['min' => 5, 'max' => 8, 'level' => 'Bajo'],
+            ['min' => 9, 'max' => 10, 'level' => 'Medio'],
+            ['min' => 11, 'max' => 13, 'level' => 'Alto'],
             ['min' => 14, 'level' => 'Muy Alto']
         ],
         'Carga de trabajo' => [
-            ['max' => 15, 'level' => 'Nulo'],
-            ['min' => 15, 'max' => 21, 'level' => 'Bajo'],
-            ['min' => 21, 'max' => 27, 'level' => 'Medio'],
-            ['min' => 27, 'max' => 37, 'level' => 'Alto'],
+            ['max' => 14, 'level' => 'Nulo'],
+            ['min' => 15, 'max' => 20, 'level' => 'Bajo'],
+            ['min' => 21, 'max' => 26, 'level' => 'Medio'],
+            ['min' => 27, 'max' => 36, 'level' => 'Alto'],
             ['min' => 37, 'level' => 'Muy Alto']
         ],
         'Falta de control sobre el trabajo' => [
-            ['max' => 11, 'level' => 'Nulo'],
-            ['min' => 11, 'max' => 16, 'level' => 'Bajo'],
-            ['min' => 16, 'max' => 21, 'level' => 'Medio'],
-            ['min' => 21, 'max' => 25, 'level' => 'Alto'],
+            ['max' => 10, 'level' => 'Nulo'],
+            ['min' => 11, 'max' => 15, 'level' => 'Bajo'],
+            ['min' => 16, 'max' => 20, 'level' => 'Medio'],
+            ['min' => 21, 'max' => 24, 'level' => 'Alto'],
             ['min' => 25, 'level' => 'Muy Alto']
         ],
         'Jornada de trabajo' => [
-            ['max' => 1, 'level' => 'Nulo'],
-            ['min' => 1, 'max' => 2, 'level' => 'Bajo'],
-            ['min' => 2, 'max' => 4, 'level' => 'Medio'],
-            ['min' => 4, 'max' => 6, 'level' => 'Alto'],
+            ['max' => 0, 'level' => 'Nulo'],
+            ['min' => 1, 'max' => 1, 'level' => 'Bajo'],
+            ['min' => 2, 'max' => 3, 'level' => 'Medio'],
+            ['min' => 4, 'max' => 5, 'level' => 'Alto'],
             ['min' => 6, 'level' => 'Muy Alto']
         ],
         'Interferencia en la relación trabajo-familia' => [
-            ['max' => 4, 'level' => 'Nulo'],
-            ['min' => 4, 'max' => 6, 'level' => 'Bajo'],
-            ['min' => 6, 'max' => 8, 'level' => 'Medio'],
-            ['min' => 8, 'max' => 10, 'level' => 'Alto'],
+            ['max' => 3, 'level' => 'Nulo'],
+            ['min' => 4, 'max' => 5, 'level' => 'Bajo'],
+            ['min' => 6, 'max' => 7, 'level' => 'Medio'],
+            ['min' => 8, 'max' => 9, 'level' => 'Alto'],
             ['min' => 10, 'level' => 'Muy Alto']
         ],
         'Liderazgo' => [
-            ['max' => 9, 'level' => 'Nulo'],
-            ['min' => 9, 'max' => 12, 'level' => 'Bajo'],
-            ['min' => 12, 'max' => 16, 'level' => 'Medio'],
-            ['min' => 16, 'max' => 20, 'level' => 'Alto'],
+            ['max' => 8, 'level' => 'Nulo'],
+            ['min' => 9, 'max' => 11, 'level' => 'Bajo'],
+            ['min' => 12, 'max' => 15, 'level' => 'Medio'],
+            ['min' => 16, 'max' => 19, 'level' => 'Alto'],
             ['min' => 20, 'level' => 'Muy Alto']
         ],
         'Relaciones en el trabajo' => [
-            ['max' => 10, 'level' => 'Nulo'],
-            ['min' => 10, 'max' => 13, 'level' => 'Bajo'],
-            ['min' => 13, 'max' => 17, 'level' => 'Medio'],
-            ['min' => 17, 'max' => 21, 'level' => 'Alto'],
+            ['max' => 9, 'level' => 'Nulo'],
+            ['min' => 10, 'max' => 12, 'level' => 'Bajo'],
+            ['min' => 13, 'max' => 16, 'level' => 'Medio'],
+            ['min' => 17, 'max' => 20, 'level' => 'Alto'],
             ['min' => 21, 'level' => 'Muy Alto']
         ],
         'Violencia' => [
-            ['max' => 7, 'level' => 'Nulo'],
-            ['min' => 7, 'max' => 10, 'level' => 'Bajo'],
-            ['min' => 10, 'max' => 13, 'level' => 'Medio'],
-            ['min' => 13, 'max' => 16, 'level' => 'Alto'],
+            ['max' => 6, 'level' => 'Nulo'],
+            ['min' => 7, 'max' => 9, 'level' => 'Bajo'],
+            ['min' => 10, 'max' => 12, 'level' => 'Medio'],
+            ['min' => 13, 'max' => 15, 'level' => 'Alto'],
             ['min' => 16, 'level' => 'Muy Alto']
         ],
         'Reconocimiento del desempeño' => [
-            ['max' => 6, 'level' => 'Nulo'],
-            ['min' => 6, 'max' => 10, 'level' => 'Bajo'],
-            ['min' => 10, 'max' => 14, 'level' => 'Medio'],
-            ['min' => 14, 'max' => 18, 'level' => 'Alto'],
+            ['max' => 5, 'level' => 'Nulo'],
+            ['min' => 6, 'max' => 9, 'level' => 'Bajo'],
+            ['min' => 10, 'max' => 13, 'level' => 'Medio'],
+            ['min' => 14, 'max' => 17, 'level' => 'Alto'],
             ['min' => 18, 'level' => 'Muy Alto']
         ],
         'Insuficiente sentido de pertenencia e inestabilidad' => [
-            ['max' => 4, 'level' => 'Nulo'],
-            ['min' => 4, 'max' => 6, 'level' => 'Bajo'],
-            ['min' => 6, 'max' => 8, 'level' => 'Medio'],
-            ['min' => 8, 'max' => 10, 'level' => 'Alto'],
+            ['max' => 3, 'level' => 'Nulo'],
+            ['min' => 4, 'max' => 5, 'level' => 'Bajo'],
+            ['min' => 6, 'max' => 7, 'level' => 'Medio'],
+            ['min' => 8, 'max' => 9, 'level' => 'Alto'],
             ['min' => 10, 'level' => 'Muy Alto']
         ]
     ];
@@ -87,38 +88,38 @@ class DimensionItemSummaryService
      */
     private $categoryRiskLevels = [
         'Ambiente de trabajo' => [
-            ['max' => 5, 'level' => 'Nulo'],
-            ['min' => 5, 'max' => 9, 'level' => 'Bajo'],
-            ['min' => 9, 'max' => 11, 'level' => 'Medio'],
-            ['min' => 11, 'max' => 14, 'level' => 'Alto'],
+            ['max' => 4, 'level' => 'Nulo'],
+            ['min' => 5, 'max' => 8, 'level' => 'Bajo'],
+            ['min' => 9, 'max' => 10, 'level' => 'Medio'],
+            ['min' => 11, 'max' => 13, 'level' => 'Alto'],
             ['min' => 14, 'level' => 'Muy Alto']
         ],
         'Factores propios de la actividad' => [
-            ['max' => 15, 'level' => 'Nulo'],
-            ['min' => 15, 'max' => 30, 'level' => 'Bajo'],
-            ['min' => 30, 'max' => 45, 'level' => 'Medio'],
-            ['min' => 45, 'max' => 60, 'level' => 'Alto'],
+            ['max' => 14, 'level' => 'Nulo'],
+            ['min' => 15, 'max' => 29, 'level' => 'Bajo'],
+            ['min' => 30, 'max' => 44, 'level' => 'Medio'],
+            ['min' => 45, 'max' => 59, 'level' => 'Alto'],
             ['min' => 60, 'level' => 'Muy Alto']
         ],
         'Organización del tiempo de trabajo' => [
-            ['max' => 5, 'level' => 'Nulo'],
-            ['min' => 5, 'max' => 7, 'level' => 'Bajo'],
-            ['min' => 7, 'max' => 10, 'level' => 'Medio'],
-            ['min' => 10, 'max' => 13, 'level' => 'Alto'],
+            ['max' => 4, 'level' => 'Nulo'],
+            ['min' => 5, 'max' => 6, 'level' => 'Bajo'],
+            ['min' => 7, 'max' => 9, 'level' => 'Medio'],
+            ['min' => 10, 'max' => 12, 'level' => 'Alto'],
             ['min' => 13, 'level' => 'Muy Alto']
         ],
         'Liderazgo y relaciones en el trabajo' => [
-            ['max' => 14, 'level' => 'Nulo'],
-            ['min' => 14, 'max' => 29, 'level' => 'Bajo'],
-            ['min' => 29, 'max' => 42, 'level' => 'Medio'],
-            ['min' => 42, 'max' => 58, 'level' => 'Alto'],
+            ['max' => 13, 'level' => 'Nulo'],
+            ['min' => 14, 'max' => 28, 'level' => 'Bajo'],
+            ['min' => 29, 'max' => 41, 'level' => 'Medio'],
+            ['min' => 42, 'max' => 57, 'level' => 'Alto'],
             ['min' => 58, 'level' => 'Muy Alto']
         ],
         'Entorno organizacional' => [
-            ['max' => 10, 'level' => 'Nulo'],
-            ['min' => 10, 'max' => 14, 'level' => 'Bajo'],
-            ['min' => 14, 'max' => 18, 'level' => 'Medio'],
-            ['min' => 18, 'max' => 23, 'level' => 'Alto'],
+            ['max' => 9, 'level' => 'Nulo'],
+            ['min' => 10, 'max' => 13, 'level' => 'Bajo'],
+            ['min' => 14, 'max' => 17, 'level' => 'Medio'],
+            ['min' => 18, 'max' => 22, 'level' => 'Alto'],
             ['min' => 23, 'level' => 'Muy Alto']
         ]
     ];
@@ -143,8 +144,11 @@ class DimensionItemSummaryService
         // Obtiene los datos agrupados por categoría y nivel de riesgo
         $groupedByCategory = $this->processCategoriasAgrupadasPorRiesgo($rawData);
 
+
         // Calcula los niveles de riesgo finales
         $finalRiskLevels = $this->processFinalRiskLevel($rawData);
+
+        $personal = $this->getPersonalCalification($organizationId);
         
         // Retorna todos los conjuntos de datos en un array
         return [
@@ -153,7 +157,8 @@ class DimensionItemSummaryService
             'grouped_by_domain' => $groupedByDomain,
             'grouped_by_category' => $groupedByCategory,
             'final_risk_levels' => $finalRiskLevels,
-            'demographic_data' => []
+            'demographic_data' => [],
+            'personalCalification' => $personal
         ];
     }
     
@@ -206,7 +211,7 @@ class DimensionItemSummaryService
         $nivelRiesgo = 'No Determinado';
         foreach ($this->domainRiskLevels[$dominio] as $rango) {
             // Si solo hay max, es porque el puntaje es menor a ese valor
-            if (isset($rango['max']) && !isset($rango['min']) && $puntaje < $rango['max']) {
+            if (isset($rango['max']) && !isset($rango['min']) && $puntaje <= $rango['max']) {
                 $nivelRiesgo = $rango['level'];
                 break;
             }
@@ -215,8 +220,8 @@ class DimensionItemSummaryService
                 $nivelRiesgo = $rango['level'];
                 break;
             }
-            // Si hay min y max, el puntaje debe estar en ese rango: min <= puntaje < max
-            else if (isset($rango['min']) && isset($rango['max']) && $puntaje >= $rango['min'] && $puntaje < $rango['max']) {
+            // Si hay min y max, el puntaje debe estar en ese rango: min <= puntaje <= max
+            else if (isset($rango['min']) && isset($rango['max']) && $puntaje >= $rango['min'] && $puntaje <= $rango['max']) {
                 $nivelRiesgo = $rango['level'];
                 break;
             }
@@ -242,7 +247,7 @@ class DimensionItemSummaryService
         $nivelRiesgo = 'No Determinado';
         foreach ($this->categoryRiskLevels[$categoria] as $rango) {
             // Si solo hay max, es porque el puntaje es menor a ese valor
-            if (isset($rango['max']) && !isset($rango['min']) && $puntaje < $rango['max']) {
+            if (isset($rango['max']) && !isset($rango['min']) && $puntaje <= $rango['max']) {
                 $nivelRiesgo = $rango['level'];
                 break;
             }
@@ -252,7 +257,7 @@ class DimensionItemSummaryService
                 break;
             }
             // Si hay min y max, el puntaje debe estar en ese rango: min <= puntaje < max
-            else if (isset($rango['min']) && isset($rango['max']) && $puntaje >= $rango['min'] && $puntaje < $rango['max']) {
+            else if (isset($rango['min']) && isset($rango['max']) && $puntaje >= $rango['min'] && $puntaje <= $rango['max']) {
                 $nivelRiesgo = $rango['level'];
                 break;
             }
@@ -564,5 +569,39 @@ class DimensionItemSummaryService
             }
         }
         return 'No Determinado';
+    }
+
+    /**
+     * Obtiene la calificación total de cada persona en la organización.
+     * 
+     * @param int $organizationId ID de la organización
+     * @return array Lista de personal_id con su calificación total
+     */
+    public function getPersonalCalification($organizationId)
+    {
+        // Consulta SQL para obtener la suma de todos los valores de preguntas por persona
+        $results = DB::select('
+            SELECT
+            e.personal_id,
+            SUM(q.value) AS calificacion_total
+            FROM questions q
+            JOIN evaluations e ON q.evaluation_id = e.id
+            WHERE q.reference_guide = ?
+            AND q.value IS NOT NULL
+            AND e.organization_id = ?
+            GROUP BY e.personal_id
+            ORDER BY e.personal_id
+        ', ['III', $organizationId]);
+        
+        // Formateamos los resultados
+        $calificaciones = [];
+        foreach ($results as $result) {
+            $calificaciones[] = [
+                'personal_id' => $result->personal_id,
+                'calificacion' => (int)$result->calificacion_total
+            ];
+        }
+        
+        return $calificaciones;
     }
 }

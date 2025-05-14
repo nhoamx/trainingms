@@ -4,6 +4,7 @@ import BarChart from './BarChart.vue';
 import RiskSummaryCards from './RiskSummaryCards.vue';
 import RiskActionButtons from './RiskActionButtons.vue';
 import FinalQualificationChart from './FinalQualificationChart.vue';
+import ParticipantReport from './ParticipantReport.vue';
 
 const props = defineProps({
     organizations: { type: Array, default: () => [] },
@@ -18,6 +19,7 @@ const tabs = [
     { key: 'dimension', label: 'Dimensiones' },
     { key: 'domain', label: 'Dominios' },
     { key: 'category', label: 'Categorías' },
+    { key: 'participants', label: 'Participantes' },
     { key: 'demographics', label: 'Datos Demográficos' },
     { key: 'final', label: 'Calificación Final' },
 ];
@@ -205,6 +207,16 @@ const processedFinalRiskData = computed(() => {
 const finalRiskLevels = computed(() => processedFinalRiskData.value?.risk_levels || {});
 const finalPersonalByRisk = computed(() => processedFinalRiskData.value?.personal_by_risk || {});
 
+// Procesa los datos de calificaciones de participantes
+const processedParticipantsData = computed(() => {
+    if (!rawSummaryData.value || !rawSummaryData.value.personalCalification) {
+        console.log('No hay datos de personalCalification', rawSummaryData.value);
+        return null;
+    }
+    console.log('Datos de participantes obtenidos:', rawSummaryData.value.personalCalification);
+    return rawSummaryData.value.personalCalification;
+});
+
 // Seleccionar el conjunto de datos correcto según el tab activo
 const activeData = computed(() => {
     switch (activeTab.value) {
@@ -214,6 +226,8 @@ const activeData = computed(() => {
             return processedDomainData.value;
         case 'category':
             return processedCategoryData.value;
+        case 'participants':
+            return processedParticipantsData.value ? [{ name: 'Participantes', data: processedParticipantsData.value }] : null;
         case 'final':
             return processedFinalRiskData.value ? [processedFinalRiskData.value] : null;
         default:
@@ -235,6 +249,8 @@ const fetchSummary = async () => {
         const res = await window.axios.get(url);
         rawSummaryData.value = res.data;
         console.log('Data received:', res.data);
+        console.log('Propiedades del objeto recibido:', Object.keys(res.data));
+        console.log('¿Existe personalCalification?', 'personalCalification' in res.data);
     } catch (e) {
         console.error('Error fetching summary data:', e);
         rawSummaryData.value = null;
@@ -344,6 +360,15 @@ watch(() => props.currentOrganization, (newOrg) => {
                             />
                         </div>
                     </div>
+                </div>
+            </div>
+            <div v-else-if="activeTab === 'participants'">
+                <h2 class="text-lg font-semibold mb-2">Resumen por Participantes</h2>
+                <div class="mb-4 bg-blue-50 p-3 rounded border border-blue-200">
+                    <p class="text-sm">Mostrando distribución de personal según nivel de riesgo por cada participante.</p>
+                </div>
+                <div class="mb-8">
+                    <ParticipantReport :personalCalifications="processedParticipantsData" :organizationId="selectedOrgId" />
                 </div>
             </div>
             <div v-else-if="activeTab === 'demographics'" class="tab-content">

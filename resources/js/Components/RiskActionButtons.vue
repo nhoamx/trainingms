@@ -102,6 +102,8 @@ const props = defineProps({
   }
 });
 
+console.log('Categorias:', props.itemData);
+
 // Estados para el modal
 const showModal = ref(false);
 const selectedRisk = ref('');
