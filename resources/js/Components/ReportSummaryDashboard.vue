@@ -16,7 +16,7 @@ const props = defineProps({
 console.log('currentOrganization', props.currentOrganization);
 
 const tabs = [
-    { key: 'dimension', label: 'Dimensiones' },
+    // { key: 'dimension', label: 'Dimensiones' },
     { key: 'domain', label: 'Dominios' },
     { key: 'category', label: 'Categorías' },
     { key: 'participants', label: 'Participantes' },
@@ -24,7 +24,7 @@ const tabs = [
     { key: 'final', label: 'Calificación Final' },
 ];
 const riskLevels = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
-const activeTab = ref('dimension');
+const activeTab = ref('domain');
 const rawSummaryData = ref(null);
 const isLoading = ref(false);
 // Función para extraer el ID de la organización desde diferentes formatos

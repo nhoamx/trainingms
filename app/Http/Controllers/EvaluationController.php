@@ -160,4 +160,19 @@ class EvaluationController extends Controller
         Log::info("--- Fin reasignación de evaluaciones ---"); // Log fin
     }
 
+    public function destroy(Evaluation $evaluation)
+    {
+        // Eliminar la evaluación
+        $evaluation->delete();
+
+        // Redirigir a la lista de evaluaciones con un mensaje de éxito
+        return redirect()
+            ->back()
+            ->with('flash', [
+                'type' => 'success',
+                'title' => 'Evaluación eliminada exitosamente',
+                'message' => 'La evaluación ha sido eliminada.'
+            ]);
+    }
+
 }

@@ -165,6 +165,7 @@ Route::middleware(['auth'])->group(function () {
                 Route::get('/cargar-evaluacion', 'loadEvaluation')->name('evaluations.load');
                 Route::post('/store', 'store')->name('evaluations.store');
                 Route::get('/{evaluation}', 'show')->name('evaluations.show');
+                Route::delete('/{evaluation}', 'destroy')->name('evaluations.destroy');
             });
 
         // Nueva ruta dedicada para evaluaciones por organización
@@ -182,6 +183,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{organization}/edit', 'edit')->name('organizations.edit')->withTrashed();
             Route::put('/{organization}', 'update')->name('organizations.update')->withTrashed();
             Route::delete('/{organization}', 'destroy')->name('organizations.destroy');
+            Route::delete('/{organization}/delete', 'forceDelete')->name('organizations.force-delete')->withTrashed();
             Route::put('/{organization}/restore', 'restore')->name('organizations.restore')->withTrashed();
         });
         

@@ -230,6 +230,12 @@ const toggleOrganization = () => {
     }
 };
 
+const confirmForceDelete = () => {
+    if (confirm("¿Estás seguro que deseas eliminar esta organización? Esta acción no se puede deshacer.")) {
+        form.delete(route('organizations.force-delete', organization));
+    }
+}
+
 </script>
 
 <template>
@@ -370,6 +376,16 @@ const toggleOrganization = () => {
                             :class="organization.deleted_at ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'"
                         >
                             {{ organization.deleted_at ? 'Activar organización' : 'Deshabilitar organización' }}
+                        </button>
+
+                        <!-- Si la organización está deshabilitada, mostramos el botón de eliminar -->
+                        <button
+                            v-if="organization.deleted_at"
+                            type="button"
+                            @click="confirmForceDelete"
+                            class="rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 bg-red-600 hover:bg-red-500"
+                        >
+                            Eliminar organización permanentemente
                         </button>
                     </div>
                 </form>

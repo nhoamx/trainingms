@@ -152,4 +152,19 @@ class OrganizationController extends Controller
                                         ->get();
         return response()->json($organizations);
     }
+
+    // metodo para eliminar completamente una organización
+    public function forceDelete(Organization $organization)
+    {
+        // Eliminar la organización de forma permanente
+        $organization->forceDelete();
+
+        // Redirigir a la lista de organizaciones con un mensaje de éxito
+        return redirect()->route('organizations.index')
+            ->with('flash', [
+                'type' => 'success',
+                'title' => 'Organización eliminada permanentemente',
+                'message' => 'La organización ha sido eliminada permanentemente.'
+            ]);
+    }
 }

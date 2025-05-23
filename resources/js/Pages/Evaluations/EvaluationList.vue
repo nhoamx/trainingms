@@ -1,6 +1,6 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { ChevronRightIcon, DocumentTextIcon, PencilSquareIcon, ArrowPathIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { ChevronRightIcon, DocumentTextIcon, PencilSquareIcon, ArrowPathIcon, XMarkIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import Dashboard from "../../Layouts/Dashboard.vue";
 import { computed, ref } from 'vue';
 import axios from 'axios';
@@ -126,6 +126,20 @@ const handleReassignConfirm = () => {
     });
 };
 
+const handleDeleteEvaluation = (evaluationId) => {
+    if (confirm('¿Estás seguro de que deseas eliminar esta evaluación? Esta acción no se puede deshacer.')) {
+        router.delete(route('evaluations.destroy', { evaluation: evaluationId }), {
+            preserveScroll: true,
+            onSuccess: () => {
+                // La redirección será manejada por Inertia
+            },
+            onError: (errors) => {
+                alert('Error al eliminar la evaluación: ' + (errors.message || 'Error desconocido'));
+            }
+        });
+    }
+};
+
 </script>
 
 <template>
@@ -214,7 +228,7 @@ const handleReassignConfirm = () => {
                                     <dd class="mt-1 text-sm text-gray-900">Completada</dd>
                                 </div>
                             </dl>
-                            <div class="mt-4 flex justify-end">
+                            <div class="mt-4 flex justify-end space-x-2">
                                 <Link
                                     :href="route('organization.results.detail', {
                                         organization: evaluation.organization_id || organization.id,
@@ -225,6 +239,13 @@ const handleReassignConfirm = () => {
                                     <DocumentTextIcon class="h-5 w-5 mr-2 text-gray-500" />
                                     Ver detalle
                                 </Link>
+                                <button
+                                    @click="handleDeleteEvaluation(evaluation.id)"
+                                    class="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                >
+                                    <TrashIcon class="h-5 w-5 mr-2 text-red-500" />
+                                    Eliminar
+                                </button>
                             </div>
                         </div>
                     </div>
