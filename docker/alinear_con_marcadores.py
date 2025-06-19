@@ -18,8 +18,8 @@ IDEAL_POSITIONS = {
 LABELS = ["TL", "TR", "ML", "MR", "BL", "BR"]
 
 # === Configuración de recorte ===
-CROP_TOP = 350
-CROP_BOTTOM = 150
+CROP_TOP = 430
+CROP_BOTTOM = 450
 
 def recortar_imagen(imagen, top=CROP_TOP, bottom=CROP_BOTTOM):
     """
