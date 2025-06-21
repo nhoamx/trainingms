@@ -80,9 +80,9 @@ def draw_bubble_positions(img_path, bubble_positions, output_path):
         print(f"Error drawing bubble positions: {e}")
 
 if __name__ == "__main__":
-    img_path = 'test_pages-to-jpg-0004.jpg'
+    img_path = 'test_reference_13.png'
     folio = config.folio_configuration
-    evaluation_01 = config.evaluation_01
+    evaluation_01 = config.reference_i
 
     results = detect_bubbles(img_path, evaluation_01)
     draw_bubble_positions(img_path, evaluation_01, 'output/output_with_bubbles.png')
