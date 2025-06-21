@@ -19,7 +19,7 @@ LABELS = ["TL", "TR", "ML", "MR", "BL", "BR"]
 
 # === Configuración de recorte ===
 CROP_TOP = 430
-CROP_BOTTOM = 450
+CROP_BOTTOM = 250
 
 def recortar_imagen(imagen, top=CROP_TOP, bottom=CROP_BOTTOM):
     """
