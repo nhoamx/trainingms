@@ -206,11 +206,12 @@ class GlobalResponseController extends Controller
                 ->first();
 
             if ($guideIResults) {
+                $answers = $guideIResults->questions()->pluck('answer', 'question');
                 $guideIResults = [
                     'id' => $guideIResults->id,
                     'folio' => $guideIResults->folio,
                     'created_at' => $guideIResults->created_at->format('Y-m-d H:i:s'),
-                    'answers' => $guideIResults->data
+                    'answers' => $answers
                 ];
             }
 

@@ -126,11 +126,12 @@ class ResultsController extends Controller
                 ->first();
 
             if ($guideIResults) {
+                $answers = $guideIResults->questions()->pluck('answer', 'question');
                 $guideIResults = [
                     'id' => $guideIResults->id,
                     'folio' => $guideIResults->folio,
                     'created_at' => $guideIResults->created_at->format('Y-m-d H:i:s'),
-                    'answers' => $guideIResults->data,
+                    'answers' => $answers,
                 ];
             }
 
@@ -159,11 +160,12 @@ class ResultsController extends Controller
             ];
         } elseif ($evaluation->reference_guide === 'I') {
             // Resultados de la guía I corresponden a esta evaluación
+            $answers = $evaluation->questions()->pluck('answer', 'question');
             $guideIResults = [
                 'id' => $evaluation->id,
                 'folio' => $evaluation->folio,
                 'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
-                'answers' => $evaluation->data,
+                'answers' => $answers,
             ];
 
             // Intentar cargar la guía V relacionada (independiente de que exista la III)
@@ -218,11 +220,12 @@ class ResultsController extends Controller
                 ->first();
 
             if ($guideIResultsModel) {
+                $answers = $guideIResultsModel->questions()->pluck('answer', 'question');
                 $guideIResults = [
                     'id' => $guideIResultsModel->id,
                     'folio' => $guideIResultsModel->folio,
                     'created_at' => $guideIResultsModel->created_at->format('Y-m-d H:i:s'),
-                    'answers' => $guideIResultsModel->data,
+                    'answers' => $answers,
                 ];
             }
 
