@@ -166,6 +166,23 @@ class ResultsController extends Controller
                 'answers' => $evaluation->data,
             ];
 
+            // Intentar cargar la guía V relacionada (independiente de que exista la III)
+            $guideVResultsModel = Evaluation::where('organization_id', $organization->id)
+                ->where('reference_guide', 'V')
+                ->where('personal_id', $evaluation->personal_id)
+                ->latest()
+                ->first();
+
+            if ($guideVResultsModel) {
+                $questions = $guideVResultsModel->questions()->select('id', 'question', 'answer')->get();
+                $guideVResults = [
+                    'id' => $guideVResultsModel->id,
+                    'folio' => $guideVResultsModel->folio,
+                    'created_at' => $guideVResultsModel->created_at->format('Y-m-d H:i:s'),
+                    'questions' => $questions,
+                ];
+            }
+
             // Buscar evaluación de la guía III relacionada
             $relatedGuideIII = Evaluation::where('organization_id', $organization->id)
                 ->where('reference_guide', 'III')
@@ -182,23 +199,6 @@ class ResultsController extends Controller
                     'questions' => $questions,
                 ];
                 $evaluationForResults = $relatedGuideIII;
-
-                // También cargar guía V si existe
-                $guideVResults = Evaluation::where('organization_id', $organization->id)
-                    ->where('reference_guide', 'V')
-                    ->where('personal_id', $evaluation->personal_id)
-                    ->latest()
-                    ->first();
-
-                if ($guideVResults) {
-                    $questions = $guideVResults->questions()->select('id', 'question', 'answer')->get();
-                    $guideVResults = [
-                        'id' => $guideVResults->id,
-                        'folio' => $guideVResults->folio,
-                        'created_at' => $guideVResults->created_at->format('Y-m-d H:i:s'),
-                        'questions' => $questions,
-                    ];
-                }
             }
         } elseif ($evaluation->reference_guide === 'V') {
             // Resultados de la guía V corresponden a esta evaluación
@@ -210,6 +210,22 @@ class ResultsController extends Controller
                 'questions' => $questions,
             ];
 
+            // Siempre intentar cargar la guía I relacionada
+            $guideIResultsModel = Evaluation::where('organization_id', $organization->id)
+                ->where('reference_guide', 'I')
+                ->where('personal_id', $evaluation->personal_id)
+                ->latest()
+                ->first();
+
+            if ($guideIResultsModel) {
+                $guideIResults = [
+                    'id' => $guideIResultsModel->id,
+                    'folio' => $guideIResultsModel->folio,
+                    'created_at' => $guideIResultsModel->created_at->format('Y-m-d H:i:s'),
+                    'answers' => $guideIResultsModel->data,
+                ];
+            }
+
             // Buscar evaluación de la guía III relacionada
             $relatedGuideIII = Evaluation::where('organization_id', $organization->id)
                 ->where('reference_guide', 'III')
@@ -226,22 +242,6 @@ class ResultsController extends Controller
                     'questions' => $questions,
                 ];
                 $evaluationForResults = $relatedGuideIII;
-
-                // También cargar guía I si existe
-                $guideIResults = Evaluation::where('organization_id', $organization->id)
-                    ->where('reference_guide', 'I')
-                    ->where('personal_id', $evaluation->personal_id)
-                    ->latest()
-                    ->first();
-
-                if ($guideIResults) {
-                    $guideIResults = [
-                        'id' => $guideIResults->id,
-                        'folio' => $guideIResults->folio,
-                        'created_at' => $guideIResults->created_at->format('Y-m-d H:i:s'),
-                        'answers' => $guideIResults->data,
-                    ];
-                }
             }
         }
 
