@@ -111,13 +111,14 @@ class ResultsController extends Controller
             abort(403, 'La evaluación no pertenece a esta organización');
         }
 
-        // Obtener resultados de otras guías si estamos viendo la guía III
+        // Obtener resultados de las otras guías relacionadas
         $guideIResults = null;
         $guideVResults = null;
         $guideIIIResults = null;
+        $evaluationForResults = $evaluation;
 
         if ($evaluation->reference_guide === 'III') {
-            // Buscar la evaluación más reciente de la guía I para el mismo personal_id
+            // Cargar las evaluaciones de la guía I y V relacionadas
             $guideIResults = Evaluation::where('organization_id', $organization->id)
                 ->where('reference_guide', 'I')
                 ->where('personal_id', $evaluation->personal_id)
@@ -129,11 +130,10 @@ class ResultsController extends Controller
                     'id' => $guideIResults->id,
                     'folio' => $guideIResults->folio,
                     'created_at' => $guideIResults->created_at->format('Y-m-d H:i:s'),
-                    'answers' => $guideIResults->data
+                    'answers' => $guideIResults->data,
                 ];
             }
 
-            // Buscar la evaluación más reciente de la guía V para el mismo personal_id
             $guideVResults = Evaluation::where('organization_id', $organization->id)
                 ->where('reference_guide', 'V')
                 ->where('personal_id', $evaluation->personal_id)
@@ -146,22 +146,107 @@ class ResultsController extends Controller
                     'id' => $guideVResults->id,
                     'folio' => $guideVResults->folio,
                     'created_at' => $guideVResults->created_at->format('Y-m-d H:i:s'),
-                    'questions' => $questions
+                    'questions' => $questions,
                 ];
             }
 
-            // Obtener las preguntas y respuestas de la guía III (actual)
             $questions = $evaluation->questions()->select('id', 'question', 'answer')->get();
             $guideIIIResults = [
                 'id' => $evaluation->id,
                 'folio' => $evaluation->folio,
                 'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
-                'questions' => $questions
+                'questions' => $questions,
             ];
+        } elseif ($evaluation->reference_guide === 'I') {
+            // Resultados de la guía I corresponden a esta evaluación
+            $guideIResults = [
+                'id' => $evaluation->id,
+                'folio' => $evaluation->folio,
+                'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
+                'answers' => $evaluation->data,
+            ];
+
+            // Buscar evaluación de la guía III relacionada
+            $relatedGuideIII = Evaluation::where('organization_id', $organization->id)
+                ->where('reference_guide', 'III')
+                ->where('personal_id', $evaluation->personal_id)
+                ->latest()
+                ->first();
+
+            if ($relatedGuideIII) {
+                $questions = $relatedGuideIII->questions()->select('id', 'question', 'answer')->get();
+                $guideIIIResults = [
+                    'id' => $relatedGuideIII->id,
+                    'folio' => $relatedGuideIII->folio,
+                    'created_at' => $relatedGuideIII->created_at->format('Y-m-d H:i:s'),
+                    'questions' => $questions,
+                ];
+                $evaluationForResults = $relatedGuideIII;
+
+                // También cargar guía V si existe
+                $guideVResults = Evaluation::where('organization_id', $organization->id)
+                    ->where('reference_guide', 'V')
+                    ->where('personal_id', $evaluation->personal_id)
+                    ->latest()
+                    ->first();
+
+                if ($guideVResults) {
+                    $questions = $guideVResults->questions()->select('id', 'question', 'answer')->get();
+                    $guideVResults = [
+                        'id' => $guideVResults->id,
+                        'folio' => $guideVResults->folio,
+                        'created_at' => $guideVResults->created_at->format('Y-m-d H:i:s'),
+                        'questions' => $questions,
+                    ];
+                }
+            }
+        } elseif ($evaluation->reference_guide === 'V') {
+            // Resultados de la guía V corresponden a esta evaluación
+            $questions = $evaluation->questions()->select('id', 'question', 'answer')->get();
+            $guideVResults = [
+                'id' => $evaluation->id,
+                'folio' => $evaluation->folio,
+                'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
+                'questions' => $questions,
+            ];
+
+            // Buscar evaluación de la guía III relacionada
+            $relatedGuideIII = Evaluation::where('organization_id', $organization->id)
+                ->where('reference_guide', 'III')
+                ->where('personal_id', $evaluation->personal_id)
+                ->latest()
+                ->first();
+
+            if ($relatedGuideIII) {
+                $questions = $relatedGuideIII->questions()->select('id', 'question', 'answer')->get();
+                $guideIIIResults = [
+                    'id' => $relatedGuideIII->id,
+                    'folio' => $relatedGuideIII->folio,
+                    'created_at' => $relatedGuideIII->created_at->format('Y-m-d H:i:s'),
+                    'questions' => $questions,
+                ];
+                $evaluationForResults = $relatedGuideIII;
+
+                // También cargar guía I si existe
+                $guideIResults = Evaluation::where('organization_id', $organization->id)
+                    ->where('reference_guide', 'I')
+                    ->where('personal_id', $evaluation->personal_id)
+                    ->latest()
+                    ->first();
+
+                if ($guideIResults) {
+                    $guideIResults = [
+                        'id' => $guideIResults->id,
+                        'folio' => $guideIResults->folio,
+                        'created_at' => $guideIResults->created_at->format('Y-m-d H:i:s'),
+                        'answers' => $guideIResults->data,
+                    ];
+                }
+            }
         }
 
-        $results = Category::with(['domains.dimensions.answers' => function($query) use ($evaluation) {
-            $query->where('evaluation_id', $evaluation->id)
+        $results = Category::with(['domains.dimensions.answers' => function($query) use ($evaluationForResults) {
+            $query->where('evaluation_id', $evaluationForResults->id)
                 ->select('id', 'dimension_id', 'question', 'answer', 'score');
         }])->get()->map(function ($category) {
             $categoryScore = 0;
