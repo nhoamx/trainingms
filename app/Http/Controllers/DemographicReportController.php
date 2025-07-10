@@ -31,8 +31,11 @@ class DemographicReportController extends Controller
                 return response()->json(['error' => 'No autorizado'], 403);
             }
 
+            // Obtener ID de organización desde parámetros o del usuario
+            $organizationId = $request->get('organization_id') ?? $user->organization_id;
+
             // Obtener los datos desde el servicio
-            $distribution = $this->demographicReportService->getDemographicDistribution();
+            $distribution = $this->demographicReportService->getDemographicDistribution($organizationId);
 
             return response()->json($distribution);
         } catch (\Exception $e) {

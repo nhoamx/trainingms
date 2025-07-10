@@ -14,12 +14,16 @@ class DemographicReportService
      * Obtiene la distribución demográfica de personas por nivel de riesgo
      * usando datos de las guías V (demográficos) y III (evaluación psicosocial)
      *
+     * @param int|null $organizationId
      * @return Collection
      */
-    public function getDemographicDistribution(): Collection
+    public function getDemographicDistribution($organizationId = null): Collection
     {
         try {
-            $organizationId = Auth::user()->organization_id;
+            // Si no se proporciona organizationId, usar el del usuario autenticado
+            if (!$organizationId) {
+                $organizationId = Auth::user()->organization_id;
+            }
             
             // Obtener todas las evaluaciones de la organización con datos demográficos y de riesgo
             $evaluations = $this->getCombinedEvaluationData($organizationId);
@@ -129,7 +133,8 @@ class DemographicReportService
             $value = data_get($item['demographic_data'], $field);
             return [
                 'value' => $this->normalizeFieldValue($field, $value),
-                'risk_level' => $item['risk_level']
+                'risk_level' => $item['risk_level'],
+                'personal_id' => $item['personal_id']
             ];
         })->filter(function ($item) {
             return !empty($item['value']);
@@ -140,14 +145,20 @@ class DemographicReportService
         
         return $grouped->map(function ($items, $value) use ($riskLevels) {
             $riskDistribution = array_fill_keys($riskLevels, 0);
+            $personalByRisk = array_fill_keys($riskLevels, []);
             
             foreach ($items as $item) {
                 $riskDistribution[$item['risk_level']]++;
+                // Agregar personal_id para compatibilidad con componentes existentes
+                if (isset($item['personal_id'])) {
+                    $personalByRisk[$item['risk_level']][] = $item['personal_id'];
+                }
             }
             
             return [
                 'name' => $value,
                 'risk_levels' => $riskDistribution,
+                'personal_by_risk' => $personalByRisk,
                 'total' => $items->count()
             ];
         })->values();
