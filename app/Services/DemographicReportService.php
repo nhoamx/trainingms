@@ -24,10 +24,10 @@ class DemographicReportService
             if (!$organizationId) {
                 $organizationId = Auth::user()->organization_id;
             }
-            
+
             // Obtener todas las evaluaciones de la organización con datos demográficos y de riesgo
             $evaluations = $this->getCombinedEvaluationData($organizationId);
-            
+
             if ($evaluations->isEmpty()) {
                 return collect();
             }
@@ -35,16 +35,18 @@ class DemographicReportService
             // Procesar por cada campo demográfico
             $demographicFields = [
                 'sexo' => 'Género',
-                'edad' => 'Rango de Edad', 
+                'edad' => 'Edad',
+                'tipo_puesto' => 'Tipo de Puesto',
                 'estado_civil' => 'Estado Civil',
-                'nivel_estudios' => 'Nivel de Estudios',
-                'datos_laborales.ocupacion_puesto' => 'Puesto',
-                'datos_laborales.tipo_contratacion' => 'Tipo de Contratación',
-                'datos_laborales.tipo_personal' => 'Tipo de Personal',
-                'datos_laborales.tipo_jornada' => 'Tipo de Jornada Laboral',
-                'datos_laborales.rotacion_turnos' => 'Rotación de Turnos',
-                'datos_laborales.departamento_seccion_area' => 'Área',
-                'datos_laborales.experiencia.tiempo_puesto_actual' => 'Antigüedad en el Puesto Actual'
+                'tipo_jornada' => 'Tipo de Jornada',
+                'tipo_personal' => 'Tipo de Personal',
+                'rotacion_turnos' => 'Rotación de Turnos',
+                'tipo_contratacion' => 'Tipo de Contratación',
+                'tiempo_puesto_actual' => 'Antigüedad en el Puesto Actual',
+                'ultimo_nivel_estudio' => 'Último Nivel de Estudio',
+                'experiencia_vida_laboral' => 'Experiencia Vida Laboral',
+                'departamento_seccion_area' => 'Departamento/Sección/Área',
+                'ocupacion_profesion_puesto' => 'Ocupación/Profesión/Puesto'
             ];
 
             $result = collect();
@@ -52,10 +54,14 @@ class DemographicReportService
             foreach ($demographicFields as $field => $title) {
                 $distribution = $this->processDemographicField($evaluations, $field, $title);
                 if (!$distribution->isEmpty()) {
+                    // Crear datos para gráficas (conteo total por demografía)
+                    $chartData = $this->createChartData($distribution);
+
                     $result->push([
                         'field' => $field,
                         'title' => $title,
-                        'data' => $distribution
+                        'data' => $distribution, // Para las tablas (con niveles de riesgo)
+                        'chart_data' => $chartData // Para las gráficas (conteo total)
                     ]);
                 }
             }
@@ -108,7 +114,7 @@ class DemographicReportService
         return $guideVData->map(function ($evaluation) use ($riskLevels) {
             $personalId = $evaluation->personal_id;
             $riskData = $riskLevels->get($personalId);
-            
+
             if ($riskData) {
                 return [
                     'personal_id' => $personalId,
@@ -116,7 +122,7 @@ class DemographicReportService
                     'risk_level' => $riskData->nivel_riesgo
                 ];
             }
-            
+
             return null;
         })->filter()->values();
     }
@@ -127,7 +133,7 @@ class DemographicReportService
     private function processDemographicField(Collection $evaluations, string $field, string $title): Collection
     {
         $riskLevels = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
-        
+
         // Extraer valores del campo demográfico
         $fieldData = $evaluations->map(function ($item) use ($field) {
             $value = data_get($item['demographic_data'], $field);
@@ -142,11 +148,11 @@ class DemographicReportService
 
         // Agrupar por valor del campo
         $grouped = $fieldData->groupBy('value');
-        
+
         return $grouped->map(function ($items, $value) use ($riskLevels) {
             $riskDistribution = array_fill_keys($riskLevels, 0);
             $personalByRisk = array_fill_keys($riskLevels, []);
-            
+
             foreach ($items as $item) {
                 $riskDistribution[$item['risk_level']]++;
                 // Agregar personal_id para compatibilidad con componentes existentes
@@ -154,7 +160,7 @@ class DemographicReportService
                     $personalByRisk[$item['risk_level']][] = $item['personal_id'];
                 }
             }
-            
+
             return [
                 'name' => $value,
                 'risk_levels' => $riskDistribution,
@@ -162,6 +168,20 @@ class DemographicReportService
                 'total' => $items->count()
             ];
         })->values();
+    }
+
+    /**
+     * Crea datos para gráficas que muestran el conteo total por demografía
+     */
+    private function createChartData(Collection $distribution): array
+    {
+        return $distribution->map(function ($item) {
+            return [
+                'name' => $item['name'],
+                'value' => $item['total'],
+                'total' => $item['total']
+            ];
+        })->toArray();
     }
 
     /**
@@ -181,7 +201,49 @@ class DemographicReportService
                     return implode(' ', $value);
                 }
                 return $value;
-                
+
+            case 'estado_civil':
+                // Normalizar "Unión libre" vs "Unión Libre"
+                if (strtolower($value) === 'union libre') {
+                    return 'Unión Libre';
+                }
+                return $value;
+
+            case 'datos_laborales.tipo_contratacion':
+                // Mapear valores específicos
+                $contractMapping = [
+                    'Por tiempo determinado (temporal)' => 'Temporal',
+                    'Tiempo indeterminado' => 'Tiempo Indeterminado',
+                    'Por obra o proyecto' => 'Temporal',
+                    'Honorarios' => 'Temporal'
+                ];
+                return $contractMapping[$value] ?? $value;
+
+            case 'datos_laborales.tipo_jornada':
+                // Normalizar jornadas laborales
+                if (strpos(strtolower($value), 'nocturno') !== false) {
+                    return 'Fijo Nocturno (entre las 20:00 y 6:00 hrs)';
+                } elseif (strpos(strtolower($value), 'diurno') !== false) {
+                    return 'Fijo Diurno (entre las 6:00 y 20:00 hrs)';
+                } elseif (strpos(strtolower($value), 'mixto') !== false) {
+                    return 'Fijo Mixto (combinación de nocturno y diurno)';
+                }
+                return $value;
+
+            case 'datos_laborales.experiencia.tiempo_puesto_actual':
+                // Normalizar rangos de tiempo
+                $timeMapping = [
+                    'Menos de 6 meses' => 'menos de 6 meses',
+                    'Entre 6 meses y 1 año' => 'entre 6 meses y 1 año',
+                    'Entre 1 a 4 años' => 'entre 1 y 4 años',
+                    'Entre 5 a 9 años' => 'entre 5 y 9 años',
+                    'Entre 10 a 14 años' => 'entre 10 y 14 años',
+                    'Entre 15 a 19 años' => 'entre 15 y 19 años',
+                    'Entre 20 a 24 años' => 'entre 20 y 24 años',
+                    '25 años o más' => '25 años o más'
+                ];
+                return $timeMapping[$value] ?? $value;
+
             case 'datos_laborales.departamento_seccion_area':
                 // Mapear departamentos comunes a categorías estándar
                 $areaMapping = [
@@ -199,7 +261,7 @@ class DemographicReportService
                     'distribucion' => 'Centro de Distribución',
                     'mantenimiento' => 'Mantenimiento'
                 ];
-                
+
                 $normalizedValue = strtolower(trim($value));
                 foreach ($areaMapping as $key => $mapped) {
                     if (strpos($normalizedValue, $key) !== false) {
@@ -207,7 +269,30 @@ class DemographicReportService
                     }
                 }
                 return 'Otros';
-                
+
+            case 'datos_laborales.ocupacion_puesto':
+                // Mapear puestos comunes
+                $positionMapping = [
+                    'almacenista' => 'Almacenista',
+                    'analista' => 'Analista',
+                    'coordinador' => 'Coordinador',
+                    'ingeniero' => 'Ingeniero',
+                    'intendencia' => 'Intendencia',
+                    'materialista' => 'Materialista',
+                    'operador' => 'Operador',
+                    'planeador' => 'Planeador',
+                    'supervisor' => 'Supervisor',
+                    'tecnico' => 'Técnico'
+                ];
+
+                $normalizedValue = strtolower(trim($value));
+                foreach ($positionMapping as $key => $mapped) {
+                    if (strpos($normalizedValue, $key) !== false) {
+                        return $mapped;
+                    }
+                }
+                return 'Otros';
+
             default:
                 return is_string($value) ? $value : (string) $value;
         }

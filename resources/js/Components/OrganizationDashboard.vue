@@ -141,6 +141,7 @@ const dimensionTotalScores = ref([]);
 
 // Estado para datos demográficos
 const demographicViewMode = ref('chart');
+const demographicChartType = ref('totals'); // 'totals' or 'risk_distribution'
 const isLoadingDemographicData = ref(false);
 const demographicData = ref([]);
 
@@ -1333,6 +1334,32 @@ const responseTypes = {
                                 <ChartPieIcon class="h-5 w-5 mr-2" />
                                 Gráficas
                             </button>
+                            
+                            <!-- Toggle para tipo de gráfica -->
+                            <div class="flex bg-gray-100 rounded-lg p-1">
+                                <button 
+                                    @click="demographicChartType = 'totals'" 
+                                    :class="[
+                                        'px-3 py-1 text-sm font-medium rounded-md transition-colors',
+                                        demographicChartType === 'totals' 
+                                            ? 'bg-white text-gray-900 shadow-sm' 
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    ]"
+                                >
+                                    Totales Demográficos
+                                </button>
+                                <button 
+                                    @click="demographicChartType = 'risk_distribution'" 
+                                    :class="[
+                                        'px-3 py-1 text-sm font-medium rounded-md transition-colors',
+                                        demographicChartType === 'risk_distribution' 
+                                            ? 'bg-white text-gray-900 shadow-sm' 
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    ]"
+                                >
+                                    Distribución por Riesgo
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
@@ -1356,8 +1383,19 @@ const responseTypes = {
                                 </div>
                                 
                                 <div class="p-6">
-                                    <!-- Gráficas por cada valor demográfico -->
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <!-- Gráfica comparativa para totales demográficos -->
+                                    <div v-if="demographicChartType === 'totals'" class="mb-6">
+                                        <h5 class="text-md font-medium text-gray-800 mb-3">Comparación de {{ section.title }}</h5>
+                                        <div class="h-80 bg-gray-50 p-4 rounded-lg">
+                                            <DemographicChart 
+                                                :title="section.title"
+                                                :chartData="section.data.map(item => ({ label: item.name, count: item.total }))"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Gráficas individuales por cada valor demográfico (solo para distribución por riesgo) -->
+                                    <div v-if="demographicChartType === 'risk_distribution'" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div v-for="(item, index) in section.data" :key="index" class="bg-gray-50 p-4 rounded-lg">
                                             <h5 class="text-md font-medium text-gray-800 mb-3">{{ item.name }}</h5>
                                             
@@ -1366,7 +1404,7 @@ const responseTypes = {
                                                 Total de personas: <span class="font-semibold">{{ item.total }}</span>
                                             </div>
                                             
-                                            <!-- Gráfico de barras -->
+                                            <!-- Gráfico de distribución por nivel de riesgo -->
                                             <div class="h-60 mb-4">
                                                 <BarChart 
                                                     :data="{
@@ -1386,14 +1424,14 @@ const responseTypes = {
                                             <!-- Tarjetas de resumen por nivel de riesgo -->
                                             <div class="grid grid-cols-5 gap-1">
                                                 <div v-for="(count, riskLevel) in item.risk_levels" :key="riskLevel"
-                                                    :class="[
-                                                        'text-center p-2 rounded-md text-xs border-2',
-                                                        riskLevel === 'Nulo' ? 'bg-blue-100 text-blue-800 border-blue-300' :
-                                                        riskLevel === 'Bajo' ? 'bg-green-100 text-green-800 border-green-300' :
-                                                        riskLevel === 'Medio' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
-                                                        riskLevel === 'Alto' ? 'bg-orange-100 text-orange-800 border-orange-300' :
-                                                        'bg-red-100 text-red-800 border-red-300'
-                                                    ]"
+                                                    :style="{
+                                                        backgroundColor: riskLevel === 'Nulo' ? '#00CED1' :
+                                                                        riskLevel === 'Bajo' ? '#28A745' :
+                                                                        riskLevel === 'Medio' ? '#FFFF00' :
+                                                                        riskLevel === 'Alto' ? '#FFA500' : '#FF0000',
+                                                        color: riskLevel === 'Medio' || riskLevel === 'Alto' ? '#000000' : '#FFFFFF'
+                                                    }"
+                                                    class="text-center p-2 rounded-md text-xs border-2 border-gray-300"
                                                     :title="`Personas en nivel ${riskLevel}`"
                                                 >
                                                     <div class="font-medium mb-1">{{ riskLevel }}</div>
@@ -1417,28 +1455,26 @@ const responseTypes = {
                                                             {{ section.title }}
                                                         </th>
                                                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Total</th>
-                                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Nulo</th>
-                                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Bajo</th>
-                                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Medio</th>
-                                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Alto</th>
-                                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Muy Alto</th>
-                                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Nu+Ba</th>
-                                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Me+Al+MA</th>
-                                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">CF*</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #00CED1; color: #FFFFFF;">Nulo</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #28A745; color: #FFFFFF;">Bajo</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FFFF00; color: #000000;">Medio</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FFA500; color: #000000;">Alto</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FF0000; color: #FFFFFF;">Muy Alto</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #28A745; color: #FFFFFF;">Nu+Ba</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider" style="background-color: #DC3545; color: #FFFFFF;">Me+Al+MA</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody class="bg-white divide-y divide-gray-200">
                                                     <tr v-for="(item, index) in section.data" :key="index" class="hover:bg-gray-50">
-                                                        <td class="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">{{ item.name }}</td>
-                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.total }}</td>
-                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.risk_levels['Nulo'] || 0 }}</td>
-                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.risk_levels['Bajo'] || 0 }}</td>
-                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.risk_levels['Medio'] || 0 }}</td>
-                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.risk_levels['Alto'] || 0 }}</td>
-                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.risk_levels['Muy Alto'] || 0 }}</td>
-                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ (item.risk_levels['Nulo'] || 0) + (item.risk_levels['Bajo'] || 0) }}</td>
-                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ (item.risk_levels['Medio'] || 0) + (item.risk_levels['Alto'] || 0) + (item.risk_levels['Muy Alto'] || 0) }}</td>
-                                                        <td class="px-4 py-3 text-sm text-center text-gray-900">X</td>
+                                                        <td class="px-4 py-3 text-sm text-gray-900 border-r border-gray-300 font-medium">{{ item.name }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-semibold">{{ item.total }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels['Nulo'] || 0 }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels['Bajo'] || 0 }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels['Medio'] || 0 }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels['Alto'] || 0 }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels['Muy Alto'] || 0 }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ (item.risk_levels['Nulo'] || 0) + (item.risk_levels['Bajo'] || 0) }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 font-medium">{{ (item.risk_levels['Medio'] || 0) + (item.risk_levels['Alto'] || 0) + (item.risk_levels['Muy Alto'] || 0) }}</td>
                                                     </tr>
                                                 </tbody>
                                             </table>
@@ -1460,8 +1496,7 @@ const responseTypes = {
                                 <div class="flex">
                                     <div class="ml-3">
                                         <p class="text-sm text-yellow-700">
-                                            <strong>CF*:</strong> Factor de Corrección. Se marcará con "X" cuando aplique según la metodología de la NOM-035-STPS-2018.
-                                            <br><strong>Nu+Ba:</strong> Suma de personas en niveles Nulo y Bajo.
+                                            <strong>Nu+Ba:</strong> Suma de personas en niveles Nulo y Bajo.
                                             <br><strong>Me+Al+MA:</strong> Suma de personas en niveles Medio, Alto y Muy Alto.
                                         </p>
                                     </div>

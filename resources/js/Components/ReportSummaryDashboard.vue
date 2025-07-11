@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import BarChart from './BarChart.vue';
+import DemographicChart from './DemographicChart.vue';
 import RiskSummaryCards from './RiskSummaryCards.vue';
 import RiskActionButtons from './RiskActionButtons.vue';
 import FinalQualificationChart from './FinalQualificationChart.vue';
@@ -220,6 +221,7 @@ const processedParticipantsData = computed(() => {
 // Estado para datos demográficos
 const demographicData = ref([]);
 const isLoadingDemographicData = ref(false);
+const demographicChartType = ref('totals'); // 'totals' or 'risk_distribution'
 
 // Función para cargar datos demográficos
 const loadDemographicData = async () => {
@@ -419,9 +421,39 @@ watch(() => props.currentOrganization, (newOrg) => {
                 </div>
             </div>
             <div v-else-if="activeTab === 'demographics'" class="tab-content">
-                <h2 class="text-lg font-semibold mb-2">Datos Demográficos</h2>
-                <div class="mb-4 bg-blue-50 p-3 rounded border border-blue-200">
-                    <p class="text-sm">Mostrando distribución de personal según características demográficas y nivel de riesgo psicosocial.</p>
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h2 class="text-lg font-semibold mb-2">Datos Demográficos</h2>
+                        <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                            <p class="text-sm">Mostrando distribución de personal según características demográficas y nivel de riesgo psicosocial.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Toggle para tipo de gráfica -->
+                    <div class="flex bg-gray-100 rounded-lg p-1">
+                        <button 
+                            @click="demographicChartType = 'totals'" 
+                            :class="[
+                                'px-3 py-1 text-sm font-medium rounded-md transition-colors',
+                                demographicChartType === 'totals' 
+                                    ? 'bg-white text-gray-900 shadow-sm' 
+                                    : 'text-gray-600 hover:text-gray-900'
+                            ]"
+                        >
+                            Totales Demográficos
+                        </button>
+                        <button 
+                            @click="demographicChartType = 'risk_distribution'" 
+                            :class="[
+                                'px-3 py-1 text-sm font-medium rounded-md transition-colors',
+                                demographicChartType === 'risk_distribution' 
+                                    ? 'bg-white text-gray-900 shadow-sm' 
+                                    : 'text-gray-600 hover:text-gray-900'
+                            ]"
+                        >
+                            Distribución por Riesgo
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Estado de carga -->
@@ -438,8 +470,19 @@ watch(() => props.currentOrganization, (newOrg) => {
                         </div>
                         
                         <div class="p-6">
-                            <!-- Grid de gráficas demográficas -->
-                            <div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Gráfica comparativa para totales demográficos -->
+                            <div v-if="demographicChartType === 'totals'" class="mb-6">
+                                <h4 class="text-md font-medium text-gray-800 mb-3">Comparación de {{ section.title }}</h4>
+                                <div class="h-80 bg-gray-50 p-4 rounded-lg">
+                                    <DemographicChart 
+                                        :title="section.title"
+                                        :chartData="section.data.map(item => ({ label: item.name, count: item.total }))"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <!-- Grid de gráficas individuales por riesgo -->
+                            <div v-if="demographicChartType === 'risk_distribution'" class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div v-for="(item, index) in section.data" :key="index" class="flex flex-col">
                                     <h4 class="text-md font-medium mb-2">{{ item.name }}</h4>
                                     <div class="bg-gray-50 p-4 rounded-lg shadow">
@@ -472,28 +515,26 @@ watch(() => props.currentOrganization, (newOrg) => {
                                                     {{ section.title }}
                                                 </th>
                                                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Total</th>
-                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Nulo</th>
-                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Bajo</th>
-                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Medio</th>
-                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Alto</th>
-                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Muy Alto</th>
-                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Nu+Ba</th>
-                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Me+Al+MA</th>
-                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">CF*</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #00CED1; color: #FFFFFF;">Nulo</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #28A745; color: #FFFFFF;">Bajo</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FFFF00; color: #000000;">Medio</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FFA500; color: #000000;">Alto</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FF0000; color: #FFFFFF;">Muy Alto</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #28A745; color: #FFFFFF;">Nu+Ba</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider" style="background-color: #DC3545; color: #FFFFFF;">Me+Al+MA</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
                                             <tr v-for="(item, index) in section.data" :key="index" class="hover:bg-gray-50">
-                                                <td class="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">{{ item.name }}</td>
-                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.total || 0 }}</td>
-                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.risk_levels?.['Nulo'] || 0 }}</td>
-                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.risk_levels?.['Bajo'] || 0 }}</td>
-                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.risk_levels?.['Medio'] || 0 }}</td>
-                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.risk_levels?.['Alto'] || 0 }}</td>
-                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ item.risk_levels?.['Muy Alto'] || 0 }}</td>
-                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ (item.risk_levels?.['Nulo'] || 0) + (item.risk_levels?.['Bajo'] || 0) }}</td>
-                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300">{{ (item.risk_levels?.['Medio'] || 0) + (item.risk_levels?.['Alto'] || 0) + (item.risk_levels?.['Muy Alto'] || 0) }}</td>
-                                                <td class="px-4 py-3 text-sm text-center text-gray-900">X</td>
+                                                <td class="px-4 py-3 text-sm text-gray-900 border-r border-gray-300 font-medium">{{ item.name }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-semibold">{{ item.total || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Nulo'] || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Bajo'] || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Medio'] || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Alto'] || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Muy Alto'] || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ (item.risk_levels?.['Nulo'] || 0) + (item.risk_levels?.['Bajo'] || 0) }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 font-medium">{{ (item.risk_levels?.['Medio'] || 0) + (item.risk_levels?.['Alto'] || 0) + (item.risk_levels?.['Muy Alto'] || 0) }}</td>
                                             </tr>
                                         </tbody>
                                     </table>

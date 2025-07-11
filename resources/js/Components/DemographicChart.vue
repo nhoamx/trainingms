@@ -9,9 +9,10 @@ import {
   CategoryScale,
   LinearScale
 } from 'chart.js'
+import ChartDataLabels from 'chartjs-plugin-datalabels'
 import { computed } from 'vue'
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ChartDataLabels)
 
 const props = defineProps({
   title: {
@@ -24,13 +25,27 @@ const props = defineProps({
   }
 })
 
-// Generate dynamic colors for bars
+// Generate dynamic colors for bars - usando colores consistentes del sistema
 const generateColors = (numColors) => {
+  // Colores base del sistema de evaluación para consistencia
+  const baseColors = [
+    '#00CED1', // Turquesa claro
+    '#28A745', // Verde césped
+    '#FFFF00', // Amarillo brillante
+    '#FFA500', // Naranja
+    '#FF0000', // Rojo
+    '#6366F1', // Índigo
+    '#8B5CF6', // Violet
+    '#EC4899', // Pink
+    '#10B981', // Emerald
+    '#F59E0B', // Amber
+    '#EF4444', // Red-500
+    '#3B82F6'  // Blue-500
+  ];
+  
   const colors = [];
-  // Simple HSL-based color generation, adjust saturation/lightness as needed
   for (let i = 0; i < numColors; i++) {
-    const hue = (i * (360 / numColors)) % 360;
-    colors.push(`hsl(${hue}, 70%, 60%)`);
+    colors.push(baseColors[i % baseColors.length]);
   }
   return colors;
 }
@@ -67,7 +82,6 @@ const chartOptions = computed(() => ({
     },
     title: {
         display: false, // Title is already above the chart
-        // text: props.title // Optionally display title within chart
     },
     tooltip: {
         callbacks: {
@@ -83,6 +97,20 @@ const chartOptions = computed(() => ({
                 return label;
             }
         }
+    },
+    // Plugin para mostrar valores en las barras con texto blanco
+    datalabels: {
+      display: true,
+      color: '#FFFFFF', // Texto blanco
+      font: {
+        weight: 'bold',
+        size: 12
+      },
+      formatter: function(value) {
+        return value > 0 ? value : ''; // Solo mostrar si hay valor
+      },
+      anchor: 'center',
+      align: 'center'
     }
   },
   scales: {
