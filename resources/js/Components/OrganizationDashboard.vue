@@ -139,6 +139,12 @@ const dimensionTotalScoreViewMode = ref('chart');
 const isLoadingDimensionTotalScores = ref(false);
 const dimensionTotalScores = ref([]);
 
+// Estado para datos demográficos
+const demographicViewMode = ref('chart');
+const demographicChartType = ref('totals'); // 'totals' or 'risk_distribution'
+const isLoadingDemographicData = ref(false);
+const demographicData = ref([]);
+
 // Función para cargar los datos de categorías para el nuevo reporte
 const loadCategoryReportData = async () => {
     if (categoryReportData.value.length > 0) return;
@@ -246,6 +252,22 @@ const loadDimensionTotalScores = async () => {
         console.error('Error al cargar los datos de puntuación total por dimensión:', error);
     } finally {
         isLoadingDimensionTotalScores.value = false;
+    }
+};
+
+// Función para cargar los datos demográficos
+const loadDemographicData = async () => {
+    if (demographicData.value.length > 0) return;
+    
+    isLoadingDemographicData.value = true;
+    try {
+        const response = await window.axios.get('/reports/demographic-distribution');
+        demographicData.value = response.data;
+        console.log('Datos demográficos cargados:', response.data);
+    } catch (error) {
+        console.error('Error al cargar los datos demográficos:', error);
+    } finally {
+        isLoadingDemographicData.value = false;
     }
 };
 
@@ -373,6 +395,9 @@ watch(currentTab, (newTab) => {
             loadDimensionTotalScores();
         }
     } else if (newTab === 'demographicAnalysis') {
+        // Cargar datos demográficos
+        loadDemographicData();
+    } else if (newTab === 'demographicAnalysis') {
         // Cargar datos si es necesario
     }
 });
@@ -433,6 +458,9 @@ onMounted(() => {
         } else if (dimensionSubTab.value === 'totalScore') {
             loadDimensionTotalScores();
         }
+    } else if (currentTab.value === 'demographicAnalysis') {
+        // Cargar datos demográficos
+        loadDemographicData();
     } else if (currentTab.value === 'demographicAnalysis') {
         // Cargar datos si es necesario
     }
@@ -1281,6 +1309,203 @@ const responseTypes = {
                             </div>
                         </div>
                     </div>
+
+            <!-- TAB: Análisis Demográfico -->
+            <div v-show="currentTab === 'demographicAnalysis'" class="space-y-6">
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-1">Análisis Demográfico por Nivel de Riesgo</h3>
+                            <p class="text-sm text-gray-600 mt-1">
+                                Este reporte muestra la distribución de personas por características demográficas según su nivel de riesgo psicosocial,
+                                basado en los datos personales (Guía V) y la evaluación psicosocial (Guía III) de la NOM-035-STPS-2018.
+                            </p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button 
+                                @click="demographicViewMode = 'chart'" 
+                                :class="[
+                                    'inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium',
+                                    demographicViewMode === 'chart' 
+                                        ? 'bg-blue-600 text-white border-blue-600' 
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                ]"
+                            >
+                                <ChartPieIcon class="h-5 w-5 mr-2" />
+                                Gráficas
+                            </button>
+                            
+                            <!-- Toggle para tipo de gráfica -->
+                            <div class="flex bg-gray-100 rounded-lg p-1">
+                                <button 
+                                    @click="demographicChartType = 'totals'" 
+                                    :class="[
+                                        'px-3 py-1 text-sm font-medium rounded-md transition-colors',
+                                        demographicChartType === 'totals' 
+                                            ? 'bg-white text-gray-900 shadow-sm' 
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    ]"
+                                >
+                                    Totales Demográficos
+                                </button>
+                                <button 
+                                    @click="demographicChartType = 'risk_distribution'" 
+                                    :class="[
+                                        'px-3 py-1 text-sm font-medium rounded-md transition-colors',
+                                        demographicChartType === 'risk_distribution' 
+                                            ? 'bg-white text-gray-900 shadow-sm' 
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    ]"
+                                >
+                                    Distribución por Riesgo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Estado de carga -->
+                    <div v-if="isLoadingDemographicData" class="flex justify-center items-center h-64">
+                        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                        <span class="ml-3 text-gray-600">Cargando datos demográficos...</span>
+                    </div>
+                    
+                    <!-- Contenido del reporte -->
+                    <div v-else>
+                        <div v-if="demographicData.length === 0" class="bg-gray-50 p-6 rounded-lg text-center text-gray-500">
+                            No hay datos demográficos disponibles para mostrar.
+                        </div>
+                        
+                        <!-- Secciones demográficas -->
+                        <div v-else class="space-y-8">
+                            <div v-for="(section, sectionIndex) in demographicData" :key="sectionIndex" class="bg-white rounded-lg border border-gray-200">
+                                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                                    <h4 class="text-lg font-semibold text-gray-900">{{ section.title }}</h4>
+                                </div>
+                                
+                                <div class="p-6">
+                                    <!-- Gráfica comparativa para totales demográficos -->
+                                    <div v-if="demographicChartType === 'totals'" class="mb-6">
+                                        <h5 class="text-md font-medium text-gray-800 mb-3">Comparación de {{ section.title }}</h5>
+                                        <div class="h-80 bg-gray-50 p-4 rounded-lg">
+                                            <DemographicChart 
+                                                :title="section.title"
+                                                :chartData="section.data.map(item => ({ label: item.name, count: item.total }))"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Gráficas individuales por cada valor demográfico (solo para distribución por riesgo) -->
+                                    <div v-if="demographicChartType === 'risk_distribution'" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div v-for="(item, index) in section.data" :key="index" class="bg-gray-50 p-4 rounded-lg">
+                                            <h5 class="text-md font-medium text-gray-800 mb-3">{{ item.name }}</h5>
+                                            
+                                            <!-- Total de personas -->
+                                            <div class="mb-2 text-sm text-gray-600">
+                                                Total de personas: <span class="font-semibold">{{ item.total }}</span>
+                                            </div>
+                                            
+                                            <!-- Gráfico de distribución por nivel de riesgo -->
+                                            <div class="h-60 mb-4">
+                                                <BarChart 
+                                                    :data="{
+                                                        responses: {
+                                                            'A': item.risk_levels['Muy Alto'] || 0,
+                                                            'B': item.risk_levels['Alto'] || 0,
+                                                            'C': item.risk_levels['Medio'] || 0,
+                                                            'D': item.risk_levels['Bajo'] || 0,
+                                                            'E': item.risk_levels['Nulo'] || 0
+                                                        },
+                                                        total: item.total
+                                                    }"
+                                                    type="demographic"
+                                                />
+                                            </div>
+                                            
+                                            <!-- Tarjetas de resumen por nivel de riesgo -->
+                                            <div class="grid grid-cols-5 gap-1">
+                                                <div v-for="(count, riskLevel) in item.risk_levels" :key="riskLevel"
+                                                    :style="{
+                                                        backgroundColor: riskLevel === 'Nulo' ? '#00CED1' :
+                                                                        riskLevel === 'Bajo' ? '#28A745' :
+                                                                        riskLevel === 'Medio' ? '#FFFF00' :
+                                                                        riskLevel === 'Alto' ? '#FFA500' : '#FF0000',
+                                                        color: riskLevel === 'Medio' || riskLevel === 'Alto' ? '#000000' : '#FFFFFF'
+                                                    }"
+                                                    class="text-center p-2 rounded-md text-xs border-2 border-gray-300"
+                                                    :title="`Personas en nivel ${riskLevel}`"
+                                                >
+                                                    <div class="font-medium mb-1">{{ riskLevel }}</div>
+                                                    <div class="font-bold">{{ count }}</div>
+                                                    <div>
+                                                        {{ item.total > 0 ? ((count / item.total * 100).toFixed(1)) : '0.0' }}%
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Tabla resumen según datos-demograficos.md -->
+                                    <div class="mt-8">
+                                        <h5 class="text-md font-medium text-gray-800 mb-4">Tabla Resumen - {{ section.title }}</h5>
+                                        <div class="overflow-x-auto">
+                                            <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
+                                                <thead class="bg-gray-50">
+                                                    <tr>
+                                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                                                            {{ section.title }}
+                                                        </th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Total</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #00CED1; color: #FFFFFF;">Nulo</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #28A745; color: #FFFFFF;">Bajo</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FFFF00; color: #000000;">Medio</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FFA500; color: #000000;">Alto</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FF0000; color: #FFFFFF;">Muy Alto</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #28A745; color: #FFFFFF;">Nu+Ba</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider" style="background-color: #DC3545; color: #FFFFFF;">Me+Al+MA</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="bg-white divide-y divide-gray-200">
+                                                    <tr v-for="(item, index) in section.data" :key="index" class="hover:bg-gray-50">
+                                                        <td class="px-4 py-3 text-sm text-gray-900 border-r border-gray-300 font-medium">{{ item.name }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-semibold">{{ item.total }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels['Nulo'] || 0 }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels['Bajo'] || 0 }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels['Medio'] || 0 }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels['Alto'] || 0 }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels['Muy Alto'] || 0 }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ (item.risk_levels['Nulo'] || 0) + (item.risk_levels['Bajo'] || 0) }}</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-900 font-medium">{{ (item.risk_levels['Medio'] || 0) + (item.risk_levels['Alto'] || 0) + (item.risk_levels['Muy Alto'] || 0) }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Interpretación y contexto -->
+                        <div class="bg-white p-6 rounded-lg shadow mt-6">
+                            <h4 class="text-md font-medium text-gray-700 mb-3">Interpretación del Análisis Demográfico</h4>
+                            <p class="text-sm text-gray-600 mb-4">
+                                Este análisis permite identificar patrones de riesgo psicosocial según características demográficas específicas.
+                                Los datos ayudan a focalizar intervenciones preventivas en grupos poblacionales con mayor concentración
+                                de personas en niveles de riesgo alto y muy alto.
+                            </p>
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+                                <div class="flex">
+                                    <div class="ml-3">
+                                        <p class="text-sm text-yellow-700">
+                                            <strong>Nu+Ba:</strong> Suma de personas en niveles Nulo y Bajo.
+                                            <br><strong>Me+Al+MA:</strong> Suma de personas en niveles Medio, Alto y Muy Alto.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

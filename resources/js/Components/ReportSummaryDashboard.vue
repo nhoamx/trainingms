@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import BarChart from './BarChart.vue';
+import DemographicChart from './DemographicChart.vue';
 import RiskSummaryCards from './RiskSummaryCards.vue';
 import RiskActionButtons from './RiskActionButtons.vue';
 import FinalQualificationChart from './FinalQualificationChart.vue';
@@ -217,6 +218,36 @@ const processedParticipantsData = computed(() => {
     return rawSummaryData.value.personalCalification;
 });
 
+// Estado para datos demográficos
+const demographicData = ref([]);
+const isLoadingDemographicData = ref(false);
+const demographicChartType = ref('totals'); // 'totals' or 'risk_distribution'
+
+// Función para cargar datos demográficos
+const loadDemographicData = async () => {
+    if (demographicData.value.length > 0) return;
+    
+    isLoadingDemographicData.value = true;
+    let url = '/reports/demographic-distribution';
+    
+    // Incluir el ID de organización si está disponible
+    if (selectedOrgId.value) {
+        url += `?organization_id=${selectedOrgId.value}`;
+    }
+    
+    try {
+        console.log('Fetching demographic data from:', url);
+        const response = await window.axios.get(url);
+        demographicData.value = response.data;
+        console.log('Demographic data received:', response.data);
+    } catch (error) {
+        console.error('Error al cargar los datos demográficos:', error);
+        demographicData.value = [];
+    } finally {
+        isLoadingDemographicData.value = false;
+    }
+};
+
 // Seleccionar el conjunto de datos correcto según el tab activo
 const activeData = computed(() => {
     switch (activeTab.value) {
@@ -228,6 +259,8 @@ const activeData = computed(() => {
             return processedCategoryData.value;
         case 'participants':
             return processedParticipantsData.value ? [{ name: 'Participantes', data: processedParticipantsData.value }] : null;
+        case 'demographics':
+            return demographicData.value;
         case 'final':
             return processedFinalRiskData.value ? [processedFinalRiskData.value] : null;
         default:
@@ -261,11 +294,27 @@ const fetchSummary = async () => {
 
 onMounted(() => {
     fetchSummary();
+    // Cargar datos demográficos cuando el componente se monta
+    if (activeTab.value === 'demographics') {
+        loadDemographicData();
+    }
 });
 
 // Observar cambios en el ID de organización seleccionada
 watch(selectedOrgId, () => {
     fetchSummary();
+    // Recargar datos demográficos cuando cambia la organización
+    if (activeTab.value === 'demographics') {
+        demographicData.value = []; // Reset para forzar recarga
+        loadDemographicData();
+    }
+});
+
+// Observar cambios en la tab activa para cargar datos demográficos cuando sea necesario
+watch(activeTab, (newTab) => {
+    if (newTab === 'demographics') {
+        loadDemographicData();
+    }
 });
 
 // Observar cambios en la propiedad currentOrganization
@@ -372,15 +421,138 @@ watch(() => props.currentOrganization, (newOrg) => {
                 </div>
             </div>
             <div v-else-if="activeTab === 'demographics'" class="tab-content">
-                <h2 class="text-lg font-semibold mb-2">Datos Demográficos</h2>
-                <div class="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h2 class="text-lg font-semibold mb-2">Datos Demográficos</h2>
+                        <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                            <p class="text-sm">Mostrando distribución de personal según características demográficas y nivel de riesgo psicosocial.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Toggle para tipo de gráfica -->
+                    <div class="flex bg-gray-100 rounded-lg p-1">
+                        <button 
+                            @click="demographicChartType = 'totals'" 
+                            :class="[
+                                'px-3 py-1 text-sm font-medium rounded-md transition-colors',
+                                demographicChartType === 'totals' 
+                                    ? 'bg-white text-gray-900 shadow-sm' 
+                                    : 'text-gray-600 hover:text-gray-900'
+                            ]"
+                        >
+                            Totales Demográficos
+                        </button>
+                        <button 
+                            @click="demographicChartType = 'risk_distribution'" 
+                            :class="[
+                                'px-3 py-1 text-sm font-medium rounded-md transition-colors',
+                                demographicChartType === 'risk_distribution' 
+                                    ? 'bg-white text-gray-900 shadow-sm' 
+                                    : 'text-gray-600 hover:text-gray-900'
+                            ]"
+                        >
+                            Distribución por Riesgo
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Estado de carga -->
+                <div v-if="isLoadingDemographicData" class="flex justify-center items-center h-64">
+                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                    <span class="ml-3 text-gray-600">Cargando datos demográficos...</span>
+                </div>
+                
+                <!-- Contenido de datos demográficos -->
+                <div v-else-if="activeData && activeData.length > 0" class="space-y-8">
+                    <div v-for="(section, sectionIndex) in activeData" :key="sectionIndex" class="bg-white rounded-lg border border-gray-200 shadow">
+                        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                            <h3 class="text-lg font-semibold text-gray-900">{{ section.title }}</h3>
+                        </div>
+                        
+                        <div class="p-6">
+                            <!-- Gráfica comparativa para totales demográficos -->
+                            <div v-if="demographicChartType === 'totals'" class="mb-6">
+                                <h4 class="text-md font-medium text-gray-800 mb-3">Comparación de {{ section.title }}</h4>
+                                <div class="h-80 bg-gray-50 p-4 rounded-lg">
+                                    <DemographicChart 
+                                        :title="section.title"
+                                        :chartData="section.data.map(item => ({ label: item.name, count: item.total }))"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <!-- Grid de gráficas individuales por riesgo -->
+                            <div v-if="demographicChartType === 'risk_distribution'" class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div v-for="(item, index) in section.data" :key="index" class="flex flex-col">
+                                    <h4 class="text-md font-medium mb-2">{{ item.name }}</h4>
+                                    <div class="bg-gray-50 p-4 rounded-lg shadow">
+                                        <!-- Resumen por nivel de riesgo -->
+                                        <RiskSummaryCards :itemData="item" />
+                                        
+                                        <!-- Gráfico de barras -->
+                                        <BarChart :data="item" type="demographic" />
+                                        
+                                        <!-- Botones de acción por nivel de riesgo -->
+                                        <RiskActionButtons 
+                                            :itemData="item"
+                                            :rawData="section.data"
+                                            :itemName="item.name"
+                                            :itemType="'demographic'"
+                                            :organizationId="selectedOrgId"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tabla resumen -->
+                            <div class="mt-8">
+                                <h4 class="text-md font-medium text-gray-800 mb-4">Tabla Resumen - {{ section.title }}</h4>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                                                    {{ section.title }}
+                                                </th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Total</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #00CED1; color: #FFFFFF;">Nulo</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #28A745; color: #FFFFFF;">Bajo</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FFFF00; color: #000000;">Medio</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FFA500; color: #000000;">Alto</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #FF0000; color: #FFFFFF;">Muy Alto</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider border-r border-gray-300" style="background-color: #28A745; color: #FFFFFF;">Nu+Ba</th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider" style="background-color: #DC3545; color: #FFFFFF;">Me+Al+MA</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            <tr v-for="(item, index) in section.data" :key="index" class="hover:bg-gray-50">
+                                                <td class="px-4 py-3 text-sm text-gray-900 border-r border-gray-300 font-medium">{{ item.name }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-semibold">{{ item.total || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Nulo'] || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Bajo'] || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Medio'] || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Alto'] || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Muy Alto'] || 0 }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ (item.risk_levels?.['Nulo'] || 0) + (item.risk_levels?.['Bajo'] || 0) }}</td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-900 font-medium">{{ (item.risk_levels?.['Medio'] || 0) + (item.risk_levels?.['Alto'] || 0) + (item.risk_levels?.['Muy Alto'] || 0) }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Estado vacío -->
+                <div v-else class="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                     <div class="text-center p-6">
                         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        <h3 class="mt-2 text-sm font-medium text-gray-900">Próximamente</h3>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No hay datos demográficos</h3>
                         <p class="mt-1 text-sm text-gray-500">
-                            Estamos desarrollando esta sección para mostrar información demográfica detallada.
+                            No se encontraron datos demográficos para mostrar en esta organización.
                         </p>
                     </div>
                 </div>
@@ -416,21 +588,7 @@ watch(() => props.currentOrganization, (newOrg) => {
             </div>
         </div>
         <div v-else >
-            <div v-if="activeTab === 'demographics'" class="tab-content">
-                <h2 class="text-lg font-semibold mb-2">Datos Demográficos</h2>
-                <div class="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                    <div class="text-center p-6">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <h3 class="mt-2 text-sm font-medium text-gray-900">Próximamente</h3>
-                        <p class="mt-1 text-sm text-gray-500">
-                            Estamos desarrollando esta sección para mostrar información demográfica detallada.
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <div v-else class="text-center py-10 text-gray-500">No hay datos para mostrar.</div>
+            <div class="text-center py-10 text-gray-500">No hay datos para mostrar.</div>
         </div>
     </div>
 </template>
