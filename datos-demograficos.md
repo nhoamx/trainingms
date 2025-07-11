@@ -29,6 +29,7 @@
 | 45–49      |   X   |  X   |  X   |   X   |  X   |  X  |   X   |    X     |  X  |
 | 50–54      |   X   |  X   |  X   |   X   |  X   |  X  |   X   |    X     |  X  |
 | 55–59      |   X   |  X   |  X   |   X   |  X   |  X  |   X   |    X     |  X  |
+| 60-mas     |   x   |  x   |  x   |   x   |  x   |  x  |   x   |    x     |  x  |
 
 
 #### Distribución demográfica por nivel de estudios

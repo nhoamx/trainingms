@@ -98,10 +98,24 @@ const chartOptions = computed(() => ({
             }
         }
     },
-    // Plugin para mostrar valores en las barras con texto blanco
+    // Plugin para mostrar valores en las barras con texto dinámico
     datalabels: {
       display: true,
-      color: '#FFFFFF', // Texto blanco
+      color: function(context) {
+        // Obtener el color de fondo de la barra
+        const backgroundColor = context.dataset.backgroundColor[context.dataIndex];
+        
+        // Colores claros que requieren texto negro
+        const lightColors = ['#FFFF00', '#00CED1', '#F59E0B', '#FBBF24', '#FEF08A', '#FED7AA'];
+        
+        // Si el color está en la lista de colores claros, usar texto negro
+        if (lightColors.includes(backgroundColor)) {
+          return '#000000';
+        }
+        
+        // Para colores oscuros, usar texto blanco
+        return '#FFFFFF';
+      },
       font: {
         weight: 'bold',
         size: 12
