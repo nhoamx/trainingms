@@ -171,7 +171,14 @@ class PopulateQuestionsTable extends Command
      */
     private function processTypeV(Evaluation $evaluation)
     {
-        foreach ($evaluation->data as $questionKey => $answer) {
+        $data = $evaluation->data;
+
+        // Combinar edad_d1 y edad_d2 en 'edad' si ambos existen
+        if (isset($data['edad_d1']) && isset($data['edad_d2'])) {
+            $data['edad'] = $data['edad_d1'] . '.' . $data['edad_d2'];
+        }
+
+        foreach ($data as $questionKey => $answer) {
             if (!is_string($questionKey)) {
                 continue;
             }

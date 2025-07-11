@@ -6,8 +6,8 @@ import fs from 'fs';
 export default defineConfig({
     // server: {
     //     https: {
-    //         key: fs.readFileSync('/Users/alfredo/Library/Application Support/Herd/config/valet/Certificates/trainingms.test.key'),
-    //         cert: fs.readFileSync('/Users/alfredo/Library/Application Support/Herd/config/valet/Certificates/trainingms.test.crt'),
+    //         key: fs.readFileSync('C:\\Users\\alfredo\\.config\\herd\\config\\valet\\Certificates\\trainingms.test.key'),
+    //         cert: fs.readFileSync('C:\\Users\\alfredo\\.config\\herd\\config\\valet\\Certificates\\trainingms.test.crt'),
     //     },
     //     cors: {
     //         origin: 'https://trainingms.test',

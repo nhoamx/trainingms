@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DemographicReportController;
 use App\Http\Controllers\DimensionReportController;
 use App\Http\Controllers\DomainReportController;
 use App\Http\Controllers\EvaluationController;
@@ -129,6 +130,12 @@ Route::middleware(['auth'])->group(function () {
     // NEW Web Route for Demographic People List Page
     Route::get('/reports/people-list-demographic/{fieldKey}/{identifier}', [PeopleListController::class, 'showDemographicList'])
         ->name('reports.peopleListDemographic');
+
+    // Rutas para reportes demográficos
+    Route::get('/reports/demographic-distribution', [DemographicReportController::class, 'getDemographicDistribution'])
+        ->name('reports.demographic.distribution');
+    Route::get('/reports/demographic-report', [DemographicReportController::class, 'showDemographicReport'])
+        ->name('reports.demographic.show');
 
     // API Route to get organization list for dropdowns
     Route::get('/api/organizations-list', [\App\Http\Controllers\OrganizationController::class, 'listForDropdown'])
