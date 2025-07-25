@@ -24,7 +24,6 @@ const answers = ref({
         estado_civil: '',
         nivel_estudios: '',
         datos_laborales: {
-            personal_id: '',
             ocupacion_puesto: '',
             departamento_seccion_area: '',
             tipo_puesto: '',
@@ -570,21 +569,13 @@ const handleSubsectionChange = (subsection) => {
                     <!-- Datos Laborales -->
                     <div class="bg-slate-50 p-4 rounded-lg">
                         <h3 class="font-medium text-slate-900 mb-4">Datos Laborales</h3>
+                        <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <p class="text-sm text-blue-700">
+                                <strong>Nota:</strong> Su ID Personal será asignado automáticamente al completar la evaluación.
+                            </p>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                             <!-- Campos de texto libre -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-slate-700">ID Personal (4 dígitos) *</label>
-                                <input
-                                    type="text"
-                                    v-model="answers.referencia_v.datos_laborales.personal_id"
-                                    maxlength="4"
-                                    pattern="[0-9]{4}"
-                                    class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                    placeholder="0000"
-                                    required
-                                >
-                            </div>
-
                             <div class="space-y-2">
                                 <label class="block text-sm font-medium text-slate-700">Ocupación / Puesto</label>
                                 <select

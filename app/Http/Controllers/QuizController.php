@@ -130,18 +130,11 @@ class QuizController extends Controller
 
         // Verificar que el quiz esté activo y no haya expirado
         if (!$quiz->is_active || $quiz->isExpired()) {
-            return response()->json([
-                'message' => 'El examen no está disponible o ha expirado'
-            ], 422);
+            return back()->with('error', 'El examen no está disponible o ha expirado');
         }
 
-        // Extraer personal_id de los datos de referencia_v
-        $personalId = $validated['referencia_v']['datos_laborales']['personal_id'] ?? null;
-        if (!$personalId || strlen($personalId) !== 4) {
-            return response()->json([
-                'message' => 'ID Personal requerido (4 dígitos)'
-            ], 422);
-        }
+        // Generar personal_id automáticamente basado en los folios de la organización
+        $personalId = $this->generateNextPersonalId($quiz->organization_id);
 
         // Combinar todas las respuestas en un solo array
         $allAnswers = array_merge(
@@ -174,18 +167,12 @@ class QuizController extends Controller
             // Guardar respuestas directamente en Questions
             $evaluation->saveOnlineAnswers($allAnswers, $referenceGuide);
 
-            return response()->json([
-                'message' => 'Examen completado exitosamente',
-                'evaluation_id' => $evaluation->id,
-                'folio' => $folioNumber
-            ]);
+            return back()->with('success', 'Examen completado exitosamente. Folio asignado: ' . $folioNumber);
 
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error al guardar examen desde Quiz: ' . $e->getMessage());
             
-            return response()->json([
-                'message' => 'Error al guardar el examen'
-            ], 500);
+            return back()->with('error', 'Error al guardar el examen. Por favor, inténtelo nuevamente.');
         }
     }
 
@@ -208,6 +195,27 @@ class QuizController extends Controller
 
         // Incrementar el número del último folio
         $nextNumber = $lastFolio->numeric_value + 1;
+        return str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Genera el siguiente personal_id disponible para la organización
+     */
+    private function generateNextPersonalId($organizationId)
+    {
+        // Buscar el último personal_id usado en evaluaciones de esta organización
+        $lastEvaluation = \App\Models\Evaluation::where('organization_id', $organizationId)
+            ->whereNotNull('personal_id')
+            ->orderByRaw('CAST(personal_id AS UNSIGNED) DESC')
+            ->first();
+
+        // Si no hay evaluaciones previas, empezar desde 0001
+        if (!$lastEvaluation) {
+            return '0001';
+        }
+
+        // Incrementar el último personal_id
+        $nextNumber = intval($lastEvaluation->personal_id) + 1;
         return str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 
