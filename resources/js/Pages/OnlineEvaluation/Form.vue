@@ -74,9 +74,9 @@
                 <label v-for="option in question.options" :key="option.value" class="flex items-center">
                   <input
                     type="radio"
-                    :name="`pregunta_${index + 1}`"
+                    :name="question.key"
                     :value="option.value"
-                    v-model="form.answers[`pregunta_${index + 1}`]"
+                    v-model="form.answers[question.key]"
                     class="mr-2 text-indigo-600 focus:ring-indigo-500"
                   />
                   <span class="text-sm text-gray-700">{{ option.label }}</span>
@@ -111,10 +111,12 @@
             <div v-for="(question, key) in guideVQuestions" :key="key" class="border-b pb-4">
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 {{ question.label }}
+                <span v-if="question.required" class="text-red-500">*</span>
               </label>
               <div v-if="question.type === 'select'" class="mt-1">
                 <select
                   v-model="form.answers[key]"
+                  :required="question.required"
                   class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 >
                   <option value="">Selecciona una opción</option>
@@ -129,6 +131,7 @@
                   v-model="form.answers[key]"
                   :min="question.min"
                   :max="question.max"
+                  :required="question.required"
                   class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </div>
@@ -136,6 +139,7 @@
                 <input
                   type="text"
                   v-model="form.answers[key]"
+                  :required="question.required"
                   class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </div>
@@ -175,7 +179,8 @@ import { useForm } from '@inertiajs/vue3'
 const props = defineProps({
   folio: String,
   organization: Object,
-  title: String
+  title: String,
+  questionConfig: Object
 })
 
 const form = useForm({
@@ -185,59 +190,17 @@ const form = useForm({
   answers: {}
 })
 
-// Configuración de preguntas para cada guía
-const guideIQuestions = [
-  {
-    text: "¿Con qué frecuencia se siente emocionalmente agotado por su trabajo?",
-    options: [
-      { value: "nunca", label: "Nunca" },
-      { value: "pocas_veces", label: "Pocas veces al año" },
-      { value: "una_vez_mes", label: "Una vez al mes" },
-      { value: "pocas_veces_mes", label: "Pocas veces al mes" },
-      { value: "una_vez_semana", label: "Una vez a la semana" },
-      { value: "pocas_veces_semana", label: "Pocas veces a la semana" },
-      { value: "todos_dias", label: "Todos los días" }
-    ]
-  }
-  // Agregar más preguntas según sea necesario
-]
-
-const guideIIIOptions = [
-  { value: "siempre", label: "Siempre" },
-  { value: "casi_siempre", label: "Casi siempre" },
-  { value: "algunas_veces", label: "Algunas veces" },
-  { value: "casi_nunca", label: "Casi nunca" },
-  { value: "nunca", label: "Nunca" }
-]
-
-const guideVQuestions = {
-  sexo: {
-    label: "Sexo",
-    type: "select",
-    options: [
-      { value: "hombre", label: "Hombre" },
-      { value: "mujer", label: "Mujer" }
-    ]
-  },
-  edad: {
-    label: "Edad",
-    type: "number",
-    min: 18,
-    max: 100
-  },
-  estado_civil: {
-    label: "Estado Civil",
-    type: "select",
-    options: [
-      { value: "soltero", label: "Soltero(a)" },
-      { value: "casado", label: "Casado(a)" },
-      { value: "union_libre", label: "Unión libre" },
-      { value: "divorciado", label: "Divorciado(a)" },
-      { value: "viudo", label: "Viudo(a)" }
-    ]
-  }
-  // Agregar más campos demográficos según sea necesario
-}
+// Usar configuración desde el backend
+const guideIQuestions = computed(() => props.questionConfig?.guide_I?.questions || [])
+const guideIIIOptions = computed(() => props.questionConfig?.guide_III?.options || [])
+const guideVQuestions = computed(() => {
+  const questions = props.questionConfig?.guide_V?.questions || []
+  const questionsObj = {}
+  questions.forEach(q => {
+    questionsObj[q.key] = q
+  })
+  return questionsObj
+})
 
 const isFormValid = computed(() => {
   return form.personal_id.length === 4 && 

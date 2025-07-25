@@ -38,7 +38,8 @@ class OnlineEvaluationController extends Controller
         return Inertia::render('OnlineEvaluation/Form', [
             'folio' => $folio,
             'organization' => $folio_record->folioBatch->organization,
-            'title' => 'Evaluación en Línea'
+            'title' => 'Evaluación en Línea',
+            'questionConfig' => config('online_evaluation_questions')
         ]);
     }
 
