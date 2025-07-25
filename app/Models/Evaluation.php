@@ -66,24 +66,50 @@ class Evaluation extends Model
             // Convertir questionKey a string para consistencia
             $questionKey = (string) $questionKey;
             
-            // Obtener información de dimensión/dominio/categoría
-            $dimensionInfo = $this->getDimensionInfo($questionKey, $referenceGuide);
-            
-            // Crear o actualizar la pregunta
-            $this->questions()->updateOrCreate(
-                [
-                    'question' => $questionKey,
-                ],
-                [
-                    'personal_id' => $this->personal_id,
-                    'answer' => $answer,
-                    'domain_id' => $dimensionInfo['domain_id'] ?? null,
-                    'dimension_id' => $dimensionInfo['dimension_id'] ?? null,
-                    'category_id' => $dimensionInfo['category_id'] ?? null,
-                    'value' => $this->getValueForAnswer($answer, $referenceGuide, $questionKey),
-                    'reference_guide' => $referenceGuide,
-                ]
-            );
+            // Si la respuesta es un array (como acontecimientos_traumaticos), procesarlo recursivamente
+            if (is_array($answer)) {
+                foreach ($answer as $subQuestionKey => $subAnswer) {
+                    $fullQuestionKey = $questionKey . '_' . $subQuestionKey;
+                    
+                    // Obtener información de dimensión/dominio/categoría
+                    $dimensionInfo = $this->getDimensionInfo($subQuestionKey, $referenceGuide);
+                    
+                    // Crear o actualizar la pregunta
+                    $this->questions()->updateOrCreate(
+                        [
+                            'question' => $fullQuestionKey,
+                        ],
+                        [
+                            'personal_id' => $this->personal_id,
+                            'answer' => $subAnswer,
+                            'domain_id' => $dimensionInfo['domain_id'] ?? null,
+                            'dimension_id' => $dimensionInfo['dimension_id'] ?? null,
+                            'category_id' => $dimensionInfo['category_id'] ?? null,
+                            'value' => $this->getValueForAnswer($subAnswer, $referenceGuide, $subQuestionKey),
+                            'reference_guide' => $referenceGuide,
+                        ]
+                    );
+                }
+            } else {
+                // Obtener información de dimensión/dominio/categoría
+                $dimensionInfo = $this->getDimensionInfo($questionKey, $referenceGuide);
+                
+                // Crear o actualizar la pregunta
+                $this->questions()->updateOrCreate(
+                    [
+                        'question' => $questionKey,
+                    ],
+                    [
+                        'personal_id' => $this->personal_id,
+                        'answer' => $answer,
+                        'domain_id' => $dimensionInfo['domain_id'] ?? null,
+                        'dimension_id' => $dimensionInfo['dimension_id'] ?? null,
+                        'category_id' => $dimensionInfo['category_id'] ?? null,
+                        'value' => $this->getValueForAnswer($answer, $referenceGuide, $questionKey),
+                        'reference_guide' => $referenceGuide,
+                    ]
+                );
+            }
         }
     }
 
@@ -149,7 +175,17 @@ class Evaluation extends Model
             return null;
         }
 
-        // Log para debugging
+        // Si la respuesta es un array, no podemos procesarla aquí
+        if (is_array($answer)) {
+            \Log::warning('getValueForAnswer recibió un array, esto debería manejarse antes', [
+                'answer' => $answer,
+                'questionKey' => $questionKey,
+                'referenceGuide' => $referenceGuide
+            ]);
+            return null;
+        }
+
+        // Log para debugging otros tipos inesperados
         if (!is_string($answer) && !is_int($answer) && !is_float($answer) && !is_bool($answer)) {
             \Log::warning('getValueForAnswer recibió un tipo de dato inesperado', [
                 'answer' => $answer,
