@@ -252,13 +252,21 @@ const handleSubsectionChange = (subsection) => {
 const submitEvaluation = () => {
     isSubmitting.value = true;
     
-    // Usar router de Inertia para enviar los datos
-    router.post(route('quiz.submit', props.quiz.id), {
+    const dataToSend = {
         referencia_iii: answers.value.referencia_iii,
-        referencia_i: answers.value.referencia_i,
+        referencia_i: answers.value.referencia_i || {},
         referencia_v: answers.value.referencia_v
-    }, {
+    };
+    
+    console.log('Enviando datos:', dataToSend);
+    
+    // Usar router de Inertia para enviar los datos
+    router.post(route('quiz.submit', props.quiz.id), dataToSend, {
         onFinish: () => {
+            isSubmitting.value = false;
+        },
+        onError: (errors) => {
+            console.error('Errores de validación:', errors);
             isSubmitting.value = false;
         }
     });

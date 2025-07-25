@@ -122,14 +122,19 @@ class QuizController extends Controller
 
     public function submit(Request $request, Quiz $quiz)
     {
+        \Log::info('Quiz submit iniciado', ['quiz_id' => $quiz->id]);
+        
         $validated = $request->validate([
             'referencia_iii' => 'required|array',
-            'referencia_i' => 'array',
+            'referencia_i' => 'nullable|array',
             'referencia_v' => 'required|array'
         ]);
 
+        \Log::info('Datos validados correctamente', ['data_keys' => array_keys($validated)]);
+
         // Verificar que el quiz esté activo y no haya expirado
         if (!$quiz->is_active || $quiz->isExpired()) {
+            \Log::warning('Quiz inactivo o expirado', ['is_active' => $quiz->is_active, 'expires_at' => $quiz->expires_at]);
             return back()->with('error', 'El examen no está disponible o ha expirado');
         }
 
@@ -166,6 +171,12 @@ class QuizController extends Controller
 
             // Guardar respuestas directamente en Questions
             $evaluation->saveOnlineAnswers($allAnswers, $referenceGuide);
+
+            \Log::info('Evaluación guardada exitosamente', [
+                'evaluation_id' => $evaluation->id,
+                'folio' => $folioNumber,
+                'personal_id' => $personalId
+            ]);
 
             // Redirigir a la página de confirmación
             return Inertia::render('Quiz/Completed', [
