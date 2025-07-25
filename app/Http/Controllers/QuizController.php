@@ -75,26 +75,29 @@ class QuizController extends Controller
             ->where('expires_at', '>', now())
             ->firstOrFail();
 
-        // Usar la misma vista que OnlineEvaluation pero con datos del Quiz
-        return Inertia::render('OnlineEvaluation/Form', [
-            'quiz' => $quiz,
-            'organization' => $quiz->organization,
-            'title' => 'Examen: ' . $quiz->name,
-            'questionConfig' => [
-                'guide_I' => config('referencia_i'),
-                'guide_III' => config('referencia_iii'),
-                'guide_V' => config('referencia_v')
-            ],
-            'isQuizMode' => true // Flag para distinguir del modo folio
+        // Usar el layout original de Quiz/Take.vue
+        return Inertia::render('Quiz/Take', [
+            'quiz' => [
+                'id' => $quiz->id,
+                'name' => $quiz->name,
+                'organization' => $quiz->organization,
+                'questions' => [
+                    'general' => config('referencia_iii.general'),
+                    'conditional_sections' => config('referencia_iii.conditional_sections'),
+                    'acontecimientos_traumaticos' => config('referencia_iii.acontecimientos_traumaticos')
+                ],
+                'reference_i' => config('referencia_i'),
+                'reference_v' => config('referencia_v')
+            ]
         ]);
     }
 
     public function submit(Request $request, Quiz $quiz)
     {
         $validated = $request->validate([
-            'personal_id' => 'required|string|size:4',
-            'reference_guide' => 'required|in:I,III,V',
-            'answers' => 'required|array',
+            'referencia_iii' => 'required|array',
+            'referencia_i' => 'array',
+            'referencia_v' => 'required|array'
         ]);
 
         // Verificar que el quiz esté activo y no haya expirado
@@ -104,40 +107,49 @@ class QuizController extends Controller
             ], 422);
         }
 
-        try {
-            // Buscar un folio disponible de la organización del quiz
-            $availableFolio = $this->getAvailableFolio($quiz->organization_id);
-            
-            if (!$availableFolio) {
-                return response()->json([
-                    'message' => 'No hay folios disponibles para esta organización'
-                ], 422);
-            }
+        // Extraer personal_id de los datos de referencia_v
+        $personalId = $validated['referencia_v']['datos_laborales']['personal_id'] ?? null;
+        if (!$personalId || strlen($personalId) !== 4) {
+            return response()->json([
+                'message' => 'ID Personal requerido (4 dígitos)'
+            ], 422);
+        }
 
-            // Crear la evaluación usando el folio asignado
+        // Combinar todas las respuestas en un solo array
+        $allAnswers = array_merge(
+            $validated['referencia_iii'] ?? [],
+            $validated['referencia_i'] ?? [],
+            $validated['referencia_v'] ?? []
+        );
+
+        // Determinar la guía de referencia principal (por defecto III)
+        $referenceGuide = 'III';
+
+        try {
+            // Generar el siguiente folio incremental para la organización
+            $folioNumber = $this->getNextFolioNumber($quiz->organization_id);
+
+            // Crear la evaluación con el folio generado
             $evaluation = \App\Models\Evaluation::create([
                 'document_id' => null,
-                'folio' => $availableFolio->folio_number,
-                'personal_id' => $validated['personal_id'],
+                'folio' => $folioNumber,
+                'personal_id' => $personalId,
                 'organization_id' => $quiz->organization_id,
                 'quiz_id' => $quiz->id,
-                'data' => $validated['answers'],
-                'reference_guide' => $validated['reference_guide'],
+                'data' => $allAnswers,
+                'reference_guide' => $referenceGuide,
             ]);
 
-            // Marcar el folio como usado
-            $availableFolio->update([
-                'used' => true,
-                'used_at' => now()
-            ]);
+            // Crear un registro de folio virtual para mantener la trazabilidad
+            $this->createVirtualFolio($quiz->organization_id, $folioNumber, $evaluation->id);
 
             // Guardar respuestas directamente en Questions
-            $evaluation->saveOnlineAnswers($validated['answers'], $validated['reference_guide']);
+            $evaluation->saveOnlineAnswers($allAnswers, $referenceGuide);
 
             return response()->json([
                 'message' => 'Examen completado exitosamente',
                 'evaluation_id' => $evaluation->id,
-                'folio' => $availableFolio->folio_number
+                'folio' => $folioNumber
             ]);
 
         } catch (\Exception $e) {
@@ -150,16 +162,51 @@ class QuizController extends Controller
     }
 
     /**
-     * Obtiene un folio disponible de la organización
+     * Obtiene el siguiente folio incremental para la organización
      */
-    private function getAvailableFolio($organizationId)
+    private function getNextFolioNumber($organizationId)
     {
-        return \App\Models\Folio::whereHas('folioBatch', function($query) use ($organizationId) {
-                $query->where('organization_id', $organizationId)
-                      ->where('type', 'en_linea'); // Solo folios de tipo en línea
+        // Buscar el último folio usado en la organización
+        $lastFolio = \App\Models\Folio::whereHas('folioBatch', function($query) use ($organizationId) {
+                $query->where('organization_id', $organizationId);
             })
-            ->where('used', false)
-            ->orderBy('numeric_value')
+            ->orderBy('numeric_value', 'desc')
             ->first();
+
+        // Si no hay folios, empezar desde 0001
+        if (!$lastFolio) {
+            return '0001';
+        }
+
+        // Incrementar el número del último folio
+        $nextNumber = $lastFolio->numeric_value + 1;
+        return str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Crea un folio virtual para mantener la trazabilidad del quiz
+     */
+    private function createVirtualFolio($organizationId, $folioNumber, $evaluationId)
+    {
+        // Buscar o crear un lote virtual para quiz de esta organización
+        $virtualBatch = \App\Models\FolioBatch::firstOrCreate([
+            'organization_id' => $organizationId,
+            'name' => 'Quiz Virtual Batch',
+            'type' => 'en_linea'
+        ], [
+            'description' => 'Lote virtual para folios generados por quiz',
+            'start_number' => 1,
+            'end_number' => 9999,
+            'quantity' => 9999
+        ]);
+
+        // Crear el folio virtual
+        \App\Models\Folio::create([
+            'folio_batch_id' => $virtualBatch->id,
+            'folio_number' => $folioNumber,
+            'numeric_value' => intval($folioNumber),
+            'used' => true,
+            'used_at' => now()
+        ]);
     }
 }
