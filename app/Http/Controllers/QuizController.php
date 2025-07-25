@@ -167,7 +167,21 @@ class QuizController extends Controller
             // Guardar respuestas directamente en Questions
             $evaluation->saveOnlineAnswers($allAnswers, $referenceGuide);
 
-            return back()->with('success', 'Examen completado exitosamente. Folio asignado: ' . $folioNumber);
+            // Redirigir a la página de confirmación
+            return Inertia::render('Quiz/Completed', [
+                'quiz' => [
+                    'id' => $quiz->id,
+                    'name' => $quiz->name,
+                    'is_reduced' => $quiz->is_reduced,
+                    'organization' => [
+                        'id' => $quiz->organization->id,
+                        'name' => $quiz->organization->name,
+                    ]
+                ],
+                'folio' => $folioNumber,
+                'personalId' => $personalId,
+                'message' => 'Examen completado exitosamente'
+            ]);
 
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error al guardar examen desde Quiz: ' . $e->getMessage());

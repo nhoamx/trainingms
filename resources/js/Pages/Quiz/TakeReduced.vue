@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import QuizLayout from '@/Layouts/QuizLayout.vue';
 
 const currentSection = ref('acontecimientos_traumaticos');
@@ -88,6 +89,21 @@ const progress = computed(() => {
 
 // Agregar estado para el modo de visualización
 const viewMode = ref('comfortable'); // 'comfortable' o 'compact'
+const isSubmitting = ref(false);
+
+const submitEvaluation = () => {
+    isSubmitting.value = true;
+    
+    router.post(route('quiz.submit', props.quiz.id), {
+        referencia_iii: { acontecimientos_traumaticos: answers.value.acontecimientos_traumaticos },
+        referencia_i: answers.value.referencia_i,
+        referencia_v: answers.value.referencia_v
+    }, {
+        onFinish: () => {
+            isSubmitting.value = false;
+        }
+    });
+};
 </script>
 
 <template>
@@ -442,14 +458,17 @@ const viewMode = ref('comfortable'); // 'comfortable' o 'compact'
                         </button>
                         <button
                             v-else
-                            @click="$inertia.post(route('quiz.submit', quiz.id), {
-                                referencia_iii: { acontecimientos_traumaticos: answers.acontecimientos_traumaticos },
-                                referencia_i: answers.referencia_i,
-                                referencia_v: answers.referencia_v
-                            })"
-                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            @click="submitEvaluation"
+                            :disabled="isSubmitting"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Enviar Evaluación
+                            <span v-if="isSubmitting" class="mr-2">
+                                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </span>
+                            {{ isSubmitting ? 'Enviando...' : 'Enviar Evaluación' }}
                         </button>
                     </div>
                 </div>

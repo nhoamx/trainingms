@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import QuizLayout from '@/Layouts/QuizLayout.vue';
 
 const currentSection = ref('referencia_iii');
@@ -225,6 +226,7 @@ const progress = computed(() => {
 
 // Agregar estado para el modo de visualización
 const viewMode = ref('comfortable'); // 'comfortable' o 'compact'
+const isSubmitting = ref(false);
 
 const canAccessSubsection = (subsection) => {
     const subsectionOrder = ['general', 'conditional', 'traumatic'];
@@ -245,6 +247,21 @@ const handleSubsectionChange = (subsection) => {
 
     currentSubsection.value = subsection;
     currentPage.value = 1;
+};
+
+const submitEvaluation = () => {
+    isSubmitting.value = true;
+    
+    // Usar router de Inertia para enviar los datos
+    router.post(route('quiz.submit', props.quiz.id), {
+        referencia_iii: answers.value.referencia_iii,
+        referencia_i: answers.value.referencia_i,
+        referencia_v: answers.value.referencia_v
+    }, {
+        onFinish: () => {
+            isSubmitting.value = false;
+        }
+    });
 };
 </script>
 
@@ -709,9 +726,17 @@ const handleSubsectionChange = (subsection) => {
                             </button>
                             <button
                                 v-else
-                                class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors"
+                                @click="submitEvaluation"
+                                :disabled="isSubmitting"
+                                class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Finalizar
+                                <span v-if="isSubmitting" class="mr-2">
+                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                                {{ isSubmitting ? 'Enviando...' : 'Finalizar' }}
                             </button>
                         </div>
                     </div>
