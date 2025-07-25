@@ -63,6 +63,9 @@ class Evaluation extends Model
     public function saveOnlineAnswers(array $answers, string $referenceGuide)
     {
         foreach ($answers as $questionKey => $answer) {
+            // Convertir questionKey a string para consistencia
+            $questionKey = (string) $questionKey;
+            
             // Obtener información de dimensión/dominio/categoría
             $dimensionInfo = $this->getDimensionInfo($questionKey, $referenceGuide);
             
@@ -90,28 +93,45 @@ class Evaluation extends Model
     private function getDimensionInfo($questionNumber, $referenceGuide)
     {
         $dimensions = config('question_dimensions', []);
+        
+        // Verificar que la configuración existe y es un array
+        if (!is_array($dimensions) || empty($dimensions)) {
+            return [];
+        }
+        
         foreach ($dimensions as $categoryName => $domains) {
+            if (!is_array($domains)) continue;
+            
             foreach ($domains as $domainName => $dimensionGroups) {
+                if (!is_array($dimensionGroups)) continue;
+                
                 foreach ($dimensionGroups as $dimensionName => $questions) {
+                    if (!is_array($questions)) continue;
+                    
                     if (in_array($questionNumber, $questions)) {
-                        // Buscar las entidades en la base de datos
-                        $category = \App\Models\Category::firstWhere('name', $categoryName);
-                        if (!$category) continue;
+                        try {
+                            // Buscar las entidades en la base de datos
+                            $category = \App\Models\Category::firstWhere('name', $categoryName);
+                            if (!$category) continue;
 
-                        $domain = \App\Models\Domain::where('name', $domainName)
-                                         ->where('category_id', $category->id)
-                                         ->first();
-                        if (!$domain) continue;
+                            $domain = \App\Models\Domain::where('name', $domainName)
+                                             ->where('category_id', $category->id)
+                                             ->first();
+                            if (!$domain) continue;
 
-                        $dimension = \App\Models\Dimension::where('name', $dimensionName)
-                                              ->where('domain_id', $domain->id)
-                                              ->first();
+                            $dimension = \App\Models\Dimension::where('name', $dimensionName)
+                                                  ->where('domain_id', $domain->id)
+                                                  ->first();
 
-                        return [
-                            'category_id' => $category->id,
-                            'domain_id' => $domain->id,
-                            'dimension_id' => $dimension->id ?? null,
-                        ];
+                            return [
+                                'category_id' => $category->id,
+                                'domain_id' => $domain->id,
+                                'dimension_id' => $dimension->id ?? null,
+                            ];
+                        } catch (\Exception $e) {
+                            \Log::error('Error al obtener información de dimensión: ' . $e->getMessage());
+                            continue;
+                        }
                     }
                 }
             }
@@ -131,20 +151,37 @@ class Evaluation extends Model
 
         $answerValues = config('answer_values', []);
         
+        // Verificar que la configuración tenga la estructura esperada
+        if (!is_array($answerValues) || empty($answerValues)) {
+            // Si la respuesta ya es numérica, devolverla como está
+            if (is_numeric($answer)) {
+                return (float)$answer;
+            }
+            return null;
+        }
+        
         // Comprobar si la pregunta está en el grupo 1
-        if (in_array($questionKey, $answerValues['group1']['questions'] ?? [])) {
+        if (isset($answerValues['group1']['questions']) && 
+            is_array($answerValues['group1']['questions']) &&
+            in_array($questionKey, $answerValues['group1']['questions'])) {
             return $answerValues['group1']['values'][$answer] ?? null;
         }
         
         // Comprobar si la pregunta está en el grupo 2
-        if (in_array($questionKey, $answerValues['group2']['questions'] ?? [])) {
+        if (isset($answerValues['group2']['questions']) && 
+            is_array($answerValues['group2']['questions']) &&
+            in_array($questionKey, $answerValues['group2']['questions'])) {
             return $answerValues['group2']['values'][$answer] ?? null;
         }
 
         // Si no se pudo determinar el grupo, comprobar ambos grupos
-        if (isset($answerValues['group1']['values'][$answer])) {
+        if (isset($answerValues['group1']['values']) && 
+            is_array($answerValues['group1']['values']) &&
+            array_key_exists($answer, $answerValues['group1']['values'])) {
             return $answerValues['group1']['values'][$answer];
-        } elseif (isset($answerValues['group2']['values'][$answer])) {
+        } elseif (isset($answerValues['group2']['values']) && 
+                  is_array($answerValues['group2']['values']) &&
+                  array_key_exists($answer, $answerValues['group2']['values'])) {
             return $answerValues['group2']['values'][$answer];
         }
 
