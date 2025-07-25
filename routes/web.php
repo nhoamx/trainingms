@@ -19,6 +19,13 @@ Route::get('/', function () {
     return \Inertia\Inertia::render('Welcome');
 });
 
+// Ruta pública para acceso a evaluaciones en línea
+Route::get('/evaluacion', function () {
+    return \Inertia\Inertia::render('OnlineEvaluation/Access', [
+        'title' => 'Acceso a Evaluación'
+    ]);
+})->name('online-evaluation.access');
+
 
 Route::controller(\App\Http\Controllers\AuthController::class)->group(function() {
    Route::get('/login', 'showLogin')->name('login');

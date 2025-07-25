@@ -25,13 +25,13 @@ class OnlineEvaluationController extends Controller
             ->first();
 
         if (!$folio_record) {
-            return redirect()->route('evaluations.index')
+            return redirect()->route('online-evaluation.access')
                 ->with('error', 'Folio no válido o no corresponde a una evaluación en línea');
         }
 
         // Verificar si ya fue usado
         if ($folio_record->used) {
-            return redirect()->route('evaluations.index')
+            return redirect()->route('online-evaluation.access')
                 ->with('error', 'Este folio ya ha sido utilizado');
         }
 
