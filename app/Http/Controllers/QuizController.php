@@ -72,11 +72,19 @@ class QuizController extends Controller
 
     public function showTemp($tempUrl)
     {
-        $quiz = Quiz::with('organization')
+        $quiz = Quiz::with(['organization.occupationPositions', 'organization.departmentAreas'])
             ->where('temp_url', $tempUrl)
             ->where('is_active', true)
             ->where('expires_at', '>', now())
             ->firstOrFail();
+
+        // Preparar datos de la organización
+        $organizationData = [
+            'id' => $quiz->organization->id,
+            'name' => $quiz->organization->name,
+            'occupation_positions' => $quiz->organization->occupationPositions->pluck('name', 'id')->toArray(),
+            'department_areas' => $quiz->organization->departmentAreas->pluck('name', 'id')->toArray(),
+        ];
 
         // Decidir qué vista usar basado en is_reduced
         if ($quiz->is_reduced) {
@@ -85,7 +93,7 @@ class QuizController extends Controller
                 'quiz' => [
                     'id' => $quiz->id,
                     'name' => $quiz->name,
-                    'organization' => $quiz->organization,
+                    'organization' => $organizationData,
                     'questions' => [
                         'acontecimientos_traumaticos' => config('referencia_iii_reduced.acontecimientos_traumaticos')
                     ],
@@ -99,7 +107,7 @@ class QuizController extends Controller
                 'quiz' => [
                     'id' => $quiz->id,
                     'name' => $quiz->name,
-                    'organization' => $quiz->organization,
+                    'organization' => $organizationData,
                     'questions' => [
                         'general' => config('referencia_iii.general'),
                         'conditional_sections' => config('referencia_iii.conditional_sections'),

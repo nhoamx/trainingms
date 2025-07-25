@@ -587,22 +587,42 @@ const handleSubsectionChange = (subsection) => {
 
                             <div class="space-y-2">
                                 <label class="block text-sm font-medium text-slate-700">Ocupación / Puesto</label>
-                                <input
-                                    type="text"
+                                <select
                                     v-model="answers.referencia_v.datos_laborales.ocupacion_puesto"
                                     class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                    placeholder="Ingrese su ocupación o puesto"
                                 >
+                                    <option value="">Seleccione su ocupación o puesto</option>
+                                    <option 
+                                        v-for="(name, id) in quiz.organization.occupation_positions" 
+                                        :key="id" 
+                                        :value="name"
+                                    >
+                                        {{ name }}
+                                    </option>
+                                    <option v-if="Object.keys(quiz.organization.occupation_positions || {}).length === 0" value="No especificado">
+                                        No hay puestos configurados
+                                    </option>
+                                </select>
                             </div>
 
                             <div class="space-y-2">
                                 <label class="block text-sm font-medium text-slate-700">Departamento / Sección / Área</label>
-                                <input
-                                    type="text"
+                                <select
                                     v-model="answers.referencia_v.datos_laborales.departamento_seccion_area"
                                     class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                    placeholder="Ingrese su departamento, sección o área"
                                 >
+                                    <option value="">Seleccione su departamento, sección o área</option>
+                                    <option 
+                                        v-for="(name, id) in quiz.organization.department_areas" 
+                                        :key="id" 
+                                        :value="name"
+                                    >
+                                        {{ name }}
+                                    </option>
+                                    <option v-if="Object.keys(quiz.organization.department_areas || {}).length === 0" value="No especificado">
+                                        No hay departamentos configurados
+                                    </option>
+                                </select>
                             </div>
 
                             <!-- Campos de selección -->
