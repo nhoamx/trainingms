@@ -41,6 +41,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/folio-batches/{batchId}/folios', [App\Http\Controllers\FolioBatchController::class, 'getFolios'])->name('folio-batches.folios');
     Route::delete('/folio-batches/{batchId}', [App\Http\Controllers\FolioBatchController::class, 'destroy'])->name('folio-batches.destroy');
 
+    // Rutas para evaluaciones en línea
+    Route::get('/evaluacion-online/{folio}', [App\Http\Controllers\OnlineEvaluationController::class, 'show'])->name('online-evaluation.show');
+    Route::post('/evaluacion-online', [App\Http\Controllers\OnlineEvaluationController::class, 'store'])->name('online-evaluation.store');
+    Route::get('/evaluacion-online/resultado/{evaluation}', [App\Http\Controllers\OnlineEvaluationController::class, 'result'])->name('online-evaluation.result');
+
     Route::get('/reports/dimension-report-summary', [\App\Http\Controllers\DimensionItemSummaryController::class, 'byOrganization'])
         ->name('reports.dimension.summary');
 
