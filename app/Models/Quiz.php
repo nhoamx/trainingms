@@ -10,12 +10,15 @@ class Quiz extends Model
         'name',
         'temp_url',
         'expires_at',
-        'is_active'
+        'is_active',
+        'organization_id',
+        'is_reduced'
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
+        'is_reduced' => 'boolean'
     ];
 
     public function scopeActive($query)
@@ -27,5 +30,21 @@ class Quiz extends Model
     public function isExpired()
     {
         return $this->expires_at->isPast();
+    }
+
+    /**
+     * Relación con las evaluaciones creadas desde este quiz
+     */
+    public function evaluations()
+    {
+        return $this->hasMany(Evaluation::class);
+    }
+
+    /**
+     * Relación con la organización
+     */
+    public function organization()
+    {
+        return $this->belongsTo(\App\Models\Organization::class);
     }
 }

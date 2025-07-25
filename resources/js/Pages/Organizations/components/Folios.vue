@@ -68,6 +68,9 @@
                   <p class="mt-1 text-xs text-gray-500">{{ batch.description || 'Sin descripción' }}</p>
                 </div>
                 <div class="flex shrink-0 items-center gap-x-2">
+                  <button v-if="batch.type === 'en_linea'" @click="showOnlineLink(batch)" type="button" class="rounded-full bg-white p-1 text-gray-400 hover:text-green-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2" title="Ver enlace de evaluación en línea">
+                    <LinkIcon class="h-5 w-5" />
+                  </button>
                   <button @click="viewBatchDetails(batch)" type="button" class="rounded-full bg-white p-1 text-gray-400 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2">
                     <EyeIcon class="h-5 w-5" />
                   </button>
@@ -109,7 +112,7 @@
 
 import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { PlusIcon, EyeIcon, TrashIcon, ArchiveBoxIcon } from '@heroicons/vue/24/solid';
+import { PlusIcon, EyeIcon, TrashIcon, ArchiveBoxIcon, LinkIcon } from '@heroicons/vue/24/solid';
 
 
 const props = defineProps({
@@ -168,6 +171,14 @@ const calculateUsedPercentage = (batch) => {
 
 const viewBatchDetails = (batch) => {
   // Aquí puedes implementar el modal de detalles si lo deseas
+};
+
+const showOnlineLink = (batch) => {
+  const baseUrl = window.location.origin;
+  const evaluationUrl = `${baseUrl}/evaluacion`;
+  
+  // Mostrar modal o alert con la información
+  alert(`Enlace para evaluaciones en línea:\n\n${evaluationUrl}\n\nLos participantes deberán usar sus folios del lote "${batch.name}" (${formatFolioNumber(batch.start_number)} - ${formatFolioNumber(batch.end_number)})`);
 };
 
 const deleteBatch = (batch) => {
