@@ -357,26 +357,51 @@ const viewMode = ref('comfortable'); // 'comfortable' o 'compact'
 
                                 <!-- Campos de selección -->
                                 <template v-for="(options, field) in quiz.reference_v.datos_laborales" :key="field">
-                                    <div v-if="field !== 'ocupacion_puesto' && field !== 'departamento_seccion_area'" class="space-y-2">
+                                    <!-- Manejar el campo experiencia por separado -->
+                                    <template v-if="field === 'experiencia'">
+                                        <div class="space-y-2">
+                                            <label class="block text-sm font-medium text-slate-700">
+                                                Tiempo en el puesto actual
+                                            </label>
+                                            <select
+                                                v-model="answers.referencia_v.datos_laborales.experiencia.tiempo_puesto_actual"
+                                                class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
+                                            >
+                                                <option value="">Seleccione una opción</option>
+                                                <option
+                                                    v-for="opt in options.tiempo_puesto_actual"
+                                                    :key="opt"
+                                                    :value="opt"
+                                                >
+                                                    {{ opt }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="block text-sm font-medium text-slate-700">
+                                                Tiempo de experiencia laboral total
+                                            </label>
+                                            <select
+                                                v-model="answers.referencia_v.datos_laborales.experiencia.tiempo_experiencia_laboral"
+                                                class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
+                                            >
+                                                <option value="">Seleccione una opción</option>
+                                                <option
+                                                    v-for="opt in options.tiempo_experiencia_laboral"
+                                                    :key="opt"
+                                                    :value="opt"
+                                                >
+                                                    {{ opt }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </template>
+                                    <!-- Campos normales (no experiencia, ocupacion_puesto, departamento_seccion_area) -->
+                                    <div v-else-if="field !== 'ocupacion_puesto' && field !== 'departamento_seccion_area'" class="space-y-2">
                                         <label class="block text-sm font-medium text-slate-700">
                                             {{ field.replace(/_/g, ' ').charAt(0).toUpperCase() + field.replace(/_/g, ' ').slice(1) }}
                                         </label>
                                         <select
-                                            v-if="!Array.isArray(options) && typeof options === 'object'"
-                                            v-model="answers.referencia_v.datos_laborales.experiencia[field]"
-                                            class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                        >
-                                            <option value="">Seleccione una opción</option>
-                                            <option
-                                                v-for="option in options"
-                                                :key="option"
-                                                :value="option"
-                                            >
-                                                {{ option }}
-                                            </option>
-                                        </select>
-                                        <select
-                                            v-else
                                             v-model="answers.referencia_v.datos_laborales[field]"
                                             class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
                                         >
