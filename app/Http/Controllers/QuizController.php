@@ -13,8 +13,8 @@ class QuizController extends Controller
     public function index()
     {
         $quizzes = Quiz::query()
+            ->with('organization')
             ->withCount('evaluations')
-            ->select('id', 'name', 'temp_url', 'expires_at', 'is_active')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($quiz) {
@@ -22,6 +22,7 @@ class QuizController extends Controller
                 return [
                     'id' => $quiz->id,
                     'name' => $quiz->name,
+                    'organization' => $quiz->organization,
                     'temp_url' => $url,
                     'qr_code' => 'data:image/svg+xml;base64,' . base64_encode(QrCode::format('svg')->size(500)->generate($url)),
                     'expires_at' => $quiz->expires_at->format('Y-m-d H:i'),
@@ -30,8 +31,12 @@ class QuizController extends Controller
                 ];
             });
 
+        // Obtener organizaciones para el formulario de creación
+        $organizations = \App\Models\Organization::select('id', 'name')->orderBy('name')->get();
+
         return Inertia::render('Quiz/Index', [
             'quizzes' => $quizzes,
+            'organizations' => $organizations,
         ]);
     }
 
@@ -39,11 +44,13 @@ class QuizController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'organization_id' => 'required|exists:organizations,id',
             'expires_at' => 'required|date|after:now',
         ]);
 
         $quiz = Quiz::create([
             'name' => $validated['name'],
+            'organization_id' => $validated['organization_id'],
             'temp_url' => Str::random(32),
             'expires_at' => $validated['expires_at'],
             'is_active' => true,
@@ -62,7 +69,8 @@ class QuizController extends Controller
 
     public function showTemp($tempUrl)
     {
-        $quiz = Quiz::where('temp_url', $tempUrl)
+        $quiz = Quiz::with('organization')
+            ->where('temp_url', $tempUrl)
             ->where('is_active', true)
             ->where('expires_at', '>', now())
             ->firstOrFail();
@@ -70,6 +78,7 @@ class QuizController extends Controller
         // Usar la misma vista que OnlineEvaluation pero con datos del Quiz
         return Inertia::render('OnlineEvaluation/Form', [
             'quiz' => $quiz,
+            'organization' => $quiz->organization,
             'title' => 'Examen: ' . $quiz->name,
             'questionConfig' => [
                 'guide_I' => config('referencia_i'),
@@ -96,15 +105,30 @@ class QuizController extends Controller
         }
 
         try {
-            // Crear la evaluación usando el sistema OnlineEvaluation
+            // Buscar un folio disponible de la organización del quiz
+            $availableFolio = $this->getAvailableFolio($quiz->organization_id);
+            
+            if (!$availableFolio) {
+                return response()->json([
+                    'message' => 'No hay folios disponibles para esta organización'
+                ], 422);
+            }
+
+            // Crear la evaluación usando el folio asignado
             $evaluation = \App\Models\Evaluation::create([
                 'document_id' => null,
-                'folio' => $quiz->temp_url . '_' . $validated['personal_id'], // Folio único basado en quiz
+                'folio' => $availableFolio->folio_number,
                 'personal_id' => $validated['personal_id'],
-                'organization_id' => null, // Los quiz no están asociados a organizaciones específicas
+                'organization_id' => $quiz->organization_id,
                 'quiz_id' => $quiz->id,
                 'data' => $validated['answers'],
                 'reference_guide' => $validated['reference_guide'],
+            ]);
+
+            // Marcar el folio como usado
+            $availableFolio->update([
+                'used' => true,
+                'used_at' => now()
             ]);
 
             // Guardar respuestas directamente en Questions
@@ -112,7 +136,8 @@ class QuizController extends Controller
 
             return response()->json([
                 'message' => 'Examen completado exitosamente',
-                'evaluation_id' => $evaluation->id
+                'evaluation_id' => $evaluation->id,
+                'folio' => $availableFolio->folio_number
             ]);
 
         } catch (\Exception $e) {
@@ -122,5 +147,19 @@ class QuizController extends Controller
                 'message' => 'Error al guardar el examen'
             ], 500);
         }
+    }
+
+    /**
+     * Obtiene un folio disponible de la organización
+     */
+    private function getAvailableFolio($organizationId)
+    {
+        return \App\Models\Folio::whereHas('folioBatch', function($query) use ($organizationId) {
+                $query->where('organization_id', $organizationId)
+                      ->where('type', 'en_linea'); // Solo folios de tipo en línea
+            })
+            ->where('used', false)
+            ->orderBy('numeric_value')
+            ->first();
     }
 }

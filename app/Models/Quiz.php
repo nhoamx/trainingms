@@ -10,7 +10,8 @@ class Quiz extends Model
         'name',
         'temp_url',
         'expires_at',
-        'is_active'
+        'is_active',
+        'organization_id'
     ];
 
     protected $casts = [
@@ -35,5 +36,13 @@ class Quiz extends Model
     public function evaluations()
     {
         return $this->hasMany(Evaluation::class);
+    }
+
+    /**
+     * Relación con la organización
+     */
+    public function organization()
+    {
+        return $this->belongsTo(\App\Models\Organization::class);
     }
 }
