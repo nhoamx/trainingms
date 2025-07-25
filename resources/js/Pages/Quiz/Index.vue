@@ -11,11 +11,14 @@ const selectedQRName = ref('');
 
 const form = useForm({
     name: '',
-    expires_at: ''
+    organization_id: '',
+    expires_at: '',
+    is_reduced: false
 });
 
 const props = defineProps({
-    quizzes: Array
+    quizzes: Array,
+    organizations: Array
 });
 
 const formatDate = (date) => {
@@ -80,8 +83,11 @@ const openQRModal = (qrCode, name) => {
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organización</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL Temporal</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código QR</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluaciones</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de Expiración</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -90,6 +96,17 @@ const openQRModal = (qrCode, name) => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="quiz in quizzes" :key="quiz.id">
                                 <td class="px-6 py-4 whitespace-nowrap">{{ quiz.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span 
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                        :class="quiz.is_reduced ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'"
+                                    >
+                                        {{ quiz.is_reduced ? 'Reducido' : 'Completo' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-gray-900">{{ quiz.organization?.name || 'N/A' }}</span>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center space-x-2">
                                         <span class="text-sm text-gray-900 truncate max-w-xs">{{ quiz.temp_url }}</span>
@@ -124,6 +141,9 @@ const openQRModal = (qrCode, name) => {
                                             </button>
                                         </div>
                                     </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-gray-900">{{ quiz.evaluations_count || 0 }}</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">{{ formatDate(quiz.expires_at) }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -166,6 +186,19 @@ const openQRModal = (qrCode, name) => {
                                 >
                             </div>
                             <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700">Organización</label>
+                                <select 
+                                    v-model="form.organization_id"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    required
+                                >
+                                    <option value="">Selecciona una organización</option>
+                                    <option v-for="org in organizations" :key="org.id" :value="org.id">
+                                        {{ org.name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700">Fecha de Expiración</label>
                                 <input 
                                     type="datetime-local" 
@@ -173,6 +206,19 @@ const openQRModal = (qrCode, name) => {
                                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     required
                                 >
+                            </div>
+                            <div class="mb-4">
+                                <label class="flex items-center space-x-2">
+                                    <input 
+                                        type="checkbox" 
+                                        v-model="form.is_reduced"
+                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                    >
+                                    <span class="text-sm font-medium text-gray-700">Examen Reducido</span>
+                                </label>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Solo incluye preguntas de acontecimientos traumáticos (preguntas 1-6)
+                                </p>
                             </div>
                             <div class="flex justify-end space-x-3">
                                 <button 

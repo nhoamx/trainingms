@@ -19,6 +19,13 @@ Route::get('/', function () {
     return \Inertia\Inertia::render('Welcome');
 });
 
+// Ruta pública para acceso a evaluaciones en línea
+Route::get('/evaluacion', function () {
+    return \Inertia\Inertia::render('OnlineEvaluation/Access', [
+        'title' => 'Acceso a Evaluación'
+    ]);
+})->name('online-evaluation.access');
+
 
 Route::controller(\App\Http\Controllers\AuthController::class)->group(function() {
    Route::get('/login', 'showLogin')->name('login');
@@ -40,6 +47,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/folio-batches', [App\Http\Controllers\FolioBatchController::class, 'store'])->name('folio-batches.store');
     Route::get('/folio-batches/{batchId}/folios', [App\Http\Controllers\FolioBatchController::class, 'getFolios'])->name('folio-batches.folios');
     Route::delete('/folio-batches/{batchId}', [App\Http\Controllers\FolioBatchController::class, 'destroy'])->name('folio-batches.destroy');
+
+    // Rutas para evaluaciones en línea
+    Route::get('/evaluacion-online/{folio}', [App\Http\Controllers\OnlineEvaluationController::class, 'show'])->name('online-evaluation.show');
+    Route::post('/evaluacion-online', [App\Http\Controllers\OnlineEvaluationController::class, 'store'])->name('online-evaluation.store');
+    Route::get('/evaluacion-online/resultado/{evaluation}', [App\Http\Controllers\OnlineEvaluationController::class, 'result'])->name('online-evaluation.result');
 
     Route::get('/reports/dimension-report-summary', [\App\Http\Controllers\DimensionItemSummaryController::class, 'byOrganization'])
         ->name('reports.dimension.summary');
@@ -262,6 +274,6 @@ Route::middleware(['auth'])->group(function () {
 
 });
 
-// Ruta pública para acceder al examen temporal
+// Rutas públicas para acceder al examen temporal (fuera del middleware auth)
 Route::get('/q/{tempUrl}', [QuizController::class, 'showTemp'])->name('quiz.temp');
 Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])->name('quiz.submit');

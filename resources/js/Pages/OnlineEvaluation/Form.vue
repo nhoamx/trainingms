@@ -1,0 +1,253 @@
+<template>
+  <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto">
+      <!-- Header -->
+      <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="text-center">
+          <h1 class="text-3xl font-bold text-gray-900">
+            {{ isQuizMode ? 'Examen en Línea' : 'Evaluación en Línea' }}
+          </h1>
+          <p class="mt-2 text-lg text-gray-600">
+            {{ isQuizMode ? quiz?.name : (organization?.name || 'Organización') }}
+          </p>
+          <div v-if="!isQuizMode" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full">
+            <span class="font-medium">Folio: {{ folio }}</span>
+          </div>
+          <div v-else class="mt-4 inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full">
+            <span class="font-medium">Examen Temporal</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulario -->
+      <form @submit.prevent="submitEvaluation" class="space-y-6">
+        <!-- Información Personal -->
+        <div class="bg-white shadow rounded-lg p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Información Personal</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label for="personal_id" class="block text-sm font-medium text-gray-700">
+                ID Personal (4 dígitos)
+              </label>
+              <input
+                type="text"
+                id="personal_id"
+                v-model="form.personal_id"
+                maxlength="4"
+                pattern="[0-9]{4}"
+                required
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                placeholder="0000"
+              />
+              <p v-if="form.errors.personal_id" class="mt-1 text-sm text-red-600">
+                {{ form.errors.personal_id }}
+              </p>
+            </div>
+            <div>
+              <label for="reference_guide" class="block text-sm font-medium text-gray-700">
+                Tipo de Evaluación
+              </label>
+              <select
+                id="reference_guide"
+                v-model="form.reference_guide"
+                required
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              >
+                <option value="">Selecciona un tipo</option>
+                <option value="I">Guía I</option>
+                <option value="III">Guía III</option>
+                <option value="V">Guía V</option>
+              </select>
+              <p v-if="form.errors.reference_guide" class="mt-1 text-sm text-red-600">
+                {{ form.errors.reference_guide }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preguntas dinámicas basadas en el tipo -->
+        <div v-if="form.reference_guide" class="bg-white shadow rounded-lg p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">
+            Preguntas - {{ getGuideTitle(form.reference_guide) }}
+          </h2>
+          
+          <!-- Preguntas para Guía I -->
+          <div v-if="form.reference_guide === 'I'" class="space-y-4">
+            <div v-for="(question, index) in guideIQuestions" :key="index" class="border-b pb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                {{ index + 1 }}. {{ question.text }}
+              </label>
+              <div class="space-y-2">
+                <label v-for="option in question.options" :key="option.value" class="flex items-center">
+                  <input
+                    type="radio"
+                    :name="question.key"
+                    :value="option.value"
+                    v-model="form.answers[question.key]"
+                    class="mr-2 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span class="text-sm text-gray-700">{{ option.label }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preguntas para Guía III -->
+          <div v-if="form.reference_guide === 'III'" class="space-y-4">
+            <div v-for="questionNum in 72" :key="questionNum" class="border-b pb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Pregunta {{ questionNum.toString().padStart(2, '0') }}
+              </label>
+              <div class="space-y-2">
+                <label v-for="option in guideIIIOptions" :key="option.value" class="flex items-center">
+                  <input
+                    type="radio"
+                    :name="`question_${questionNum}`"
+                    :value="option.value"
+                    v-model="form.answers[questionNum.toString().padStart(2, '0')]"
+                    class="mr-2 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span class="text-sm text-gray-700">{{ option.label }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preguntas para Guía V -->
+          <div v-if="form.reference_guide === 'V'" class="space-y-4">
+            <div v-for="(question, key) in guideVQuestions" :key="key" class="border-b pb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                {{ question.label }}
+                <span v-if="question.required" class="text-red-500">*</span>
+              </label>
+              <div v-if="question.type === 'select'" class="mt-1">
+                <select
+                  v-model="form.answers[key]"
+                  :required="question.required"
+                  class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                  <option value="">Selecciona una opción</option>
+                  <option v-for="option in question.options" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </div>
+              <div v-else-if="question.type === 'number'" class="mt-1">
+                <input
+                  type="number"
+                  v-model="form.answers[key]"
+                  :min="question.min"
+                  :max="question.max"
+                  :required="question.required"
+                  class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+              </div>
+              <div v-else class="mt-1">
+                <input
+                  type="text"
+                  v-model="form.answers[key]"
+                  :required="question.required"
+                  class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="bg-white shadow rounded-lg p-6">
+          <div class="flex justify-between">
+            <button
+              type="button"
+              @click="$inertia.visit(route('evaluations.index'))"
+              class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              :disabled="form.processing || !isFormValid"
+              class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="form.processing">Guardando...</span>
+              <span v-else>Enviar Evaluación</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+import { useForm } from '@inertiajs/vue3'
+
+const props = defineProps({
+  folio: String,
+  organization: Object,
+  quiz: Object,
+  title: String,
+  questionConfig: Object,
+  isQuizMode: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const form = useForm({
+  folio: props.folio,
+  personal_id: '',
+  reference_guide: '',
+  answers: {},
+  quiz_id: props.quiz?.id || null
+})
+
+// Usar configuración desde el backend
+const guideIQuestions = computed(() => props.questionConfig?.guide_I?.questions || [])
+const guideIIIOptions = computed(() => props.questionConfig?.guide_III?.options || [])
+const guideVQuestions = computed(() => {
+  const questions = props.questionConfig?.guide_V?.questions || []
+  const questionsObj = {}
+  questions.forEach(q => {
+    questionsObj[q.key] = q
+  })
+  return questionsObj
+})
+
+const isFormValid = computed(() => {
+  return form.personal_id.length === 4 && 
+         form.reference_guide && 
+         Object.keys(form.answers).length > 0
+})
+
+const getGuideTitle = (guide) => {
+  const titles = {
+    'I': 'Cuestionario de Maslach',
+    'III': 'Factores Psicosociales',
+    'V': 'Datos Demográficos'
+  }
+  return titles[guide] || 'Evaluación'
+}
+
+const submitEvaluation = () => {
+  const submitRoute = props.isQuizMode 
+    ? route('quiz.submit', props.quiz.id)
+    : route('online-evaluation.store')
+    
+  form.post(submitRoute, {
+    onSuccess: (response) => {
+      if (props.isQuizMode) {
+        // Para quiz, mostrar mensaje de éxito
+        alert('¡Examen completado exitosamente!')
+      } else {
+        // Para evaluación con folio, redirigir a resultados
+        window.location.href = route('online-evaluation.result', response.evaluation_id)
+      }
+    },
+    onError: (errors) => {
+      console.error('Error al enviar:', errors)
+    }
+  })
+}
+</script>
