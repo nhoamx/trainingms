@@ -62,17 +62,27 @@ class Evaluation extends Model
      */
     public function saveOnlineAnswers(array $answers, string $referenceGuide)
     {
+        $this->processAnswersRecursively($answers, $referenceGuide);
+    }
+
+    /**
+     * Procesa las respuestas de forma recursiva para manejar arrays anidados
+     */
+    private function processAnswersRecursively(array $answers, string $referenceGuide, string $prefix = '')
+    {
         foreach ($answers as $questionKey => $answer) {
             // Convertir questionKey a string para consistencia
             $questionKey = (string) $questionKey;
+            $fullQuestionKey = $prefix ? $prefix . '_' . $questionKey : $questionKey;
             
-            // Si la respuesta es un array (como acontecimientos_traumaticos), procesarlo recursivamente
+            // Si la respuesta es un array, procesarlo recursivamente
             if (is_array($answer)) {
-                foreach ($answer as $subQuestionKey => $subAnswer) {
-                    $fullQuestionKey = $questionKey . '_' . $subQuestionKey;
-                    
+                $this->processAnswersRecursively($answer, $referenceGuide, $fullQuestionKey);
+            } else {
+                // Solo procesar si la respuesta no está vacía
+                if ($answer !== null && $answer !== '') {
                     // Obtener información de dimensión/dominio/categoría
-                    $dimensionInfo = $this->getDimensionInfo($subQuestionKey, $referenceGuide);
+                    $dimensionInfo = $this->getDimensionInfo($questionKey, $referenceGuide);
                     
                     // Crear o actualizar la pregunta
                     $this->questions()->updateOrCreate(
@@ -81,34 +91,15 @@ class Evaluation extends Model
                         ],
                         [
                             'personal_id' => $this->personal_id,
-                            'answer' => $subAnswer,
+                            'answer' => $answer,
                             'domain_id' => $dimensionInfo['domain_id'] ?? null,
                             'dimension_id' => $dimensionInfo['dimension_id'] ?? null,
                             'category_id' => $dimensionInfo['category_id'] ?? null,
-                            'value' => $this->getValueForAnswer($subAnswer, $referenceGuide, $subQuestionKey),
+                            'value' => $this->getValueForAnswer($answer, $referenceGuide, $questionKey),
                             'reference_guide' => $referenceGuide,
                         ]
                     );
                 }
-            } else {
-                // Obtener información de dimensión/dominio/categoría
-                $dimensionInfo = $this->getDimensionInfo($questionKey, $referenceGuide);
-                
-                // Crear o actualizar la pregunta
-                $this->questions()->updateOrCreate(
-                    [
-                        'question' => $questionKey,
-                    ],
-                    [
-                        'personal_id' => $this->personal_id,
-                        'answer' => $answer,
-                        'domain_id' => $dimensionInfo['domain_id'] ?? null,
-                        'dimension_id' => $dimensionInfo['dimension_id'] ?? null,
-                        'category_id' => $dimensionInfo['category_id'] ?? null,
-                        'value' => $this->getValueForAnswer($answer, $referenceGuide, $questionKey),
-                        'reference_guide' => $referenceGuide,
-                    ]
-                );
             }
         }
     }
