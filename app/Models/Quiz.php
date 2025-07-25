@@ -11,12 +11,14 @@ class Quiz extends Model
         'temp_url',
         'expires_at',
         'is_active',
-        'organization_id'
+        'organization_id',
+        'is_reduced'
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
+        'is_reduced' => 'boolean'
     ];
 
     public function scopeActive($query)

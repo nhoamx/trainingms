@@ -27,6 +27,7 @@ class QuizController extends Controller
                     'qr_code' => 'data:image/svg+xml;base64,' . base64_encode(QrCode::format('svg')->size(500)->generate($url)),
                     'expires_at' => $quiz->expires_at->format('Y-m-d H:i'),
                     'is_active' => $quiz->is_active && !$quiz->isExpired(),
+                    'is_reduced' => $quiz->is_reduced,
                     'evaluations_count' => $quiz->evaluations_count,
                 ];
             });
@@ -46,6 +47,7 @@ class QuizController extends Controller
             'name' => 'required|string|max:255',
             'organization_id' => 'required|exists:organizations,id',
             'expires_at' => 'required|date|after:now',
+            'is_reduced' => 'boolean',
         ]);
 
         $quiz = Quiz::create([
@@ -54,6 +56,7 @@ class QuizController extends Controller
             'temp_url' => Str::random(32),
             'expires_at' => $validated['expires_at'],
             'is_active' => true,
+            'is_reduced' => $validated['is_reduced'] ?? false,
         ]);
 
         return redirect()->route('quizzes.index')
@@ -75,21 +78,38 @@ class QuizController extends Controller
             ->where('expires_at', '>', now())
             ->firstOrFail();
 
-        // Usar el layout original de Quiz/Take.vue
-        return Inertia::render('Quiz/Take', [
-            'quiz' => [
-                'id' => $quiz->id,
-                'name' => $quiz->name,
-                'organization' => $quiz->organization,
-                'questions' => [
-                    'general' => config('referencia_iii.general'),
-                    'conditional_sections' => config('referencia_iii.conditional_sections'),
-                    'acontecimientos_traumaticos' => config('referencia_iii.acontecimientos_traumaticos')
-                ],
-                'reference_i' => config('referencia_i'),
-                'reference_v' => config('referencia_v')
-            ]
-        ]);
+        // Decidir qué vista usar basado en is_reduced
+        if ($quiz->is_reduced) {
+            // Quiz reducido - solo acontecimientos traumáticos
+            return Inertia::render('Quiz/TakeReduced', [
+                'quiz' => [
+                    'id' => $quiz->id,
+                    'name' => $quiz->name,
+                    'organization' => $quiz->organization,
+                    'questions' => [
+                        'acontecimientos_traumaticos' => config('referencia_iii_reduced.acontecimientos_traumaticos')
+                    ],
+                    'reference_i' => config('referencia_i'),
+                    'reference_v' => config('referencia_v')
+                ]
+            ]);
+        } else {
+            // Quiz completo - layout original
+            return Inertia::render('Quiz/Take', [
+                'quiz' => [
+                    'id' => $quiz->id,
+                    'name' => $quiz->name,
+                    'organization' => $quiz->organization,
+                    'questions' => [
+                        'general' => config('referencia_iii.general'),
+                        'conditional_sections' => config('referencia_iii.conditional_sections'),
+                        'acontecimientos_traumaticos' => config('referencia_iii.acontecimientos_traumaticos')
+                    ],
+                    'reference_i' => config('referencia_i'),
+                    'reference_v' => config('referencia_v')
+                ]
+            ]);
+        }
     }
 
     public function submit(Request $request, Quiz $quiz)
