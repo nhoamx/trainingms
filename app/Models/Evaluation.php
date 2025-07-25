@@ -149,6 +149,16 @@ class Evaluation extends Model
             return null;
         }
 
+        // Log para debugging
+        if (!is_string($answer) && !is_int($answer) && !is_float($answer) && !is_bool($answer)) {
+            \Log::warning('getValueForAnswer recibió un tipo de dato inesperado', [
+                'answer' => $answer,
+                'answer_type' => gettype($answer),
+                'questionKey' => $questionKey,
+                'referenceGuide' => $referenceGuide
+            ]);
+        }
+
         $answerValues = config('answer_values', []);
         
         // Verificar que la configuración tenga la estructura esperada
@@ -158,6 +168,17 @@ class Evaluation extends Model
                 return (float)$answer;
             }
             return null;
+        }
+        
+        // Verificar que $answer sea un tipo válido para usar como clave de array
+        if (!is_string($answer) && !is_int($answer) && !is_float($answer)) {
+            // Manejar respuestas booleanas (del quiz pueden venir true/false)
+            if (is_bool($answer)) {
+                $answer = $answer ? 'true' : 'false';
+            } else {
+                // Si $answer no es un tipo válido, intentar convertirlo a string
+                $answer = (string) $answer;
+            }
         }
         
         // Comprobar si la pregunta está en el grupo 1
@@ -175,14 +196,17 @@ class Evaluation extends Model
         }
 
         // Si no se pudo determinar el grupo, comprobar ambos grupos
-        if (isset($answerValues['group1']['values']) && 
-            is_array($answerValues['group1']['values']) &&
-            array_key_exists($answer, $answerValues['group1']['values'])) {
-            return $answerValues['group1']['values'][$answer];
-        } elseif (isset($answerValues['group2']['values']) && 
-                  is_array($answerValues['group2']['values']) &&
-                  array_key_exists($answer, $answerValues['group2']['values'])) {
-            return $answerValues['group2']['values'][$answer];
+        // Verificar que $answer sea un tipo válido para usar como clave de array
+        if (is_string($answer) || is_int($answer) || is_float($answer)) {
+            if (isset($answerValues['group1']['values']) && 
+                is_array($answerValues['group1']['values']) &&
+                array_key_exists($answer, $answerValues['group1']['values'])) {
+                return $answerValues['group1']['values'][$answer];
+            } elseif (isset($answerValues['group2']['values']) && 
+                      is_array($answerValues['group2']['values']) &&
+                      array_key_exists($answer, $answerValues['group2']['values'])) {
+                return $answerValues['group2']['values'][$answer];
+            }
         }
 
         // Si la respuesta ya es numérica, devolverla como está
