@@ -15,6 +15,7 @@ class Evaluation extends Model
         'personal_id',
         'data',
         'reference_guide', // Agregar reference_guide a fillable
+        'quiz_id', // Para evaluaciones creadas desde Quiz
     ];
 
     protected $casts = [
@@ -49,6 +50,11 @@ class Evaluation extends Model
     public function organization()
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function quiz()
+    {
+        return $this->belongsTo(Quiz::class);
     }
 
     /**

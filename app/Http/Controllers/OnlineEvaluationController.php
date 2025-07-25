@@ -39,7 +39,12 @@ class OnlineEvaluationController extends Controller
             'folio' => $folio,
             'organization' => $folio_record->folioBatch->organization,
             'title' => 'Evaluación en Línea',
-            'questionConfig' => config('online_evaluation_questions')
+            'questionConfig' => [
+                'guide_I' => config('referencia_i'),
+                'guide_III' => config('referencia_iii'),
+                'guide_V' => config('referencia_v'),
+                'online_config' => config('online_evaluation_questions')
+            ]
         ]);
     }
 
@@ -77,6 +82,7 @@ class OnlineEvaluationController extends Controller
                 'folio' => $validated['folio'],
                 'personal_id' => $validated['personal_id'],
                 'organization_id' => $folio_record->folioBatch->organization->id,
+                'quiz_id' => null, // Las evaluaciones con folio no vienen de quiz
                 'data' => $validated['answers'], // Mantener compatibilidad
                 'reference_guide' => $validated['reference_guide'],
             ]);

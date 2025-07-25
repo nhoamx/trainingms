@@ -13,6 +13,7 @@ class QuizController extends Controller
     public function index()
     {
         $quizzes = Quiz::query()
+            ->withCount('evaluations')
             ->select('id', 'name', 'temp_url', 'expires_at', 'is_active')
             ->orderBy('created_at', 'desc')
             ->get()
@@ -25,6 +26,7 @@ class QuizController extends Controller
                     'qr_code' => 'data:image/svg+xml;base64,' . base64_encode(QrCode::format('svg')->size(500)->generate($url)),
                     'expires_at' => $quiz->expires_at->format('Y-m-d H:i'),
                     'is_active' => $quiz->is_active && !$quiz->isExpired(),
+                    'evaluations_count' => $quiz->evaluations_count,
                 ];
             });
 
@@ -65,36 +67,60 @@ class QuizController extends Controller
             ->where('expires_at', '>', now())
             ->firstOrFail();
 
-        return Inertia::render('Quiz/Take', [
-            'quiz' => [
-                'id' => $quiz->id,
-                'name' => $quiz->name,
-                'questions' => [
-                    'general' => config('referencia_iii.general'),
-                    'conditional_sections' => config('referencia_iii.conditional_sections'),
-                    'acontecimientos_traumaticos' => config('referencia_iii.acontecimientos_traumaticos')
-                ],
-                'reference_i' => config('referencia_i'),
-                'reference_v' => config('referencia_v')
-            ]
+        // Usar la misma vista que OnlineEvaluation pero con datos del Quiz
+        return Inertia::render('OnlineEvaluation/Form', [
+            'quiz' => $quiz,
+            'title' => 'Examen: ' . $quiz->name,
+            'questionConfig' => [
+                'guide_I' => config('referencia_i'),
+                'guide_III' => config('referencia_iii'),
+                'guide_V' => config('referencia_v')
+            ],
+            'isQuizMode' => true // Flag para distinguir del modo folio
         ]);
     }
 
     public function submit(Request $request, Quiz $quiz)
     {
         $validated = $request->validate([
-            'reference_iii' => 'required|array',
-            'reference_i' => 'array',
-            'reference_v' => 'required|array'
+            'personal_id' => 'required|string|size:4',
+            'reference_guide' => 'required|in:I,III,V',
+            'answers' => 'required|array',
         ]);
 
-        // Aquí guardarías las respuestas en tu base de datos
-        // Por ejemplo:
-        // $quiz->answers()->create([
-        //     'user_id' => auth()->id(),
-        //     'answers' => $validated
-        // ]);
+        // Verificar que el quiz esté activo y no haya expirado
+        if (!$quiz->is_active || $quiz->isExpired()) {
+            return response()->json([
+                'message' => 'El examen no está disponible o ha expirado'
+            ], 422);
+        }
 
-        return redirect()->back()->with('success', 'Examen completado exitosamente');
+        try {
+            // Crear la evaluación usando el sistema OnlineEvaluation
+            $evaluation = \App\Models\Evaluation::create([
+                'document_id' => null,
+                'folio' => $quiz->temp_url . '_' . $validated['personal_id'], // Folio único basado en quiz
+                'personal_id' => $validated['personal_id'],
+                'organization_id' => null, // Los quiz no están asociados a organizaciones específicas
+                'quiz_id' => $quiz->id,
+                'data' => $validated['answers'],
+                'reference_guide' => $validated['reference_guide'],
+            ]);
+
+            // Guardar respuestas directamente en Questions
+            $evaluation->saveOnlineAnswers($validated['answers'], $validated['reference_guide']);
+
+            return response()->json([
+                'message' => 'Examen completado exitosamente',
+                'evaluation_id' => $evaluation->id
+            ]);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al guardar examen desde Quiz: ' . $e->getMessage());
+            
+            return response()->json([
+                'message' => 'Error al guardar el examen'
+            ], 500);
+        }
     }
 }

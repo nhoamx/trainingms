@@ -4,10 +4,17 @@
       <!-- Header -->
       <div class="bg-white shadow rounded-lg p-6 mb-6">
         <div class="text-center">
-          <h1 class="text-3xl font-bold text-gray-900">Evaluación en Línea</h1>
-          <p class="mt-2 text-lg text-gray-600">{{ organization?.name || 'Organización' }}</p>
-          <div class="mt-4 inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full">
+          <h1 class="text-3xl font-bold text-gray-900">
+            {{ isQuizMode ? 'Examen en Línea' : 'Evaluación en Línea' }}
+          </h1>
+          <p class="mt-2 text-lg text-gray-600">
+            {{ isQuizMode ? quiz?.name : (organization?.name || 'Organización') }}
+          </p>
+          <div v-if="!isQuizMode" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full">
             <span class="font-medium">Folio: {{ folio }}</span>
+          </div>
+          <div v-else class="mt-4 inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full">
+            <span class="font-medium">Examen Temporal</span>
           </div>
         </div>
       </div>
@@ -179,15 +186,21 @@ import { useForm } from '@inertiajs/vue3'
 const props = defineProps({
   folio: String,
   organization: Object,
+  quiz: Object,
   title: String,
-  questionConfig: Object
+  questionConfig: Object,
+  isQuizMode: {
+    type: Boolean,
+    default: false
+  }
 })
 
 const form = useForm({
   folio: props.folio,
   personal_id: '',
   reference_guide: '',
-  answers: {}
+  answers: {},
+  quiz_id: props.quiz?.id || null
 })
 
 // Usar configuración desde el backend
@@ -218,13 +231,22 @@ const getGuideTitle = (guide) => {
 }
 
 const submitEvaluation = () => {
-  form.post(route('online-evaluation.store'), {
+  const submitRoute = props.isQuizMode 
+    ? route('quiz.submit', props.quiz.id)
+    : route('online-evaluation.store')
+    
+  form.post(submitRoute, {
     onSuccess: (response) => {
-      // Redirigir a la página de resultados
-      window.location.href = route('online-evaluation.result', response.evaluation_id)
+      if (props.isQuizMode) {
+        // Para quiz, mostrar mensaje de éxito
+        alert('¡Examen completado exitosamente!')
+      } else {
+        // Para evaluación con folio, redirigir a resultados
+        window.location.href = route('online-evaluation.result', response.evaluation_id)
+      }
     },
     onError: (errors) => {
-      console.error('Error al enviar evaluación:', errors)
+      console.error('Error al enviar:', errors)
     }
   })
 }

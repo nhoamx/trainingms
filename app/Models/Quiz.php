@@ -28,4 +28,12 @@ class Quiz extends Model
     {
         return $this->expires_at->isPast();
     }
+
+    /**
+     * Relación con las evaluaciones creadas desde este quiz
+     */
+    public function evaluations()
+    {
+        return $this->hasMany(Evaluation::class);
+    }
 }
