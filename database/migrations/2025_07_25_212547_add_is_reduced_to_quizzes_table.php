@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::table('quizzes', function (Blueprint $table) {
             $table->boolean('is_reduced')->default(false)->after('is_active');
+            $table->foreignUuid('organization_id')->after('is_reduced');
         });
     }
 
@@ -22,6 +23,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('quizzes', function (Blueprint $table) {
+            $table->dropForeign(['organization_id']);
+            $table->dropColumn('organization_id');
             $table->dropColumn('is_reduced');
         });
     }
