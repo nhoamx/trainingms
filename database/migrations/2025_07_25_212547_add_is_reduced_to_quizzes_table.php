@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('quizzes', function (Blueprint $table) {
             $table->boolean('is_reduced')->default(false)->after('is_active');
-            $table->foreignUuid('organization_id')->after('is_reduced');
+            $table->foreignUuid('organization_id')->after('is_reduced')->constrained();
         });
     }
 
