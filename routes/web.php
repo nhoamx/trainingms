@@ -16,7 +16,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return \Inertia\Inertia::render('Welcome');
+    return redirect()->route('login');
 });
 
 // Ruta pública para acceso a evaluaciones en línea
