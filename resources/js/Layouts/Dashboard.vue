@@ -5,7 +5,7 @@
                 <div class="flex h-16 items-center justify-between">
                     <div class="flex items-center">
                         <div class="shrink-0">
-                            <img class="size-8" src="https://tailwindui.com/plus/img/logos/mark.svg?color=indigo&shade=500" alt="Your Company" />
+                            <span class="text-white text-2xl font-bold">T & MS</span>
                         </div>
                         <div class="hidden md:block">
                             <div class="ml-10 flex items-baseline space-x-4">
@@ -196,16 +196,6 @@ const navigation = computed(() => {
     if (isOrganizationUser) {
         return [
             { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
-            { name: 'Reportes', href: '#', current: route().current('reports.*'), items: [
-                { name: 'Análisis Global de Respuestas', href: route('reports.global.show'), current: route().current('reports.global.show') },
-                { name: 'Análisis Global de Personas', href: route('reports.global.person.show'), current: route().current('reports.global.person.show') },
-                { name: 'Categorías', href: route('reports.category.show'), current: route().current('reports.category.show') },
-                { name: 'Puntuación por Categoría', href: route('reports.category.totalScores.show'), current: route().current('reports.category.totalScores.show') },
-                { name: 'Dominios', href: route('reports.domain.show'), current: route().current('reports.domain.show') },
-                { name: 'Puntuación por Dominio', href: route('reports.domain.totalScores.show'), current: route().current('reports.domain.totalScores.show') },
-                { name: 'Dimensiones', href: route('reports.dimension.show'), current: route().current('reports.dimension.show') },
-                { name: 'Puntuación por Dimensión', href: route('reports.dimension.totalScores.show'), current: route().current('reports.dimension.totalScores.show') },
-            ] },
         ];
     }
 
@@ -214,15 +204,6 @@ const navigation = computed(() => {
         { name: 'Evaluaciones', href: '#', current: route().current('evaluations.*'), items: [
             { name: 'Cargar resultados', href: route('evaluations.load'), current: route().current('evaluations.load') },
             { name: 'Resultados', href: route('evaluations.index'), current: route().current('evaluations.index') },
-        ] },
-        { name: 'Reportes', href: '#', current: route().current('reports.*'), items: [
-            { name: 'Análisis Global', href: route('reports.global.show'), current: route().current('reports.global.show') },
-            { name: 'Categorías', href: route('reports.category.show'), current: route().current('reports.category.show') },
-            { name: 'Puntuación por Categoría', href: route('reports.category.totalScores.show'), current: route().current('reports.category.totalScores.show') },
-            { name: 'Dominios', href: route('reports.domain.show'), current: route().current('reports.domain.show') },
-            { name: 'Puntuación por Dominio', href: route('reports.domain.totalScores.show'), current: route().current('reports.domain.totalScores.show') },
-            { name: 'Dimensiones', href: route('reports.dimension.show'), current: route().current('reports.dimension.show') },
-            { name: 'Puntuación por Dimensión', href: route('reports.dimension.totalScores.show'), current: route().current('reports.dimension.totalScores.show') },
         ] },
         { name: 'Organizaciones', href: '#', current: route().current('organizations.*'), items: [
             { name: 'Listado', href: route('organizations.index'), current: route().current('organizations.index') },
