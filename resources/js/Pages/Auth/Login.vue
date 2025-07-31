@@ -29,7 +29,6 @@ const submit = async () => {
     <div class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
         <div class="sm:mx-auto sm:w-full sm:max-w-sm">
             <!-- Reemplazado el logo por texto -->
-            <span class="mx-auto block text-indigo-600 text-2xl font-bold">T & MS</span>
             <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
                 Inicia sesión
             </h2>
