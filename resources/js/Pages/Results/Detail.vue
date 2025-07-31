@@ -540,7 +540,7 @@
                                                         </button>
                                                     </div>
                                                     <button 
-                                                        v-else
+                                                        v-if="canEdit"
                                                         @click="startGuideIIIQuestionEdit(idx, q.answer)" 
                                                         class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs"
                                                     >
@@ -650,7 +650,7 @@
                                                             </button>
                                                         </div>
                                                         <button 
-                                                            v-else
+                                                            v-if="canEdit"
                                                             @click="startGuideVQuestionEdit(idx, q.answer)" 
                                                             class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs"
                                                         >
@@ -678,7 +678,16 @@
 import { Head, Link } from '@inertiajs/vue3'
 import Dashboard from "../../Layouts/Dashboard.vue";
 import { ref, computed } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
+
+// Get page props for user access
+const page = usePage();
+const user = computed(() => page.props.auth.user);
+
+// Check if user has admin or super-admin role
+const canEdit = computed(() => {
+    return user.value?.roles?.some(role => role.name === 'admin' || role.name === 'super-admin') || false;
+});
 
 // Variables reactivas para la edición de preguntas
 const editingQuestionIdx = ref(null);
