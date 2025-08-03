@@ -4,7 +4,7 @@ import { Head } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import QuizLayout from '@/Layouts/QuizLayout.vue';
 
-const currentSection = ref('acontecimientos_traumaticos');
+const currentSection = ref('referencia_v');
 const showFollowUpQuestions = ref(false);
 
 const props = defineProps({
@@ -48,40 +48,42 @@ const checkTraumaticEvents = () => {
 };
 
 const nextSection = () => {
-    if (currentSection.value === 'acontecimientos_traumaticos') {
-        checkTraumaticEvents();
-        currentSection.value = showFollowUpQuestions.value ? 'referencia_i' : 'referencia_v';
+    if (currentSection.value === 'referencia_v') {
+        currentSection.value = 'acontecimientos_traumaticos';
         // Scroll suave hacia arriba
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (currentSection.value === 'referencia_i') {
-        currentSection.value = 'referencia_v';
+    } else if (currentSection.value === 'acontecimientos_traumaticos') {
+        checkTraumaticEvents();
+        if (showFollowUpQuestions.value) {
+            currentSection.value = 'referencia_i';
+        }
         // Scroll suave hacia arriba
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
 
 const previousSection = () => {
-    if (currentSection.value === 'referencia_v') {
-        currentSection.value = showFollowUpQuestions.value ? 'referencia_i' : 'acontecimientos_traumaticos';
+    if (currentSection.value === 'referencia_i') {
+        currentSection.value = 'acontecimientos_traumaticos';
         // Scroll suave hacia arriba
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (currentSection.value === 'referencia_i') {
-        currentSection.value = 'acontecimientos_traumaticos';
+    } else if (currentSection.value === 'acontecimientos_traumaticos') {
+        currentSection.value = 'referencia_v';
         // Scroll suave hacia arriba
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
 
 const isLastSection = computed(() => {
-    return currentSection.value === 'referencia_v';
+    return currentSection.value === 'referencia_i' || 
+           (currentSection.value === 'acontecimientos_traumaticos' && !showFollowUpQuestions.value);
 });
 
 const progress = computed(() => {
-    const sections = ['acontecimientos_traumaticos'];
+    const sections = ['referencia_v', 'acontecimientos_traumaticos'];
     if (showFollowUpQuestions.value) {
         sections.push('referencia_i');
     }
-    sections.push('referencia_v');
     
     const currentIndex = sections.indexOf(currentSection.value);
     return ((currentIndex + 1) / sections.length) * 100;
@@ -126,14 +128,14 @@ const submitEvaluation = () => {
                     ></div>
                 </div>
                 <div class="mt-2 text-sm text-slate-600">
-                    <span v-if="currentSection === 'acontecimientos_traumaticos'">
-                        Sección 1: Acontecimientos Traumáticos
+                    <span v-if="currentSection === 'referencia_v'">
+                        Sección 1: Datos Personales
                     </span>
-                    <span v-else-if="currentSection === 'referencia_i'">
-                        Sección 2: Preguntas de Seguimiento
+                    <span v-else-if="currentSection === 'acontecimientos_traumaticos'">
+                        Sección 2: Acontecimientos Traumáticos
                     </span>
                     <span v-else>
-                        Sección {{ showFollowUpQuestions ? '3' : '2' }}: Datos Personales
+                        Sección 3: Preguntas de Seguimiento
                     </span>
                 </div>
             </div>
@@ -169,74 +171,6 @@ const submitEvaluation = () => {
                         <h1 class="text-xl font-medium text-slate-900">{{ quiz.name }}</h1>
                         <div class="mt-2 text-sm text-slate-600">
                             Evaluación Reducida - Solo Acontecimientos Traumáticos
-                        </div>
-                    </div>
-
-                    <!-- Sección Acontecimientos Traumáticos -->
-                    <div v-if="currentSection === 'acontecimientos_traumaticos'" class="space-y-6">
-                        <div class="bg-slate-50 p-4 rounded-lg mb-6">
-                            <h3 class="font-medium text-slate-900 mb-4">{{ quiz.questions.acontecimientos_traumaticos.title }}</h3>
-                            <div class="space-y-4">
-                                <div
-                                    v-for="(question, index) in quiz.questions.acontecimientos_traumaticos.questions"
-                                    :key="index"
-                                    class="bg-white p-4 rounded-lg border border-slate-100"
-                                >
-                                    <p class="mb-3 text-slate-900">{{ index }}. {{ question }}</p>
-                                    <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
-                                        <label
-                                            v-for="option in answerOptions.yesNo"
-                                            :key="option.value"
-                                            class="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-slate-50 transition-colors"
-                                        >
-                                            <input
-                                                type="radio"
-                                                :name="`trauma_${index}`"
-                                                :value="option.value"
-                                                v-model="answers.acontecimientos_traumaticos[index]"
-                                                class="form-radio h-4 w-4 text-slate-800"
-                                            >
-                                            <span class="text-sm text-slate-700">{{ option.label }}</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sección Referencia I (solo si hay respuestas positivas) -->
-                    <div v-if="currentSection === 'referencia_i'" class="space-y-6">
-                        <div
-                            v-for="(questions, category) in quiz.reference_i"
-                            :key="category"
-                            class="bg-slate-50 p-4 rounded-lg"
-                        >
-                            <h3 class="font-medium text-slate-900 mb-4">{{ category }}</h3>
-                            <div class="space-y-4">
-                                <div
-                                    v-for="(question, index) in questions"
-                                    :key="index"
-                                    class="bg-white p-4 rounded-lg border border-slate-100"
-                                >
-                                    <p class="mb-3 text-slate-900">{{ question }}</p>
-                                    <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
-                                        <label
-                                            v-for="option in answerOptions.yesNo"
-                                            :key="option.value"
-                                            class="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-slate-50 transition-colors"
-                                        >
-                                            <input
-                                                type="radio"
-                                                :name="`trauma_follow_${category}_${index}`"
-                                                :value="option.value"
-                                                v-model="answers.referencia_i[`${category}_${index}`]"
-                                                class="form-radio h-4 w-4 text-slate-800"
-                                            >
-                                            <span class="text-sm text-slate-700">{{ option.label }}</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -443,13 +377,80 @@ const submitEvaluation = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+
+                    <!-- Sección Acontecimientos Traumáticos -->
+                    <div v-if="currentSection === 'acontecimientos_traumaticos'" class="space-y-6">
+                        <div class="bg-slate-50 p-4 rounded-lg mb-6">
+                            <h3 class="font-medium text-slate-900 mb-4">{{ quiz.questions.acontecimientos_traumaticos.title }}</h3>
+                            <div class="space-y-4">
+                                <div
+                                    v-for="(question, index) in quiz.questions.acontecimientos_traumaticos.questions"
+                                    :key="index"
+                                    class="bg-white p-4 rounded-lg border border-slate-100"
+                                >
+                                    <p class="mb-3 text-slate-900">{{ index }}. {{ question }}</p>
+                                    <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
+                                        <label
+                                            v-for="option in answerOptions.yesNo"
+                                            :key="option.value"
+                                            class="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-slate-50 transition-colors"
+                                        >
+                                            <input
+                                                type="radio"
+                                                :name="`trauma_${index}`"
+                                                :value="option.value"
+                                                v-model="answers.acontecimientos_traumaticos[index]"
+                                                class="form-radio h-4 w-4 text-slate-800"
+                                            >
+                                            <span class="text-sm text-slate-700">{{ option.label }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección Referencia I (solo si hay respuestas positivas) -->
+                    <div v-if="currentSection === 'referencia_i'" class="space-y-6">
+                        <div
+                            v-for="(questions, category) in quiz.reference_i"
+                            :key="category"
+                            class="bg-slate-50 p-4 rounded-lg"
+                        >
+                            <h3 class="font-medium text-slate-900 mb-4">{{ category }}</h3>
+                            <div class="space-y-4">
+                                <div
+                                    v-for="(question, index) in questions"
+                                    :key="index"
+                                    class="bg-white p-4 rounded-lg border border-slate-100"
+                                >
+                                    <p class="mb-3 text-slate-900">{{ question }}</p>
+                                    <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
+                                        <label
+                                            v-for="option in answerOptions.yesNo"
+                                            :key="option.value"
+                                            class="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-slate-50 transition-colors"
+                                        >
+                                            <input
+                                                type="radio"
+                                                :name="`trauma_follow_${category}_${index}`"
+                                                :value="option.value"
+                                                v-model="answers.referencia_i[`${category}_${index}`]"
+                                                class="form-radio h-4 w-4 text-slate-800"
+                                            >
+                                            <span class="text-sm text-slate-700">{{ option.label }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                 <!-- Navegación -->
                 <div class="px-4 py-4 sm:px-6 border-t border-slate-200 bg-slate-50 rounded-b-lg">
                     <div class="flex justify-between">
                         <button
-                            v-if="currentSection !== 'acontecimientos_traumaticos'"
+                            v-if="currentSection !== 'referencia_v'"
                             @click="previousSection"
                             class="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500"
                         >

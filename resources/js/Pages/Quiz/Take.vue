@@ -4,7 +4,7 @@ import { Head } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import QuizLayout from '@/Layouts/QuizLayout.vue';
 
-const currentSection = ref('referencia_iii');
+const currentSection = ref('referencia_v');
 const showTraumaticQuestions = ref(false);
 const currentPage = ref(1);
 const questionsPerPage = 10;
@@ -129,7 +129,13 @@ const previousPage = () => {
 };
 
 const nextSection = () => {
-    if (currentSection.value === 'referencia_iii') {
+    if (currentSection.value === 'referencia_v') {
+        currentSection.value = 'referencia_iii';
+        currentSubsection.value = 'general';
+        currentPage.value = 1;
+        // Scroll suave hacia arriba
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (currentSection.value === 'referencia_iii') {
         if (currentSubsection.value === 'general' && currentPage.value < totalPages.value) {
             // Si estamos en preguntas generales y hay más páginas, avanzar a la siguiente página
             currentPage.value++;
@@ -150,33 +156,24 @@ const nextSection = () => {
 
         // Pasamos a la siguiente sección principal
         checkTraumaticEvents();
-        currentSection.value = showTraumaticQuestions.value ? 'referencia_i' : 'referencia_v';
-        currentPage.value = 1;
-        currentSubsection.value = 'general';
-        // Scroll suave hacia arriba
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (currentSection.value === 'referencia_i') {
-        currentSection.value = 'referencia_v';
-        currentPage.value = 1;
+        if (showTraumaticQuestions.value) {
+            currentSection.value = 'referencia_i';
+            currentPage.value = 1;
+            currentSubsection.value = 'general';
+        }
         // Scroll suave hacia arriba
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
 
 const previousSection = () => {
-    if (currentSection.value === 'referencia_v') {
-        currentSection.value = showTraumaticQuestions.value ? 'referencia_i' : 'referencia_iii';
-        currentSubsection.value = 'traumatic'; // La última subsección de referencia_iii
-        currentPage.value = 1;
-        // Scroll suave hacia arriba
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (currentSection.value === 'referencia_i') {
+    if (currentSection.value === 'referencia_i') {
         currentSection.value = 'referencia_iii';
         currentSubsection.value = 'traumatic';
         currentPage.value = 1;
         // Scroll suave hacia arriba
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
+    } else if (currentSection.value === 'referencia_iii') {
         // Dentro de la sección referencia_iii
         if (currentSubsection.value === 'general' && currentPage.value > 1) {
             // Si estamos en preguntas generales y no estamos en la primera página
@@ -198,19 +195,26 @@ const previousSection = () => {
                 }
                 // Scroll suave hacia arriba
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                // Si estamos en la primera subsección de referencia_iii, volvemos a referencia_v
+                currentSection.value = 'referencia_v';
+                currentPage.value = 1;
+                // Scroll suave hacia arriba
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         }
     }
 };
 
 const isLastSection = computed(() => {
-    return currentSection.value === 'referencia_v';
+    return currentSection.value === 'referencia_i' || 
+           (currentSection.value === 'referencia_iii' && !showTraumaticQuestions.value);
 });
 
 // Actualizar el progreso para incluir subsecciones
 const progress = computed(() => {
-    // Calcular el progreso basado en secciones y subsecciones
-    const mainSections = ['referencia_iii', 'referencia_i', 'referencia_v'];
+    // Calcular el progreso basado en secciones y subsecciones en el nuevo orden
+    const mainSections = ['referencia_v', 'referencia_iii', 'referencia_i'];
     const currentMainIndex = mainSections.indexOf(currentSection.value);
 
     let sectionProgress = currentMainIndex / mainSections.length;
@@ -285,18 +289,18 @@ const submitEvaluation = () => {
                     ></div>
                 </div>
                 <div class="mt-2 text-sm text-slate-600">
-                    <span v-if="currentSection === 'referencia_iii'">
-                        Sección 1 de 3:
+                    <span v-if="currentSection === 'referencia_v'">
+                        Sección 1 de 3: Datos Personales
+                    </span>
+                    <span v-else-if="currentSection === 'referencia_iii'">
+                        Sección 2 de 3:
                         <span v-if="currentSubsection === 'general'">Cuestionario Principal</span>
                         <span v-else-if="currentSubsection === 'conditional'">Preguntas Condicionales</span>
                         <span v-else-if="currentSubsection === 'traumatic'">Acontecimientos Traumáticos</span>
                         <span v-if="currentSubsection === 'general'"> • Página {{ currentPage }} de {{ totalPages }}</span>
                     </span>
-                    <span v-else-if="currentSection === 'referencia_i'">
-                        Sección 2 de 3: Preguntas Adicionales
-                    </span>
                     <span v-else>
-                        Sección 3 de 3: Datos Personales
+                        Sección 3 de 3: Preguntas Adicionales
                     </span>
                 </div>
             </div>
@@ -333,15 +337,219 @@ const submitEvaluation = () => {
                         <div class="mt-4 flex flex-wrap gap-2">
                             <div
                                 v-for="(section, key) in {
+                                    referencia_v: 'Datos Personales',
                                     referencia_iii: 'Cuestionario Principal',
-                                    referencia_i: 'Preguntas Adicionales',
-                                    referencia_v: 'Datos Personales'
+                                    referencia_i: 'Preguntas Adicionales'
                                 }"
                                 :key="key"
                                 class="px-3 py-1.5 text-sm rounded-full transition-colors"
                                 :class="currentSection === key ? 'bg-slate-100 text-slate-800' : 'bg-slate-50 text-slate-600'"
                             >
                                 {{ section }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección Referencia V -->
+                    <div v-if="currentSection === 'referencia_v'" class="space-y-6">
+                        <!-- Datos personales -->
+                        <div class="bg-slate-50 p-4 rounded-lg">
+                            <h3 class="font-medium text-slate-900 mb-4">Datos Personales</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                <!-- Sexo -->
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-slate-700">Sexo</label>
+                                    <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
+                                        <label
+                                            v-for="option in quiz.reference_v.sexo"
+                                            :key="option"
+                                            class="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-white transition-colors"
+                                        >
+                                            <input
+                                                type="radio"
+                                                :value="option"
+                                                v-model="answers.referencia_v.sexo"
+                                                class="form-radio h-4 w-4 text-slate-800"
+                                            >
+                                            <span class="text-sm text-slate-700">{{ option }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Edad -->
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-slate-700">Edad</label>
+                                    <select
+                                        v-model="answers.referencia_v.edad"
+                                        class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
+                                    >
+                                        <option value="">Seleccione un rango de edad</option>
+                                        <option
+                                            v-for="edad in quiz.reference_v.edad"
+                                            :key="edad"
+                                            :value="edad"
+                                        >
+                                            {{ edad }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <!-- Estado Civil -->
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-slate-700">Estado Civil</label>
+                                    <select
+                                        v-model="answers.referencia_v.estado_civil"
+                                        class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
+                                    >
+                                        <option value="">Seleccione su estado civil</option>
+                                        <option
+                                            v-for="estado in quiz.reference_v.estado_civil"
+                                            :key="estado"
+                                            :value="estado"
+                                        >
+                                            {{ estado }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <!-- Nivel de Estudios -->
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-slate-700">Nivel de Estudios</label>
+                                    <select
+                                        v-model="answers.referencia_v.nivel_estudios"
+                                        class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
+                                    >
+                                        <option value="">Seleccione su nivel de estudios</option>
+                                        <template v-for="(nivel, key) in quiz.reference_v.nivel_estudios" :key="key">
+                                            <template v-if="Array.isArray(nivel)">
+                                                <optgroup :label="key">
+                                                    <option
+                                                        v-for="subnivel in nivel"
+                                                        :key="subnivel"
+                                                        :value="`${key} - ${subnivel}`"
+                                                    >
+                                                        {{ key }} - {{ subnivel }}
+                                                    </option>
+                                                </optgroup>
+                                            </template>
+                                            <option v-else :value="nivel">{{ nivel }}</option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Datos Laborales -->
+                        <div class="bg-slate-50 p-4 rounded-lg">
+                            <h3 class="font-medium text-slate-900 mb-4">Datos Laborales</h3>
+                            <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                <p class="text-sm text-blue-700">
+                                    <strong>Nota:</strong> Su ID Personal será asignado automáticamente al completar la evaluación.
+                                </p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                <!-- Campos de texto libre -->
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-slate-700">Ocupación / Puesto</label>
+                                    <select
+                                        v-model="answers.referencia_v.datos_laborales.ocupacion_puesto"
+                                        class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
+                                    >
+                                        <option value="">Seleccione su ocupación o puesto</option>
+                                        <option 
+                                            v-for="(name, id) in quiz.organization.occupation_positions" 
+                                            :key="id" 
+                                            :value="name"
+                                        >
+                                            {{ name }}
+                                        </option>
+                                        <option v-if="Object.keys(quiz.organization.occupation_positions || {}).length === 0" value="No especificado">
+                                            No hay puestos configurados
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-slate-700">Departamento / Sección / Área</label>
+                                    <select
+                                        v-model="answers.referencia_v.datos_laborales.departamento_seccion_area"
+                                        class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
+                                    >
+                                        <option value="">Seleccione su departamento, sección o área</option>
+                                        <option 
+                                            v-for="(name, id) in quiz.organization.department_areas" 
+                                            :key="id" 
+                                            :value="name"
+                                        >
+                                            {{ name }}
+                                        </option>
+                                        <option v-if="Object.keys(quiz.organization.department_areas || {}).length === 0" value="No especificado">
+                                            No hay departamentos configurados
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <!-- Campos de selección -->
+                                <template v-for="(options, field) in quiz.reference_v.datos_laborales" :key="field">
+                                    <!-- Manejar el campo experiencia por separado -->
+                                    <template v-if="field === 'experiencia'">
+                                        <div class="space-y-2">
+                                            <label class="block text-sm font-medium text-slate-700">
+                                                Tiempo en el puesto actual
+                                            </label>
+                                            <select
+                                                v-model="answers.referencia_v.datos_laborales.experiencia.tiempo_puesto_actual"
+                                                class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
+                                            >
+                                                <option value="">Seleccione una opción</option>
+                                                <option
+                                                    v-for="opt in options.tiempo_puesto_actual"
+                                                    :key="opt"
+                                                    :value="opt"
+                                                >
+                                                    {{ opt }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="block text-sm font-medium text-slate-700">
+                                                Tiempo de experiencia laboral total
+                                            </label>
+                                            <select
+                                                v-model="answers.referencia_v.datos_laborales.experiencia.tiempo_experiencia_laboral"
+                                                class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
+                                            >
+                                                <option value="">Seleccione una opción</option>
+                                                <option
+                                                    v-for="opt in options.tiempo_experiencia_laboral"
+                                                    :key="opt"
+                                                    :value="opt"
+                                                >
+                                                    {{ opt }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </template>
+                                    <!-- Campos normales (no experiencia, ocupacion_puesto, departamento_seccion_area) -->
+                                    <div v-else-if="field !== 'ocupacion_puesto' && field !== 'departamento_seccion_area'" class="space-y-2">
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            {{ field.replace(/_/g, ' ').charAt(0).toUpperCase() + field.replace(/_/g, ' ').slice(1) }}
+                                        </label>
+                                        <select
+                                            v-model="answers.referencia_v.datos_laborales[field]"
+                                            class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
+                                        >
+                                            <option value="">Seleccione una opción</option>
+                                            <option
+                                                v-for="opt in options"
+                                                :key="opt"
+                                                :value="opt"
+                                            >
+                                                {{ opt }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>
@@ -502,215 +710,11 @@ const submitEvaluation = () => {
                     </div>
                 </div>
 
-                <!-- Sección Referencia V -->
-                <div v-if="currentSection === 'referencia_v'" class="space-y-6">
-                    <!-- Datos personales -->
-                    <div class="bg-slate-50 p-4 rounded-lg">
-                        <h3 class="font-medium text-slate-900 mb-4">Datos Personales</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                            <!-- Sexo -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-slate-700">Sexo</label>
-                                <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
-                                    <label
-                                        v-for="option in quiz.reference_v.sexo"
-                                        :key="option"
-                                        class="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-white transition-colors"
-                                    >
-                                        <input
-                                            type="radio"
-                                            :value="option"
-                                            v-model="answers.referencia_v.sexo"
-                                            class="form-radio h-4 w-4 text-slate-800"
-                                        >
-                                        <span class="text-sm text-slate-700">{{ option }}</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <!-- Edad -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-slate-700">Edad</label>
-                                <select
-                                    v-model="answers.referencia_v.edad"
-                                    class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                >
-                                    <option value="">Seleccione un rango de edad</option>
-                                    <option
-                                        v-for="edad in quiz.reference_v.edad"
-                                        :key="edad"
-                                        :value="edad"
-                                    >
-                                        {{ edad }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <!-- Estado Civil -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-slate-700">Estado Civil</label>
-                                <select
-                                    v-model="answers.referencia_v.estado_civil"
-                                    class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                >
-                                    <option value="">Seleccione su estado civil</option>
-                                    <option
-                                        v-for="estado in quiz.reference_v.estado_civil"
-                                        :key="estado"
-                                        :value="estado"
-                                    >
-                                        {{ estado }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <!-- Nivel de Estudios -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-slate-700">Nivel de Estudios</label>
-                                <select
-                                    v-model="answers.referencia_v.nivel_estudios"
-                                    class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                >
-                                    <option value="">Seleccione su nivel de estudios</option>
-                                    <template v-for="(nivel, key) in quiz.reference_v.nivel_estudios" :key="key">
-                                        <template v-if="Array.isArray(nivel)">
-                                            <optgroup :label="key">
-                                                <option
-                                                    v-for="subnivel in nivel"
-                                                    :key="subnivel"
-                                                    :value="`${key} - ${subnivel}`"
-                                                >
-                                                    {{ key }} - {{ subnivel }}
-                                                </option>
-                                            </optgroup>
-                                        </template>
-                                        <option v-else :value="nivel">{{ nivel }}</option>
-                                    </template>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Datos Laborales -->
-                    <div class="bg-slate-50 p-4 rounded-lg">
-                        <h3 class="font-medium text-slate-900 mb-4">Datos Laborales</h3>
-                        <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                            <p class="text-sm text-blue-700">
-                                <strong>Nota:</strong> Su ID Personal será asignado automáticamente al completar la evaluación.
-                            </p>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                            <!-- Campos de texto libre -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-slate-700">Ocupación / Puesto</label>
-                                <select
-                                    v-model="answers.referencia_v.datos_laborales.ocupacion_puesto"
-                                    class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                >
-                                    <option value="">Seleccione su ocupación o puesto</option>
-                                    <option 
-                                        v-for="(name, id) in quiz.organization.occupation_positions" 
-                                        :key="id" 
-                                        :value="name"
-                                    >
-                                        {{ name }}
-                                    </option>
-                                    <option v-if="Object.keys(quiz.organization.occupation_positions || {}).length === 0" value="No especificado">
-                                        No hay puestos configurados
-                                    </option>
-                                </select>
-                            </div>
-
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-slate-700">Departamento / Sección / Área</label>
-                                <select
-                                    v-model="answers.referencia_v.datos_laborales.departamento_seccion_area"
-                                    class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                >
-                                    <option value="">Seleccione su departamento, sección o área</option>
-                                    <option 
-                                        v-for="(name, id) in quiz.organization.department_areas" 
-                                        :key="id" 
-                                        :value="name"
-                                    >
-                                        {{ name }}
-                                    </option>
-                                    <option v-if="Object.keys(quiz.organization.department_areas || {}).length === 0" value="No especificado">
-                                        No hay departamentos configurados
-                                    </option>
-                                </select>
-                            </div>
-
-                            <!-- Campos de selección -->
-                            <template v-for="(options, field) in quiz.reference_v.datos_laborales" :key="field">
-                                <!-- Manejar el campo experiencia por separado -->
-                                <template v-if="field === 'experiencia'">
-                                    <div class="space-y-2">
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            Tiempo en el puesto actual
-                                        </label>
-                                        <select
-                                            v-model="answers.referencia_v.datos_laborales.experiencia.tiempo_puesto_actual"
-                                            class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                        >
-                                            <option value="">Seleccione una opción</option>
-                                            <option
-                                                v-for="opt in options.tiempo_puesto_actual"
-                                                :key="opt"
-                                                :value="opt"
-                                            >
-                                                {{ opt }}
-                                            </option>
-                                        </select>
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            Tiempo de experiencia laboral total
-                                        </label>
-                                        <select
-                                            v-model="answers.referencia_v.datos_laborales.experiencia.tiempo_experiencia_laboral"
-                                            class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                        >
-                                            <option value="">Seleccione una opción</option>
-                                            <option
-                                                v-for="opt in options.tiempo_experiencia_laboral"
-                                                :key="opt"
-                                                :value="opt"
-                                            >
-                                                {{ opt }}
-                                            </option>
-                                        </select>
-                                    </div>
-                                </template>
-                                <!-- Campos normales (no experiencia, ocupacion_puesto, departamento_seccion_area) -->
-                                <div v-else-if="field !== 'ocupacion_puesto' && field !== 'departamento_seccion_area'" class="space-y-2">
-                                    <label class="block text-sm font-medium text-slate-700">
-                                        {{ field.replace(/_/g, ' ').charAt(0).toUpperCase() + field.replace(/_/g, ' ').slice(1) }}
-                                    </label>
-                                    <select
-                                        v-model="answers.referencia_v.datos_laborales[field]"
-                                        class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
-                                    >
-                                        <option value="">Seleccione una opción</option>
-                                        <option
-                                            v-for="opt in options"
-                                            :key="opt"
-                                            :value="opt"
-                                        >
-                                            {{ opt }}
-                                        </option>
-                                    </select>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Navegación -->
                 <div class="mt-8 flex flex-col space-y-4 px-4 sm:px-6 pb-6">
                     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
                         <button
-                            v-if="currentSection !== 'referencia_iii' || currentSubsection !== 'general' || currentPage > 1"
+                            v-if="currentSection !== 'referencia_v'"
                             @click="previousSection"
                             class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
                         >
