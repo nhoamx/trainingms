@@ -12,6 +12,7 @@ import FollowUpQuestionsSection from '@/Components/Quiz/FollowUpQuestionsSection
 import NavigationButtons from '@/Components/Quiz/NavigationButtons.vue';
 import GeneralQuestionsSection from '@/Components/Quiz/GeneralQuestionsSection.vue';
 import ConditionalQuestionsSection from '@/Components/Quiz/ConditionalQuestionsSection.vue';
+import FinalSection from '@/Components/Quiz/FinalSection.vue';
 
 const currentSection = ref('referencia_v');
 const showTraumaticQuestions = ref(false);
@@ -169,14 +170,30 @@ const nextSection = () => {
             currentSection.value = 'referencia_i';
             currentPage.value = 1;
             currentSubsection.value = 'general';
+        } else {
+            currentSection.value = 'final';
         }
         // Scroll suave hacia arriba
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (currentSection.value === 'referencia_i') {
+        currentSection.value = 'final';
+        // Scroll suave hacia arriba  
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
 
 const previousSection = () => {
-    if (currentSection.value === 'referencia_i') {
+    if (currentSection.value === 'final') {
+        if (showTraumaticQuestions.value) {
+            currentSection.value = 'referencia_i';
+        } else {
+            currentSection.value = 'referencia_iii';
+            currentSubsection.value = 'traumatic';
+            currentPage.value = 1;
+        }
+        // Scroll suave hacia arriba
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (currentSection.value === 'referencia_i') {
         currentSection.value = 'referencia_iii';
         currentSubsection.value = 'traumatic';
         currentPage.value = 1;
@@ -216,14 +233,18 @@ const previousSection = () => {
 };
 
 const isLastSection = computed(() => {
-    return currentSection.value === 'referencia_i' || 
-           (currentSection.value === 'referencia_iii' && !showTraumaticQuestions.value);
+    return currentSection.value === 'final';
 });
 
 // Actualizar el progreso para incluir subsecciones
 const progress = computed(() => {
     // Calcular el progreso basado en secciones y subsecciones en el nuevo orden
-    const mainSections = ['referencia_v', 'referencia_iii', 'referencia_i'];
+    const mainSections = ['referencia_v', 'referencia_iii'];
+    if (showTraumaticQuestions.value) {
+        mainSections.push('referencia_i');
+    }
+    mainSections.push('final');
+    
     const currentMainIndex = mainSections.indexOf(currentSection.value);
 
     let sectionProgress = currentMainIndex / mainSections.length;
@@ -292,17 +313,20 @@ const submitEvaluation = () => {
             <!-- Barra de progreso -->
             <ProgressBar :progress="progress">
                 <span v-if="currentSection === 'referencia_v'">
-                    Sección 1 de 3: Datos Personales
+                    Sección 1: Datos Personales
                 </span>
                 <span v-else-if="currentSection === 'referencia_iii'">
-                    Sección 2 de 3:
+                    Sección 2:
                     <span v-if="currentSubsection === 'general'">Cuestionario Principal</span>
                     <span v-else-if="currentSubsection === 'conditional'">Preguntas Condicionales</span>
                     <span v-else-if="currentSubsection === 'traumatic'">Acontecimientos Traumáticos</span>
                     <span v-if="currentSubsection === 'general'"> • Página {{ currentPage }} de {{ totalPages }}</span>
                 </span>
-                <span v-else>
-                    Sección 3 de 3: Preguntas Adicionales
+                <span v-else-if="currentSection === 'referencia_i'">
+                    Sección 3: Preguntas Adicionales
+                </span>
+                <span v-else-if="currentSection === 'final'">
+                    Finalización: Guardar Respuestas
                 </span>
             </ProgressBar>
 
@@ -389,10 +413,31 @@ const submitEvaluation = () => {
                             :answer-options="answerOptions.yesNo"
                         />
                     </div>
+
+                    <!-- Sección Final -->
+                    <div v-if="currentSection === 'final'" class="space-y-6">
+                        <FinalSection
+                            :is-submitting="isSubmitting"
+                            @submit="submitEvaluation"
+                        />
+                        <div class="flex justify-center mt-6">
+                            <button
+                                type="button"
+                                @click="() => {
+                                    currentSection = 'referencia_v';
+                                    currentSubsection = 'general';
+                                    currentPage = 1;
+                                }"
+                                class="px-6 py-2 rounded-md bg-slate-100 text-slate-800 font-medium border border-slate-300 hover:bg-slate-200 transition-colors"
+                            >
+                                Revisar todas mis respuestas
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Navegación -->
-                <div class="mt-8 flex flex-col space-y-4 px-4 sm:px-6 pb-6">
+                <!-- Navegación (no mostrar en la sección final ya que tiene su propio botón) -->
+                <div v-if="currentSection !== 'final'" class="mt-8 flex flex-col space-y-4 px-4 sm:px-6 pb-6">
                     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
                         <button
                             v-if="currentSection !== 'referencia_v'"
@@ -407,7 +452,6 @@ const submitEvaluation = () => {
                         </button>
                         <div class="flex items-center justify-center sm:justify-end space-x-4">
                             <button
-                                v-if="!isLastSection || (currentSection === 'referencia_iii' && currentSubsection !== 'traumatic') || (currentSubsection === 'general' && currentPage < totalPages)"
                                 @click="nextSection"
                                 class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-slate-800 rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
                             >
@@ -416,20 +460,6 @@ const submitEvaluation = () => {
                                         (currentSubsection === 'general' && currentPage < totalPages ? 'Siguiente página' : 'Siguiente subsección') :
                                         'Siguiente sección'
                                 }}
-                            </button>
-                            <button
-                                v-else
-                                @click="submitEvaluation"
-                                :disabled="isSubmitting"
-                                class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <span v-if="isSubmitting" class="mr-2">
-                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </span>
-                                {{ isSubmitting ? 'Enviando...' : 'Finalizar' }}
                             </button>
                         </div>
                     </div>

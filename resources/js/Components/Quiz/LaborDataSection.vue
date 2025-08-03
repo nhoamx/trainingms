@@ -1,11 +1,6 @@
 <template>
     <div class="bg-slate-50 p-4 rounded-lg">
         <h3 class="font-medium text-slate-900 mb-4">Datos Laborales</h3>
-        <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p class="text-sm text-blue-700">
-                <strong>Nota:</strong> Su ID Personal será asignado automáticamente al completar la evaluación.
-            </p>
-        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <!-- Ocupación / Puesto -->
             <div class="space-y-2">

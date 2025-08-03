@@ -9,7 +9,7 @@ import PersonalDataSection from '@/Components/Quiz/PersonalDataSection.vue';
 import LaborDataSection from '@/Components/Quiz/LaborDataSection.vue';
 import TraumaticEventsSection from '@/Components/Quiz/TraumaticEventsSection.vue';
 import FollowUpQuestionsSection from '@/Components/Quiz/FollowUpQuestionsSection.vue';
-import NavigationButtons from '@/Components/Quiz/NavigationButtons.vue';
+import FinalSection from '@/Components/Quiz/FinalSection.vue';
 
 const currentSection = ref('referencia_v');
 const showFollowUpQuestions = ref(false);
@@ -63,14 +63,28 @@ const nextSection = () => {
         checkTraumaticEvents();
         if (showFollowUpQuestions.value) {
             currentSection.value = 'referencia_i';
+        } else {
+            currentSection.value = 'final';
         }
+        // Scroll suave hacia arriba
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (currentSection.value === 'referencia_i') {
+        currentSection.value = 'final';
         // Scroll suave hacia arriba
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
 
 const previousSection = () => {
-    if (currentSection.value === 'referencia_i') {
+    if (currentSection.value === 'final') {
+        if (showFollowUpQuestions.value) {
+            currentSection.value = 'referencia_i';
+        } else {
+            currentSection.value = 'acontecimientos_traumaticos';
+        }
+        // Scroll suave hacia arriba
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (currentSection.value === 'referencia_i') {
         currentSection.value = 'acontecimientos_traumaticos';
         // Scroll suave hacia arriba
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -82,8 +96,7 @@ const previousSection = () => {
 };
 
 const isLastSection = computed(() => {
-    return currentSection.value === 'referencia_i' || 
-           (currentSection.value === 'acontecimientos_traumaticos' && !showFollowUpQuestions.value);
+    return currentSection.value === 'final';
 });
 
 const progress = computed(() => {
@@ -91,6 +104,7 @@ const progress = computed(() => {
     if (showFollowUpQuestions.value) {
         sections.push('referencia_i');
     }
+    sections.push('final');
     
     const currentIndex = sections.indexOf(currentSection.value);
     return ((currentIndex + 1) / sections.length) * 100;
@@ -101,14 +115,13 @@ const viewMode = ref('comfortable'); // 'comfortable' o 'compact'
 const isSubmitting = ref(false);
 
 // Helpers para la sección de acontecimientos traumáticos
+const traumaticQuestions = computed(() => props.quiz?.questions?.acontecimientos_traumaticos?.questions || []);
 const traumaticAnswers = computed(() => answers.value.acontecimientos_traumaticos || {});
 const allTraumaticAnswered = computed(() => {
-    const questions = props.quiz?.questions?.acontecimientos_traumaticos?.questions || [];
-    return questions.length > 0 && questions.every((_, idx) => traumaticAnswers.value[idx] !== undefined);
+    return traumaticQuestions.value.length > 0 && traumaticQuestions.value.every((_, idx) => traumaticAnswers.value[idx] !== undefined);
 });
 const allTraumaticNo = computed(() => {
-    const questions = props.quiz?.questions?.acontecimientos_traumaticos?.questions || [];
-    return questions.length > 0 && questions.every((_, idx) => traumaticAnswers.value[idx] === false);
+    return traumaticQuestions.value.length > 0 && traumaticQuestions.value.every((_, idx) => traumaticAnswers.value[idx] === false);
 });
 const traumaticHasYes = computed(() => {
     return Object.values(traumaticAnswers.value).some(v => v === true);
@@ -148,8 +161,11 @@ const submitEvaluation = () => {
                 <span v-else-if="currentSection === 'acontecimientos_traumaticos'">
                     Sección 2: Acontecimientos Traumáticos
                 </span>
-                <span v-else>
+                <span v-else-if="currentSection === 'referencia_i'">
                     Sección 3: Preguntas de Seguimiento
+                </span>
+                <span v-else-if="currentSection === 'final'">
+                    Finalización: Guardar Respuestas
                 </span>
             </ProgressBar>
 
@@ -203,20 +219,43 @@ const submitEvaluation = () => {
                         />
                     </div>
 
-                <!-- Navegación -->
-                <NavigationButtons
-                    :show-previous="currentSection !== 'referencia_v'"
-                    :show-next="currentSection === 'acontecimientos_traumaticos' ? (traumaticHasYes && allTraumaticAnswered) : !isLastSection"
-                    :show-submit="(currentSection === 'acontecimientos_traumaticos' && (!traumaticHasYes || !allTraumaticAnswered || allTraumaticNo)) || isLastSection"
-                    :is-last-section="isLastSection"
-                    :next-disabled="currentSection === 'acontecimientos_traumaticos' && !allTraumaticAnswered"
-                    :submit-disabled="currentSection === 'acontecimientos_traumaticos' ? (!allTraumaticAnswered || (!allTraumaticNo && !traumaticHasYes)) : isSubmitting"
-                    :is-submitting="isSubmitting"
-                    :submit-label="isSubmitting ? 'Enviando...' : (currentSection === 'acontecimientos_traumaticos' ? 'Finalizar' : 'Enviar Evaluación')"
-                    @previous="previousSection"
-                    @next="nextSection"
-                    @submit="submitEvaluation"
-                />
+                    <!-- Sección Final -->
+                    <div v-if="currentSection === 'final'" class="space-y-6">
+                        <FinalSection
+                            :is-submitting="isSubmitting"
+                            @submit="submitEvaluation"
+                        />
+                        <div class="flex justify-center mt-6">
+                            <button
+                                type="button"
+                                @click="currentSection = 'referencia_v'"
+                                class="px-6 py-2 rounded-md bg-slate-100 text-slate-800 font-medium border border-slate-300 hover:bg-slate-200 transition-colors"
+                            >
+                                Revisar todas mis respuestas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navegación (no mostrar en la sección final ya que tiene su propio botón) -->
+                <div v-if="currentSection !== 'final'" class="mt-8 flex flex-col space-y-4 px-4 sm:px-6 pb-6">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
+                        <button
+                            v-if="currentSection !== 'referencia_v'"
+                            @click="previousSection"
+                            class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
+                        >
+                            Sección anterior
+                        </button>
+                        <div class="flex items-center justify-center sm:justify-end space-x-4">
+                            <button
+                                @click="nextSection"
+                                class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-slate-800 rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Siguiente sección
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

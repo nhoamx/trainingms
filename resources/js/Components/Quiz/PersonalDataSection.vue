@@ -86,6 +86,29 @@
                     </template>
                 </select>
             </div>
+            <!-- INE Frente -->
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-slate-700">Foto INE (Frente)</label>
+                <input
+                    type="file"
+                    accept="image/*"
+                    @change="onFileChange('ine_frente', $event)"
+                    class="mt-1 block w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+                >
+                <div v-if="modelValue.ine_frente" class="text-xs text-slate-500 truncate">Archivo seleccionado: {{ modelValue.ine_frente.name }}</div>
+            </div>
+
+            <!-- INE Reverso -->
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-slate-700">Foto INE (Reverso)</label>
+                <input
+                    type="file"
+                    accept="image/*"
+                    @change="onFileChange('ine_reverso', $event)"
+                    class="mt-1 block w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+                >
+                <div v-if="modelValue.ine_reverso" class="text-xs text-slate-500 truncate">Archivo seleccionado: {{ modelValue.ine_reverso.name }}</div>
+            </div>
         </div>
     </div>
 </template>
@@ -108,6 +131,14 @@ const updateField = (field, value) => {
     emit('update:modelValue', {
         ...props.modelValue,
         [field]: value
+    });
+};
+
+const onFileChange = (field, event) => {
+    const file = event.target.files && event.target.files[0] ? event.target.files[0] : null;
+    emit('update:modelValue', {
+        ...props.modelValue,
+        [field]: file
     });
 };
 </script>
