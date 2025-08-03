@@ -9,11 +9,12 @@ const showQRModal = ref(false);
 const selectedQR = ref(null);
 const selectedQRName = ref('');
 
+
 const form = useForm({
     name: '',
     organization_id: '',
     expires_at: '',
-    is_reduced: false
+    quiz_type: 'normal' // valores: normal, reducido, cisneros
 });
 
 const props = defineProps({
@@ -99,9 +100,13 @@ const openQRModal = (qrCode, name) => {
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span 
                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                        :class="quiz.is_reduced ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'"
+                                        :class="{
+                                            'bg-orange-100 text-orange-800': quiz.is_reduced,
+                                            'bg-green-100 text-green-800': quiz.is_cisneros,
+                                            'bg-blue-100 text-blue-800': !quiz.is_reduced && !quiz.is_cisneros
+                                        }"
                                     >
-                                        {{ quiz.is_reduced ? 'Reducido' : 'Completo' }}
+                                        {{ quiz.is_cisneros ? 'Cisneros' : (quiz.is_reduced ? 'Reducido' : 'Completo') }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -208,16 +213,23 @@ const openQRModal = (qrCode, name) => {
                                 >
                             </div>
                             <div class="mb-4">
-                                <label class="flex items-center space-x-2">
-                                    <input 
-                                        type="checkbox" 
-                                        v-model="form.is_reduced"
-                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                                    >
-                                    <span class="text-sm font-medium text-gray-700">Examen Reducido</span>
-                                </label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Examen</label>
+                                <div class="flex space-x-6">
+                                    <label class="flex items-center space-x-2">
+                                        <input type="radio" value="normal" v-model="form.quiz_type" class="form-radio text-blue-600">
+                                        <span class="text-sm">Normal</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2">
+                                        <input type="radio" value="reducido" v-model="form.quiz_type" class="form-radio text-orange-600">
+                                        <span class="text-sm">Reducido</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2">
+                                        <input type="radio" value="cisneros" v-model="form.quiz_type" class="form-radio text-green-600">
+                                        <span class="text-sm">Cisneros</span>
+                                    </label>
+                                </div>
                                 <p class="mt-1 text-xs text-gray-500">
-                                    Solo incluye preguntas de acontecimientos traumáticos (preguntas 1-6)
+                                    "Reducido" solo incluye preguntas de acontecimientos traumáticos (preguntas 1-6). "Cisneros" muestra la escala Cisneros.
                                 </p>
                             </div>
                             <div class="flex justify-end space-x-3">
