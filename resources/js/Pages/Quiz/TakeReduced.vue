@@ -130,15 +130,34 @@ const traumaticHasYes = computed(() => {
 const submitEvaluation = () => {
     isSubmitting.value = true;
     
-    const dataToSend = {
-        referencia_iii: { acontecimientos_traumaticos: answers.value.acontecimientos_traumaticos },
-        referencia_i: answers.value.referencia_i || {},
-        referencia_v: answers.value.referencia_v
-    };
+    // Crear FormData para manejar archivos
+    const formData = new FormData();
     
-    console.log('Enviando datos:', dataToSend);
+    // Agregar datos de respuestas como JSON
+    formData.append('referencia_iii', JSON.stringify({ acontecimientos_traumaticos: answers.value.acontecimientos_traumaticos }));
+    formData.append('referencia_i', JSON.stringify(answers.value.referencia_i || {}));
     
-    router.post(route('quiz.submit', props.quiz.id), dataToSend, {
+    // Separar archivos de imágenes de los demás datos de referencia_v
+    const referenciaVData = { ...answers.value.referencia_v };
+    
+    // Manejar archivos de INE si existen
+    if (referenciaVData.ine_frente && referenciaVData.ine_frente instanceof File) {
+        formData.append('ine_frente', referenciaVData.ine_frente);
+        delete referenciaVData.ine_frente;
+    }
+    
+    if (referenciaVData.ine_reverso && referenciaVData.ine_reverso instanceof File) {
+        formData.append('ine_reverso', referenciaVData.ine_reverso);
+        delete referenciaVData.ine_reverso;
+    }
+    
+    // Agregar el resto de datos de referencia_v
+    formData.append('referencia_v', JSON.stringify(referenciaVData));
+    
+    console.log('Enviando datos con FormData');
+    
+    router.post(route('quiz.submit', props.quiz.id), formData, {
+        forceFormData: true,
         onFinish: () => {
             isSubmitting.value = false;
         },

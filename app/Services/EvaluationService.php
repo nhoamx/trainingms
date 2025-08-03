@@ -30,7 +30,7 @@ class EvaluationService
     public function getAllEvaluationsByOrganization()
     {
         // Solo traemos las organizaciones y un conteo de evaluaciones
-        return Organization::withCount('evaluations')
+        return Organization::withCount(['evaluations', 'quizzes'])
             ->get()
             ->map(function ($organization) {
                 return [
@@ -38,6 +38,7 @@ class EvaluationService
                     'name' => $organization->name,
                     'logo' => $organization->logo,
                     'evaluations_count' => $organization->evaluations_count,
+                    'online_quizzes_count' => $organization->quizzes_count,
                     // Indicador para ver el reporte, el frontend usará el id
                 ];
             });

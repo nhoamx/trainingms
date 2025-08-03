@@ -286,16 +286,35 @@ const handleSubsectionChange = (subsection) => {
 const submitEvaluation = () => {
     isSubmitting.value = true;
     
-    const dataToSend = {
-        referencia_iii: answers.value.referencia_iii,
-        referencia_i: answers.value.referencia_i || {},
-        referencia_v: answers.value.referencia_v
-    };
+    // Crear FormData para manejar archivos
+    const formData = new FormData();
     
-    console.log('Enviando datos:', dataToSend);
+    // Agregar datos de respuestas como JSON
+    formData.append('referencia_iii', JSON.stringify(answers.value.referencia_iii));
+    formData.append('referencia_i', JSON.stringify(answers.value.referencia_i || {}));
     
-    // Usar router de Inertia para enviar los datos
-    router.post(route('quiz.submit', props.quiz.id), dataToSend, {
+    // Separar archivos de imágenes de los demás datos de referencia_v
+    const referenciaVData = { ...answers.value.referencia_v };
+    
+    // Manejar archivos de INE si existen
+    if (referenciaVData.ine_frente && referenciaVData.ine_frente instanceof File) {
+        formData.append('ine_frente', referenciaVData.ine_frente);
+        delete referenciaVData.ine_frente; // Remover del objeto JSON
+    }
+    
+    if (referenciaVData.ine_reverso && referenciaVData.ine_reverso instanceof File) {
+        formData.append('ine_reverso', referenciaVData.ine_reverso);
+        delete referenciaVData.ine_reverso; // Remover del objeto JSON
+    }
+    
+    // Agregar el resto de datos de referencia_v
+    formData.append('referencia_v', JSON.stringify(referenciaVData));
+    
+    console.log('Enviando datos con FormData');
+    
+    // Usar router de Inertia para enviar los datos con FormData
+    router.post(route('quiz.submit', props.quiz.id), formData, {
+        forceFormData: true,
         onFinish: () => {
             isSubmitting.value = false;
         },

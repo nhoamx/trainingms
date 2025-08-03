@@ -41,4 +41,9 @@ class Organization extends Model
     {
         return $this->hasMany(FolioBatch::class);
     }
+
+    public function quizzes()
+    {
+        return $this->hasMany(Quiz::class);
+    }
 }

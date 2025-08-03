@@ -218,11 +218,33 @@ class QuizController extends Controller
 
         try {
             $validated = $request->validate([
-                'referencia_iii' => 'nullable|array',
-                'referencia_i' => 'nullable|array',
-                'referencia_v' => 'nullable|array',
-                'escala_cisneros' => 'nullable|array'
+                'referencia_iii' => 'nullable|string',
+                'referencia_i' => 'nullable|string',
+                'referencia_v' => 'nullable|string',
+                'escala_cisneros' => 'nullable|string',
+                'ine_frente' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'ine_reverso' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
             ]);
+
+            // Decodificar datos JSON
+            $decodedData = [];
+            foreach (['referencia_iii', 'referencia_i', 'referencia_v', 'escala_cisneros'] as $key) {
+                if (isset($validated[$key]) && !empty($validated[$key])) {
+                    $decoded = json_decode($validated[$key], true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $decodedData[$key] = $decoded;
+                    } else {
+                        \Illuminate\Support\Facades\Log::warning('Error al decodificar JSON', [
+                            'key' => $key,
+                            'json_error' => json_last_error_msg(),
+                            'data' => $validated[$key]
+                        ]);
+                    }
+                }
+            }
+            
+            // Reemplazar datos validados con datos decodificados
+            $validated = array_merge($validated, $decodedData);
 
             \Illuminate\Support\Facades\Log::info('Datos validados correctamente', [
                 'quiz_id' => $quiz->id,
@@ -277,8 +299,11 @@ class QuizController extends Controller
                 'organization_id' => $quiz->organization_id
             ]);
 
+            // Procesar imágenes del INE si están presentes
+            $ineImages = $this->processIneImages($request, $folioNumber, $personalId);
+
             // Wrap operations in database transaction for data integrity
-            DB::transaction(function () use ($folioNumber, $personalId, $quiz, $validated) {
+            DB::transaction(function () use ($folioNumber, $personalId, $quiz, $validated, $ineImages) {
                 \Illuminate\Support\Facades\Log::info('Iniciando transacción de base de datos', [
                     'quiz_id' => $quiz->id,
                     'folio' => $folioNumber,
@@ -286,7 +311,7 @@ class QuizController extends Controller
                 ]);
 
                 // Store online answers using the new method
-                $this->storeOnlineAnswers($folioNumber, $personalId, $quiz->organization_id, $quiz->id, $validated);
+                $this->storeOnlineAnswers($folioNumber, $personalId, $quiz->organization_id, $quiz->id, $validated, $ineImages);
 
                 // Crear un registro de folio virtual para mantener la trazabilidad
                 $this->createVirtualFolio($quiz->organization_id, $folioNumber);
@@ -504,10 +529,58 @@ class QuizController extends Controller
     }
 
     /**
+     * Procesa y almacena las imágenes del INE
+     */
+    private function processIneImages($request, $folio, $personalId)
+    {
+        $ineImages = [];
+        
+        try {
+            // Procesar INE frente
+            if ($request->hasFile('ine_frente')) {
+                $ineFrente = $request->file('ine_frente');
+                $frenteFileName = "ine_frente_{$folio}_{$personalId}." . $ineFrente->getClientOriginalExtension();
+                $frentePath = $ineFrente->storeAs('ine_images', $frenteFileName, 'public');
+                $ineImages['ine_frente'] = $frentePath;
+                
+                \Illuminate\Support\Facades\Log::info('INE frente procesado', [
+                    'folio' => $folio,
+                    'personal_id' => $personalId,
+                    'file_path' => $frentePath
+                ]);
+            }
+
+            // Procesar INE reverso
+            if ($request->hasFile('ine_reverso')) {
+                $ineReverso = $request->file('ine_reverso');
+                $reversoFileName = "ine_reverso_{$folio}_{$personalId}." . $ineReverso->getClientOriginalExtension();
+                $reversoPath = $ineReverso->storeAs('ine_images', $reversoFileName, 'public');
+                $ineImages['ine_reverso'] = $reversoPath;
+                
+                \Illuminate\Support\Facades\Log::info('INE reverso procesado', [
+                    'folio' => $folio,
+                    'personal_id' => $personalId,
+                    'file_path' => $reversoPath
+                ]);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al procesar imágenes del INE', [
+                'folio' => $folio,
+                'personal_id' => $personalId,
+                'error_message' => $e->getMessage()
+            ]);
+            
+            throw new \Exception('Error al procesar las imágenes del INE: ' . $e->getMessage());
+        }
+
+        return $ineImages;
+    }
+
+    /**
      * Store online quiz answers in the online_answers table
      * Processes and stores individual question-answer pairs for different reference guide types
      */
-    private function storeOnlineAnswers($folio, $personalId, $organizationId, $quizId, $answers)
+    private function storeOnlineAnswers($folio, $personalId, $organizationId, $quizId, $answers, $ineImages = [])
     {
         try {
             \Illuminate\Support\Facades\Log::info('Iniciando almacenamiento de respuestas online', [
@@ -613,6 +686,24 @@ class QuizController extends Controller
                         ];
                         $recordCounts['referencia_v']++;
                     }
+                }
+            }
+
+            // Process INE images if present
+            if (!empty($ineImages)) {
+                foreach ($ineImages as $imageType => $imagePath) {
+                    $records[] = [
+                        'folio' => $folio,
+                        'personal_id' => $personalId,
+                        'organization_id' => $organizationId,
+                        'quiz_id' => $quizId,
+                        'question_key' => $imageType,
+                        'answer_value' => $imagePath,
+                        'reference_guide' => 'V',
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                    $recordCounts['referencia_v']++;
                 }
             }
             
