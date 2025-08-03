@@ -44,6 +44,9 @@ Route::middleware(['auth'])->group(function () {
         ]);
     })->name('organization.report');
 
+    Route::get('/organization/{id}/online-results', [App\Http\Controllers\OnlineResultsController::class, 'index'])->name('organization.online-results');
+    Route::get('/organization/{organizationId}/participant/{participantId}', [App\Http\Controllers\OnlineResultsController::class, 'showParticipant'])->name('organization.participant.show');
+
     Route::post('/folio-batches', [App\Http\Controllers\FolioBatchController::class, 'store'])->name('folio-batches.store');
     Route::get('/folio-batches/{batchId}/folios', [App\Http\Controllers\FolioBatchController::class, 'getFolios'])->name('folio-batches.folios');
     Route::delete('/folio-batches/{batchId}', [App\Http\Controllers\FolioBatchController::class, 'destroy'])->name('folio-batches.destroy');
