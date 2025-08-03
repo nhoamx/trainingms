@@ -30,8 +30,8 @@
                             <span class="text-sm font-medium text-gray-500">Tipo de evaluación:</span>
                             <span class="text-sm text-gray-900">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                      :class="quiz.is_reduced ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'">
-                                    {{ quiz.is_reduced ? 'Evaluación Reducida' : 'Evaluación Completa' }}
+                                      :class="getQuizTypeClass()">
+                                    {{ getQuizTypeLabel() }}
                                 </span>
                             </span>
                         </div>
@@ -115,6 +115,26 @@ const formatDate = (date) => {
         hour: '2-digit',
         minute: '2-digit'
     })
+}
+
+const getQuizTypeLabel = () => {
+    if (props.quiz.is_cisneros) {
+        return 'Evaluación Cisneros'
+    } else if (props.quiz.is_reduced) {
+        return 'Evaluación Reducida'
+    } else {
+        return 'Evaluación Completa'
+    }
+}
+
+const getQuizTypeClass = () => {
+    if (props.quiz.is_cisneros) {
+        return 'bg-purple-100 text-purple-800'
+    } else if (props.quiz.is_reduced) {
+        return 'bg-orange-100 text-orange-800'
+    } else {
+        return 'bg-blue-100 text-blue-800'
+    }
 }
 
 const closeWindow = () => {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Quiz;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -44,45 +45,111 @@ class QuizController extends Controller
 
     public function store(Request $request)
     {
+        try {
+            \Illuminate\Support\Facades\Log::info('Iniciando creación de quiz', [
+                'user_ip' => $request->ip(),
+                'request_data' => $request->only(['name', 'organization_id', 'expires_at', 'quiz_type'])
+            ]);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'organization_id' => 'required|exists:organizations,id',
-            'expires_at' => 'required|date|after:now',
-            'quiz_type' => 'required|in:normal,reducido,cisneros',
-        ]);
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'organization_id' => 'required|exists:organizations,id',
+                'expires_at' => 'required|date|after:now',
+                'quiz_type' => 'required|in:normal,reducido,cisneros',
+            ]);
 
-        $isReduced = $validated['quiz_type'] === 'reducido';
-        $isCisneros = $validated['quiz_type'] === 'cisneros';
+            $isReduced = $validated['quiz_type'] === 'reducido';
+            $isCisneros = $validated['quiz_type'] === 'cisneros';
 
-        $quiz = Quiz::create([
-            'name' => $validated['name'],
-            'organization_id' => $validated['organization_id'],
-            'temp_url' => Str::random(32),
-            'expires_at' => $validated['expires_at'],
-            'is_active' => true,
-            'is_reduced' => $isReduced,
-            'is_cisneros' => $isCisneros,
-        ]);
+            $quiz = Quiz::create([
+                'name' => $validated['name'],
+                'organization_id' => $validated['organization_id'],
+                'temp_url' => Str::random(32),
+                'expires_at' => $validated['expires_at'],
+                'is_active' => true,
+                'is_reduced' => $isReduced,
+                'is_cisneros' => $isCisneros,
+            ]);
 
-        return redirect()->route('quizzes.index')
-            ->with('success', 'Examen creado exitosamente');
+            \Illuminate\Support\Facades\Log::info('Quiz creado exitosamente', [
+                'quiz_id' => $quiz->id,
+                'quiz_name' => $quiz->name,
+                'organization_id' => $quiz->organization_id,
+                'quiz_type' => $validated['quiz_type']
+            ]);
+
+            return redirect()->route('quizzes.index')
+                ->with('success', 'Examen creado exitosamente');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Illuminate\Support\Facades\Log::warning('Validación fallida al crear quiz', [
+                'errors' => $e->errors(),
+                'user_ip' => $request->ip()
+            ]);
+            
+            return back()->withErrors($e->errors())->withInput()
+                ->with('error', 'Los datos proporcionados no son válidos. Por favor, revise los campos.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al crear quiz', [
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'user_ip' => $request->ip()
+            ]);
+
+            return back()->withInput()
+                ->with('error', 'Error al crear el examen. Por favor, inténtelo nuevamente.');
+        }
     }
 
     public function toggle(Quiz $quiz)
     {
         $quiz->update(['is_active' => !$quiz->is_active]);
-        
+
         return back()->with('success', 'Estado del examen actualizado');
     }
 
     public function showTemp($tempUrl)
     {
-        $quiz = Quiz::with(['organization.occupationPositions', 'organization.departmentAreas'])
-            ->where('temp_url', $tempUrl)
-            ->where('is_active', true)
-            ->where('expires_at', '>', now())
-            ->firstOrFail();
+        try {
+            \Illuminate\Support\Facades\Log::info('Acceso a quiz temporal', [
+                'temp_url' => $tempUrl,
+                'user_ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
+            $quiz = Quiz::with(['organization.occupationPositions', 'organization.departmentAreas'])
+                ->where('temp_url', $tempUrl)
+                ->where('is_active', true)
+                ->where('expires_at', '>', now())
+                ->first();
+
+            if (!$quiz) {
+                \Illuminate\Support\Facades\Log::warning('Quiz no encontrado o no disponible', [
+                    'temp_url' => $tempUrl,
+                    'user_ip' => request()->ip()
+                ]);
+                
+                abort(404, 'El examen no está disponible o ha expirado.');
+            }
+
+            \Illuminate\Support\Facades\Log::info('Quiz cargado exitosamente', [
+                'quiz_id' => $quiz->id,
+                'quiz_name' => $quiz->name,
+                'organization_id' => $quiz->organization_id,
+                'is_reduced' => $quiz->is_reduced,
+                'is_cisneros' => $quiz->is_cisneros
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al cargar quiz temporal', [
+                'temp_url' => $tempUrl,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'user_ip' => request()->ip()
+            ]);
+            
+            abort(500, 'Error al cargar el examen. Por favor, inténtelo nuevamente.');
+        }
 
         // Preparar datos de la organización
         $organizationData = [
@@ -100,7 +167,6 @@ class QuizController extends Controller
                     'id' => $quiz->id,
                     'name' => $quiz->name,
                     'organization' => $organizationData,
-                    // Aseguramos que reference_v y datos_laborales existan para evitar errores en el frontend
                     'questions' => [
                         'acontecimientos_traumaticos' => config('referencia_iii_reduced.acontecimientos_traumaticos')
                     ],
@@ -143,60 +209,100 @@ class QuizController extends Controller
 
     public function submit(Request $request, Quiz $quiz)
     {
-        \Log::info('Quiz submit iniciado', ['quiz_id' => $quiz->id]);
-        
-        $validated = $request->validate([
-            'referencia_iii' => 'required|array',
-            'referencia_i' => 'nullable|array',
-            'referencia_v' => 'required|array'
+        \Illuminate\Support\Facades\Log::info('Quiz submit iniciado', [
+            'quiz_id' => $quiz->id,
+            'organization_id' => $quiz->organization_id,
+            'user_ip' => $request->ip(),
+            'user_agent' => $request->userAgent()
         ]);
 
-        \Log::info('Datos validados correctamente', ['data_keys' => array_keys($validated)]);
+        try {
+            $validated = $request->validate([
+                'referencia_iii' => 'nullable|array',
+                'referencia_i' => 'nullable|array',
+                'referencia_v' => 'nullable|array',
+                'escala_cisneros' => 'nullable|array'
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('Datos validados correctamente', [
+                'quiz_id' => $quiz->id,
+                'data_keys' => array_keys($validated),
+                'answer_counts' => [
+                    'referencia_iii' => isset($validated['referencia_iii']) ? count($validated['referencia_iii']) : 0,
+                    'referencia_i' => count($validated['referencia_i']),
+                    'referencia_v' => count($validated['referencia_v']),
+                    'escala_cisneros' => isset($validated['escala_cisneros']) ? count($validated['escala_cisneros']) : 0,
+                ]
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Illuminate\Support\Facades\Log::warning('Validación fallida en quiz submit', [
+                'quiz_id' => $quiz->id,
+                'errors' => $e->errors(),
+                'user_ip' => $request->ip()
+            ]);
+            
+            return back()->withErrors($e->errors())->withInput()
+                ->with('error', 'Los datos enviados no son válidos. Por favor, complete todos los campos requeridos.');
+        }
 
         // Verificar que el quiz esté activo y no haya expirado
         if (!$quiz->is_active || $quiz->isExpired()) {
-            \Log::warning('Quiz inactivo o expirado', ['is_active' => $quiz->is_active, 'expires_at' => $quiz->expires_at]);
+            \Illuminate\Support\Facades\Log::warning('Intento de acceso a quiz inactivo o expirado', [
+                'quiz_id' => $quiz->id,
+                'is_active' => $quiz->is_active,
+                'expires_at' => $quiz->expires_at,
+                'current_time' => now(),
+                'user_ip' => $request->ip()
+            ]);
+            
             return back()->with('error', 'El examen no está disponible o ha expirado');
         }
 
-        // Generar personal_id automáticamente basado en los folios de la organización
-        $personalId = $this->generateNextPersonalId($quiz->organization_id);
-
-        // Combinar todas las respuestas en un solo array
-        $allAnswers = array_merge(
-            $validated['referencia_iii'] ?? [],
-            $validated['referencia_i'] ?? [],
-            $validated['referencia_v'] ?? []
-        );
-
-        // Determinar la guía de referencia principal (por defecto III)
-        $referenceGuide = 'III';
-
         try {
-            // Generar el siguiente folio incremental para la organización
-            $folioNumber = $this->getNextFolioNumber($quiz->organization_id);
-
-            // Crear la evaluación con el folio generado
-            $evaluation = \App\Models\Evaluation::create([
-                'document_id' => null,
-                'folio' => $folioNumber,
-                'personal_id' => $personalId,
-                'organization_id' => $quiz->organization_id,
+            // Generar personal_id automáticamente basado en los folios de la organización
+            $personalId = $this->generateNextPersonalId($quiz->organization_id);
+            
+            \Illuminate\Support\Facades\Log::info('Personal ID generado', [
                 'quiz_id' => $quiz->id,
-                'data' => $allAnswers,
-                'reference_guide' => $referenceGuide,
+                'personal_id' => $personalId,
+                'organization_id' => $quiz->organization_id
             ]);
 
-            // Crear un registro de folio virtual para mantener la trazabilidad
-            $this->createVirtualFolio($quiz->organization_id, $folioNumber, $evaluation->id);
-
-            // Guardar respuestas directamente en Questions
-            $evaluation->saveOnlineAnswers($allAnswers, $referenceGuide);
-
-            \Log::info('Evaluación guardada exitosamente', [
-                'evaluation_id' => $evaluation->id,
+            // Generar el siguiente folio incremental para la organización
+            $folioNumber = $this->getNextFolioNumber($quiz->organization_id);
+            
+            \Illuminate\Support\Facades\Log::info('Folio generado', [
+                'quiz_id' => $quiz->id,
                 'folio' => $folioNumber,
-                'personal_id' => $personalId
+                'organization_id' => $quiz->organization_id
+            ]);
+
+            // Wrap operations in database transaction for data integrity
+            DB::transaction(function () use ($folioNumber, $personalId, $quiz, $validated) {
+                \Illuminate\Support\Facades\Log::info('Iniciando transacción de base de datos', [
+                    'quiz_id' => $quiz->id,
+                    'folio' => $folioNumber,
+                    'personal_id' => $personalId
+                ]);
+
+                // Store online answers using the new method
+                $this->storeOnlineAnswers($folioNumber, $personalId, $quiz->organization_id, $quiz->id, $validated);
+
+                // Crear un registro de folio virtual para mantener la trazabilidad
+                $this->createVirtualFolio($quiz->organization_id, $folioNumber);
+                
+                \Illuminate\Support\Facades\Log::info('Transacción completada exitosamente', [
+                    'quiz_id' => $quiz->id,
+                    'folio' => $folioNumber,
+                    'personal_id' => $personalId
+                ]);
+            });
+
+            \Illuminate\Support\Facades\Log::info('Respuestas guardadas exitosamente', [
+                'quiz_id' => $quiz->id,
+                'folio' => $folioNumber,
+                'personal_id' => $personalId,
+                'organization_id' => $quiz->organization_id
             ]);
 
             // Redirigir a la página de confirmación
@@ -205,6 +311,7 @@ class QuizController extends Controller
                     'id' => $quiz->id,
                     'name' => $quiz->name,
                     'is_reduced' => $quiz->is_reduced,
+                    'is_cisneros' => $quiz->is_cisneros,
                     'organization' => [
                         'id' => $quiz->organization->id,
                         'name' => $quiz->organization->name,
@@ -214,10 +321,28 @@ class QuizController extends Controller
                 'personalId' => $personalId,
                 'message' => 'Examen completado exitosamente'
             ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Illuminate\Support\Facades\Log::error('Error de base de datos al guardar examen', [
+                'quiz_id' => $quiz->id,
+                'organization_id' => $quiz->organization_id,
+                'error_code' => $e->getCode(),
+                'error_message' => $e->getMessage(),
+                'sql_state' => $e->errorInfo[0] ?? null,
+                'user_ip' => $request->ip()
+            ]);
 
+            return back()->with('error', 'Error al guardar el examen en la base de datos. Por favor, inténtelo nuevamente.');
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Error al guardar examen desde Quiz: ' . $e->getMessage());
-            
+            \Illuminate\Support\Facades\Log::error('Error general al guardar examen', [
+                'quiz_id' => $quiz->id,
+                'organization_id' => $quiz->organization_id,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'stack_trace' => $e->getTraceAsString(),
+                'user_ip' => $request->ip()
+            ]);
+
             return back()->with('error', 'Error al guardar el examen. Por favor, inténtelo nuevamente.');
         }
     }
@@ -227,21 +352,47 @@ class QuizController extends Controller
      */
     private function getNextFolioNumber($organizationId)
     {
-        // Buscar el último folio usado en la organización
-        $lastFolio = \App\Models\Folio::whereHas('folioBatch', function($query) use ($organizationId) {
+        try {
+            \Illuminate\Support\Facades\Log::info('Generando siguiente folio', [
+                'organization_id' => $organizationId
+            ]);
+
+            // Buscar el último folio usado en la organización
+            $lastFolio = \App\Models\Folio::whereHas('folioBatch', function ($query) use ($organizationId) {
                 $query->where('organization_id', $organizationId);
             })
-            ->orderBy('numeric_value', 'desc')
-            ->first();
+                ->orderBy('numeric_value', 'desc')
+                ->first();
 
-        // Si no hay folios, empezar desde 0001
-        if (!$lastFolio) {
-            return '0001';
+            // Si no hay folios, empezar desde 0001
+            if (!$lastFolio) {
+                \Illuminate\Support\Facades\Log::info('No se encontraron folios previos, iniciando desde 0001', [
+                    'organization_id' => $organizationId
+                ]);
+                return '0001';
+            }
+
+            // Incrementar el número del último folio
+            $nextNumber = $lastFolio->numeric_value + 1;
+            $folioNumber = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            
+            \Illuminate\Support\Facades\Log::info('Folio generado exitosamente', [
+                'organization_id' => $organizationId,
+                'last_folio_number' => $lastFolio->numeric_value,
+                'new_folio_number' => $folioNumber
+            ]);
+
+            return $folioNumber;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al generar folio', [
+                'organization_id' => $organizationId,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine()
+            ]);
+            
+            throw new \Exception('Error al generar el número de folio: ' . $e->getMessage());
         }
-
-        // Incrementar el número del último folio
-        $nextNumber = $lastFolio->numeric_value + 1;
-        return str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -249,46 +400,345 @@ class QuizController extends Controller
      */
     private function generateNextPersonalId($organizationId)
     {
-        // Buscar el último personal_id usado en evaluaciones de esta organización
-        $lastEvaluation = \App\Models\Evaluation::where('organization_id', $organizationId)
-            ->whereNotNull('personal_id')
-            ->orderByRaw('CAST(personal_id AS UNSIGNED) DESC')
-            ->first();
+        try {
+            \Illuminate\Support\Facades\Log::info('Generando siguiente personal_id', [
+                'organization_id' => $organizationId
+            ]);
 
-        // Si no hay evaluaciones previas, empezar desde 0001
-        if (!$lastEvaluation) {
-            return '0001';
+            // Buscar el último personal_id usado en evaluaciones de esta organización
+            $lastEvaluation = \App\Models\Evaluation::where('organization_id', $organizationId)
+                ->whereNotNull('personal_id')
+                ->orderByRaw('CAST(personal_id AS UNSIGNED) DESC')
+                ->first();
+
+            // Buscar el último personal_id usado en respuestas online de esta organización
+            $lastOnlineAnswer = \App\Models\OnlineAnswer::where('organization_id', $organizationId)
+                ->whereNotNull('personal_id')
+                ->orderByRaw('CAST(personal_id AS UNSIGNED) DESC')
+                ->first();
+
+            // Determinar el último personal_id usado entre evaluaciones y respuestas online
+            $lastPersonalId = 0;
+            
+            if ($lastEvaluation) {
+                $lastPersonalId = max($lastPersonalId, intval($lastEvaluation->personal_id));
+            }
+            
+            if ($lastOnlineAnswer) {
+                $lastPersonalId = max($lastPersonalId, intval($lastOnlineAnswer->personal_id));
+            }
+
+            // Si no hay registros previos, empezar desde 0001
+            if ($lastPersonalId === 0) {
+                \Illuminate\Support\Facades\Log::info('No se encontraron registros previos, iniciando personal_id desde 0001', [
+                    'organization_id' => $organizationId
+                ]);
+                return '0001';
+            }
+
+            // Incrementar el último personal_id
+            $nextNumber = $lastPersonalId + 1;
+            $personalId = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            
+            \Illuminate\Support\Facades\Log::info('Personal ID generado exitosamente', [
+                'organization_id' => $organizationId,
+                'last_personal_id' => $lastPersonalId,
+                'new_personal_id' => $personalId
+            ]);
+
+            return $personalId;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al generar personal_id', [
+                'organization_id' => $organizationId,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine()
+            ]);
+            
+            throw new \Exception('Error al generar el personal ID: ' . $e->getMessage());
         }
+    }
 
-        // Incrementar el último personal_id
-        $nextNumber = intval($lastEvaluation->personal_id) + 1;
-        return str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+    /**
+     * Formats answer values for consistent storage in the database
+     * Handles different data types: arrays, booleans, and strings
+     */
+    private function formatAnswerValue($value)
+    {
+        try {
+            // Handle arrays by JSON encoding them
+            if (is_array($value)) {
+                $jsonValue = json_encode($value, JSON_UNESCAPED_UNICODE);
+                if ($jsonValue === false) {
+                    \Illuminate\Support\Facades\Log::warning('Error al codificar array como JSON', [
+                        'value' => $value,
+                        'json_error' => json_last_error_msg()
+                    ]);
+                    return json_encode($value); // Fallback without unicode flag
+                }
+                return $jsonValue;
+            }
+
+            // Handle booleans by converting to string representation
+            if (is_bool($value)) {
+                return $value ? '1' : '0';
+            }
+
+            // Handle null values
+            if (is_null($value)) {
+                return '';
+            }
+
+            // Handle all other types by casting to string
+            return (string) $value;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al formatear valor de respuesta', [
+                'value' => $value,
+                'value_type' => gettype($value),
+                'error_message' => $e->getMessage()
+            ]);
+            
+            // Return a safe fallback value
+            return is_scalar($value) ? (string) $value : '';
+        }
+    }
+
+    /**
+     * Store online quiz answers in the online_answers table
+     * Processes and stores individual question-answer pairs for different reference guide types
+     */
+    private function storeOnlineAnswers($folio, $personalId, $organizationId, $quizId, $answers)
+    {
+        try {
+            \Illuminate\Support\Facades\Log::info('Iniciando almacenamiento de respuestas online', [
+                'folio' => $folio,
+                'personal_id' => $personalId,
+                'organization_id' => $organizationId,
+                'quiz_id' => $quizId,
+                'answer_sections' => array_keys($answers)
+            ]);
+
+            $records = [];
+            $recordCounts = [
+                'referencia_iii' => 0,
+                'referencia_i' => 0,
+                'referencia_v' => 0,
+                'escala_cisneros' => 0
+            ];
+            
+            // Process referencia_iii answers
+            if (isset($answers['referencia_iii']) && is_array($answers['referencia_iii'])) {
+                foreach ($answers['referencia_iii'] as $key => $value) {
+                    // Handle nested structures like acontecimientos_traumaticos
+                    if (is_array($value)) {
+                        foreach ($value as $subKey => $subValue) {
+                            $records[] = [
+                                'folio' => $folio,
+                                'personal_id' => $personalId,
+                                'organization_id' => $organizationId,
+                                'quiz_id' => $quizId,
+                                'question_key' => $key . '_' . $subKey,
+                                'answer_value' => $this->formatAnswerValue($subValue),
+                                'reference_guide' => 'III',
+                                'created_at' => now(),
+                                'updated_at' => now()
+                            ];
+                            $recordCounts['referencia_iii']++;
+                        }
+                    } else {
+                        $records[] = [
+                            'folio' => $folio,
+                            'personal_id' => $personalId,
+                            'organization_id' => $organizationId,
+                            'quiz_id' => $quizId,
+                            'question_key' => $key,
+                            'answer_value' => $this->formatAnswerValue($value),
+                            'reference_guide' => 'III',
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ];
+                        $recordCounts['referencia_iii']++;
+                    }
+                }
+            }
+            
+            // Process referencia_i answers
+            if (isset($answers['referencia_i']) && is_array($answers['referencia_i'])) {
+                foreach ($answers['referencia_i'] as $key => $value) {
+                    $records[] = [
+                        'folio' => $folio,
+                        'personal_id' => $personalId,
+                        'organization_id' => $organizationId,
+                        'quiz_id' => $quizId,
+                        'question_key' => $key,
+                        'answer_value' => $this->formatAnswerValue($value),
+                        'reference_guide' => 'I',
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                    $recordCounts['referencia_i']++;
+                }
+            }
+            
+            // Process referencia_v answers
+            if (isset($answers['referencia_v']) && is_array($answers['referencia_v'])) {
+                foreach ($answers['referencia_v'] as $key => $value) {
+                    // Handle nested structures like datos_laborales
+                    if (is_array($value)) {
+                        foreach ($value as $subKey => $subValue) {
+                            $records[] = [
+                                'folio' => $folio,
+                                'personal_id' => $personalId,
+                                'organization_id' => $organizationId,
+                                'quiz_id' => $quizId,
+                                'question_key' => $key . '_' . $subKey,
+                                'answer_value' => $this->formatAnswerValue($subValue),
+                                'reference_guide' => 'V',
+                                'created_at' => now(),
+                                'updated_at' => now()
+                            ];
+                            $recordCounts['referencia_v']++;
+                        }
+                    } else {
+                        $records[] = [
+                            'folio' => $folio,
+                            'personal_id' => $personalId,
+                            'organization_id' => $organizationId,
+                            'quiz_id' => $quizId,
+                            'question_key' => $key,
+                            'answer_value' => $this->formatAnswerValue($value),
+                            'reference_guide' => 'V',
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ];
+                        $recordCounts['referencia_v']++;
+                    }
+                }
+            }
+            
+            // Process escala_cisneros answers (for Cisneros quizzes)
+            if (isset($answers['escala_cisneros']) && is_array($answers['escala_cisneros'])) {
+                foreach ($answers['escala_cisneros'] as $key => $value) {
+                    $records[] = [
+                        'folio' => $folio,
+                        'personal_id' => $personalId,
+                        'organization_id' => $organizationId,
+                        'quiz_id' => $quizId,
+                        'question_key' => $key,
+                        'answer_value' => $this->formatAnswerValue($value),
+                        'reference_guide' => 'Cisneros',
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                    $recordCounts['escala_cisneros']++;
+                }
+            }
+            
+            // Batch insert for performance optimization
+            if (!empty($records)) {
+                \App\Models\OnlineAnswer::insert($records);
+                
+                \Illuminate\Support\Facades\Log::info('Respuestas almacenadas exitosamente', [
+                    'folio' => $folio,
+                    'personal_id' => $personalId,
+                    'total_records' => count($records),
+                    'record_counts' => $recordCounts
+                ]);
+            } else {
+                \Illuminate\Support\Facades\Log::warning('No se encontraron respuestas para almacenar', [
+                    'folio' => $folio,
+                    'personal_id' => $personalId,
+                    'quiz_id' => $quizId
+                ]);
+            }
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Illuminate\Support\Facades\Log::error('Error de base de datos al almacenar respuestas online', [
+                'folio' => $folio,
+                'personal_id' => $personalId,
+                'quiz_id' => $quizId,
+                'error_code' => $e->getCode(),
+                'error_message' => $e->getMessage(),
+                'sql_state' => $e->errorInfo[0] ?? null
+            ]);
+            
+            throw new \Exception('Error al guardar las respuestas en la base de datos: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error general al almacenar respuestas online', [
+                'folio' => $folio,
+                'personal_id' => $personalId,
+                'quiz_id' => $quizId,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine()
+            ]);
+            
+            throw new \Exception('Error al procesar las respuestas del examen: ' . $e->getMessage());
+        }
     }
 
     /**
      * Crea un folio virtual para mantener la trazabilidad del quiz
+     * Modificado para trabajar sin evaluation_id, manteniendo compatibilidad con el sistema de lotes existente
      */
-    private function createVirtualFolio($organizationId, $folioNumber, $evaluationId)
+    private function createVirtualFolio($organizationId, $folioNumber)
     {
-        // Buscar o crear un lote virtual para quiz de esta organización
-        $virtualBatch = \App\Models\FolioBatch::firstOrCreate([
-            'organization_id' => $organizationId,
-            'name' => 'Quiz Virtual Batch',
-            'type' => 'en_linea'
-        ], [
-            'description' => 'Lote virtual para folios generados por quiz',
-            'start_number' => 1,
-            'end_number' => 9999,
-            'quantity' => 9999
-        ]);
+        try {
+            \Illuminate\Support\Facades\Log::info('Creando folio virtual', [
+                'organization_id' => $organizationId,
+                'folio_number' => $folioNumber
+            ]);
 
-        // Crear el folio virtual
-        \App\Models\Folio::create([
-            'folio_batch_id' => $virtualBatch->id,
-            'folio_number' => $folioNumber,
-            'numeric_value' => intval($folioNumber),
-            'used' => true,
-            'used_at' => now()
-        ]);
+            // Buscar o crear un lote virtual para quiz de esta organización
+            $virtualBatch = \App\Models\FolioBatch::firstOrCreate([
+                'organization_id' => $organizationId,
+                'name' => 'Quiz Virtual Batch',
+                'type' => 'en_linea'
+            ], [
+                'description' => 'Lote virtual para folios generados por quiz',
+                'start_number' => 1,
+                'end_number' => 9999,
+                'quantity' => 9999
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('Lote virtual obtenido/creado', [
+                'batch_id' => $virtualBatch->id,
+                'organization_id' => $organizationId
+            ]);
+
+            // Crear el folio virtual
+            $folio = \App\Models\Folio::create([
+                'folio_batch_id' => $virtualBatch->id,
+                'folio_number' => $folioNumber,
+                'numeric_value' => intval($folioNumber),
+                'used' => true,
+                'used_at' => now()
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('Folio virtual creado exitosamente', [
+                'folio_id' => $folio->id,
+                'folio_number' => $folioNumber,
+                'batch_id' => $virtualBatch->id
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Illuminate\Support\Facades\Log::error('Error de base de datos al crear folio virtual', [
+                'organization_id' => $organizationId,
+                'folio_number' => $folioNumber,
+                'error_code' => $e->getCode(),
+                'error_message' => $e->getMessage(),
+                'sql_state' => $e->errorInfo[0] ?? null
+            ]);
+            
+            throw new \Exception('Error al crear el folio virtual en la base de datos: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error general al crear folio virtual', [
+                'organization_id' => $organizationId,
+                'folio_number' => $folioNumber,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine()
+            ]);
+            
+            throw new \Exception('Error al crear el folio virtual: ' . $e->getMessage());
+        }
     }
 }
