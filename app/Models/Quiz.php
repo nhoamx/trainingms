@@ -6,19 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class Quiz extends Model
 {
+
     protected $fillable = [
         'name',
         'temp_url',
         'expires_at',
         'is_active',
         'organization_id',
-        'is_reduced'
+        'is_reduced',
+        'is_cisneros'
     ];
+
 
     protected $casts = [
         'expires_at' => 'datetime',
         'is_active' => 'boolean',
-        'is_reduced' => 'boolean'
+        'is_reduced' => 'boolean',
+        'is_cisneros' => 'boolean'
     ];
 
     public function scopeActive($query)
