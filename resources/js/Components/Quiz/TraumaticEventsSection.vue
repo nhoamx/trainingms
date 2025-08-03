@@ -31,6 +31,8 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue';
+
 const props = defineProps({
     title: {
         type: String,
@@ -55,6 +57,17 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+// Inicializa todas las preguntas traumáticas como null si no existen
+onMounted(() => {
+    const newValue = { ...props.modelValue };
+    Object.keys(props.questions).forEach(index => {
+        if (!(index in newValue)) {
+            newValue[index] = null;
+        }
+    });
+    emit('update:modelValue', newValue);
+});
 
 const updateAnswer = (index, value) => {
     emit('update:modelValue', {

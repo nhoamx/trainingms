@@ -56,6 +56,8 @@
 </template>
 
 <script setup>
+import { watch } from 'vue';
+
 const props = defineProps({
     conditionalSections: {
         type: Object,
@@ -76,6 +78,23 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+// Watch para inicializar preguntas condicionales como null si el filtro es "No"
+Object.entries(props.conditionalSections).forEach(([key, section]) => {
+    watch(
+        () => props.modelValue[`condition_${key}`],
+        (val) => {
+            if (val === false) {
+                // Inicializa todas las preguntas condicionales como null
+                const newValue = { ...props.modelValue };
+                Object.keys(section.questions).forEach(qKey => {
+                    newValue[qKey] = null;
+                });
+                emit('update:modelValue', newValue);
+            }
+        }
+    );
+});
 
 const updateCondition = (key, value) => {
     emit('update:modelValue', {
