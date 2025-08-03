@@ -80,100 +80,158 @@ const openQRModal = (qrCode, name) => {
 
                 <!-- Table -->
                 <div class="bg-white shadow-sm rounded-lg overflow-hidden">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organización</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL Temporal</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código QR</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluaciones</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de Expiración</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="quiz in quizzes" :key="quiz.id">
-                                <td class="px-6 py-4 whitespace-nowrap">{{ quiz.name }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span 
-                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                        :class="{
-                                            'bg-orange-100 text-orange-800': quiz.is_reduced,
-                                            'bg-green-100 text-green-800': quiz.is_cisneros,
-                                            'bg-blue-100 text-blue-800': !quiz.is_reduced && !quiz.is_cisneros
-                                        }"
-                                    >
-                                        {{ quiz.is_cisneros ? 'Cisneros' : (quiz.is_reduced ? 'Reducido' : 'Completo') }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="text-sm text-gray-900">{{ quiz.organization?.name || 'N/A' }}</span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="text-sm text-gray-900 truncate max-w-xs">{{ quiz.temp_url }}</span>
-                                        <button 
-                                            @click="copyToClipboard(quiz.temp_url)"
-                                            class="text-blue-600 hover:text-blue-800"
-                                            title="Copiar URL"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="relative group">
-                                        <div class="flex items-center space-x-2">
-                                            <img 
-                                                :src="quiz.qr_code" 
-                                                class="w-10 h-10 cursor-pointer hover:opacity-75" 
-                                                :alt="'QR code for ' + quiz.name"
-                                                @click="openQRModal(quiz.qr_code, quiz.name)"
-                                            />
-                                            <button 
-                                                @click="downloadQR(quiz.qr_code, quiz.name)"
-                                                class="text-blue-600 hover:text-blue-800"
-                                                title="Descargar QR"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                                </svg>
-                                            </button>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                                        Examen
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/8">
+                                        Tipo
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                                        Organización
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                                        Acceso
+                                    </th>
+                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                                        Eval.
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                                        Expira
+                                    </th>
+                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                                        Estado
+                                    </th>
+                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                                        Acciones
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr v-for="quiz in quizzes" :key="quiz.id" class="hover:bg-gray-50">
+                                    <!-- Nombre del examen -->
+                                    <td class="px-4 py-4">
+                                        <div class="text-sm font-medium text-gray-900 truncate">
+                                            {{ quiz.name }}
                                         </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="text-sm text-gray-900">{{ quiz.evaluations_count || 0 }}</span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">{{ formatDate(quiz.expires_at) }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span 
-                                        :class="[
-                                            'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
-                                            quiz.is_active 
-                                                ? 'bg-green-100 text-green-800' 
-                                                : 'bg-red-100 text-red-800'
-                                        ]"
-                                    >
-                                        {{ quiz.is_active ? 'Activo' : 'Inactivo' }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <button 
-                                        @click="toggleQuizStatus(quiz.id)"
-                                        class="text-sm text-blue-600 hover:text-blue-900"
-                                    >
-                                        {{ quiz.is_active ? 'Desactivar' : 'Activar' }}
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                    </td>
+                                    
+                                    <!-- Tipo -->
+                                    <td class="px-4 py-4">
+                                        <span 
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                                            :class="{
+                                                'bg-orange-100 text-orange-800': quiz.is_reduced,
+                                                'bg-green-100 text-green-800': quiz.is_cisneros,
+                                                'bg-blue-100 text-blue-800': !quiz.is_reduced && !quiz.is_cisneros
+                                            }"
+                                        >
+                                            {{ quiz.is_cisneros ? 'Cisneros' : (quiz.is_reduced ? 'Reducido' : 'Completo') }}
+                                        </span>
+                                    </td>
+                                    
+                                    <!-- Organización -->
+                                    <td class="px-4 py-4">
+                                        <div class="text-sm text-gray-900 truncate">
+                                            {{ quiz.organization?.name || 'N/A' }}
+                                        </div>
+                                    </td>
+                                    
+                                    <!-- URL y QR -->
+                                    <td class="px-4 py-4">
+                                        <div class="flex items-center space-x-3">
+                                            <!-- URL -->
+                                            <div class="flex items-center space-x-2 flex-1 min-w-0">
+                                                <span class="text-xs text-gray-600 truncate max-w-32" :title="quiz.temp_url">
+                                                    {{ quiz.temp_url.replace('http://', '').replace('https://', '') }}
+                                                </span>
+                                                <button 
+                                                    @click="copyToClipboard(quiz.temp_url)"
+                                                    class="text-blue-600 hover:text-blue-800 flex-shrink-0"
+                                                    title="Copiar URL"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            
+                                            <!-- QR Code -->
+                                            <div class="flex items-center space-x-1 flex-shrink-0">
+                                                <img 
+                                                    :src="quiz.qr_code" 
+                                                    class="w-8 h-8 cursor-pointer hover:opacity-75 border border-gray-200 rounded" 
+                                                    :alt="'QR code for ' + quiz.name"
+                                                    @click="openQRModal(quiz.qr_code, quiz.name)"
+                                                />
+                                                <button 
+                                                    @click="downloadQR(quiz.qr_code, quiz.name)"
+                                                    class="text-blue-600 hover:text-blue-800"
+                                                    title="Descargar QR"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    
+                                    <!-- Evaluaciones -->
+                                    <td class="px-4 py-4 text-center">
+                                        <span class="inline-flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full text-sm font-medium text-gray-900">
+                                            {{ quiz.evaluations_count || 0 }}
+                                        </span>
+                                    </td>
+                                    
+                                    <!-- Fecha de expiración -->
+                                    <td class="px-4 py-4">
+                                        <div class="text-sm text-gray-900">
+                                            {{ new Date(quiz.expires_at).toLocaleDateString('es-ES', { 
+                                                day: '2-digit', 
+                                                month: '2-digit', 
+                                                year: '2-digit',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) }}
+                                        </div>
+                                    </td>
+                                    
+                                    <!-- Estado -->
+                                    <td class="px-4 py-4 text-center">
+                                        <span 
+                                            :class="[
+                                                'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
+                                                quiz.is_active 
+                                                    ? 'bg-green-100 text-green-800' 
+                                                    : 'bg-red-100 text-red-800'
+                                            ]"
+                                        >
+                                            {{ quiz.is_active ? 'Activo' : 'Inactivo' }}
+                                        </span>
+                                    </td>
+                                    
+                                    <!-- Acciones -->
+                                    <td class="px-4 py-4 text-center">
+                                        <button 
+                                            @click="toggleQuizStatus(quiz.id)"
+                                            :class="[
+                                                'text-xs font-medium px-3 py-1 rounded-md transition-colors',
+                                                quiz.is_active 
+                                                    ? 'text-red-700 bg-red-50 hover:bg-red-100' 
+                                                    : 'text-green-700 bg-green-50 hover:bg-green-100'
+                                            ]"
+                                        >
+                                            {{ quiz.is_active ? 'Desactivar' : 'Activar' }}
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Modal for creating quiz -->
