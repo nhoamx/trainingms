@@ -188,27 +188,23 @@
                     <div v-if="answers.Cisneros && answers.Cisneros.length > 0"
                         class="bg-white shadow-sm rounded-lg p-6">
                         <h3 class="text-lg font-medium text-gray-900 mb-4">Escala Cisneros</h3>
-                        <div class="space-y-3">
-                            <div v-for="answer in answers.Cisneros" :key="answer.question_key"
-                                class="border-b border-gray-100 pb-2">
-                                <div class="flex justify-between items-start">
-                                    <!-- Mostrar pregunta real de Escala Cisneros -->
-                                    <span class="text-sm font-medium text-gray-700 flex-1 pr-4">
-                                        {{ getEscalaCisnerosQuestionText(answer.question_key) }}
+                        <div class="space-y-4">
+                            <div v-for="(questionData, questionNumber) in groupedCisnerosAnswers" :key="questionNumber"
+                                class="border-b border-gray-100 pb-3">
+                                <div class="mb-2">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        {{ questionNumber }}. {{ questionData.question }}
                                     </span>
-
-                                    <!-- Render JSON objects -->
-                                    <div v-if="isJsonObject(answer.answer_value)" class="text-sm text-gray-900 ml-4 flex-shrink-0">
-                                        <div v-for="(value, key) in parseJsonValue(answer.answer_value)" :key="key"
-                                            class="mb-1">
-                                            <span class="font-medium text-gray-600">{{ formatQuestionKey(key) }}:</span>
-                                            <span class="ml-2">{{ value }}</span>
-                                        </div>
+                                </div>
+                                <div class="ml-4 space-y-1">
+                                    <div v-if="questionData.persona" class="text-sm text-gray-600">
+                                        <span class="font-medium">Persona:</span> 
+                                        <span class="ml-2">{{ questionData.persona }}</span>
                                     </div>
-
-                                    <!-- Render simple values -->
-                                    <span v-else class="text-sm text-gray-900 ml-4 flex-shrink-0">{{ answer.formatted_value ||
-                                        answer.answer_value }}</span>
+                                    <div v-if="questionData.frecuencia !== undefined" class="text-sm text-gray-600">
+                                        <span class="font-medium">Frecuencia:</span> 
+                                        <span class="ml-2">{{ questionData.frecuencia }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -244,7 +240,7 @@
 <script setup>
 import Dashboard from '@/Layouts/Dashboard.vue';
 import { Link } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
     organization: Object,
@@ -313,7 +309,7 @@ const getReferenciaIQuestionText = (questionKey) => {
     if (questionKey.includes('acontecimientos_traumaticos')) {
         return getTraumaticQuestionText(questionKey);
     }
-    
+
     // Extraer la categoría y el índice (ej: "Afectación (durante el último mes)_0" -> categoría + índice)
     const lastUnderscoreIndex = questionKey.lastIndexOf('_');
     if (lastUnderscoreIndex === -1) return questionKey;
@@ -363,17 +359,51 @@ const getEscalaCisnerosQuestionText = (questionKey) => {
     // Manejar claves como "frecuencia1", "persona1", etc.
     const frequencyMatch = questionKey.match(/^frecuencia(\d+)$/);
     const personMatch = questionKey.match(/^persona(\d+)$/);
-    
+
     if (frequencyMatch || personMatch) {
         const questionNumber = parseInt(frequencyMatch ? frequencyMatch[1] : personMatch[1]);
-        
+
         if (props.escala_cisneros_questions && props.escala_cisneros_questions[questionNumber]) {
             const questionText = props.escala_cisneros_questions[questionNumber];
             const prefix = frequencyMatch ? 'Frecuencia - ' : 'Persona - ';
             return prefix + questionText;
         }
     }
-    
+
     return questionKey;
 };
+
+const groupedCisnerosAnswers = computed(() => {
+    if (!props.answers.Cisneros || !props.escala_cisneros_questions) {
+        return {};
+    }
+    
+    const grouped = {};
+    
+    // Agrupar respuestas por número de pregunta
+    props.answers.Cisneros.forEach(answer => {
+        const frequencyMatch = answer.question_key.match(/^frecuencia(\d+)$/);
+        const personMatch = answer.question_key.match(/^persona(\d+)$/);
+        
+        if (frequencyMatch || personMatch) {
+            const questionNumber = parseInt(frequencyMatch ? frequencyMatch[1] : personMatch[1]);
+            
+            if (!grouped[questionNumber]) {
+                grouped[questionNumber] = {
+                    question: props.escala_cisneros_questions[questionNumber] || `Pregunta ${questionNumber}`,
+                    persona: null,
+                    frecuencia: null
+                };
+            }
+            
+            if (frequencyMatch) {
+                grouped[questionNumber].frecuencia = answer.answer_value;
+            } else if (personMatch) {
+                grouped[questionNumber].persona = answer.answer_value;
+            }
+        }
+    });
+    
+    return grouped;
+});
 </script>
