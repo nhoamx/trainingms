@@ -117,7 +117,7 @@
 
                                 <!-- Render simple values -->
                                 <p v-else class="text-sm text-gray-900">{{ answer.formatted_value || answer.answer_value
-                                    }}</p>
+                                }}</p>
                             </div>
                         </div>
                     </div>
@@ -198,11 +198,11 @@
                                 </div>
                                 <div class="ml-4 space-y-1">
                                     <div v-if="questionData.persona" class="text-sm text-gray-600">
-                                        <span class="font-medium">Persona:</span> 
+                                        <span class="font-medium">Persona:</span>
                                         <span class="ml-2">{{ questionData.persona }}</span>
                                     </div>
                                     <div v-if="questionData.frecuencia !== undefined" class="text-sm text-gray-600">
-                                        <span class="font-medium">Frecuencia:</span> 
+                                        <span class="font-medium">Frecuencia:</span>
                                         <span class="ml-2">{{ questionData.frecuencia }}</span>
                                     </div>
                                 </div>
@@ -377,17 +377,17 @@ const groupedCisnerosAnswers = computed(() => {
     if (!props.answers.Cisneros || !props.escala_cisneros_questions) {
         return {};
     }
-    
+
     const grouped = {};
-    
+
     // Agrupar respuestas por número de pregunta
     props.answers.Cisneros.forEach(answer => {
         const frequencyMatch = answer.question_key.match(/^frecuencia(\d+)$/);
         const personMatch = answer.question_key.match(/^persona(\d+)$/);
-        
+
         if (frequencyMatch || personMatch) {
             const questionNumber = parseInt(frequencyMatch ? frequencyMatch[1] : personMatch[1]);
-            
+
             if (!grouped[questionNumber]) {
                 grouped[questionNumber] = {
                     question: props.escala_cisneros_questions[questionNumber] || `Pregunta ${questionNumber}`,
@@ -395,7 +395,7 @@ const groupedCisnerosAnswers = computed(() => {
                     frecuencia: null
                 };
             }
-            
+
             if (frequencyMatch) {
                 grouped[questionNumber].frecuencia = answer.answer_value;
             } else if (personMatch) {
@@ -403,7 +403,7 @@ const groupedCisnerosAnswers = computed(() => {
             }
         }
     });
-    
+
     return grouped;
 });
 </script>
