@@ -192,11 +192,13 @@
                             <div v-for="answer in answers.Cisneros" :key="answer.question_key"
                                 class="border-b border-gray-100 pb-2">
                                 <div class="flex justify-between items-start">
-                                    <span class="text-sm font-medium text-gray-700">{{
-                                        formatQuestionKey(answer.question_key) }}</span>
+                                    <!-- Mostrar pregunta real de Escala Cisneros -->
+                                    <span class="text-sm font-medium text-gray-700 flex-1 pr-4">
+                                        {{ getEscalaCisnerosQuestionText(answer.question_key) }}
+                                    </span>
 
                                     <!-- Render JSON objects -->
-                                    <div v-if="isJsonObject(answer.answer_value)" class="text-sm text-gray-900 ml-4">
+                                    <div v-if="isJsonObject(answer.answer_value)" class="text-sm text-gray-900 ml-4 flex-shrink-0">
                                         <div v-for="(value, key) in parseJsonValue(answer.answer_value)" :key="key"
                                             class="mb-1">
                                             <span class="font-medium text-gray-600">{{ formatQuestionKey(key) }}:</span>
@@ -205,7 +207,7 @@
                                     </div>
 
                                     <!-- Render simple values -->
-                                    <span v-else class="text-sm text-gray-900 ml-4">{{ answer.formatted_value ||
+                                    <span v-else class="text-sm text-gray-900 ml-4 flex-shrink-0">{{ answer.formatted_value ||
                                         answer.answer_value }}</span>
                                 </div>
                             </div>
@@ -251,7 +253,8 @@ const props = defineProps({
     ine_images: Object,
     traumatic_questions: Array,
     referencia_i_questions: Object,
-    referencia_iii_questions: Object
+    referencia_iii_questions: Object,
+    escala_cisneros_questions: Object
 });
 
 const showImageModal = ref(false);
@@ -306,6 +309,11 @@ const getTraumaticQuestionText = (questionKey) => {
 };
 
 const getReferenciaIQuestionText = (questionKey) => {
+    // Manejar preguntas de acontecimientos traumáticos en Referencia I
+    if (questionKey.includes('acontecimientos_traumaticos')) {
+        return getTraumaticQuestionText(questionKey);
+    }
+    
     // Extraer la categoría y el índice (ej: "Afectación (durante el último mes)_0" -> categoría + índice)
     const lastUnderscoreIndex = questionKey.lastIndexOf('_');
     if (lastUnderscoreIndex === -1) return questionKey;
@@ -327,12 +335,12 @@ const getReferenciaIIIQuestionText = (questionKey) => {
     // Para preguntas generales (ej: "1", "2", "65", etc.)
     if (/^\d+$/.test(questionKey)) {
         const questionNumber = parseInt(questionKey);
-        
+
         // Buscar en preguntas generales
         if (props.referencia_iii_questions?.general && props.referencia_iii_questions.general[questionNumber]) {
             return props.referencia_iii_questions.general[questionNumber];
         }
-        
+
         // Buscar en secciones condicionales
         if (props.referencia_iii_questions?.conditional_sections) {
             for (const section of Object.values(props.referencia_iii_questions.conditional_sections)) {
@@ -342,10 +350,28 @@ const getReferenciaIIIQuestionText = (questionKey) => {
             }
         }
     }
-    
+
     // Para preguntas de acontecimientos traumáticos ya manejadas por getTraumaticQuestionText
     if (questionKey.includes('acontecimientos_traumaticos')) {
         return getTraumaticQuestionText(questionKey);
+    }
+
+    return questionKey;
+};
+
+const getEscalaCisnerosQuestionText = (questionKey) => {
+    // Manejar claves como "frecuencia1", "persona1", etc.
+    const frequencyMatch = questionKey.match(/^frecuencia(\d+)$/);
+    const personMatch = questionKey.match(/^persona(\d+)$/);
+    
+    if (frequencyMatch || personMatch) {
+        const questionNumber = parseInt(frequencyMatch ? frequencyMatch[1] : personMatch[1]);
+        
+        if (props.escala_cisneros_questions && props.escala_cisneros_questions[questionNumber]) {
+            const questionText = props.escala_cisneros_questions[questionNumber];
+            const prefix = frequencyMatch ? 'Frecuencia - ' : 'Persona - ';
+            return prefix + questionText;
+        }
     }
     
     return questionKey;

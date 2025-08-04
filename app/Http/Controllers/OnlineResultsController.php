@@ -88,6 +88,9 @@ class OnlineResultsController extends Controller
         // Obtener las preguntas de referencia III desde la configuración
         $referenciaIIIQuestions = config('referencia_iii', []);
 
+        // Obtener las preguntas de la Escala Cisneros desde la configuración
+        $escalaCisnerosQuestions = config('escala_cisneros', []);
+
         // Organizar respuestas por guía de referencia
         $organizedAnswers = [
             'V' => [], // Datos personales
@@ -142,6 +145,7 @@ class OnlineResultsController extends Controller
             'traumatic_questions' => $traumaticQuestions,
             'referencia_i_questions' => $referenciaIQuestions,
             'referencia_iii_questions' => $referenciaIIIQuestions,
+            'escala_cisneros_questions' => $escalaCisnerosQuestions,
         ]);
     }
 
