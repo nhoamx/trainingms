@@ -140,7 +140,8 @@
                                     </span>
 
                                     <!-- Render JSON objects -->
-                                    <div v-if="isJsonObject(answer.answer_value)" class="text-sm text-gray-900 ml-4 flex-shrink-0">
+                                    <div v-if="isJsonObject(answer.answer_value)"
+                                        class="text-sm text-gray-900 ml-4 flex-shrink-0">
                                         <div v-for="(value, key) in parseJsonValue(answer.answer_value)" :key="key"
                                             class="mb-1">
                                             <span class="font-medium text-gray-600">{{ formatQuestionKey(key) }}:</span>
@@ -149,7 +150,8 @@
                                     </div>
 
                                     <!-- Render simple values -->
-                                    <span v-else class="text-sm text-gray-900 ml-4 flex-shrink-0">{{ answer.formatted_value ||
+                                    <span v-else class="text-sm text-gray-900 ml-4 flex-shrink-0">{{
+                                        answer.formatted_value ||
                                         answer.answer_value }}</span>
                                 </div>
                             </div>
@@ -163,11 +165,13 @@
                             <div v-for="answer in answers.I" :key="answer.question_key"
                                 class="border-b border-gray-100 pb-2">
                                 <div class="flex justify-between items-start">
-                                    <span class="text-sm font-medium text-gray-700">{{
-                                        formatQuestionKey(answer.question_key) }}</span>
+                                    <!-- Mostrar pregunta real de Referencia I o clave formateada -->
+                                    <span class="text-sm font-medium text-gray-700 flex-1 pr-4">
+                                        {{ getReferenciaIQuestionText(answer.question_key) }}
+                                    </span>
 
                                     <!-- Render JSON objects -->
-                                    <div v-if="isJsonObject(answer.answer_value)" class="text-sm text-gray-900 ml-4">
+                                    <div v-if="isJsonObject(answer.answer_value)" class="text-sm text-gray-900 ml-4 flex-shrink-0">
                                         <div v-for="(value, key) in parseJsonValue(answer.answer_value)" :key="key"
                                             class="mb-1">
                                             <span class="font-medium text-gray-600">{{ formatQuestionKey(key) }}:</span>
@@ -176,8 +180,7 @@
                                     </div>
 
                                     <!-- Render simple values -->
-                                    <span v-else class="text-sm text-gray-900 ml-4">{{ answer.formatted_value ||
-                                        answer.answer_value }}</span>
+                                    <span v-else class="text-sm text-gray-900 ml-4 flex-shrink-0">{{ answer.formatted_value || answer.answer_value }}</span>
                                 </div>
                             </div>
                         </div>
@@ -248,7 +251,8 @@ const props = defineProps({
     participant: Object,
     answers: Object,
     ine_images: Object,
-    traumatic_questions: Array
+    traumatic_questions: Array,
+    referencia_i_questions: Object
 });
 
 const showImageModal = ref(false);
@@ -299,6 +303,24 @@ const getTraumaticQuestionText = (questionKey) => {
         const index = parseInt(match[1]);
         return props.traumatic_questions[index] || questionKey;
     }
+    return questionKey;
+};
+
+const getReferenciaIQuestionText = (questionKey) => {
+    // Extraer la categoría y el índice (ej: "Afectación (durante el último mes)_0" -> categoría + índice)
+    const lastUnderscoreIndex = questionKey.lastIndexOf('_');
+    if (lastUnderscoreIndex === -1) return questionKey;
+    
+    const category = questionKey.substring(0, lastUnderscoreIndex);
+    const index = parseInt(questionKey.substring(lastUnderscoreIndex + 1));
+    
+    if (props.referencia_i_questions && props.referencia_i_questions[category]) {
+        const questions = props.referencia_i_questions[category];
+        if (Array.isArray(questions) && questions[index]) {
+            return questions[index];
+        }
+    }
+    
     return questionKey;
 };
 </script>

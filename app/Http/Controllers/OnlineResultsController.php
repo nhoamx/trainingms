@@ -82,6 +82,9 @@ class OnlineResultsController extends Controller
             $traumaticQuestions = $traumaticConfig['questions'];
         }
 
+        // Obtener las preguntas de referencia I desde la configuración
+        $referenciaIQuestions = config('referencia_i', []);
+
         // Organizar respuestas por guía de referencia
         $organizedAnswers = [
             'V' => [], // Datos personales
@@ -134,6 +137,7 @@ class OnlineResultsController extends Controller
             'answers' => $organizedAnswers,
             'ine_images' => $ineImages,
             'traumatic_questions' => $traumaticQuestions,
+            'referencia_i_questions' => $referenciaIQuestions,
         ]);
     }
 
