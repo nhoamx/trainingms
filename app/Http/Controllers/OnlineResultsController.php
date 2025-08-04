@@ -75,6 +75,13 @@ class OnlineResultsController extends Controller
             abort(404, 'Participante no encontrado');
         }
 
+        // Obtener las preguntas de acontecimientos traumáticos desde la configuración
+        $traumaticQuestions = [];
+        $traumaticConfig = config('referencia_iii_reduced.acontecimientos_traumaticos');
+        if (isset($traumaticConfig['questions'])) {
+            $traumaticQuestions = $traumaticConfig['questions'];
+        }
+
         // Organizar respuestas por guía de referencia
         $organizedAnswers = [
             'V' => [], // Datos personales
@@ -126,6 +133,7 @@ class OnlineResultsController extends Controller
             'participant' => $participantInfo,
             'answers' => $organizedAnswers,
             'ine_images' => $ineImages,
+            'traumatic_questions' => $traumaticQuestions,
         ]);
     }
 
