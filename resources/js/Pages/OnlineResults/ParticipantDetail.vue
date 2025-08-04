@@ -109,7 +109,17 @@
                                 <label class="block text-sm font-medium text-gray-700">
                                     {{ formatQuestionKey(answer.question_key) }}
                                 </label>
-                                <p class="text-sm text-gray-900">{{ answer.formatted_value || answer.answer_value }}</p>
+                                
+                                <!-- Render JSON objects -->
+                                <div v-if="isJsonObject(answer.answer_value)" class="text-sm text-gray-900">
+                                    <div v-for="(value, key) in parseJsonValue(answer.answer_value)" :key="key" class="ml-4 mb-1">
+                                        <span class="font-medium text-gray-600">{{ formatQuestionKey(key) }}:</span>
+                                        <span class="ml-2">{{ value }}</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Render simple values -->
+                                <p v-else class="text-sm text-gray-900">{{ answer.formatted_value || answer.answer_value }}</p>
                             </div>
                         </div>
                     </div>
@@ -121,7 +131,17 @@
                             <div v-for="answer in answers.III" :key="answer.question_key" class="border-b border-gray-100 pb-2">
                                 <div class="flex justify-between items-start">
                                     <span class="text-sm font-medium text-gray-700">{{ formatQuestionKey(answer.question_key) }}</span>
-                                    <span class="text-sm text-gray-900 ml-4">{{ answer.formatted_value || answer.answer_value }}</span>
+                                    
+                                    <!-- Render JSON objects -->
+                                    <div v-if="isJsonObject(answer.answer_value)" class="text-sm text-gray-900 ml-4">
+                                        <div v-for="(value, key) in parseJsonValue(answer.answer_value)" :key="key" class="mb-1">
+                                            <span class="font-medium text-gray-600">{{ formatQuestionKey(key) }}:</span>
+                                            <span class="ml-2">{{ value }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Render simple values -->
+                                    <span v-else class="text-sm text-gray-900 ml-4">{{ answer.formatted_value || answer.answer_value }}</span>
                                 </div>
                             </div>
                         </div>
@@ -134,7 +154,17 @@
                             <div v-for="answer in answers.I" :key="answer.question_key" class="border-b border-gray-100 pb-2">
                                 <div class="flex justify-between items-start">
                                     <span class="text-sm font-medium text-gray-700">{{ formatQuestionKey(answer.question_key) }}</span>
-                                    <span class="text-sm text-gray-900 ml-4">{{ answer.formatted_value || answer.answer_value }}</span>
+                                    
+                                    <!-- Render JSON objects -->
+                                    <div v-if="isJsonObject(answer.answer_value)" class="text-sm text-gray-900 ml-4">
+                                        <div v-for="(value, key) in parseJsonValue(answer.answer_value)" :key="key" class="mb-1">
+                                            <span class="font-medium text-gray-600">{{ formatQuestionKey(key) }}:</span>
+                                            <span class="ml-2">{{ value }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Render simple values -->
+                                    <span v-else class="text-sm text-gray-900 ml-4">{{ answer.formatted_value || answer.answer_value }}</span>
                                 </div>
                             </div>
                         </div>
@@ -147,7 +177,17 @@
                             <div v-for="answer in answers.Cisneros" :key="answer.question_key" class="border-b border-gray-100 pb-2">
                                 <div class="flex justify-between items-start">
                                     <span class="text-sm font-medium text-gray-700">{{ formatQuestionKey(answer.question_key) }}</span>
-                                    <span class="text-sm text-gray-900 ml-4">{{ answer.formatted_value || answer.answer_value }}</span>
+                                    
+                                    <!-- Render JSON objects -->
+                                    <div v-if="isJsonObject(answer.answer_value)" class="text-sm text-gray-900 ml-4">
+                                        <div v-for="(value, key) in parseJsonValue(answer.answer_value)" :key="key" class="mb-1">
+                                            <span class="font-medium text-gray-600">{{ formatQuestionKey(key) }}:</span>
+                                            <span class="ml-2">{{ value }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Render simple values -->
+                                    <span v-else class="text-sm text-gray-900 ml-4">{{ answer.formatted_value || answer.answer_value }}</span>
                                 </div>
                             </div>
                         </div>
@@ -208,5 +248,23 @@ const formatQuestionKey = (key) => {
         .replace(/_/g, ' ')
         .replace(/\b\w/g, l => l.toUpperCase())
         .replace(/Datos Laborales/g, 'Datos Laborales:');
+};
+
+const isJsonObject = (value) => {
+    if (typeof value !== 'string') return false;
+    try {
+        const parsed = JSON.parse(value);
+        return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
+    } catch {
+        return false;
+    }
+};
+
+const parseJsonValue = (value) => {
+    try {
+        return JSON.parse(value);
+    } catch {
+        return {};
+    }
 };
 </script>
