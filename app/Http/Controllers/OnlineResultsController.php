@@ -85,6 +85,9 @@ class OnlineResultsController extends Controller
         // Obtener las preguntas de referencia I desde la configuración
         $referenciaIQuestions = config('referencia_i', []);
 
+        // Obtener las preguntas de referencia III desde la configuración
+        $referenciaIIIQuestions = config('referencia_iii', []);
+
         // Organizar respuestas por guía de referencia
         $organizedAnswers = [
             'V' => [], // Datos personales
@@ -138,6 +141,7 @@ class OnlineResultsController extends Controller
             'ine_images' => $ineImages,
             'traumatic_questions' => $traumaticQuestions,
             'referencia_i_questions' => $referenciaIQuestions,
+            'referencia_iii_questions' => $referenciaIIIQuestions,
         ]);
     }
 

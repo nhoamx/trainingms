@@ -129,14 +129,9 @@
                             <div v-for="answer in answers.III" :key="answer.question_key"
                                 class="border-b border-gray-100 pb-2">
                                 <div class="flex justify-between items-start">
-                                    <!-- Mostrar pregunta traumática real o clave formateada -->
+                                    <!-- Mostrar pregunta real de Referencia III -->
                                     <span class="text-sm font-medium text-gray-700 flex-1 pr-4">
-                                        <template v-if="answer.question_key.includes('acontecimientos_traumaticos')">
-                                            {{ getTraumaticQuestionText(answer.question_key) }}
-                                        </template>
-                                        <template v-else>
-                                            {{ formatQuestionKey(answer.question_key) }}
-                                        </template>
+                                        {{ getReferenciaIIIQuestionText(answer.question_key) }}
                                     </span>
 
                                     <!-- Render JSON objects -->
@@ -171,7 +166,8 @@
                                     </span>
 
                                     <!-- Render JSON objects -->
-                                    <div v-if="isJsonObject(answer.answer_value)" class="text-sm text-gray-900 ml-4 flex-shrink-0">
+                                    <div v-if="isJsonObject(answer.answer_value)"
+                                        class="text-sm text-gray-900 ml-4 flex-shrink-0">
                                         <div v-for="(value, key) in parseJsonValue(answer.answer_value)" :key="key"
                                             class="mb-1">
                                             <span class="font-medium text-gray-600">{{ formatQuestionKey(key) }}:</span>
@@ -180,7 +176,9 @@
                                     </div>
 
                                     <!-- Render simple values -->
-                                    <span v-else class="text-sm text-gray-900 ml-4 flex-shrink-0">{{ answer.formatted_value || answer.answer_value }}</span>
+                                    <span v-else class="text-sm text-gray-900 ml-4 flex-shrink-0">{{
+                                        answer.formatted_value ||
+                                        answer.answer_value }}</span>
                                 </div>
                             </div>
                         </div>
@@ -252,7 +250,8 @@ const props = defineProps({
     answers: Object,
     ine_images: Object,
     traumatic_questions: Array,
-    referencia_i_questions: Object
+    referencia_i_questions: Object,
+    referencia_iii_questions: Object
 });
 
 const showImageModal = ref(false);
@@ -310,15 +309,43 @@ const getReferenciaIQuestionText = (questionKey) => {
     // Extraer la categoría y el índice (ej: "Afectación (durante el último mes)_0" -> categoría + índice)
     const lastUnderscoreIndex = questionKey.lastIndexOf('_');
     if (lastUnderscoreIndex === -1) return questionKey;
-    
+
     const category = questionKey.substring(0, lastUnderscoreIndex);
     const index = parseInt(questionKey.substring(lastUnderscoreIndex + 1));
-    
+
     if (props.referencia_i_questions && props.referencia_i_questions[category]) {
         const questions = props.referencia_i_questions[category];
         if (Array.isArray(questions) && questions[index]) {
             return questions[index];
         }
+    }
+
+    return questionKey;
+};
+
+const getReferenciaIIIQuestionText = (questionKey) => {
+    // Para preguntas generales (ej: "1", "2", "65", etc.)
+    if (/^\d+$/.test(questionKey)) {
+        const questionNumber = parseInt(questionKey);
+        
+        // Buscar en preguntas generales
+        if (props.referencia_iii_questions?.general && props.referencia_iii_questions.general[questionNumber]) {
+            return props.referencia_iii_questions.general[questionNumber];
+        }
+        
+        // Buscar en secciones condicionales
+        if (props.referencia_iii_questions?.conditional_sections) {
+            for (const section of Object.values(props.referencia_iii_questions.conditional_sections)) {
+                if (section.questions && section.questions[questionNumber]) {
+                    return section.questions[questionNumber];
+                }
+            }
+        }
+    }
+    
+    // Para preguntas de acontecimientos traumáticos ya manejadas por getTraumaticQuestionText
+    if (questionKey.includes('acontecimientos_traumaticos')) {
+        return getTraumaticQuestionText(questionKey);
     }
     
     return questionKey;
