@@ -75,6 +75,22 @@ class OnlineResultsController extends Controller
             abort(404, 'Participante no encontrado');
         }
 
+        // Obtener las preguntas de acontecimientos traumáticos desde la configuración
+        $traumaticQuestions = [];
+        $traumaticConfig = config('referencia_iii_reduced.acontecimientos_traumaticos');
+        if (isset($traumaticConfig['questions'])) {
+            $traumaticQuestions = $traumaticConfig['questions'];
+        }
+
+        // Obtener las preguntas de referencia I desde la configuración
+        $referenciaIQuestions = config('referencia_i', []);
+
+        // Obtener las preguntas de referencia III desde la configuración
+        $referenciaIIIQuestions = config('referencia_iii', []);
+
+        // Obtener las preguntas de la Escala Cisneros desde la configuración
+        $escalaCisnerosQuestions = config('escala_cisneros', []);
+
         // Organizar respuestas por guía de referencia
         $organizedAnswers = [
             'V' => [], // Datos personales
@@ -126,6 +142,10 @@ class OnlineResultsController extends Controller
             'participant' => $participantInfo,
             'answers' => $organizedAnswers,
             'ine_images' => $ineImages,
+            'traumatic_questions' => $traumaticQuestions,
+            'referencia_i_questions' => $referenciaIQuestions,
+            'referencia_iii_questions' => $referenciaIIIQuestions,
+            'escala_cisneros_questions' => $escalaCisnerosQuestions,
         ]);
     }
 
