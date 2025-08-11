@@ -61,6 +61,18 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Dashboard PDF report routes
+    Route::get('/dashboard/pdf/category-report', [\App\Http\Controllers\DashboardPdfController::class, 'generateCategoryReport'])
+        ->name('dashboard.pdf.category');
+    Route::get('/dashboard/pdf/domain-report', [\App\Http\Controllers\DashboardPdfController::class, 'generateDomainReport'])
+        ->name('dashboard.pdf.domain');
+    Route::get('/dashboard/pdf/dimension-report', [\App\Http\Controllers\DashboardPdfController::class, 'generateDimensionReport'])
+        ->name('dashboard.pdf.dimension');
+    Route::get('/dashboard/pdf/demographic-report', [\App\Http\Controllers\DashboardPdfController::class, 'generateDemographicReport'])
+        ->name('dashboard.pdf.demographic');
+    Route::get('/dashboard/pdf/complete-report', [\App\Http\Controllers\DashboardPdfController::class, 'generateCompleteReport'])
+        ->name('dashboard.pdf.complete');
+
     // API route for raw answer distribution by category
     Route::get('/dashboard/report/category-answer-distribution/{categoryId}', [DashboardController::class, 'getCategoryAnswerDistribution'])
         ->name('dashboard.report.categoryAnswerDistribution');
