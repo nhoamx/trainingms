@@ -28,6 +28,7 @@ const riskLevels = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
 const activeTab = ref('domain');
 const rawSummaryData = ref(null);
 const isLoading = ref(false);
+const showPdfMenu = ref(false);
 // Función para extraer el ID de la organización desde diferentes formatos
 const extractOrgId = (org) => {
     if (!org) return null;
@@ -298,6 +299,13 @@ onMounted(() => {
     if (activeTab.value === 'demographics') {
         loadDemographicData();
     }
+    
+    // Close PDF menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.relative')) {
+            showPdfMenu.value = false;
+        }
+    });
 });
 
 // Observar cambios en el ID de organización seleccionada
@@ -325,11 +333,93 @@ watch(() => props.currentOrganization, (newOrg) => {
 </script>
 <template>
     <div>
-        <div class="flex space-x-4 mb-6">
-            <button v-for="tab in tabs" :key="tab.key" @click="activeTab = tab.key"
-                :class="['px-4 py-2 rounded', activeTab === tab.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700']">
-                {{ tab.label }}
-            </button>
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex space-x-4">
+                <button v-for="tab in tabs" :key="tab.key" @click="activeTab = tab.key"
+                    :class="['px-4 py-2 rounded', activeTab === tab.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700']">
+                    {{ tab.label }}
+                </button>
+            </div>
+            
+            <!-- PDF Export Menu -->
+            <div class="relative">
+                <button @click="showPdfMenu = !showPdfMenu" 
+                    class="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Descargar PDF
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                
+                <!-- PDF Dropdown Menu -->
+                <div v-if="showPdfMenu" class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div class="py-2">
+                        <div class="px-4 py-2 text-sm text-gray-500 border-b border-gray-100">
+                            Reportes en PDF
+                        </div>
+                        
+                        <a :href="route('dashboard.pdf.category')" target="_blank"
+                            class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <svg class="w-4 h-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                            <div>
+                                <div class="font-medium">Reporte de Categorías</div>
+                                <div class="text-xs text-gray-500">Calificaciones y distribución por categoría</div>
+                            </div>
+                        </a>
+                        
+                        <a :href="route('dashboard.pdf.domain')" target="_blank"
+                            class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <svg class="w-4 h-4 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 00-2 2v2a2 2 0 002 2m0 0h14m-14 0v4a2 2 0 002 2h10a2 2 0 002-2v-4"></path>
+                            </svg>
+                            <div>
+                                <div class="font-medium">Reporte de Dominios</div>
+                                <div class="text-xs text-gray-500">Calificaciones y distribución por dominio</div>
+                            </div>
+                        </a>
+                        
+                        <a :href="route('dashboard.pdf.dimension')" target="_blank"
+                            class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <svg class="w-4 h-4 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
+                            </svg>
+                            <div>
+                                <div class="font-medium">Reporte de Dimensiones</div>
+                                <div class="text-xs text-gray-500">Distribución de riesgo por dimensión</div>
+                            </div>
+                        </a>
+                        
+                        <a :href="route('dashboard.pdf.demographic')" target="_blank"
+                            class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <svg class="w-4 h-4 mr-3 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            <div>
+                                <div class="font-medium">Reporte Demográfico</div>
+                                <div class="text-xs text-gray-500">Análisis de datos demográficos</div>
+                            </div>
+                        </a>
+                        
+                        <div class="border-t border-gray-100 my-1"></div>
+                        
+                        <a :href="route('dashboard.pdf.complete')" target="_blank"
+                            class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <svg class="w-4 h-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <div>
+                                <div class="font-medium">Reporte Completo</div>
+                                <div class="text-xs text-gray-500">Reporte consolidado del dashboard</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
         <div v-if="isLoading" class="text-center py-10">Cargando...</div>
         <div v-else-if="activeData">

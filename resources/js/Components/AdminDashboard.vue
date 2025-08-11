@@ -2,8 +2,41 @@
   <div>
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold text-gray-800">Organizaciones</h2>
-      <div class="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-        {{ organizations.length }} organizaciones
+      <div class="flex items-center space-x-4">
+        <div class="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+          {{ organizations.length }} organizaciones
+        </div>
+        
+        <!-- PDF Export Button -->
+        <div class="relative">
+          <button @click="showPdfMenu = !showPdfMenu" 
+              class="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              Reportes PDF
+          </button>
+          
+          <!-- PDF Dropdown Menu -->
+          <div v-if="showPdfMenu" class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+              <div class="py-2">
+                  <div class="px-4 py-2 text-sm text-gray-500 border-b border-gray-100">
+                      Reportes Globales en PDF
+                  </div>
+                  
+                  <a :href="route('dashboard.pdf.complete')" target="_blank"
+                      class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <svg class="w-4 h-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      <div>
+                          <div class="font-medium">Reporte Completo</div>
+                          <div class="text-xs text-gray-500">Reporte consolidado del sistema</div>
+                      </div>
+                  </a>
+              </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -80,12 +113,25 @@
 
 <script setup>
 import { AdjustmentsVerticalIcon } from '@heroicons/vue/24/outline';
-import { defineProps, defineEmits } from 'vue';
+import { defineProps, defineEmits, ref, onMounted } from 'vue';
+
 const props = defineProps({
   organizations: {
     type: Array,
     default: () => []
   }
 });
+
 defineEmits(['see-report']);
+
+const showPdfMenu = ref(false);
+
+onMounted(() => {
+  // Close PDF menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.relative')) {
+      showPdfMenu.value = false;
+    }
+  });
+});
 </script>
