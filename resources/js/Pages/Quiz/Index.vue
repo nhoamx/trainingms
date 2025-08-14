@@ -3,18 +3,20 @@ import Dashboard from "../../Layouts/Dashboard.vue";
 import { ref } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import Modal from '@/Components/Modal.vue';
+import CustomFieldsManager from '@/Components/Quiz/CustomFieldsManager.vue';
 
 const showModal = ref(false);
 const showQRModal = ref(false);
 const selectedQR = ref(null);
 const selectedQRName = ref('');
-
+const showCreateForm = ref(false);
 
 const form = useForm({
     name: '',
     organization_id: '',
     expires_at: '',
-    quiz_type: 'normal' // valores: normal, reducido, cisneros
+    quiz_type: 'normal', // valores: normal, reducido, cisneros
+    custom_fields: []
 });
 
 const props = defineProps({
@@ -33,7 +35,7 @@ const copyToClipboard = (url) => {
 const createQuiz = () => {
     form.post(route('quizzes.store'), {
         onSuccess: () => {
-            showModal.value = false;
+            showCreateForm.value = false;
             form.reset();
         }
     });
@@ -62,6 +64,13 @@ const openQRModal = (qrCode, name) => {
     selectedQRName.value = name;
     showQRModal.value = true;
 };
+
+const toggleCreateForm = () => {
+    showCreateForm.value = !showCreateForm.value;
+    if (!showCreateForm.value) {
+        form.reset();
+    }
+};
 </script>
 
 <template>
@@ -70,12 +79,97 @@ const openQRModal = (qrCode, name) => {
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-semibold">Lista de Exámenes</h2>
-                    <button 
-                        @click="showModal = true"
+                    <button
+                        @click="toggleCreateForm"
                         class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                     >
-                        Crear Examen Temporal
+                        {{ showCreateForm ? 'Cancelar' : 'Crear Examen Temporal' }}
                     </button>
+                </div>
+
+                <!-- Embedded Create Form -->
+                <div v-if="showCreateForm" class="bg-white shadow rounded-lg p-6 mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Crear Nuevo Examen Temporal</h3>
+                    <form @submit.prevent="createQuiz" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Nombre del Examen</label>
+                                <input
+                                    type="text"
+                                    v-model="form.name"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    required
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Organización</label>
+                                <select
+                                    v-model="form.organization_id"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    required
+                                >
+                                    <option value="">Selecciona una organización</option>
+                                    <option v-for="org in organizations" :key="org.id" :value="org.id">
+                                        {{ org.name }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Fecha de Expiración</label>
+                                <input
+                                    type="datetime-local"
+                                    v-model="form.expires_at"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    required
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Examen</label>
+                                <div class="flex space-x-6">
+                                    <label class="flex items-center space-x-2">
+                                        <input type="radio" value="normal" v-model="form.quiz_type" class="form-radio text-blue-600">
+                                        <span class="text-sm">Normal</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2">
+                                        <input type="radio" value="reducido" v-model="form.quiz_type" class="form-radio text-orange-600">
+                                        <span class="text-sm">Reducido</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2">
+                                        <input type="radio" value="cisneros" v-model="form.quiz_type" class="form-radio text-green-600">
+                                        <span class="text-sm">Cisneros</span>
+                                    </label>
+                                </div>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    "Reducido" solo incluye preguntas de acontecimientos traumáticos (preguntas 1-6). "Cisneros" muestra la escala Cisneros.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Custom Fields Section -->
+                        <div class="border-t pt-6">
+                            <CustomFieldsManager v-model="form.custom_fields" />
+                        </div>
+
+                        <div class="flex justify-end space-x-3">
+                            <button
+                                type="button"
+                                @click="toggleCreateForm"
+                                class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                                :disabled="form.processing"
+                            >
+                                {{ form.processing ? 'Creando...' : 'Crear Examen' }}
+                            </button>
+                        </div>
+                    </form>
                 </div>
 
                 <!-- Table -->
@@ -89,6 +183,9 @@ const openQRModal = (qrCode, name) => {
                                     </th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/8">
                                         Tipo
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/8">
+                                        Campos Personalizados
                                     </th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                                         Organización
@@ -105,7 +202,7 @@ const openQRModal = (qrCode, name) => {
                                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                                         Estado
                                     </th>
-                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                                         Acciones
                                     </th>
                                 </tr>
@@ -121,7 +218,7 @@ const openQRModal = (qrCode, name) => {
                                     
                                     <!-- Tipo -->
                                     <td class="px-4 py-4">
-                                        <span 
+                                        <span
                                             class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
                                             :class="{
                                                 'bg-orange-100 text-orange-800': quiz.is_reduced,
@@ -132,8 +229,16 @@ const openQRModal = (qrCode, name) => {
                                             {{ quiz.is_cisneros ? 'Cisneros' : (quiz.is_reduced ? 'Reducido' : 'Completo') }}
                                         </span>
                                     </td>
-                                    
-                                    <!-- Organización -->
+
+                                    <!-- Campos Personalizados -->
+                                    <td class="px-4 py-4">
+                                        <div class="text-sm text-gray-900">
+                                            <span v-if="quiz.custom_fields && quiz.custom_fields.length > 0" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                {{ quiz.custom_fields.length }} campos
+                                            </span>
+                                            <span v-else class="text-gray-400 text-xs">Sin campos</span>
+                                        </div>
+                                    </td>                                    <!-- Organización -->
                                     <td class="px-4 py-4">
                                         <div class="text-sm text-gray-900 truncate">
                                             {{ quiz.organization?.name || 'N/A' }}
@@ -216,99 +321,32 @@ const openQRModal = (qrCode, name) => {
                                     
                                     <!-- Acciones -->
                                     <td class="px-4 py-4 text-center">
-                                        <button 
-                                            @click="toggleQuizStatus(quiz.id)"
-                                            :class="[
-                                                'text-xs font-medium px-3 py-1 rounded-md transition-colors',
-                                                quiz.is_active 
-                                                    ? 'text-red-700 bg-red-50 hover:bg-red-100' 
-                                                    : 'text-green-700 bg-green-50 hover:bg-green-100'
-                                            ]"
-                                        >
-                                            {{ quiz.is_active ? 'Desactivar' : 'Activar' }}
-                                        </button>
+                                        <div class="flex items-center justify-center space-x-2">
+                                            <a
+                                                :href="route('quizzes.show', quiz.id)"
+                                                class="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-1 rounded-md bg-blue-50 hover:bg-blue-100"
+                                                title="Editar examen"
+                                            >
+                                                Editar
+                                            </a>
+                                            <button
+                                                @click="toggleQuizStatus(quiz.id)"
+                                                :class="[
+                                                    'text-xs font-medium px-2 py-1 rounded-md transition-colors',
+                                                    quiz.is_active
+                                                        ? 'text-red-700 bg-red-50 hover:bg-red-100'
+                                                        : 'text-green-700 bg-green-50 hover:bg-green-100'
+                                                ]"
+                                            >
+                                                {{ quiz.is_active ? 'Desactivar' : 'Activar' }}
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
-
-                <!-- Modal for creating quiz -->
-                <Modal :show="showModal" @close="showModal = false">
-                    <div class="p-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Crear Nuevo Examen Temporal</h3>
-                        <form @submit.prevent="createQuiz">
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700">Nombre del Examen</label>
-                                <input 
-                                    type="text" 
-                                    v-model="form.name"
-                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                                    required
-                                >
-                            </div>
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700">Organización</label>
-                                <select 
-                                    v-model="form.organization_id"
-                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                                    required
-                                >
-                                    <option value="">Selecciona una organización</option>
-                                    <option v-for="org in organizations" :key="org.id" :value="org.id">
-                                        {{ org.name }}
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700">Fecha de Expiración</label>
-                                <input 
-                                    type="datetime-local" 
-                                    v-model="form.expires_at"
-                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                                    required
-                                >
-                            </div>
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Examen</label>
-                                <div class="flex space-x-6">
-                                    <label class="flex items-center space-x-2">
-                                        <input type="radio" value="normal" v-model="form.quiz_type" class="form-radio text-blue-600">
-                                        <span class="text-sm">Normal</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2">
-                                        <input type="radio" value="reducido" v-model="form.quiz_type" class="form-radio text-orange-600">
-                                        <span class="text-sm">Reducido</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2">
-                                        <input type="radio" value="cisneros" v-model="form.quiz_type" class="form-radio text-green-600">
-                                        <span class="text-sm">Cisneros</span>
-                                    </label>
-                                </div>
-                                <p class="mt-1 text-xs text-gray-500">
-                                    "Reducido" solo incluye preguntas de acontecimientos traumáticos (preguntas 1-6). "Cisneros" muestra la escala Cisneros.
-                                </p>
-                            </div>
-                            <div class="flex justify-end space-x-3">
-                                <button 
-                                    type="button"
-                                    @click="showModal = false"
-                                    class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300"
-                                >
-                                    Cancelar
-                                </button>
-                                <button 
-                                    type="submit"
-                                    class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-                                    :disabled="form.processing"
-                                >
-                                    Crear
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </Modal>
 
                 <!-- Modal for QR code -->
                 <Modal :show="showQRModal" @close="showQRModal = false" maxWidth="sm">

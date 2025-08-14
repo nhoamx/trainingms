@@ -5,9 +5,10 @@ import { router } from '@inertiajs/vue3';
 import QuizLayout from '@/Layouts/QuizLayout.vue';
 import ProgressBar from '@/Components/Quiz/ProgressBar.vue';
 import ViewModeToggle from '@/Components/Quiz/ViewModeToggle.vue';
-import PersonalDataSection from '@/Components/Quiz/PersonalDataSection.vue';
-import LaborDataSection from '@/Components/Quiz/LaborDataSection.vue';
-import TraumaticEventsSection from '@/Components/Quiz/TraumaticEventsSection.vue';
+import PersonalDataSection from "../../Components/Quiz/PersonalDataSection.vue";
+import LaborDataSection from "../../Components/Quiz/LaborDataSection.vue";
+import CustomFieldsSection from "../../Components/Quiz/CustomFieldsSection.vue";
+import TraumaticEventsSection from "../../Components/Quiz/TraumaticEventsSection.vue";
 import FollowUpQuestionsSection from '@/Components/Quiz/FollowUpQuestionsSection.vue';
 import FinalSection from '@/Components/Quiz/FinalSection.vue';
 
@@ -21,6 +22,7 @@ const props = defineProps({
 const answers = ref({
     acontecimientos_traumaticos: {},
     referencia_i: {},
+    custom_fields: {},
     referencia_v: {
         sexo: '',
         edad: '',
@@ -154,6 +156,9 @@ const submitEvaluation = () => {
     // Agregar el resto de datos de referencia_v
     formData.append('referencia_v', JSON.stringify(referenciaVData));
     
+    // Agregar campos personalizados
+    formData.append('custom_fields', JSON.stringify(answers.value.custom_fields || {}));
+    
     console.log('Enviando datos con FormData');
     
     router.post(route('quiz.submit', props.quiz.id), formData, {
@@ -208,6 +213,13 @@ const submitEvaluation = () => {
                         <PersonalDataSection 
                             v-model="answers.referencia_v" 
                             :reference-data="quiz.reference_v"
+                        />
+
+                        <!-- Campos Personalizados -->
+                        <CustomFieldsSection 
+                            v-if="quiz.custom_fields && quiz.custom_fields.length > 0"
+                            :custom-fields="quiz.custom_fields" 
+                            v-model="answers.custom_fields"
                         />
 
                         <!-- Datos Laborales -->

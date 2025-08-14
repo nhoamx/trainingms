@@ -272,6 +272,8 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('quizzes')->group(function () {
         Route::get('/', [QuizController::class, 'index'])->name('quizzes.index');
         Route::post('/', [QuizController::class, 'store'])->name('quizzes.store');
+        Route::get('/{quiz}', [QuizController::class, 'show'])->name('quizzes.show');
+        Route::put('/{quiz}', [QuizController::class, 'update'])->name('quizzes.update');
         Route::post('/{quiz}/toggle', [QuizController::class, 'toggle'])->name('quizzes.toggle');
     });
 
