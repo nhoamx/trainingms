@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Quiz;
+use App\Models\CustomField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -14,7 +15,7 @@ class QuizController extends Controller
     public function index()
     {
         $quizzes = Quiz::query()
-            ->with('organization')
+            ->with(['organization', 'customFields'])
             ->withCount('evaluations')
             ->orderBy('created_at', 'desc')
             ->get()
@@ -31,6 +32,7 @@ class QuizController extends Controller
                     'is_reduced' => $quiz->is_reduced,
                     'is_cisneros' => $quiz->is_cisneros,
                     'evaluations_count' => $quiz->evaluations_count,
+                    'custom_fields' => $quiz->customFields,
                 ];
             });
 
@@ -56,6 +58,9 @@ class QuizController extends Controller
                 'organization_id' => 'required|exists:organizations,id',
                 'expires_at' => 'required|date|after:now',
                 'quiz_type' => 'required|in:normal,reducido,cisneros',
+                'custom_fields' => 'sometimes|array',
+                'custom_fields.*.name' => 'required_with:custom_fields|string|max:255',
+                'custom_fields.*.type' => 'required_with:custom_fields|in:text,number,textarea',
             ]);
 
             $isReduced = $validated['quiz_type'] === 'reducido';
@@ -70,6 +75,18 @@ class QuizController extends Controller
                 'is_reduced' => $isReduced,
                 'is_cisneros' => $isCisneros,
             ]);
+
+            // Crear campos personalizados si existen
+            if (isset($validated['custom_fields']) && is_array($validated['custom_fields'])) {
+                foreach ($validated['custom_fields'] as $customField) {
+                    if (!empty($customField['name']) && !empty($customField['type'])) {
+                        $quiz->customFields()->create([
+                            'name' => $customField['name'],
+                            'type' => $customField['type'],
+                        ]);
+                    }
+                }
+            }
 
             \Illuminate\Support\Facades\Log::info('Quiz creado exitosamente', [
                 'quiz_id' => $quiz->id,
@@ -108,6 +125,110 @@ class QuizController extends Controller
         return back()->with('success', 'Estado del examen actualizado');
     }
 
+    /**
+     * Show quiz with custom fields for editing
+     */
+    public function show(Quiz $quiz)
+    {
+        $quiz->load(['organization', 'customFields']);
+        
+        return Inertia::render('Quiz/Show', [
+            'quiz' => [
+                'id' => $quiz->id,
+                'name' => $quiz->name,
+                'organization' => $quiz->organization,
+                'expires_at' => $quiz->expires_at->format('Y-m-d\TH:i'),
+                'is_active' => $quiz->is_active,
+                'is_reduced' => $quiz->is_reduced,
+                'is_cisneros' => $quiz->is_cisneros,
+                'custom_fields' => $quiz->customFields->map(function ($field) {
+                    return [
+                        'id' => $field->id,
+                        'name' => $field->name,
+                        'type' => $field->type,
+                    ];
+                }),
+            ],
+            'organizations' => \App\Models\Organization::select('id', 'name')->orderBy('name')->get(),
+        ]);
+    }
+
+    /**
+     * Update quiz and custom fields
+     */
+    public function update(Request $request, Quiz $quiz)
+    {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'organization_id' => 'required|exists:organizations,id',
+                'expires_at' => 'required|date|after:now',
+                'quiz_type' => 'required|in:normal,reducido,cisneros',
+                'custom_fields' => 'sometimes|array',
+                'custom_fields.*.id' => 'sometimes|exists:custom_fields,id',
+                'custom_fields.*.name' => 'required_with:custom_fields|string|max:255',
+                'custom_fields.*.type' => 'required_with:custom_fields|in:text,number,textarea',
+            ]);
+
+            DB::transaction(function () use ($validated, $quiz) {
+                // Update quiz
+                $quiz->update([
+                    'name' => $validated['name'],
+                    'organization_id' => $validated['organization_id'],
+                    'expires_at' => $validated['expires_at'],
+                    'is_reduced' => $validated['quiz_type'] === 'reducido',
+                    'is_cisneros' => $validated['quiz_type'] === 'cisneros',
+                ]);
+
+                // Handle custom fields
+                if (isset($validated['custom_fields'])) {
+                    $submittedFieldIds = collect($validated['custom_fields'])
+                        ->pluck('id')
+                        ->filter()
+                        ->toArray();
+
+                    // Delete fields that are not in the submitted list
+                    $quiz->customFields()
+                        ->whereNotIn('id', $submittedFieldIds)
+                        ->delete();
+
+                    foreach ($validated['custom_fields'] as $fieldData) {
+                        if (!empty($fieldData['name']) && !empty($fieldData['type'])) {
+                            if (isset($fieldData['id'])) {
+                                // Update existing field
+                                $quiz->customFields()
+                                    ->where('id', $fieldData['id'])
+                                    ->update([
+                                        'name' => $fieldData['name'],
+                                        'type' => $fieldData['type'],
+                                    ]);
+                            } else {
+                                // Create new field
+                                $quiz->customFields()->create([
+                                    'name' => $fieldData['name'],
+                                    'type' => $fieldData['type'],
+                                ]);
+                            }
+                        }
+                    }
+                } else {
+                    // If no custom fields are sent, delete all existing ones
+                    $quiz->customFields()->delete();
+                }
+            });
+
+            return back()->with('success', 'Examen actualizado exitosamente');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error updating quiz', [
+                'quiz_id' => $quiz->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->withErrors(['error' => 'Error al actualizar el examen']);
+        }
+    }
+
     public function showTemp($tempUrl)
     {
         try {
@@ -117,7 +238,7 @@ class QuizController extends Controller
                 'user_agent' => request()->userAgent()
             ]);
 
-            $quiz = Quiz::with(['organization.occupationPositions', 'organization.departmentAreas'])
+            $quiz = Quiz::with(['organization.occupationPositions', 'organization.departmentAreas', 'customFields'])
                 ->where('temp_url', $tempUrl)
                 ->where('is_active', true)
                 ->where('expires_at', '>', now())
@@ -157,6 +278,13 @@ class QuizController extends Controller
             'name' => $quiz->organization->name,
             'occupation_positions' => $quiz->organization->occupationPositions->pluck('name', 'id')->toArray(),
             'department_areas' => $quiz->organization->departmentAreas->pluck('name', 'id')->toArray(),
+            'custom_fields' => $quiz->customFields->map(function ($field) {
+                return [
+                    'id' => $field->id,
+                    'name' => $field->name,
+                    'type' => $field->type,
+                ];
+            })->toArray(),
         ];
 
         // Decidir qué vista usar basado en el tipo de quiz
@@ -171,7 +299,14 @@ class QuizController extends Controller
                         'acontecimientos_traumaticos' => config('referencia_iii_reduced.acontecimientos_traumaticos')
                     ],
                     'reference_i' => config('referencia_i'),
-                    'reference_v' => config('referencia_v')
+                    'reference_v' => config('referencia_v'),
+                    'custom_fields' => $quiz->customFields->map(function ($field) {
+                        return [
+                            'id' => $field->id,
+                            'name' => $field->name,
+                            'type' => $field->type,
+                        ];
+                    })->toArray()
                 ]
             ]);
         } elseif ($quiz->is_reduced) {
@@ -185,7 +320,14 @@ class QuizController extends Controller
                         'acontecimientos_traumaticos' => config('referencia_iii_reduced.acontecimientos_traumaticos')
                     ],
                     'reference_i' => config('referencia_i'),
-                    'reference_v' => config('referencia_v')
+                    'reference_v' => config('referencia_v'),
+                    'custom_fields' => $quiz->customFields->map(function ($field) {
+                        return [
+                            'id' => $field->id,
+                            'name' => $field->name,
+                            'type' => $field->type,
+                        ];
+                    })->toArray()
                 ]
             ]);
         } else {
@@ -201,7 +343,14 @@ class QuizController extends Controller
                         'acontecimientos_traumaticos' => config('referencia_iii.acontecimientos_traumaticos')
                     ],
                     'reference_i' => config('referencia_i'),
-                    'reference_v' => config('referencia_v')
+                    'reference_v' => config('referencia_v'),
+                    'custom_fields' => $quiz->customFields->map(function ($field) {
+                        return [
+                            'id' => $field->id,
+                            'name' => $field->name,
+                            'type' => $field->type,
+                        ];
+                    })->toArray()
                 ]
             ]);
         }
@@ -222,13 +371,14 @@ class QuizController extends Controller
                 'referencia_i' => 'nullable|string',
                 'referencia_v' => 'nullable|string',
                 'escala_cisneros' => 'nullable|string',
+                'custom_fields' => 'nullable|string',
                 'ine_frente' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'ine_reverso' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
             ]);
 
             // Decodificar datos JSON
             $decodedData = [];
-            foreach (['referencia_iii', 'referencia_i', 'referencia_v', 'escala_cisneros'] as $key) {
+            foreach (['referencia_iii', 'referencia_i', 'referencia_v', 'escala_cisneros', 'custom_fields'] as $key) {
                 if (isset($validated[$key]) && !empty($validated[$key])) {
                     $decoded = json_decode($validated[$key], true);
                     if (json_last_error() === JSON_ERROR_NONE) {
@@ -529,6 +679,47 @@ class QuizController extends Controller
     }
 
     /**
+     * Sanitize field name for use as question_key in database
+     * Converts human-readable field names to database-safe identifiers
+     */
+    private function sanitizeFieldName($fieldName)
+    {
+        // Convert to lowercase
+        $sanitized = strtolower(trim($fieldName));
+        
+        // Replace accented characters with their non-accented equivalents
+        $accents = [
+            'á' => 'a', 'à' => 'a', 'ä' => 'a', 'â' => 'a', 'ã' => 'a', 'å' => 'a',
+            'Á' => 'a', 'À' => 'a', 'Ä' => 'a', 'Â' => 'a', 'Ã' => 'a', 'Å' => 'a',
+            'é' => 'e', 'è' => 'e', 'ë' => 'e', 'ê' => 'e',
+            'É' => 'e', 'È' => 'e', 'Ë' => 'e', 'Ê' => 'e',
+            'í' => 'i', 'ì' => 'i', 'ï' => 'i', 'î' => 'i',
+            'Í' => 'i', 'Ì' => 'i', 'Ï' => 'i', 'Î' => 'i',
+            'ó' => 'o', 'ò' => 'o', 'ö' => 'o', 'ô' => 'o', 'õ' => 'o', 'ø' => 'o',
+            'Ó' => 'o', 'Ò' => 'o', 'Ö' => 'o', 'Ô' => 'o', 'Õ' => 'o', 'Ø' => 'o',
+            'ú' => 'u', 'ù' => 'u', 'ü' => 'u', 'û' => 'u',
+            'Ú' => 'u', 'Ù' => 'u', 'Ü' => 'u', 'Û' => 'u',
+            'ñ' => 'n', 'Ñ' => 'n', 'ç' => 'c', 'Ç' => 'c'
+        ];
+        
+        // First replace accents, then convert to lowercase
+        $sanitized = strtr($fieldName, $accents);
+        $sanitized = strtolower(trim($sanitized));
+        
+        // Replace spaces and special chars with underscores
+        $sanitized = preg_replace('/[^a-z0-9_]/', '_', $sanitized);
+        $sanitized = preg_replace('/_+/', '_', $sanitized); // Remove multiple underscores
+        $sanitized = trim($sanitized, '_'); // Remove leading/trailing underscores
+        
+        // Ensure it's not empty
+        if (empty($sanitized)) {
+            $sanitized = 'custom_field';
+        }
+        
+        return $sanitized;
+    }
+
+    /**
      * Procesa y almacena las imágenes del INE
      */
     private function processIneImages($request, $folio, $personalId)
@@ -596,7 +787,8 @@ class QuizController extends Controller
                 'referencia_iii' => 0,
                 'referencia_i' => 0,
                 'referencia_v' => 0,
-                'escala_cisneros' => 0
+                'escala_cisneros' => 0,
+                'custom_fields' => 0
             ];
             
             // Process referencia_iii answers
@@ -722,6 +914,39 @@ class QuizController extends Controller
                         'updated_at' => now()
                     ];
                     $recordCounts['escala_cisneros']++;
+                }
+            }
+            
+            // Process custom fields answers
+            if (isset($answers['custom_fields']) && is_array($answers['custom_fields'])) {
+                // Load custom fields for this quiz to get field names
+                $quiz = Quiz::with('customFields')->find($quizId);
+                $customFields = $quiz ? $quiz->customFields->keyBy('id') : collect();
+                
+                foreach ($answers['custom_fields'] as $key => $value) {
+                    if (!empty($value)) {
+                        // Try to get the real field name from the database
+                        $fieldName = 'custom_field_' . $key; // Default fallback
+                        
+                        // If we have the custom field data, use the actual field name
+                        if ($customFields->has($key)) {
+                            $customField = $customFields->get($key);
+                            $fieldName = $this->sanitizeFieldName($customField->name);
+                        }
+                        
+                        $records[] = [
+                            'folio' => $folio,
+                            'personal_id' => $personalId,
+                            'organization_id' => $organizationId,
+                            'quiz_id' => $quizId,
+                            'question_key' => $fieldName,
+                            'answer_value' => $this->formatAnswerValue($value),
+                            'reference_guide' => 'V', // Store custom fields under reference V
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ];
+                        $recordCounts['custom_fields']++;
+                    }
                 }
             }
             
