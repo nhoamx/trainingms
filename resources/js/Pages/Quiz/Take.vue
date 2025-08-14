@@ -7,6 +7,7 @@ import ProgressBar from '@/Components/Quiz/ProgressBar.vue';
 import ViewModeToggle from '@/Components/Quiz/ViewModeToggle.vue';
 import PersonalDataSection from '@/Components/Quiz/PersonalDataSection.vue';
 import LaborDataSection from '@/Components/Quiz/LaborDataSection.vue';
+import CustomFieldsSection from '@/Components/Quiz/CustomFieldsSection.vue';
 import TraumaticEventsSection from '@/Components/Quiz/TraumaticEventsSection.vue';
 import FollowUpQuestionsSection from '@/Components/Quiz/FollowUpQuestionsSection.vue';
 import NavigationButtons from '@/Components/Quiz/NavigationButtons.vue';
@@ -25,29 +26,17 @@ const props = defineProps({
 });
 
 const answers = ref({
-    referencia_iii: {
-        acontecimientos_traumaticos: {} // Inicializando el objeto para acontecimientos traumáticos
-    },
+    referencia_iii: {},
     referencia_i: {},
     referencia_v: {
         sexo: '',
         edad: '',
         estado_civil: '',
         nivel_estudios: '',
-        datos_laborales: {
-            ocupacion_puesto: '',
-            departamento_seccion_area: '',
-            tipo_puesto: '',
-            tipo_contratacion: '',
-            tipo_personal: '',
-            tipo_jornada: '',
-            rotacion_turnos: '',
-            experiencia: {
-                tiempo_puesto_actual: '',
-                tiempo_experiencia_laboral: ''
-            }
-        }
-    }
+        ine_frente: null,
+        ine_reverso: null
+    },
+    custom_fields: {}
 });
 
 const answerOptions = {
@@ -310,6 +299,9 @@ const submitEvaluation = () => {
     // Agregar el resto de datos de referencia_v
     formData.append('referencia_v', JSON.stringify(referenciaVData));
     
+    // Agregar campos personalizados
+    formData.append('custom_fields', JSON.stringify(answers.value.custom_fields || {}));
+    
     console.log('Enviando datos con FormData');
     
     // Usar router de Inertia para enviar los datos con FormData
@@ -380,6 +372,13 @@ const submitEvaluation = () => {
                         <PersonalDataSection 
                             v-model="answers.referencia_v" 
                             :reference-data="quiz.reference_v"
+                        />
+
+                        <!-- Campos Personalizados -->
+                        <CustomFieldsSection 
+                            v-if="quiz.custom_fields && quiz.custom_fields.length > 0"
+                            :custom-fields="quiz.custom_fields" 
+                            v-model="answers.custom_fields"
                         />
 
                         <!-- Datos Laborales -->
