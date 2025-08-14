@@ -53,4 +53,12 @@ class Quiz extends Model
     {
         return $this->belongsTo(\App\Models\Organization::class);
     }
+
+    /**
+     * Relación con los campos personalizados
+     */
+    public function customFields()
+    {
+        return $this->hasMany(CustomField::class);
+    }
 }
