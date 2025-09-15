@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use App\Jobs\ProcessQuizSubmission;
 
 class QuizController extends Controller
 {
@@ -482,7 +483,7 @@ class QuizController extends Controller
             }
 
             // Dispatch job to process submission asynchronously
-            \App\Jobs\ProcessQuizSubmission::dispatch($submissionStatus->id, true);
+            ProcessQuizSubmission::dispatch($submissionStatus->id, true);
 
             \Illuminate\Support\Facades\Log::info('Quiz submitted to queue successfully', [
                 'quiz_id' => $quiz->id,

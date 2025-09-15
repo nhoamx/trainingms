@@ -137,7 +137,6 @@ class EvaluationController extends Controller
                 $updatedCount = 0;
                 foreach ($evaluationsToReassign as $evaluation) {
                     // Usar el $newOrganizationId (UUID string) correcto
-                    Log::debug("Actualizando Evaluation ID: {$evaluation->id} al Organization ID (UUID): {$newOrganizationId}");
                     $evaluation->update(['organization_id' => $newOrganizationId]);
                     $updatedCount++;
                 }
