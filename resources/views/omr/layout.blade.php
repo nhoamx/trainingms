@@ -79,82 +79,11 @@
             font-size: 10px;
         }
 
-        /* Información del folio */
-        .folio-section {
-            position: absolute;
-            top: 10mm;
-            left: 10mm;
-            border: 2px solid black;
-            padding: 5px;
-            background: #f0f0f0;
-        }
-
-        .folio-section h3 {
-            font-size: 10px;
-            margin-bottom: 5px;
-            text-align: center;
-        }
-
-        .folio-boxes {
-            display: flex;
-            gap: 2px;
-        }
-
-        .folio-box {
-            width: 8mm;
-            height: 8mm;
-            border: 1px solid black;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-
-        /* Información de fecha */
-        .date-section {
-            position: absolute;
-            top: 10mm;
-            right: 10mm;
-            border: 2px solid black;
-            padding: 5px;
-            background: #f0f0f0;
-        }
-
-        .date-section h3 {
-            font-size: 10px;
-            margin-bottom: 5px;
-            text-align: center;
-        }
-
-        .date-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 3px;
-        }
-
-        .date-label {
-            width: 20mm;
-            font-size: 9px;
-        }
-
-        .date-boxes {
-            display: flex;
-            gap: 1px;
-        }
-
-        .date-box {
-            width: 6mm;
-            height: 6mm;
-            border: 1px solid black;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 8px;
-        }
+        /* Estilos de folio y fecha movidos a plantillas individuales */
 
         /* Contenido principal */
         .content {
-            margin-top: 40mm;
+            margin-top: 10mm;
             clear: both;
         }
 
@@ -278,48 +207,6 @@
 <body>
     <div class="page">
         <!-- Marcadores de alineación -->
-        <div class="alignment-marker marker-top-left"></div>
-        <div class="alignment-marker marker-top-right"></div>
-        <div class="alignment-marker marker-bottom-left"></div>
-        <div class="alignment-marker marker-bottom-right"></div>
-
-        <!-- Información del folio -->
-        <div class="folio-section">
-            <h3>FOLIO</h3>
-            <div class="folio-boxes">
-                @for ($i = 1; $i <= 9; $i++)
-                    <div class="folio-box">{{ $i }}</div>
-                @endfor
-            </div>
-        </div>
-
-        <!-- Información de fecha -->
-        <div class="date-section">
-            <h3>FECHA</h3>
-            <div class="date-row">
-                <span class="date-label">Día:</span>
-                <div class="date-boxes">
-                    <div class="date-box">D</div>
-                    <div class="date-box">D</div>
-                </div>
-            </div>
-            <div class="date-row">
-                <span class="date-label">Mes:</span>
-                <div class="date-boxes">
-                    <div class="date-box">M</div>
-                    <div class="date-box">M</div>
-                </div>
-            </div>
-            <div class="date-row">
-                <span class="date-label">Año:</span>
-                <div class="date-boxes">
-                    <div class="date-box">A</div>
-                    <div class="date-box">A</div>
-                    <div class="date-box">A</div>
-                    <div class="date-box">A</div>
-                </div>
-            </div>
-        </div>
 
         <!-- Encabezado -->
         <div class="header">
@@ -334,11 +221,6 @@
             @yield('content')
         </div>
 
-        <!-- Pie de página -->
-        <div style="position: absolute; bottom: 5mm; left: 10mm; right: 10mm; text-align: center; font-size: 8px; border-top: 1px solid black; padding-top: 2mm;">
-            <p>Este documento debe llenarse con tinta azul o negra. Marque completamente las burbujas. No utilice marcas fuera de las burbujas.</p>
-            <p>NOM-035-STPS-2018 - Factores de riesgo psicosocial en el trabajo</p>
-        </div>
     </div>
 </body>
 </html>

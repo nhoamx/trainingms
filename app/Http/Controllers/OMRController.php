@@ -9,7 +9,13 @@ class OMRController extends Controller
      */
     public function referenciaI()
     {
-        $questions = config('guide_i_questions');
+        $config = config('referencia_i');
+        $questions = [];
+
+        // Flatten the questions from all sections
+        foreach ($config as $sectionQuestions) {
+            $questions = array_merge($questions, $sectionQuestions);
+        }
 
         return view('omr.referencia-i', [
             'questions' => $questions,
