@@ -20,6 +20,7 @@ class ProcessQuizSubmission implements ShouldQueue
     public $timeout = 300; // 5 minutes timeout
     public $tries = 3; // Allow 3 attempts
     public $maxExceptions = 3;
+    public $queue = 'quiz_processing'; // Cola específica para procesamiento de evaluaciones
 
     /**
      * Create a new job instance.
@@ -27,7 +28,10 @@ class ProcessQuizSubmission implements ShouldQueue
     public function __construct(
         public int $submissionStatusId,
         public bool $processImages = true
-    ) {}
+    ) {
+        // Asignar a la cola específica de procesamiento de evaluaciones
+        $this->onQueue('quiz_processing');
+    }
 
     /**
      * Execute the job.
