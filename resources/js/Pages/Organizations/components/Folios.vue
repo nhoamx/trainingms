@@ -68,6 +68,9 @@
                   <p class="mt-1 text-xs text-gray-500">{{ batch.description || 'Sin descripción' }}</p>
                 </div>
                 <div class="flex shrink-0 items-center gap-x-2">
+                  <button v-if="batch.type === 'presencial'" @click="generatePdfForBatch(batch)" type="button" class="rounded-full bg-white p-1 text-gray-400 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2" title="Generar PDF con folios">
+                    <DocumentArrowDownIcon class="h-5 w-5" />
+                  </button>
                   <button v-if="batch.type === 'en_linea'" @click="showOnlineLink(batch)" type="button" class="rounded-full bg-white p-1 text-gray-400 hover:text-green-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2" title="Ver enlace de evaluación en línea">
                     <LinkIcon class="h-5 w-5" />
                   </button>
@@ -104,6 +107,61 @@
         </div>
       </div>
     </div>
+    
+    <!-- Modal para generar PDF -->
+    <div v-if="showPdfModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+        <div class="mb-4">
+          <h3 class="text-lg font-medium text-gray-900">Generar PDF de Evaluaciones</h3>
+          <p class="mt-1 text-sm text-gray-500">
+            Lote: {{ selectedBatch?.name }} ({{ formatFolioNumber(selectedBatch?.start_number) }} - {{ formatFolioNumber(selectedBatch?.end_number) }})
+          </p>
+        </div>
+        
+        <div class="space-y-4">
+          <!-- Selector de tipo de guía -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Tipo de evaluación</label>
+            <select v-model="selectedGuideType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+              <option value="">Selecciona un tipo</option>
+              <option v-for="guide in guideTypes" :key="guide.value" :value="guide.value">
+                {{ guide.label }}
+              </option>
+            </select>
+          </div>
+          
+          <!-- Checkbox para generar todos -->
+          <div class="flex items-center">
+            <input v-model="generateAll" id="generate-all" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+            <label for="generate-all" class="ml-2 block text-sm text-gray-700">Generar todos los folios del lote</label>
+          </div>
+          
+          <!-- Selector de folios específicos -->
+          <div v-if="!generateAll">
+            <label class="block text-sm font-medium text-gray-700">Folios específicos (separados por coma)</label>
+            <input 
+              v-model="selectedFolios" 
+              type="text" 
+              placeholder="ej: 0001,0002,0003"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              @input="selectedFolios = $event.target.value.split(',').map(f => f.trim()).filter(f => f)"
+            >
+            <p class="mt-1 text-xs text-gray-500">
+              Ingresa los números de folio que deseas incluir en el PDF
+            </p>
+          </div>
+        </div>
+        
+        <div class="mt-6 flex justify-end space-x-3">
+          <button @click="closePdfModal" type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200">
+            Cancelar
+          </button>
+          <button @click="generatePdf" type="button" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700">
+            Generar PDF
+          </button>
+        </div>
+      </div>
+    </div>
     <!-- Modal de detalles y eliminación pueden agregarse aquí si se requiere -->
   </div>
 </template>
@@ -112,7 +170,7 @@
 
 import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { PlusIcon, EyeIcon, TrashIcon, ArchiveBoxIcon, LinkIcon } from '@heroicons/vue/24/solid';
+import { PlusIcon, EyeIcon, TrashIcon, ArchiveBoxIcon, LinkIcon, DocumentArrowDownIcon } from '@heroicons/vue/24/solid';
 
 
 const props = defineProps({
@@ -183,5 +241,68 @@ const showOnlineLink = (batch) => {
 
 const deleteBatch = (batch) => {
   // Aquí puedes implementar el modal de confirmación y lógica de borrado
+};
+
+// PDF Generation state
+const showPdfModal = ref(false);
+const selectedBatch = ref(null);
+const selectedGuideType = ref('');
+const selectedFolios = ref([]);
+const generateAll = ref(false);
+
+const guideTypes = [
+  { value: 'referencia-i', label: 'Guía de Referencia I' },
+  { value: 'referencia-iii', label: 'Guía de Referencia III' }, 
+  { value: 'referencia-v', label: 'Guía de Referencia V' },
+  { value: 'escala-cisneros', label: 'Escala Cisneros' }
+];
+
+const generatePdfForBatch = (batch) => {
+  selectedBatch.value = batch;
+  selectedGuideType.value = '';
+  selectedFolios.value = [];
+  generateAll.value = false;
+  showPdfModal.value = true;
+};
+
+const generatePdf = () => {
+  if (!selectedGuideType.value) {
+    alert('Por favor selecciona un tipo de guía');
+    return;
+  }
+
+  let foliosToUse = [];
+  if (generateAll.value) {
+    // Generar folios basados en el rango del batch
+    for (let i = selectedBatch.value.start_number; i <= selectedBatch.value.end_number; i++) {
+      foliosToUse.push(i.toString().padStart(4, '0'));
+    }
+  } else {
+    if (selectedFolios.value.length === 0) {
+      alert('Por favor selecciona al menos un folio o marca "Generar todos"');
+      return;
+    }
+    foliosToUse = selectedFolios.value;
+  }
+
+  // Generar URL para el PDF
+  const baseUrl = `/omr/${selectedGuideType.value}`;
+  const params = new URLSearchParams({
+    download: 'pdf',
+    folios: foliosToUse
+  });
+  
+  // Abrir en nueva ventana para descargar
+  window.open(`${baseUrl}?${params.toString()}`, '_blank');
+  
+  showPdfModal.value = false;
+};
+
+const closePdfModal = () => {
+  showPdfModal.value = false;
+  selectedBatch.value = null;
+  selectedGuideType.value = '';
+  selectedFolios.value = [];
+  generateAll.value = false;
 };
 </script>

@@ -25,6 +25,11 @@
             background: white;
             padding: 10mm;
             position: relative;
+            page-break-after: always;
+        }
+        
+        .page:last-child {
+            page-break-after: auto;
         }
 
         /* Marcadores de alineación */
@@ -96,6 +101,26 @@
             display: inline-block;
             margin: 0 2mm 0 1mm;
             vertical-align: middle;
+        }
+        
+        .bubble-small {
+            width: 3mm;
+            height: 3mm;
+            border: 1px solid black;
+            border-radius: 50%;
+        }
+        
+        .bubble-tiny {
+            width: 3mm;
+            height: 3mm;
+            border: 1.5px solid black;
+            border-radius: 50%;
+        }
+        
+        .bubble-filled,
+        .bubble-small.bubble-filled,
+        .bubble-tiny.bubble-filled {
+            background-color: black;
         }
 
         .question-row {

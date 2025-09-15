@@ -47,7 +47,11 @@
                 <div class="folio-digit-number">{{ $digit }}</div>
                 <div class="folio-bubbles-row">
                     @for($i = 0; $i < 9; $i++)
-                        <div class="bubble"></div>
+                        @php
+                            $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
+                            $isSelected = $folioDigit == $digit;
+                        @endphp
+                        <div class="bubble {{ $isSelected ? 'bubble-filled' : '' }}"></div>
                     @endfor
                 </div>
             </div>
