@@ -1,17 +1,17 @@
 <?php
 
+use App\Http\Controllers\CategoryReportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemographicReportController;
 use App\Http\Controllers\DimensionReportController;
 use App\Http\Controllers\DomainReportController;
 use App\Http\Controllers\EvaluationController;
 use App\Http\Controllers\GlobalResponseController;
+use App\Http\Controllers\OMRController;
+use App\Http\Controllers\PeopleListController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\ResultsController;
-use App\Http\Controllers\TestController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\PeopleListController;
-use App\Http\Controllers\CategoryReportController;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -22,25 +22,23 @@ Route::get('/', function () {
 // Ruta pública para acceso a evaluaciones en línea
 Route::get('/evaluacion', function () {
     return \Inertia\Inertia::render('OnlineEvaluation/Access', [
-        'title' => 'Acceso a Evaluación'
+        'title' => 'Acceso a Evaluación',
     ]);
 })->name('online-evaluation.access');
 
+Route::controller(\App\Http\Controllers\AuthController::class)->group(function () {
+    Route::get('/login', 'showLogin')->name('login');
+    Route::post('/login', 'login')->name('loginPost');
 
-Route::controller(\App\Http\Controllers\AuthController::class)->group(function() {
-   Route::get('/login', 'showLogin')->name('login');
-   Route::post('/login', 'login')->name('loginPost');
-
-   Route::post('/logout', 'logout')->name('logout');
+    Route::post('/logout', 'logout')->name('logout');
 });
 
-
 Route::middleware(['auth'])->group(function () {
-    
-    Route::get('/organization/{id}/report', function($id) {
+
+    Route::get('/organization/{id}/report', function ($id) {
         return \Inertia\Inertia::render('Reports/AdminOrganizationReport', [
             'organizationId' => $id,
-            'title' => 'Reporte de Organización'
+            'title' => 'Reporte de Organización',
         ]);
     })->name('organization.report');
 
@@ -75,7 +73,7 @@ Route::middleware(['auth'])->group(function () {
     // API route for dimension qualifications (loaded when domain is selected)
     Route::get('/dashboard/report/dimension-qualifications/{domainId}', [DashboardController::class, 'getDimensionQualifications'])
         ->name('dashboard.report.dimensionQualifications');
-        
+
     // Nuevas rutas para los reportes de categoría
     Route::get('/reports/category-distribution', [CategoryReportController::class, 'getCategoryAnswerTypeDistribution'])
         ->name('reports.category.distribution');
@@ -95,35 +93,35 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports/global-person', [GlobalResponseController::class, 'showGlobalPersonReport'])
         ->name('reports.global.person.show');
 
-    // Rutas para reportes por categoría    
+    // Rutas para reportes por categoría
     Route::get('/reports/category', [CategoryReportController::class, 'showCategoryReport'])
         ->name('reports.category.show');
-        
+
     // Rutas para reporte de suma total por categoría
     Route::get('/reports/category-total-scores', [CategoryReportController::class, 'getCategoryTotalScores'])
         ->name('reports.category.totalScores');
     Route::get('/reports/category-total-scores-report', [CategoryReportController::class, 'showCategoryTotalScoreReport'])
         ->name('reports.category.totalScores.show');
-        
+
     // Rutas para reportes de dominio
     Route::get('/reports/domain-distribution', [DomainReportController::class, 'getDomainAnswerTypeDistribution'])
         ->name('reports.domain.distribution');
     Route::get('/reports/domain', [DomainReportController::class, 'showDomainReport'])
         ->name('reports.domain.show');
-        
+
     // Rutas para reporte de suma total por dominio
     Route::get('/reports/domain-total-scores', [DomainReportController::class, 'getDomainTotalScores'])
         ->name('reports.domain.totalScores');
     Route::get('/reports/domain-total-scores-report', [DomainReportController::class, 'showDomainTotalScoreReport'])
         ->name('reports.domain.totalScores.show');
-        
+
     // Rutas para reportes de dimensión
     // NUEVO: Distribución por nivel de riesgo y dimensión
     Route::get('/reports/dimension-risk-distribution', [DimensionReportController::class, 'getDimensionRiskLevelDistribution'])
         ->name('reports.dimension.riskDistribution');
     Route::get('/reports/dimension', [DimensionReportController::class, 'showDimensionReport'])
         ->name('reports.dimension.show');
-        
+
     // Rutas para reporte de suma total por dimensión
     Route::get('/reports/dimension-total-scores', [DimensionReportController::class, 'getDimensionTotalScores'])
         ->name('reports.dimension.totalScores');
@@ -182,7 +180,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::controller(EvaluationController::class)
             ->prefix('/evaluaciones')
-            ->group(function() {
+            ->group(function () {
                 Route::get('/', 'index')->name('evaluations.index');
                 Route::get('/cargar-evaluacion', 'loadEvaluation')->name('evaluations.load');
                 Route::post('/store', 'store')->name('evaluations.store');
@@ -198,7 +196,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/organizaciones/{organization}/evaluations/reassign', [EvaluationController::class, 'reassignEvaluations'])
             ->name('organizations.evaluations.reassign');
 
-        Route::controller(\App\Http\Controllers\OrganizationController::class)->prefix('/organizaciones')->group(function() {
+        Route::controller(\App\Http\Controllers\OrganizationController::class)->prefix('/organizaciones')->group(function () {
             Route::get('/', 'index')->name('organizations.index');
             Route::get('/create', 'create')->name('organizations.create');
             Route::post('/store', 'store')->name('organizations.store');
@@ -208,27 +206,27 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{organization}/delete', 'forceDelete')->name('organizations.force-delete')->withTrashed();
             Route::put('/{organization}/restore', 'restore')->name('organizations.restore')->withTrashed();
         });
-        
+
         // Rutas para puestos de ocupación
         Route::post('/occupation-positions', [\App\Http\Controllers\OccupationPositionController::class, 'store'])
             ->name('occupation-positions.store');
         Route::delete('/occupation-positions/{occupationPosition}', [\App\Http\Controllers\OccupationPositionController::class, 'destroy'])
             ->name('occupation-positions.destroy');
-            
+
         // Rutas para áreas de departamento
         Route::post('/department-areas', [\App\Http\Controllers\DepartmentAreaController::class, 'store'])
             ->name('department-areas.store');
         Route::delete('/department-areas/{departmentArea}', [\App\Http\Controllers\DepartmentAreaController::class, 'destroy'])
             ->name('department-areas.destroy');
 
-        Route::controller(ResultsController::class)->prefix('/resultados')->group(function() {
+        Route::controller(ResultsController::class)->prefix('/resultados')->group(function () {
             Route::get('/', 'index')->name('results.index');
             Route::get('/{organization}', 'organizationResults')->name('results.organization');
             Route::put('/evaluacion/{evaluation}/guia-v/preguntas/{question}', 'updateGuideVQuestion')->name('results.guide-v.question.update');
             Route::put('/evaluacion/{evaluation}/guia-iii/preguntas/{question}', 'updateGuideIIIQuestion')->name('results.guide-iii.question.update');
         });
 
-        Route::controller(QuizController::class)->prefix('/examenes')->name('quiz.')->group(function() {
+        Route::controller(QuizController::class)->prefix('/examenes')->name('quiz.')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/create', 'create')->name('create');
             Route::post('/store', 'store')->name('store');
@@ -239,7 +237,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::controller(UserController::class)
             ->prefix('/usuarios')
-            ->group(function() {
+            ->group(function () {
                 Route::get('/', 'index')->name('users.index');
                 Route::get('/create', 'create')->name('users.create');
                 Route::get('/{user}/edit', 'edit')->name('users.edit');
@@ -262,7 +260,7 @@ Route::middleware(['auth'])->group(function () {
             $status = cache('process_status', [
                 'status' => 'pending',
                 'finished' => false,
-                'message' => 'Procesando...'
+                'message' => 'Procesando...',
             ]);
 
             return response()->json($status);
@@ -283,4 +281,12 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/q/{tempUrl}', [QuizController::class, 'showTemp'])->name('quiz.temp');
 Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])
     ->name('quiz.submit');
-    //->middleware(\App\Http\Middleware\RateLimitQuizSubmissions::class);
+//->middleware(\App\Http\Middleware\RateLimitQuizSubmissions::class);
+
+// Rutas públicas para las plantillas OMR de evaluación presencial
+Route::prefix('omr')->name('omr.')->group(function () {
+    Route::get('/referencia-i', [OMRController::class, 'referenciaI'])->name('referencia-i');
+    Route::get('/referencia-iii', [OMRController::class, 'referenciaIII'])->name('referencia-iii');
+    Route::get('/referencia-v', [OMRController::class, 'referenciaV'])->name('referencia-v');
+    Route::get('/escala-cisneros', [OMRController::class, 'escalaCisneros'])->name('escala-cisneros');
+});
