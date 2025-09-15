@@ -4,55 +4,140 @@ This document provides guidance for AI coding agents working on the `trainingms`
 
 ## Project Overview
 
-`trainingms` is a Laravel-based application. It includes the following key components:
+`trainingms` is a Laravel 11 + Inertia.js + Vue 3 application for managing **psychological workplace risk assessments** under Mexico's **NOM-035-STPS-2018** regulation. This system handles both online digital evaluations and OCR-processed paper forms for identifying, analyzing, and preventing psychosocial risk factors in Mexican organizations.
 
-- **App Layer** (`app/`): Contains core application logic, including controllers, models, and services.
-- **Database Layer** (`database/`): Includes migrations, seeders, and factories for managing database schema and test data.
-- **Configuration** (`config/`): Centralized configuration files for services, caching, authentication, etc.
-- **Public Assets** (`public/`): Contains public-facing assets like the `index.php` entry point and static files.
-- **Resources** (`resources/`): Includes views, JavaScript, and CSS files.
-- **Routes** (`routes/`): Defines application routes (`web.php`, `api.php`, etc.).
+### Core Domain Concepts
+
+- **NOM-035-STPS-2018 Compliance**: Official Mexican standard for psychosocial risk factors in the workplace - identification, analysis, and prevention
+- **Evaluations**: Psychological assessments measuring workplace stress, trauma, and mobbing using validated instruments per NOM-035 requirements
+- **Organizations**: Companies that conduct evaluations with their employees (15+ workers require different compliance levels)
+- **Quizzes**: Temporary evaluation links with expiration dates for online assessments
+- **Folios**: Unique identifiers for paper-based evaluations processed via OCR
+- **Reference Guides**: Standardized question sets aligned with NOM-035 (Guide I: PTSD, Escala Cisneros: Mobbing, Reference III/V: Workplace factors)
+
+### Application Architecture
+
+- **Backend** (`app/`): Laravel 11 with domain models (Quiz, Evaluation, Organization, Folio, etc.)
+- **Frontend** (`resources/js/`): Vue 3 + Inertia.js with modular quiz components in `Components/Quiz/`
+- **OCR Processing** (`docker/`): Python-based bubble sheet detection for paper forms
+- **Configuration** (`config/`): Domain-specific question sets and demographic data structures
+- **Database** (`database/`): Psychological evaluation data with JSON storage for flexible questionnaire responses
 
 ## Developer Workflows
 
-### Database Migrations and Seeding
-- Run migrations with `php artisan migrate`.
-- Seed the database using `php artisan db:seed`. For specific seeders, use `--class`, e.g., `php artisan db:seed --class=RolesSeeder`.
+### Database Operations
+- Run migrations with `php artisan migrate`
+- Seed with `php artisan db:seed --class=RolesSeeder` (roles use `firstOrCreate` pattern)
+- Models use UUIDs where applicable (`Evaluation` model uses `HasUuids`)
+
+### OCR Processing Workflow
+- Paper forms are processed via Docker container (`docker/main.py`)
+- Python scripts detect bubble sheets and output JSON results by folio ID
+- Results are imported into Laravel via JSON parsing into `Evaluation->data` field
+
+### Frontend Development
+- Vue 3 components in `resources/js/Components/Quiz/` are modular and reusable
+- Use `npm run dev` for development, `npm run build` for production
+- Quiz components follow specific patterns (see `Components/Quiz/README.md`)
 
 ### Testing
-- Run tests with `php artisan test` or `vendor/bin/phpunit`.
-- Use `php artisan test --filter=TestName` to run a specific test.
-- Always use DatabaseTransactions for tests that modify the database.
-- Feature tests are located in `tests/Feature/`.
+- Run tests with `php artisan test`
+- Use `php artisan test --filter=TestName` for specific tests
+- All database tests use `DatabaseTransactions`
+- Feature tests are in `tests/Feature/`
 
 ## Project-Specific Conventions
 
-- **Role Management**: Roles are seeded using the `RolesSeeder` class in `database/seeders/`. It uses `firstOrCreate` to avoid duplicate entries.
-- **Configuration**: Sensitive data is managed via `.env` files. Avoid hardcoding sensitive values.
-- **Frontend**: Tailwind CSS is configured via `tailwind.config.js`. Build assets using `npm run dev` or `npm run build`.
+### Domain-Specific Patterns
+- **NOM-035-STPS-2018 Compliance Structure**: 
+  - Different requirements by organization size (≤15, 16-50, >50 workers)
+  - Mandatory biannual evaluations for workplace psychosocial risk factors
+  - Three intervention levels: organizational, group, and individual
+- **Question Configuration**: All questionnaires are defined in `config/` files following NOM-035 validated instruments (e.g., `guide_i_questions.php`, `escala_cisneros.php`, `referencia_v.php`)
+- **Mexican Workplace Demographics**: Configured in `referencia_v.php` with nested arrays for Mexican labor market specifics
+- **JSON Data Storage**: `Evaluation->data` field stores flexible questionnaire responses as JSON per NOM-035 data requirements
+- **Quiz Types**: Support for regular, reduced, and Cisneros scale evaluations (`is_reduced`, `is_cisneros` flags) based on organizational risk levels
+- **Temporary URLs**: Quizzes have expiring temporary URLs with `expires_at` datetime handling for secure access
+
+### Vue Component Architecture
+- Quiz components use composition API with `v-model` patterns
+- Modular components in `Components/Quiz/` for reusability between quiz types
+- Data collection components handle personal/labor demographics separately
+- Navigation and progress components provide consistent UX across quiz flows
+
+### Model Conventions
+- Use `casts()` method for model casting (Laravel 11 pattern)
+- UUID primary keys on `Evaluation` model for privacy
+- JSON casting for flexible data structures
+- Scope methods for common queries (`scopeActive` on Quiz)
 
 ## Integration Points
 
-- **External Services**: Configured in `config/services.php`. Examples include mail, storage, and third-party APIs.
-- **Docker**: A `docker-compose.yml` file is available for containerized development. Key scripts are in the `docker/` directory.
-- **Telescope**: Laravel Telescope is included for debugging and monitoring.
+### OCR Processing Pipeline
+- Docker container processes PDF forms to detect bubble selections
+- Python scripts in `docker/` handle image conversion and bubble detection
+- Folio detection determines unique evaluation identifiers
+- Results saved as JSON files by folio for Laravel import
+
+### External Services
+- Configured in `config/services.php` for mail, storage, and third-party APIs
+- Laravel Reverb for real-time features (deployment notes in README)
+- Laravel Telescope included for debugging and monitoring
+
+### Cross-Component Communication
+- Inertia.js bridges Laravel backend with Vue frontend
+- Ziggy provides named route access in JavaScript
+- Quiz data flows: Configuration → Backend Models → Inertia Props → Vue Components
+- OCR results: Docker JSON → Laravel Evaluation JSON → Frontend display
 
 ## Key Files and Directories
 
-- `app/Models/`: Contains Eloquent models.
-- `routes/web.php`: Defines web routes.
-- `database/migrations/`: Manages database schema.
-- `resources/views/`: Blade templates for the frontend.
-- `config/`: Centralized configuration files.
+### Core Application Structure
+- `app/Models/`: Domain models (Quiz, Evaluation, Organization, Folio, etc.)
+- `routes/web.php`: Web routes including public evaluation access
+- `database/migrations/`: Schema for psychological evaluation data
+- `resources/js/Pages/`: Inertia.js pages for different application sections
+- `resources/js/Components/Quiz/`: Reusable Vue components for quiz functionality
+
+### Domain Configuration
+- **NOM-035 Validated Instruments**:
+  - `config/guide_i_questions.php`: Guide I - PTSD assessment questions in Spanish (acontecimientos traumáticos severos)
+  - `config/escala_cisneros.php`: Workplace mobbing scale questions (violencia laboral/acoso psicológico)
+  - `config/referencia_v.php`: Mexican demographic data structures aligned with NOM-035 requirements
+  - `config/referencia_iii.php`: Reference III - Workplace psychosocial factors evaluation
+- `config/answer_values.php`: Standardized response options for scales per NOM-035 specifications
+
+### OCR Processing
+- `docker/main.py`: Main OCR processing script for bubble detection
+- `docker/bubble_detector.py`: Core bubble detection logic
+- `docker/config.py`: OCR configuration for different form layouts
 
 ## Notes for AI Agents
 
-- Follow Laravel conventions for naming and structure.
-- Use `php artisan` commands for common tasks.
-- When adding new features, ensure they are covered by tests in `tests/`.
-- Respect existing patterns, such as using service classes for business logic.
+### Domain Understanding
+- This is a **NOM-035-STPS-2018 compliance platform** for Mexican workplace psychosocial risk assessment
+- **Legal Framework**: Official Mexican standard requiring identification, analysis, and prevention of workplace psychosocial risk factors
+- **Regulatory Requirements**: Different compliance levels based on organization size (≤15, 16-50, >50 workers)
+- **Validated Instruments**: Uses officially validated questionnaires (Guide I, Escala Cisneros, Reference III/V) per NOM-035 specifications
+- **Risk Factor Categories**: Covers trabajo-familia interference, violencia laboral, liderazgo negativo, cargas de trabajo, and entorno organizacional
+- Data privacy is critical - UUIDs used for sensitive evaluation records
+- Support both digital (online) and paper-based (OCR) evaluation workflows per regulatory flexibility
 
-For further clarification, consult the Laravel documentation or ask for specific examples from the codebase.
+### Development Patterns
+- Follow Laravel 11 conventions with modern patterns (`casts()` method, constructor promotion)
+- Vue 3 Composition API with `v-model` for form components
+- JSON storage pattern for flexible questionnaire data structures
+- Modular component architecture in `Components/Quiz/` for reusability
+
+### Critical Workflows
+- **NOM-035 Compliance Cycle**: Biannual evaluations required by law with proper documentation and intervention programs
+- Quiz creation with temporary URLs and expiration handling for secure regulatory compliance
+- OCR processing pipeline from PDF → images → bubble detection → JSON import for paper forms
+- Multi-step evaluation forms with conditional logic and demographic collection per NOM-035 requirements
+- **Three-Level Intervention**: Organizational (policies), group (team dynamics), and individual (clinical) interventions based on risk levels
+- Report generation from aggregated psychological assessment data meeting regulatory reporting standards
+
+For domain-specific examples, consult configuration files in `config/` and the Quiz component documentation in `resources/js/Components/Quiz/README.md`.
 
 ===
 
