@@ -42,6 +42,11 @@ class Organization extends Model
         return $this->hasMany(FolioBatch::class);
     }
 
+    public function folios()
+    {
+        return $this->hasManyThrough(Folio::class, FolioBatch::class);
+    }
+
     public function quizzes()
     {
         return $this->hasMany(Quiz::class);

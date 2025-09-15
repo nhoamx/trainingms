@@ -1043,12 +1043,10 @@ class ReportService
                                 $displayLabel = $configOptions[$index];
                                 $identifier = $rawAnswer;
                             } else {
-                                Log::debug("Invalid age index [{$rawAnswer}] for personal_id [{$personalId}]");
                                 $displayLabel = 'Edad Inválida';
                                 $identifier = $rawAnswer; // Store the original invalid answer
                             }
                         } else {
-                            Log::debug("Non-numeric age answer [{$rawAnswer}] for personal_id [{$personalId}]");
                             $displayLabel = 'Edad Inválida';
                             $identifier = $rawAnswer; // Store the original non-numeric answer
                         }
@@ -1064,7 +1062,6 @@ class ReportService
                              $displayLabel = $matchedKey;
                              $identifier = $rawAnswer;
                         } else {
-                             Log::debug("Could not map nivel_estudios answer [{$rawAnswer}] for personal_id [{$personalId}]");
                              $displayLabel = 'Estudio Desconocido';
                              $identifier = $rawAnswer; // Store the original unmappable answer
                         }
@@ -1084,7 +1081,6 @@ class ReportService
                          if ($foundLabel) {
                              $displayLabel = $foundLabel;
                          } else {
-                             Log::debug("Could not map general answer [{$rawAnswer}] for field [{$fieldKey}], personal_id [{$personalId}]");
                              $displayLabel = 'Otro';
                              $identifier = $rawAnswer; // Keep raw answer for 'Otro' category
                          }
