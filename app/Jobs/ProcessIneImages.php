@@ -16,6 +16,7 @@ class ProcessIneImages implements ShouldQueue
 
     public $timeout = 600; // 10 minutes for image processing
     public $tries = 3;
+    public $queue = 'image_processing'; // Cola específica para procesamiento de imágenes
 
     /**
      * Create a new job instance.
@@ -24,7 +25,10 @@ class ProcessIneImages implements ShouldQueue
         public string $folio,
         public string $personalId,
         public array $ineImages
-    ) {}
+    ) {
+        // Asignar a la cola específica de procesamiento de imágenes
+        $this->onQueue('image_processing');
+    }
 
     /**
      * Execute the job.
