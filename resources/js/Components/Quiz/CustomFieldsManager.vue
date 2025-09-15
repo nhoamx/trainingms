@@ -25,7 +25,6 @@
                     <input
                         type="text"
                         v-model="field.name"
-                        @input="updateField(index, 'name', $event.target.value)"
                         class="block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
                         placeholder="Ej: Número de empleado"
                         required
@@ -36,7 +35,6 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Campo</label>
                     <select
                         v-model="field.type"
-                        @change="updateField(index, 'type', $event.target.value)"
                         class="block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
                         required
                     >
@@ -65,7 +63,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 
 const props = defineProps({
     modelValue: {
@@ -78,14 +76,26 @@ const emit = defineEmits(['update:modelValue']);
 
 const localCustomFields = ref([...props.modelValue]);
 
-// Watch for external changes
+// Watch for external changes only
 watch(() => props.modelValue, (newValue) => {
-    localCustomFields.value = [...newValue];
+    // Only update if the values are actually different to prevent loops
+    if (JSON.stringify(newValue) !== JSON.stringify(localCustomFields.value)) {
+        localCustomFields.value = [...newValue];
+    }
 }, { deep: true });
 
-// Watch for local changes and emit them
+// Watch for local changes and emit them with debouncing
+let updateTimeout = null;
 watch(localCustomFields, (newValue) => {
-    emit('update:modelValue', newValue);
+    // Clear any pending updates
+    if (updateTimeout) {
+        clearTimeout(updateTimeout);
+    }
+    
+    // Debounce the emit to prevent rapid-fire updates
+    updateTimeout = setTimeout(() => {
+        emit('update:modelValue', [...newValue]);
+    }, 100);
 }, { deep: true });
 
 const addCustomField = () => {
@@ -99,11 +109,5 @@ const addCustomField = () => {
 
 const removeCustomField = (index) => {
     localCustomFields.value.splice(index, 1);
-};
-
-const updateField = (index, property, value) => {
-    if (localCustomFields.value[index]) {
-        localCustomFields.value[index][property] = value;
-    }
 };
 </script>
