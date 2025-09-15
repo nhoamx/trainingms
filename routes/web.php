@@ -281,4 +281,6 @@ Route::middleware(['auth'])->group(function () {
 
 // Rutas públicas para acceder al examen temporal (fuera del middleware auth)
 Route::get('/q/{tempUrl}', [QuizController::class, 'showTemp'])->name('quiz.temp');
-Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])->name('quiz.submit');
+Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])
+    ->name('quiz.submit')
+    ->middleware(\App\Http\Middleware\RateLimitQuizSubmissions::class);
