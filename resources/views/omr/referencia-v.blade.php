@@ -14,19 +14,68 @@
 <style>
     .page-container { position: relative; margin: 0 auto; padding: 8mm; background: white; font-size: 6px; }
     .folio-instructions-row { display: flex; gap: 6mm; margin-bottom: 4mm; align-items: flex-start; }
-    .folio-section { border: 1px solid black; padding: 1mm; background: #f8f8f8; position: relative; min-width: 60mm; max-width: 80mm; flex: 1; }
-    .folio-header { display: flex; gap: 0.8mm; margin-bottom: 1.5mm; align-items: center; }
-    .folio-digit-column { width: 6mm; text-align: center; font-weight: bold; font-size: 5px; }
-    .folio-position-header { flex: 1; text-align: center; font-size: 4px; font-weight: bold; border: 1px solid black; height: 3mm; display: flex; align-items: center; justify-content: center; background: white; }
-    .folio-row { display: flex; align-items: center; margin-bottom: 1mm; font-size: 5px; min-height: 3mm; gap: 0.8mm; }
-    .folio-digit-number { font-weight: bold; width: 6mm; text-align: center; flex-shrink: 0; font-size: 5px; }
-    .folio-bubbles-row { display: flex; gap: 0.8mm; align-items: center; flex: 1; justify-content: space-around; }
-    .block-corner-marker { position: absolute; width: 2mm; height: 2mm; background: black; z-index: 2; }
-    .block-corner-marker.top-left { top: 0; left: 0; }
-    .block-corner-marker.top-right { top: 0; right: 0; }
-    .block-corner-marker.bottom-left { bottom: 0; left: 0; }
-    .block-corner-marker.bottom-right { bottom: 0; right: 0; }
+    .folio-section { 
+        border: 2px solid black; 
+        padding: 3mm; 
+        background: #f8f8f8; 
+        position: relative; 
+        min-width: 60mm; 
+        max-width: 80mm; 
+        flex: 1; 
+    }
+    .folio-header { 
+        display: flex; 
+        gap: 1.5mm; 
+        margin-bottom: 2mm; 
+        align-items: center; 
+    }
+    .folio-digit-column { 
+        width: 8mm; 
+        text-align: center; 
+        font-weight: bold; 
+        font-size: 7px; 
+    }
+    .folio-position-header { 
+        flex: 1; 
+        text-align: center; 
+        font-size: 6px; 
+        font-weight: bold; 
+        border: 1px solid black; 
+        height: 4mm; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        background: white; 
+    }
+    .folio-row { 
+        display: flex; 
+        align-items: center; 
+        gap: 1.5mm; 
+        margin-bottom: 1.2mm; 
+        font-size: 5px; 
+        min-height: 3.5mm; 
+    }
+    .folio-digit-number { 
+        font-weight: bold; 
+        width: 8mm; 
+        text-align: center; 
+        flex-shrink: 0; 
+        font-size: 7px; 
+    }
+    .folio-bubbles-row { 
+        display: flex; 
+        gap: 1.5mm; 
+        align-items: center; 
+        flex: 1; 
+        justify-content: space-between; 
+    }
     .instructions { flex: 2; min-width: 0; font-size: 7px; }
+    
+    .folio-instructions-row {
+        margin-bottom: 4mm;
+        padding-bottom: 3mm;
+        border-bottom: 2px solid black;
+    }
     
     .three-column-layout { display: flex; gap: 4mm; margin-top: 4mm; }
     .column { width: 32%; page-break-inside: avoid; }
@@ -63,11 +112,6 @@
 <div class="page-container">
     <div class="folio-instructions-row">
         <div class="folio-section">
-            <!-- Marcadores de esquina -->
-            <div class="block-corner-marker top-left"></div>
-            <div class="block-corner-marker top-right"></div>
-            <div class="block-corner-marker bottom-left"></div>
-            <div class="block-corner-marker bottom-right"></div>
             <!-- Header con espacios para escribir -->
             <div class="folio-header">
                 <div class="folio-digit-column"></div>

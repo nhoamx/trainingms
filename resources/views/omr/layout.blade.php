@@ -19,8 +19,8 @@
         }
 
         .page {
-            width: 210mm;
-            min-height: 297mm;
+            width: 215.9mm;  /* US Letter width */
+            min-height: 279.4mm;  /* US Letter height */
             margin: 0 auto;
             background: white;
             padding: 10mm;
@@ -32,12 +32,13 @@
             page-break-after: auto;
         }
 
-        /* Marcadores de alineación */
+        /* Marcadores de alineación - Optimizados para detección OMR */
         .alignment-marker {
             position: absolute;
             width: 8mm;
             height: 8mm;
             background: black;
+            border-radius: 0;
         }
 
         .marker-top-left {
