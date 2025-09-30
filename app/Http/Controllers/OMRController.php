@@ -146,10 +146,7 @@ class OMRController extends Controller
 
         // Configurar Browsershot para WSL/Windows
         $browsershot = Browsershot::html($htmlContent)
-            ->addChromiumArguments([
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-            ])
+            ->noSandbox()
             ->format('Letter')
             ->margins(10, 10, 10, 10) // top, right, bottom, left en mm
             ->showBackground()
