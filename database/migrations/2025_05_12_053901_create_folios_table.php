@@ -19,7 +19,7 @@ return new class extends Migration
             $table->boolean('used')->default(false)->comment('Indica si el folio ya ha sido utilizado');
             $table->timestamp('used_at')->nullable()->comment('Fecha y hora en que se utilizó el folio');
             $table->timestamps();
-            
+
             $table->unique(['folio_batch_id', 'folio_number'])->comment('Garantiza que no haya folios duplicados dentro de un mismo lote');
         });
     }

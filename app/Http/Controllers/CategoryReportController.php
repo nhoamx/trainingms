@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Services\CategoryReportService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class CategoryReportController extends Controller
 {
@@ -19,7 +19,6 @@ class CategoryReportController extends Controller
     /**
      * Obtiene y devuelve la distribución de respuestas por categoría y tipo
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function getCategoryAnswerTypeDistribution(Request $request)
@@ -27,7 +26,7 @@ class CategoryReportController extends Controller
         try {
             // Verificación de autorización - ajusta según tus necesidades
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
 
@@ -36,7 +35,8 @@ class CategoryReportController extends Controller
 
             return response()->json($distribution);
         } catch (\Exception $e) {
-            Log::error("Error al obtener la distribución de respuestas por categoría: " . $e->getMessage());
+            Log::error('Error al obtener la distribución de respuestas por categoría: '.$e->getMessage());
+
             return response()->json(['error' => 'Error al procesar la solicitud'], 500);
         }
     }
@@ -44,7 +44,6 @@ class CategoryReportController extends Controller
     /**
      * Muestra la vista del reporte de visualización de categorías
      *
-     * @param Request $request
      * @return \Inertia\Response
      */
     public function showCategoryReport(Request $request)
@@ -52,20 +51,20 @@ class CategoryReportController extends Controller
         try {
             // Verificación de autorización - ajusta según tus necesidades
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 abort(403, 'No autorizado');
             }
 
             // Obtener los datos desde el servicio para la carga inicial (por nivel de riesgo)
             $distribution = $this->categoryReportService->getCategoryRiskLevelDistribution();
-            Log::info("Distribución de personas por nivel de riesgo y categoría: ", $distribution->toArray());
+            Log::info('Distribución de personas por nivel de riesgo y categoría: ', $distribution->toArray());
 
             return Inertia::render('Reports/CategoryReport', [
                 'categoryDistribution' => $distribution,
-                'title' => 'Reporte por Categorías'
+                'title' => 'Reporte por Categorías',
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al mostrar el reporte de categorías: " . $e->getMessage());
+            Log::error('Error al mostrar el reporte de categorías: '.$e->getMessage());
             abort(500, 'Error al procesar la solicitud');
         }
     }
@@ -73,7 +72,6 @@ class CategoryReportController extends Controller
     /**
      * Obtiene y devuelve la suma total del valor de respuestas por categoría
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function getCategoryTotalScores(Request $request)
@@ -81,7 +79,7 @@ class CategoryReportController extends Controller
         try {
             // Verificación de autorización - ajusta según tus necesidades
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
 
@@ -90,7 +88,8 @@ class CategoryReportController extends Controller
 
             return response()->json($totalScores);
         } catch (\Exception $e) {
-            Log::error("Error al obtener la suma total de respuestas por categoría: " . $e->getMessage());
+            Log::error('Error al obtener la suma total de respuestas por categoría: '.$e->getMessage());
+
             return response()->json(['error' => 'Error al procesar la solicitud'], 500);
         }
     }
@@ -98,7 +97,6 @@ class CategoryReportController extends Controller
     /**
      * Muestra la vista del reporte de puntuación total por categoría
      *
-     * @param Request $request
      * @return \Inertia\Response
      */
     public function showCategoryTotalScoreReport(Request $request)
@@ -106,7 +104,7 @@ class CategoryReportController extends Controller
         try {
             // Verificación de autorización - ajusta según tus necesidades
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 abort(403, 'No autorizado');
             }
 
@@ -115,10 +113,10 @@ class CategoryReportController extends Controller
 
             return Inertia::render('Reports/CategoryTotalScoreReport', [
                 'categoryTotalScores' => $totalScores,
-                'title' => 'Puntuación Total por Categorías'
+                'title' => 'Puntuación Total por Categorías',
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al mostrar el reporte de puntuación total por categorías: " . $e->getMessage());
+            Log::error('Error al mostrar el reporte de puntuación total por categorías: '.$e->getMessage());
             abort(500, 'Error al procesar la solicitud');
         }
     }

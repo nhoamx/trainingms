@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\Quiz;
 use App\Models\OnlineAnswer;
+use App\Models\Quiz;
 use App\Models\SubmissionStatus;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -18,8 +18,11 @@ class ProcessQuizSubmission implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 300; // 5 minutes timeout
+
     public $tries = 3; // Allow 3 attempts
+
     public $maxExceptions = 3;
+
     public $queue = 'quiz_processing'; // Cola específica para procesamiento de evaluaciones
 
     /**
@@ -39,9 +42,10 @@ class ProcessQuizSubmission implements ShouldQueue
     public function handle(): void
     {
         $submissionStatus = SubmissionStatus::find($this->submissionStatusId);
-        
-        if (!$submissionStatus) {
+
+        if (! $submissionStatus) {
             Log::error('SubmissionStatus not found', ['id' => $this->submissionStatusId]);
+
             return;
         }
 
@@ -51,18 +55,12 @@ class ProcessQuizSubmission implements ShouldQueue
             $this->processSubmission($submissionStatus);
             $submissionStatus->markAsCompleted();
 
-            Log::info('Quiz submission processed successfully', [
-                'folio' => $submissionStatus->folio,
-                'personal_id' => $submissionStatus->personal_id,
-                'quiz_id' => $submissionStatus->quiz_id
-            ]);
-
         } catch (\Exception $e) {
             Log::error('Quiz submission processing failed', [
                 'submission_id' => $this->submissionStatusId,
                 'folio' => $submissionStatus->folio,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             $submissionStatus->markAsFailed($e->getMessage());
@@ -72,12 +70,7 @@ class ProcessQuizSubmission implements ShouldQueue
                 $delay = $submissionStatus->retry_count * 60; // Progressive delay
                 self::dispatch($this->submissionStatusId, $this->processImages)
                     ->delay(now()->addSeconds($delay));
-                
-                Log::info('Quiz submission job will retry', [
-                    'submission_id' => $this->submissionStatusId,
-                    'retry_count' => $submissionStatus->retry_count,
-                    'delay_seconds' => $delay
-                ]);
+
             }
 
             throw $e;
@@ -90,7 +83,7 @@ class ProcessQuizSubmission implements ShouldQueue
     private function processSubmission(SubmissionStatus $submissionStatus): void
     {
         $data = $submissionStatus->data_snapshot;
-        
+
         // Process in chunks to handle large datasets
         $answers = $data['answers'] ?? [];
         $ineImages = $data['ine_images'] ?? [];
@@ -111,7 +104,7 @@ class ProcessQuizSubmission implements ShouldQueue
         });
 
         // Dispatch INE image processing job if needed
-        if ($this->processImages && !empty($ineImages)) {
+        if ($this->processImages && ! empty($ineImages)) {
             ProcessIneImages::dispatch(
                 $submissionStatus->folio,
                 $submissionStatus->personal_id,
@@ -139,16 +132,11 @@ class ProcessQuizSubmission implements ShouldQueue
 
         // Insert in chunks for better memory management
         $chunks = array_chunk($records, $chunkSize);
-        
+
         foreach ($chunks as $chunk) {
             OnlineAnswer::insert($chunk);
         }
 
-        Log::info('Online answers stored successfully', [
-            'folio' => $folio,
-            'total_records' => count($records),
-            'chunks_processed' => count($chunks)
-        ]);
     }
 
     /**
@@ -175,7 +163,7 @@ class ProcessQuizSubmission implements ShouldQueue
                     'answer_value' => $this->formatAnswerValue($value),
                     'reference_guide' => 'III',
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ];
             }
         }
@@ -192,7 +180,7 @@ class ProcessQuizSubmission implements ShouldQueue
                     'answer_value' => $this->formatAnswerValue($value),
                     'reference_guide' => 'I',
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ];
             }
         }
@@ -214,7 +202,7 @@ class ProcessQuizSubmission implements ShouldQueue
                     'answer_value' => $this->formatAnswerValue($value),
                     'reference_guide' => 'Cisneros',
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ];
             }
         }
@@ -231,7 +219,7 @@ class ProcessQuizSubmission implements ShouldQueue
                     'answer_value' => $this->formatAnswerValue($value),
                     'reference_guide' => 'V', // Custom fields are part of reference guide V
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ];
             }
         }
@@ -247,7 +235,7 @@ class ProcessQuizSubmission implements ShouldQueue
                 'answer_value' => $imagePath,
                 'reference_guide' => 'V',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ];
         }
     }
@@ -267,7 +255,7 @@ class ProcessQuizSubmission implements ShouldQueue
     ): void {
         foreach ($answers as $key => $value) {
             $fullKey = $prefix ? "{$prefix}.{$key}" : $key;
-            
+
             if (is_array($value)) {
                 $this->processNestedAnswers($records, $value, $folio, $personalId, $organizationId, $quizId, $referenceGuide, $fullKey);
             } else {
@@ -280,7 +268,7 @@ class ProcessQuizSubmission implements ShouldQueue
                     'answer_value' => $this->formatAnswerValue($value),
                     'reference_guide' => $referenceGuide,
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ];
             }
         }
@@ -294,11 +282,11 @@ class ProcessQuizSubmission implements ShouldQueue
         if (is_array($value)) {
             return json_encode($value);
         }
-        
+
         if (is_bool($value)) {
             return $value ? '1' : '0';
         }
-        
+
         return (string) $value;
     }
 
@@ -312,12 +300,12 @@ class ProcessQuizSubmission implements ShouldQueue
             $virtualBatch = \App\Models\FolioBatch::firstOrCreate([
                 'organization_id' => $organizationId,
                 'name' => 'Quiz Virtual Batch',
-                'type' => 'en_linea'
+                'type' => 'en_linea',
             ], [
                 'description' => 'Lote virtual para folios generados por quiz',
                 'start_number' => 1,
                 'end_number' => 9999,
-                'quantity' => 9999
+                'quantity' => 9999,
             ]);
 
             \App\Models\Folio::create([
@@ -325,14 +313,14 @@ class ProcessQuizSubmission implements ShouldQueue
                 'folio_number' => $folioNumber,
                 'numeric_value' => intval($folioNumber),
                 'used' => true,
-                'used_at' => now()
+                'used_at' => now(),
             ]);
 
         } catch (\Exception $e) {
             Log::warning('Failed to create virtual folio', [
                 'organization_id' => $organizationId,
                 'folio_number' => $folioNumber,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
             // Don't fail the entire job for virtual folio creation issues
         }

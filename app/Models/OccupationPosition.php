@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class OccupationPosition extends Model
 {
     use SoftDeletes;
-    
+
     protected $fillable = [
         'organization_id',
         'identifier',
         'name',
     ];
-    
+
     public function organization()
     {
         return $this->belongsTo(Organization::class);

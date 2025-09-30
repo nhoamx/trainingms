@@ -17,7 +17,7 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
 
         // Configurar notificaciones por correo para producción
         Horizon::routeMailNotificationsTo('alfredo@nhoamx.com');
-        
+
         // Configurar tema oscuro para mejor UX durante monitoreo nocturno
         Horizon::night();
     }

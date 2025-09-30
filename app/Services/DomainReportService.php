@@ -2,23 +2,19 @@
 
 namespace App\Services;
 
-use App\Models\Question;
-use App\Models\Domain;
 use App\Models\Evaluation;
-use Illuminate\Support\Facades\DB;
+use App\Models\Question;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class DomainReportService
 {
-
     /**
      * Obtiene la distribución de personas por dominio y nivel de riesgo (Nulo, Bajo, Medio, Alto, Muy Alto)
      * Implementa el query oficial de la NOM-035 para dominios (ver instrucciones)
      *
-     * @param string $referenceGuide
-     * @param int|null $organizationId
-     * @return Collection
+     * @param  int|null  $organizationId
      */
     public function getDomainAnswerTypeDistribution(string $referenceGuide = 'III', $organizationId = null): Collection
     {
@@ -38,11 +34,12 @@ class DomainReportService
          * Siempre incluye todos los niveles de riesgo, aunque sean cero.
          */
         try {
-            if (!$organizationId && auth()->check() && auth()->user()->organization_id) {
+            if (! $organizationId && auth()->check() && auth()->user()->organization_id) {
                 $organizationId = auth()->user()->organization_id;
             }
-            if (!$organizationId) {
+            if (! $organizationId) {
                 Log::warning('No se proporcionó organization_id para el reporte de dominios.');
+
                 return collect();
             }
 
@@ -96,11 +93,11 @@ class DomainReportService
             $data = [];
             foreach ($results as $row) {
                 $dom = $row->dominio_nombre;
-                if (!isset($data[$dom])) {
+                if (! isset($data[$dom])) {
                     // Inicializa todos los niveles en cero
                     $data[$dom] = [
                         'domain_name' => $dom,
-                        'risk_levels' => array_fill_keys($niveles, 0)
+                        'risk_levels' => array_fill_keys($niveles, 0),
                     ];
                 }
                 $data[$dom]['risk_levels'][$row->nivel_riesgo] = (int) $row->total_personas;
@@ -108,25 +105,24 @@ class DomainReportService
             // Si algún dominio no tiene todos los niveles, los completa en cero
             foreach ($data as &$domData) {
                 foreach ($niveles as $nivel) {
-                    if (!isset($domData['risk_levels'][$nivel])) {
+                    if (! isset($domData['risk_levels'][$nivel])) {
                         $domData['risk_levels'][$nivel] = 0;
                     }
                 }
             }
             unset($domData);
+
             // Devuelve colección indexada
             return collect(array_values($data));
         } catch (\Throwable $e) {
-            Log::error("Error al obtener la distribución de personas por nivel de riesgo y dominio: " . $e->getMessage());
+            Log::error('Error al obtener la distribución de personas por nivel de riesgo y dominio: '.$e->getMessage());
+
             return collect();
         }
     }
 
     /**
      * Procesa los resultados de la consulta para estructurarlos por dominio
-     *
-     * @param Collection $results
-     * @return Collection
      */
     private function processDomainResults(Collection $results, string $referenceGuide, $guidePersonalIds): Collection
     {
@@ -174,7 +170,7 @@ class DomainReportService
                 'name' => $domainName,
                 'responses' => $responsesByType,
                 'percentages' => $percentages,
-                'total' => $totalUniquePersonsInDomain
+                'total' => $totalUniquePersonsInDomain,
             ]);
         }
 
@@ -184,9 +180,6 @@ class DomainReportService
     /**
      * Obtiene la suma total del valor de respuestas por dominio
      * Implementa el Query #4 de la guía III: Suma total del valor de respuestas por dominio
-     *
-     * @param string $referenceGuide
-     * @return Collection
      */
     public function getDomainTotalScores(string $referenceGuide = 'III'): Collection
     {
@@ -200,6 +193,7 @@ class DomainReportService
 
             if ($guidePersonalIds->isEmpty()) {
                 Log::warning("No se encontraron IDs de personal con evaluaciones de la Guía {$referenceGuide}.");
+
                 return collect();
             }
 
@@ -222,20 +216,21 @@ class DomainReportService
             // Procesar los resultados para añadir información adicional como promedios
             $processedResults = $results->map(function ($item) {
                 $avgScore = $item->question_count > 0 ? $item->total_score / $item->question_count : 0;
-                
+
                 return [
                     'id' => $item->domain_id,
                     'name' => $item->domain_name,
                     'total_score' => $item->total_score,
                     'question_count' => $item->question_count,
-                    'avg_score' => round($avgScore, 2)
+                    'avg_score' => round($avgScore, 2),
                 ];
             });
 
             return $processedResults;
-            
+
         } catch (\Exception $e) {
-            Log::error("Error al obtener la suma total de respuestas por dominio: " . $e->getMessage());
+            Log::error('Error al obtener la suma total de respuestas por dominio: '.$e->getMessage());
+
             return collect();
         }
     }

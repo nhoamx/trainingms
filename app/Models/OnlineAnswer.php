@@ -14,11 +14,11 @@ class OnlineAnswer extends Model
         'quiz_id',
         'question_key',
         'answer_value',
-        'reference_guide'
+        'reference_guide',
     ];
 
     protected $casts = [
-        'answer_value' => 'string'
+        'answer_value' => 'string',
     ];
 
     /**

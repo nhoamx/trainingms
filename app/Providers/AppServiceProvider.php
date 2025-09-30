@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
         // Registrar los servicios para la gestión de puestos y departamentos
         $this->app->singleton(\App\Services\OccupationPositionService::class);
         $this->app->singleton(\App\Services\DepartmentAreaService::class);
-        
+
         // Registrar el servicio para reportes de categoría
         $this->app->singleton(\App\Services\CategoryReportService::class);
     }

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Quiz;
-use App\Models\Organization;
 use App\Models\OnlineAnswer;
+use App\Models\Organization;
+use App\Models\Quiz;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -26,8 +26,8 @@ class QuizIntegrationTest extends TestCase
                 'answers' => [
                     'referencia_iii' => ['trauma_0' => '1'],
                     'referencia_i' => ['sexo' => 'M', 'edad' => '25'],
-                    'referencia_v' => ['puesto' => 'Developer']
-                ]
+                    'referencia_v' => ['puesto' => 'Developer'],
+                ],
             ],
             [
                 'name' => 'Reduced Quiz',
@@ -36,8 +36,8 @@ class QuizIntegrationTest extends TestCase
                 'answers' => [
                     'referencia_iii' => ['trauma_0' => '1'],
                     'referencia_i' => ['sexo' => 'F', 'edad' => '30'],
-                    'referencia_v' => ['puesto' => 'Manager']
-                ]
+                    'referencia_v' => ['puesto' => 'Manager'],
+                ],
             ],
             [
                 'name' => 'Cisneros Quiz',
@@ -46,9 +46,9 @@ class QuizIntegrationTest extends TestCase
                 'answers' => [
                     'escala_cisneros' => ['cisneros_1' => '2'],
                     'referencia_i' => ['sexo' => 'M', 'edad' => '35'],
-                    'referencia_v' => ['puesto' => 'Analyst']
-                ]
-            ]
+                    'referencia_v' => ['puesto' => 'Analyst'],
+                ],
+            ],
         ];
 
         foreach ($quizTypes as $quizData) {
@@ -59,7 +59,7 @@ class QuizIntegrationTest extends TestCase
                 'is_reduced' => $quizData['is_reduced'],
                 'is_cisneros' => $quizData['is_cisneros'],
                 'is_active' => true,
-                'expires_at' => now()->addHours(2)
+                'expires_at' => now()->addHours(2),
             ]);
 
             // Submit quiz
@@ -67,17 +67,15 @@ class QuizIntegrationTest extends TestCase
 
             // Assert successful completion
             $response->assertStatus(200)
-                ->assertInertia(fn ($page) => 
-                    $page->component('Quiz/Completed')
-                        ->has('quiz', fn ($quizProps) => 
-                            $quizProps->where('name', $quizData['name'])
-                                ->where('is_reduced', $quizData['is_reduced'])
-                                ->where('is_cisneros', $quizData['is_cisneros'])
-                                ->has('id')
-                                ->has('organization')
-                        )
-                        ->has('folio')
-                        ->has('personalId')
+                ->assertInertia(fn ($page) => $page->component('Quiz/Completed')
+                    ->has('quiz', fn ($quizProps) => $quizProps->where('name', $quizData['name'])
+                        ->where('is_reduced', $quizData['is_reduced'])
+                        ->where('is_cisneros', $quizData['is_cisneros'])
+                        ->has('id')
+                        ->has('organization')
+                    )
+                    ->has('folio')
+                    ->has('personalId')
                 );
 
             // Verify data was stored correctly
@@ -90,23 +88,23 @@ class QuizIntegrationTest extends TestCase
             if ($quizData['is_cisneros']) {
                 $this->assertDatabaseHas('online_answers', [
                     'quiz_id' => $quiz->id,
-                    'reference_guide' => 'Cisneros'
+                    'reference_guide' => 'Cisneros',
                 ]);
             } else {
                 $this->assertDatabaseHas('online_answers', [
                     'quiz_id' => $quiz->id,
-                    'reference_guide' => 'III'
+                    'reference_guide' => 'III',
                 ]);
             }
 
             $this->assertDatabaseHas('online_answers', [
                 'quiz_id' => $quiz->id,
-                'reference_guide' => 'I'
+                'reference_guide' => 'I',
             ]);
 
             $this->assertDatabaseHas('online_answers', [
                 'quiz_id' => $quiz->id,
-                'reference_guide' => 'V'
+                'reference_guide' => 'V',
             ]);
         }
     }
@@ -117,12 +115,12 @@ class QuizIntegrationTest extends TestCase
         $quiz = Quiz::factory()->create([
             'organization_id' => $organization->id,
             'is_active' => true,
-            'expires_at' => now()->addHours(2)
+            'expires_at' => now()->addHours(2),
         ]);
 
         $answers = [
             'referencia_i' => ['sexo' => 'M', 'edad' => '25'],
-            'referencia_v' => ['puesto' => 'Developer']
+            'referencia_v' => ['puesto' => 'Developer'],
         ];
 
         // Submit first quiz

@@ -22,7 +22,7 @@ return new class extends Migration
             $table->enum('type', ['presencial', 'en_linea'])->comment('Tipo de examen: presencial o en línea');
             $table->boolean('active')->default(true)->comment('Indica si el lote está activo o ha sido cancelado');
             $table->timestamps();
-        }); 
+        });
     }
 
     /**

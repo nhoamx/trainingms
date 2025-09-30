@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Evaluation;
-use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -18,13 +17,13 @@ class OnlineEvaluationController extends Controller
     {
         // Buscar el folio en los lotes de folios
         $folio_record = \App\Models\Folio::where('folio_number', $folio)
-            ->whereHas('folioBatch', function($query) {
+            ->whereHas('folioBatch', function ($query) {
                 $query->where('type', 'en_linea');
             })
             ->with('folioBatch.organization')
             ->first();
 
-        if (!$folio_record) {
+        if (! $folio_record) {
             return redirect()->route('online-evaluation.access')
                 ->with('error', 'Folio no válido o no corresponde a una evaluación en línea');
         }
@@ -43,8 +42,8 @@ class OnlineEvaluationController extends Controller
                 'guide_I' => config('referencia_i'),
                 'guide_III' => config('referencia_iii'),
                 'guide_V' => config('referencia_v'),
-                'online_config' => config('online_evaluation_questions')
-            ]
+                'online_config' => config('online_evaluation_questions'),
+            ],
         ]);
     }
 
@@ -62,15 +61,15 @@ class OnlineEvaluationController extends Controller
 
         // Verificar que el folio sea válido y no esté usado
         $folio_record = \App\Models\Folio::where('folio_number', $validated['folio'])
-            ->whereHas('folioBatch', function($query) {
+            ->whereHas('folioBatch', function ($query) {
                 $query->where('type', 'en_linea');
             })
             ->with('folioBatch.organization')
             ->first();
 
-        if (!$folio_record || $folio_record->used) {
+        if (! $folio_record || $folio_record->used) {
             return response()->json([
-                'message' => 'Folio no válido o ya utilizado'
+                'message' => 'Folio no válido o ya utilizado',
             ], 422);
         }
 
@@ -93,22 +92,22 @@ class OnlineEvaluationController extends Controller
             // Marcar el folio como usado
             $folio_record->update([
                 'used' => true,
-                'used_at' => now()
+                'used_at' => now(),
             ]);
 
             DB::commit();
 
             return response()->json([
                 'message' => 'Evaluación guardada exitosamente',
-                'evaluation_id' => $evaluation->id
+                'evaluation_id' => $evaluation->id,
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error al guardar evaluación en línea: ' . $e->getMessage());
-            
+            Log::error('Error al guardar evaluación en línea: '.$e->getMessage());
+
             return response()->json([
-                'message' => 'Error al guardar la evaluación'
+                'message' => 'Error al guardar la evaluación',
             ], 500);
         }
     }
@@ -123,7 +122,7 @@ class OnlineEvaluationController extends Controller
 
         return Inertia::render('OnlineEvaluation/Result', [
             'evaluation' => $evaluation,
-            'title' => 'Resultado de Evaluación'
+            'title' => 'Resultado de Evaluación',
         ]);
     }
 }

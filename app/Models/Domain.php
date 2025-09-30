@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Domain extends Model
 {
     use HasUuids;
+
     protected $fillable = ['name', 'description', 'category_id'];
 
     public function category()

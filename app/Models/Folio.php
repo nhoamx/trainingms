@@ -18,7 +18,7 @@ class Folio extends Model
         'folio_number',
         'numeric_value',
         'used',
-        'used_at'
+        'used_at',
     ];
 
     /**

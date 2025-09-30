@@ -21,7 +21,7 @@ class FolioBatch extends Model
         'end_number',
         'quantity',
         'type',
-        'active'
+        'active',
     ];
 
     /**

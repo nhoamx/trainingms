@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\EvaluationProcessingStatusChanged;
 use App\Jobs\ProcessEvaluation;
 use App\Models\Evaluation;
 use App\Models\Organization;
@@ -13,7 +12,6 @@ use Inertia\Inertia;
 
 class EvaluationController extends Controller
 {
-
     public function index()
     {
         // Get organizations with their evaluations
@@ -25,7 +23,7 @@ class EvaluationController extends Controller
         return Inertia::render('Evaluations/Results', [
             'title' => 'Evaluaciones',
             'organizations' => $organizations,
-            'noOrgEvaluations' => $noOrgEvaluations
+            'noOrgEvaluations' => $noOrgEvaluations,
         ]);
     }
 
@@ -47,11 +45,10 @@ class EvaluationController extends Controller
         $path = $request->file('file')->store('evaluations', 'public');
 
         // Obtener el path completo del archivo almacenado
-        $fullPath = storage_path('app/public/' . $path);
-        Log::info('Archivo almacenado en: ' . $fullPath);
+        $fullPath = storage_path('app/public/'.$path);
 
         // Nombre o ID del contenedor (según salida de `docker ps`)
-        $containerName = "training-and-ms";
+        $containerName = 'training-and-ms';
 
         // 3. Despachar el job que se encargará de copiar el archivo y ejecutar el comando
         ProcessEvaluation::dispatch($fullPath, $containerName);
@@ -62,7 +59,7 @@ class EvaluationController extends Controller
             ->with('flash', [
                 'type' => 'success',
                 'title' => 'Evaluación cargada exitosamente',
-                'message' => 'El archivo PDF ha sido cargado y está siendo procesado. Los resultados estarán disponibles en breve.'
+                'message' => 'El archivo PDF ha sido cargado y está siendo procesado. Los resultados estarán disponibles en breve.',
             ]);
     }
 
@@ -73,7 +70,7 @@ class EvaluationController extends Controller
         return Inertia::render('Evaluations/EvaluationDetails', [
             'title' => 'Detalles de Evaluación',
             'evaluation' => $evaluation,
-            'answers' => $evaluation->answers
+            'answers' => $evaluation->answers,
         ]);
     }
 
@@ -83,7 +80,7 @@ class EvaluationController extends Controller
 
         if ($organization === 'no-org') {
             $evaluations = Evaluation::whereNull('organization_id')->get(); // Get all evaluations without org
-            $organizationData = ['id' => 'no-org', 'name' => 'Sin Organización']; 
+            $organizationData = ['id' => 'no-org', 'name' => 'Sin Organización'];
         } else {
             $organizationData = Organization::findOrFail($organization);
             $evaluations = $organizationData->evaluations()->get(); // Get all evaluations for the org
@@ -98,8 +95,6 @@ class EvaluationController extends Controller
     // Nueva función para reasignar evaluaciones
     public function reassignEvaluations(Request $request, Organization $organization)
     {
-        Log::info("--- Iniciando reasignación de evaluaciones ---"); // Log inicio
-        Log::info("Organización original ID: " . $organization->id); // Log ID original
 
         $validated = $request->validate([
             // Corregir validación: esperar string (UUID) y verificar existencia
@@ -107,10 +102,10 @@ class EvaluationController extends Controller
         ]);
 
         $newOrganizationId = $validated['new_organization_id']; // Ahora $newOrganizationId será el UUID string
-        Log::info("Nuevo ID de organización (UUID) recibido: " . $newOrganizationId);
 
         if ($organization->id == $newOrganizationId) {
-            Log::warning("Intento de reasignar a la misma organización."); // Log advertencia
+            Log::warning('Intento de reasignar a la misma organización.'); // Log advertencia
+
             return back()->with('error', 'No se puede reasignar las evaluaciones a la misma organización.');
         }
 
@@ -120,43 +115,39 @@ class EvaluationController extends Controller
 
             // Contar cuántas se van a actualizar
             $count = $evaluationsToReassign->count();
-            Log::info("Número de evaluaciones encontradas para reasignar: " . $count); // Log conteo
 
             if ($count === 0) {
-                Log::info("No hay evaluaciones para reasignar."); // Log si no hay nada
                 // Devolver JSON también en este caso para consistencia
                 session()->flash('info', 'No hay evaluaciones asociadas a esta organización para reasignar.');
+
                 return response()->json(['message' => 'No hay evaluaciones para reasignar.'], 200); // Código 200 OK pero con info
             }
 
             $newOrganization = Organization::findOrFail($newOrganizationId);
-            Log::info("Nueva organización encontrada: " . $newOrganization->name); // Log nombre nueva org
 
             DB::transaction(function () use ($evaluationsToReassign, $newOrganizationId) {
-                Log::info("Iniciando transacción de actualización..."); // Log inicio transacción
                 $updatedCount = 0;
                 foreach ($evaluationsToReassign as $evaluation) {
                     // Usar el $newOrganizationId (UUID string) correcto
                     $evaluation->update(['organization_id' => $newOrganizationId]);
                     $updatedCount++;
                 }
-                Log::info("Transacción completada. Evaluaciones actualizadas: " . $updatedCount); // Log fin transacción
             });
 
-            Log::info("Actualización exitosa. Evaluaciones reasignadas: " . $count); // Log éxito
             // Devolver una redirección con el mensaje flash (Estilo Inertia)
             return redirect()->route('organizations.evaluations', ['organization' => $newOrganizationId])
-                              ->with('success', "Se reasignaron {$count} evaluaciones exitosamente a {$newOrganization->name}.");
+                ->with('success', "Se reasignaron {$count} evaluaciones exitosamente a {$newOrganization->name}.");
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            Log::error("Error al encontrar la organización: " . $e->getMessage()); // Log error más específico
+            Log::error('Error al encontrar la organización: '.$e->getMessage()); // Log error más específico
+
             return back()->with('error', 'La organización de origen no fue encontrada.');
         } catch (\Exception $e) {
-            Log::error("Error durante la reasignación: " . $e->getMessage()); // Log excepción
-            Log::error("Stack trace: " . $e->getTraceAsString()); // Log stack trace
-            return back()->with('error', 'Ocurrió un error inesperado durante la reasignación: ' . $e->getMessage());
+            Log::error('Error durante la reasignación: '.$e->getMessage()); // Log excepción
+            Log::error('Stack trace: '.$e->getTraceAsString()); // Log stack trace
+
+            return back()->with('error', 'Ocurrió un error inesperado durante la reasignación: '.$e->getMessage());
         }
-        Log::info("--- Fin reasignación de evaluaciones ---"); // Log fin
     }
 
     public function destroy(Evaluation $evaluation)
@@ -170,8 +161,7 @@ class EvaluationController extends Controller
             ->with('flash', [
                 'type' => 'success',
                 'title' => 'Evaluación eliminada exitosamente',
-                'message' => 'La evaluación ha sido eliminada.'
+                'message' => 'La evaluación ha sido eliminada.',
             ]);
     }
-
 }

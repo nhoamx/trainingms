@@ -12,11 +12,11 @@ class CustomField extends Model
     protected $fillable = [
         'name',
         'type',
-        'quiz_id'
+        'quiz_id',
     ];
 
     protected $casts = [
-        'type' => 'string'
+        'type' => 'string',
     ];
 
     /**

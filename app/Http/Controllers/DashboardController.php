@@ -2,25 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
+use App\Models\Dimension;
 use App\Models\Domain;
 use App\Models\Organization;
 use App\Services\EvaluationService;
 use App\Services\ReportService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Models\Category;
-use App\Models\Dimension;
 
 class DashboardController extends Controller
 {
     protected $evaluationService;
+
     protected $reportService;
 
     public function __construct(
         EvaluationService $evaluationService,
         ReportService $reportService
-    )
-    {
+    ) {
         $this->evaluationService = $evaluationService;
         $this->reportService = $reportService;
     }
@@ -50,22 +50,19 @@ class DashboardController extends Controller
 
             $data['isAdmin'] = false;
             $data['isSuperAdmin'] = false;
-        } else if ($user->hasRole('admin')) {
+        } elseif ($user->hasRole('admin')) {
             $data['organizations'] = $this->evaluationService->getAllEvaluationsByOrganization();
             // Admins/SuperAdmins see global demographics
             $data['demographic_distributions'] = $this->reportService->getDemographicDistributions();
             $data['isAdmin'] = true;
             $data['isSuperAdmin'] = false;
-        } else if ($user->hasRole('super-admin')) {
+        } elseif ($user->hasRole('super-admin')) {
             $data['organizations'] = $this->evaluationService->getAllEvaluationsByOrganization();
-             // Admins/SuperAdmins see global demographics
+            // Admins/SuperAdmins see global demographics
             $data['demographic_distributions'] = $this->reportService->getDemographicDistributions();
             $data['isAdmin'] = false;
             $data['isSuperAdmin'] = true;
         }
-
-        // Log the data being passed
-        \Illuminate\Support\Facades\Log::info("Data passed to Dashboard view", $data);
 
         return Inertia::render('Dashboard', $data);
     }
@@ -73,38 +70,36 @@ class DashboardController extends Controller
     /**
      * Get raw answer distribution for a specific category.
      *
-     * @param Request $request
-     * @param string $categoryId
      * @return \Illuminate\Http\JsonResponse
      */
     public function getCategoryAnswerDistribution(Request $request, string $categoryId)
     {
         // Authorization check
         $user = $request->user();
-        if (!$user->hasRole('organization') || !$user->organization) {
+        if (! $user->hasRole('organization') || ! $user->organization) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $distribution = $this->reportService->getCategoryAnswerDistribution($categoryId);
+
         return response()->json($distribution);
     }
 
     /**
      * Get raw answer distribution for a specific domain.
      *
-     * @param Request $request
-     * @param string $domainId
      * @return \Illuminate\Http\JsonResponse
      */
     public function getDomainAnswerDistribution(Request $request, string $domainId)
     {
         // Authorization check
         $user = $request->user();
-        if (!$user->hasRole('organization') || !$user->organization) {
+        if (! $user->hasRole('organization') || ! $user->organization) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $distribution = $this->reportService->getDomainAnswerDistribution($domainId);
+
         return response()->json($distribution);
     }
 
@@ -128,7 +123,7 @@ class DashboardController extends Controller
     {
         return Inertia::render('Evaluations/Results', [
             'title' => 'Resultados',
-            'organizations' => Organization::all()
+            'organizations' => Organization::all(),
         ]);
     }
 
@@ -139,11 +134,12 @@ class DashboardController extends Controller
     {
         // Auth check
         $user = $request->user();
-        if (!$user->hasRole('organization') || !$user->organization) {
+        if (! $user->hasRole('organization') || ! $user->organization) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $qualifications = $this->reportService->calculateDimensionQualifications($domainId);
+
         return response()->json($qualifications);
     }
 
@@ -152,13 +148,14 @@ class DashboardController extends Controller
      */
     public function getDimensionAnswerDistribution(Request $request, string $dimensionId)
     {
-         // Auth check
+        // Auth check
         $user = $request->user();
-        if (!$user->hasRole('organization') || !$user->organization) {
+        if (! $user->hasRole('organization') || ! $user->organization) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $distribution = $this->reportService->getDimensionAnswerDistribution($dimensionId);
+
         return response()->json($distribution);
     }
 
@@ -167,6 +164,6 @@ class DashboardController extends Controller
         $orgaization = $request->organization_id;
 
         $data['evaluations'] = $this->evaluationService->getOrganizationEvaluations($orgaization);
-        
+
     }
 }

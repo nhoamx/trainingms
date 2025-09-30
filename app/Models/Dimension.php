@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Dimension extends Model
 {
     use HasUuids;
+
     protected $fillable = ['name', 'description', 'domain_id'];
 
     public function domain()

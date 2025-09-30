@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
-use App\Models\Domain;
 use App\Models\Dimension;
+use App\Models\Domain;
 use Illuminate\Database\Seeder;
 
 class QuestionDimensionsSeeder extends Seeder
@@ -19,13 +19,13 @@ class QuestionDimensionsSeeder extends Seeder
             foreach ($domains as $domainName => $dimensionGroups) {
                 $domain = Domain::create([
                     'name' => $domainName,
-                    'category_id' => $category->id
+                    'category_id' => $category->id,
                 ]);
 
                 foreach ($dimensionGroups as $dimensionName => $questions) {
                     Dimension::create([
                         'name' => $dimensionName,
-                        'domain_id' => $domain->id
+                        'domain_id' => $domain->id,
                     ]);
                 }
             }

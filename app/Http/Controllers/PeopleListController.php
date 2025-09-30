@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use App\Models\Domain;
 use App\Models\Dimension;
+use App\Models\Domain;
 use App\Services\ReportService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class PeopleListController extends Controller
 {
@@ -22,9 +22,6 @@ class PeopleListController extends Controller
     /**
      * Display the list of people for a specific category and answer key.
      *
-     * @param Request $request
-     * @param string $categoryId
-     * @param string $answerKey
      * @return \Inertia\Response
      */
     public function show(Request $request, string $categoryId, string $answerKey)
@@ -32,13 +29,13 @@ class PeopleListController extends Controller
         // Optional: Add authorization check if needed for this route
 
         // Basic validation
-        if (!in_array($answerKey, ['A', 'B', 'C', 'D', 'E', 'INVALID'])) {
+        if (! in_array($answerKey, ['A', 'B', 'C', 'D', 'E', 'INVALID'])) {
             abort(404, 'Invalid answer key.');
         }
 
         $category = Category::find($categoryId);
-        if (!$category) {
-             abort(404, 'Category not found.');
+        if (! $category) {
+            abort(404, 'Category not found.');
         }
 
         $peopleDetails = $this->reportService->getPeopleWithAnswerInCategory($categoryId, $answerKey);
@@ -50,7 +47,7 @@ class PeopleListController extends Controller
             'C' => 'Medio',
             'B' => 'Alto',
             'A' => 'Muy Alto',
-            'INVALID' => 'Inválido'
+            'INVALID' => 'Inválido',
         ];
         $answerLabel = $answerLabels[$answerKey] ?? $answerKey;
 
@@ -58,28 +55,25 @@ class PeopleListController extends Controller
             'categoryName' => $category->name,
             'answerLabel' => $answerLabel,
             'peopleDetails' => $peopleDetails, // Collection of { personal_id, evaluation_id, organization_id }
-             // Pass title for the layout
-            'title' => "Personal - {$answerLabel} en {$category->name}"
+            // Pass title for the layout
+            'title' => "Personal - {$answerLabel} en {$category->name}",
         ]);
     }
 
     /**
      * Display the list of people for a specific DOMAIN and answer key.
      *
-     * @param Request $request
-     * @param string $domainId
-     * @param string $answerKey
      * @return \Inertia\Response
      */
     public function showDomainList(Request $request, string $domainId, string $answerKey)
     {
-        if (!in_array($answerKey, ['A', 'B', 'C', 'D', 'E', 'INVALID'])) {
+        if (! in_array($answerKey, ['A', 'B', 'C', 'D', 'E', 'INVALID'])) {
             abort(404, 'Invalid answer key.');
         }
 
         $domain = Domain::find($domainId);
-        if (!$domain) {
-             abort(404, 'Domain not found.');
+        if (! $domain) {
+            abort(404, 'Domain not found.');
         }
 
         // Need a new service method for this!
@@ -88,7 +82,7 @@ class PeopleListController extends Controller
 
         $answerLabels = [
             'E' => 'Nulo', 'D' => 'Bajo', 'C' => 'Medio',
-            'B' => 'Alto', 'A' => 'Muy Alto', 'INVALID' => 'Inválido'
+            'B' => 'Alto', 'A' => 'Muy Alto', 'INVALID' => 'Inválido',
         ];
         $answerLabel = $answerLabels[$answerKey] ?? $answerKey;
 
@@ -97,7 +91,7 @@ class PeopleListController extends Controller
             'domainName' => $domain->name,
             'answerLabel' => $answerLabel,
             'peopleDetails' => $peopleDetails,
-            'title' => "Personal - {$answerLabel} en {$domain->name}" // Update title
+            'title' => "Personal - {$answerLabel} en {$domain->name}", // Update title
         ]);
     }
 
@@ -106,20 +100,20 @@ class PeopleListController extends Controller
      */
     public function showDimensionList(Request $request, string $dimensionId, string $answerKey)
     {
-        if (!in_array($answerKey, ['A', 'B', 'C', 'D', 'E', 'INVALID'])) {
+        if (! in_array($answerKey, ['A', 'B', 'C', 'D', 'E', 'INVALID'])) {
             abort(404, 'Invalid answer key.');
         }
 
         $dimension = Dimension::find($dimensionId);
-        if (!$dimension) {
-             abort(404, 'Dimension not found.');
+        if (! $dimension) {
+            abort(404, 'Dimension not found.');
         }
 
         $peopleDetails = $this->reportService->getPeopleWithAnswerInDimension($dimensionId, $answerKey);
 
         $answerLabels = [
             'E' => 'Nulo', 'D' => 'Bajo', 'C' => 'Medio',
-            'B' => 'Alto', 'A' => 'Muy Alto', 'INVALID' => 'Inválido'
+            'B' => 'Alto', 'A' => 'Muy Alto', 'INVALID' => 'Inválido',
         ];
         $answerLabel = $answerLabels[$answerKey] ?? $answerKey;
 
@@ -127,16 +121,13 @@ class PeopleListController extends Controller
             'dimensionName' => $dimension->name, // Pass dimension name
             'answerLabel' => $answerLabel,
             'peopleDetails' => $peopleDetails,
-            'title' => "Personal - {$answerLabel} en {$dimension->name}" // Update title
+            'title' => "Personal - {$answerLabel} en {$dimension->name}", // Update title
         ]);
     }
 
     /**
      * Display the list of people for a specific demographic field and answer identifier.
      *
-     * @param Request $request
-     * @param string $fieldKey
-     * @param string $identifier
      * @return \Inertia\Response
      */
     public function showDemographicList(Request $request, string $fieldKey, string $identifier)
@@ -156,7 +147,7 @@ class PeopleListController extends Controller
             // Placeholder: $personalIdsFilter = $this->getPersonalIdsForOrg($user->organization->id);
             // For now, we might pass an empty array, letting the service potentially handle it
             // OR we need to implement fetching these IDs.
-             Log::warning('Demographic people list filtering by organization is not fully implemented yet.');
+            Log::warning('Demographic people list filtering by organization is not fully implemented yet.');
         }
 
         $peopleDetails = $this->reportService->getPeopleWithDemographicAnswer($fieldKey, $identifier, $personalIdsFilter);
@@ -174,7 +165,7 @@ class PeopleListController extends Controller
             'demographicField' => $displayFieldLabel, // e.g., 'Estado Civil'
             'demographicValue' => $displayValueLabel, // e.g., 'Casado' or the raw identifier
             'peopleDetails' => $peopleDetails,
-            'title' => "Personal - {$displayFieldLabel}: {$displayValueLabel}" // Update title
+            'title' => "Personal - {$displayFieldLabel}: {$displayValueLabel}", // Update title
         ]);
     }
 }

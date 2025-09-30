@@ -20,7 +20,7 @@ return new class extends Migration
 
             // Foreign key constraint
             $table->foreign('quiz_id')->references('id')->on('quizzes')->onDelete('cascade');
-            
+
             // Index for performance
             $table->index('quiz_id');
         });

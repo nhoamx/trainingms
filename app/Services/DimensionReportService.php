@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Question;
-use App\Models\Dimension;
 use App\Models\Evaluation;
-use Illuminate\Support\Facades\DB;
+use App\Models\Question;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class DimensionReportService
@@ -14,9 +13,6 @@ class DimensionReportService
     /**
      * Obtiene el conteo de respuestas por dimensión y tipo de respuesta
      * Implementa el Query #5 de la guía III: Conteo de respuestas por dimensión y tipo de respuesta
-     *
-     * @param string $referenceGuide
-     * @return Collection
      */
     public function getDimensionRiskLevelDistribution(string $referenceGuide = 'III'): Collection
     {
@@ -46,11 +42,11 @@ class DimensionReportService
             $data = [];
             foreach ($results as $row) {
                 $dim = $row->dimension_nombre;
-                if (!isset($data[$dim])) {
+                if (! isset($data[$dim])) {
                     // Inicializa todos los niveles en cero
                     $data[$dim] = [
                         'dimension_name' => $dim,
-                        'risk_levels' => array_fill_keys($niveles, 0)
+                        'risk_levels' => array_fill_keys($niveles, 0),
                     ];
                 }
                 $data[$dim]['risk_levels'][$row->nivel_riesgo] = (int) $row->total_personas;
@@ -58,25 +54,24 @@ class DimensionReportService
             // Si alguna dimensión no tiene todos los niveles, los completa en cero
             foreach ($data as &$dimData) {
                 foreach ($niveles as $nivel) {
-                    if (!isset($dimData['risk_levels'][$nivel])) {
+                    if (! isset($dimData['risk_levels'][$nivel])) {
                         $dimData['risk_levels'][$nivel] = 0;
                     }
                 }
             }
             unset($dimData);
+
             // Devuelve colección indexada
             return collect(array_values($data));
         } catch (\Throwable $e) {
-            Log::error("Error al obtener la distribución de personas por nivel de riesgo y dimensión: " . $e->getMessage());
+            Log::error('Error al obtener la distribución de personas por nivel de riesgo y dimensión: '.$e->getMessage());
+
             return collect();
         }
     }
 
     /**
      * Procesa los resultados de la consulta para estructurarlos por dimensión
-     *
-     * @param Collection $results
-     * @return Collection
      */
     private function processDimensionResults(Collection $results): Collection
     {
@@ -87,7 +82,7 @@ class DimensionReportService
 
         foreach ($groupedResults as $dimensionId => $dimensionResponses) {
             $dimensionName = $dimensionResponses->first()->dimension_name;
-            
+
             // Inicializamos contadores para cada tipo de respuesta
             $responsesByType = [
                 'A' => 0, // Siempre
@@ -96,30 +91,30 @@ class DimensionReportService
                 'D' => 0, // Casi nunca
                 'E' => 0, // Nunca
             ];
-            
+
             // Sumamos las respuestas por tipo
             foreach ($dimensionResponses as $response) {
                 if (isset($responsesByType[$response->answer])) {
                     $responsesByType[$response->answer] = $response->total_responses;
                 }
             }
-            
+
             // Calculamos el total de respuestas para esta dimensión
             $totalResponses = array_sum($responsesByType);
-            
+
             // Calculamos porcentajes
             $percentages = [];
             foreach ($responsesByType as $type => $count) {
                 $percentages[$type] = $totalResponses > 0 ? ($count / $totalResponses) * 100 : 0;
             }
-            
+
             // Añadimos al resultado
             $dimensionData->push([
                 'id' => $dimensionId,
                 'name' => $dimensionName,
                 'responses' => $responsesByType,
                 'percentages' => $percentages,
-                'total' => $totalResponses
+                'total' => $totalResponses,
             ]);
         }
 
@@ -129,9 +124,6 @@ class DimensionReportService
     /**
      * Obtiene la suma total del valor de respuestas por dimensión
      * Implementa el Query #6 de la guía III: Suma total del valor de respuestas por dimensión
-     *
-     * @param string $referenceGuide
-     * @return Collection
      */
     public function getDimensionTotalScores(string $referenceGuide = 'III'): Collection
     {
@@ -145,6 +137,7 @@ class DimensionReportService
 
             if ($guidePersonalIds->isEmpty()) {
                 Log::warning("No se encontraron IDs de personal con evaluaciones de la Guía {$referenceGuide}.");
+
                 return collect();
             }
 
@@ -167,20 +160,21 @@ class DimensionReportService
             // Procesar los resultados para añadir información adicional como promedios
             $processedResults = $results->map(function ($item) {
                 $avgScore = $item->question_count > 0 ? $item->total_score / $item->question_count : 0;
-                
+
                 return [
                     'id' => $item->dimension_id,
                     'name' => $item->dimension_name,
                     'total_score' => $item->total_score,
                     'question_count' => $item->question_count,
-                    'avg_score' => round($avgScore, 2)
+                    'avg_score' => round($avgScore, 2),
                 ];
             });
 
             return $processedResults;
-            
+
         } catch (\Exception $e) {
-            Log::error("Error al obtener la suma total de respuestas por dimensión: " . $e->getMessage());
+            Log::error('Error al obtener la suma total de respuestas por dimensión: '.$e->getMessage());
+
             return collect();
         }
     }

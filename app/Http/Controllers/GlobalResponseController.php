@@ -7,8 +7,8 @@ use App\Models\Evaluation;
 use App\Models\Organization;
 use App\Services\GlobalResponseService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class GlobalResponseController extends Controller
 {
@@ -22,7 +22,6 @@ class GlobalResponseController extends Controller
     /**
      * Obtiene y devuelve el conteo global de respuestas por opción (A-E)
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function getGlobalResponseCounts(Request $request)
@@ -30,7 +29,7 @@ class GlobalResponseController extends Controller
         try {
             // Verificación de autorización
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
 
@@ -39,7 +38,8 @@ class GlobalResponseController extends Controller
 
             return response()->json($responseCounts);
         } catch (\Exception $e) {
-            Log::error("Error al obtener el conteo global de respuestas: " . $e->getMessage());
+            Log::error('Error al obtener el conteo global de respuestas: '.$e->getMessage());
+
             return response()->json(['error' => 'Error al procesar la solicitud'], 500);
         }
     }
@@ -47,7 +47,6 @@ class GlobalResponseController extends Controller
     /**
      * Obtiene y devuelve el conteo de respuestas por categoría y opción
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function getCategoryResponseCounts(Request $request)
@@ -55,7 +54,7 @@ class GlobalResponseController extends Controller
         try {
             // Verificación de autorización
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
 
@@ -64,7 +63,8 @@ class GlobalResponseController extends Controller
 
             return response()->json($categoryCounts);
         } catch (\Exception $e) {
-            Log::error("Error al obtener el conteo de respuestas por categoría: " . $e->getMessage());
+            Log::error('Error al obtener el conteo de respuestas por categoría: '.$e->getMessage());
+
             return response()->json(['error' => 'Error al procesar la solicitud'], 500);
         }
     }
@@ -72,7 +72,6 @@ class GlobalResponseController extends Controller
     /**
      * Obtiene y devuelve el conteo global de personas únicas por opción (A-E)
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function getGlobalPersonCounts(Request $request)
@@ -80,7 +79,7 @@ class GlobalResponseController extends Controller
         try {
             // Verificación de autorización
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
 
@@ -89,7 +88,8 @@ class GlobalResponseController extends Controller
 
             return response()->json($personCounts);
         } catch (\Exception $e) {
-            Log::error("Error al obtener el conteo global de personas: " . $e->getMessage());
+            Log::error('Error al obtener el conteo global de personas: '.$e->getMessage());
+
             return response()->json(['error' => 'Error al procesar la solicitud'], 500);
         }
     }
@@ -97,7 +97,6 @@ class GlobalResponseController extends Controller
     /**
      * Obtiene y devuelve el conteo de personas únicas por categoría y opción
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function getPersonCountByCategoryAndResponse(Request $request)
@@ -105,7 +104,7 @@ class GlobalResponseController extends Controller
         try {
             // Verificación de autorización
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
 
@@ -114,7 +113,8 @@ class GlobalResponseController extends Controller
 
             return response()->json($categoryPersonCounts);
         } catch (\Exception $e) {
-            Log::error("Error al obtener el conteo de personas por categoría: " . $e->getMessage());
+            Log::error('Error al obtener el conteo de personas por categoría: '.$e->getMessage());
+
             return response()->json(['error' => 'Error al procesar la solicitud'], 500);
         }
     }
@@ -122,7 +122,6 @@ class GlobalResponseController extends Controller
     /**
      * Muestra la vista del reporte global de respuestas
      *
-     * @param Request $request
      * @return \Inertia\Response
      */
     public function showGlobalResponseReport(Request $request)
@@ -130,7 +129,7 @@ class GlobalResponseController extends Controller
         try {
             // Verificación de autorización
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 abort(403, 'No autorizado');
             }
 
@@ -141,10 +140,10 @@ class GlobalResponseController extends Controller
             return Inertia::render('Reports/GlobalResponseReport', [
                 'globalCounts' => $globalCounts,
                 'categoryCounts' => $categoryCounts,
-                'title' => 'Análisis Global de Respuestas'
+                'title' => 'Análisis Global de Respuestas',
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al mostrar el reporte global de respuestas: " . $e->getMessage());
+            Log::error('Error al mostrar el reporte global de respuestas: '.$e->getMessage());
             abort(500, 'Error al procesar la solicitud');
         }
     }
@@ -152,7 +151,6 @@ class GlobalResponseController extends Controller
     /**
      * Muestra la vista del reporte global de personas
      *
-     * @param Request $request
      * @return \Inertia\Response
      */
     public function showGlobalPersonReport(Request $request)
@@ -160,7 +158,7 @@ class GlobalResponseController extends Controller
         try {
             // Verificación de autorización
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 abort(403, 'No autorizado');
             }
 
@@ -171,17 +169,16 @@ class GlobalResponseController extends Controller
             return Inertia::render('Reports/GlobalPersonReport', [
                 'globalPersonCounts' => $globalPersonCounts,
                 'categoryPersonCounts' => $categoryPersonCounts,
-                'title' => 'Análisis Global de Personas'
+                'title' => 'Análisis Global de Personas',
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al mostrar el reporte global de personas: " . $e->getMessage());
+            Log::error('Error al mostrar el reporte global de personas: '.$e->getMessage());
             abort(500, 'Error al procesar la solicitud');
         }
     }
 
     /**
      * Muestra la vista de las respuestas de una persona
-     * 
      */
     public function showPersonResponses($organizationId, $personalId)
     {
@@ -190,7 +187,6 @@ class GlobalResponseController extends Controller
             ->where('organization_id', $organizationId)
             ->where('reference_guide', 'III')
             ->latest()->first();
-
 
         // Obtener resultados de otras guías si estamos viendo la guía III
         $guideIResults = null;
@@ -210,7 +206,7 @@ class GlobalResponseController extends Controller
                     'id' => $guideIResults->id,
                     'folio' => $guideIResults->folio,
                     'created_at' => $guideIResults->created_at->format('Y-m-d H:i:s'),
-                    'answers' => $guideIResults->data
+                    'answers' => $guideIResults->data,
                 ];
             }
 
@@ -227,7 +223,7 @@ class GlobalResponseController extends Controller
                     'id' => $guideVResults->id,
                     'folio' => $guideVResults->folio,
                     'created_at' => $guideVResults->created_at->format('Y-m-d H:i:s'),
-                    'questions' => $questions
+                    'questions' => $questions,
                 ];
             }
 
@@ -237,11 +233,11 @@ class GlobalResponseController extends Controller
                 'id' => $evaluation->id,
                 'folio' => $evaluation->folio,
                 'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
-                'questions' => $questions
+                'questions' => $questions,
             ];
         }
 
-        $results = Category::with(['domains.dimensions.answers' => function($query) use ($evaluation) {
+        $results = Category::with(['domains.dimensions.answers' => function ($query) use ($evaluation) {
             $query->where('evaluation_id', $evaluation->id)
                 ->select('id', 'dimension_id', 'question', 'answer', 'score');
         }])->get()->map(function ($category) {
@@ -263,16 +259,16 @@ class GlobalResponseController extends Controller
                         $details[] = [
                             'categoria' => [
                                 'nombre' => $category->name,
-                                'puntaje' => 0 // Se actualizará después
+                                'puntaje' => 0, // Se actualizará después
                             ],
                             'dominio' => [
                                 'nombre' => $domain->name,
-                                'puntaje' => 0 // Se actualizará después
+                                'puntaje' => 0, // Se actualizará después
                             ],
                             'dimension' => $dimension->name,
                             'item' => $answer->question,
                             'respuesta' => $answer->answer,
-                            'puntaje' => $answer->score
+                            'puntaje' => $answer->score,
                         ];
                     }
                 }
@@ -309,7 +305,7 @@ class GlobalResponseController extends Controller
             'results' => $results,
             'guideIResults' => $guideIResults,
             'guideVResults' => $guideVResults,
-            'guideIIIResults' => $guideIIIResults
+            'guideIIIResults' => $guideIIIResults,
         ]);
 
     }

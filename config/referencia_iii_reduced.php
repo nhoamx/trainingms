@@ -11,6 +11,6 @@ return [
             4 => 'Secuestro',
             5 => 'Amenazas',
             6 => 'Cualquier otro que ponga en riesgo su vida o salud, y/o la de otras personas',
-        ]
-    ]
+        ],
+    ],
 ];

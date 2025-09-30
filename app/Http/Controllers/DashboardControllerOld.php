@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Domain;
 use App\Models\Organization;
 use App\Services\EvaluationService;
 use Illuminate\Http\Request;
@@ -26,7 +25,7 @@ class DashboardController extends Controller
             $data['evaluations'] = $this->evaluationService->getOrganizationEvaluations($user->organization);
             $data['demographic_data'] = $this->evaluationService->getDemographicData($user->organization);
             $data['isAdmin'] = false;
-        } else if ($user->hasRole(['admin', 'super-admin'])) {
+        } elseif ($user->hasRole(['admin', 'super-admin'])) {
             $data['organizations'] = $this->evaluationService->getAllEvaluationsByOrganization();
             $data['isAdmin'] = true;
         }
@@ -54,7 +53,7 @@ class DashboardController extends Controller
     {
         return Inertia::render('Evaluations/Results', [
             'title' => 'Resultados',
-            'organizations' => Organization::all()
+            'organizations' => Organization::all(),
         ]);
     }
 }

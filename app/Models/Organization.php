@@ -14,7 +14,7 @@ class Organization extends Model
     protected $fillable = [
         'name',
         'logo',
-        'folio_organization'
+        'folio_organization',
     ];
 
     public function users()
@@ -26,12 +26,12 @@ class Organization extends Model
     {
         return $this->hasMany(Evaluation::class);
     }
-    
+
     public function occupationPositions()
     {
         return $this->hasMany(OccupationPosition::class);
     }
-    
+
     public function departmentAreas()
     {
         return $this->hasMany(DepartmentArea::class);

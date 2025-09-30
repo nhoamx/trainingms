@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Evaluation extends Model
 {
     use HasUuids;
+
     protected $fillable = [
         'document_id',
         'folio',
@@ -73,8 +74,8 @@ class Evaluation extends Model
         foreach ($answers as $questionKey => $answer) {
             // Convertir questionKey a string para consistencia
             $questionKey = (string) $questionKey;
-            $fullQuestionKey = $prefix ? $prefix . '_' . $questionKey : $questionKey;
-            
+            $fullQuestionKey = $prefix ? $prefix.'_'.$questionKey : $questionKey;
+
             // Si la respuesta es un array, procesarlo recursivamente
             if (is_array($answer)) {
                 $this->processAnswersRecursively($answer, $referenceGuide, $fullQuestionKey);
@@ -83,7 +84,7 @@ class Evaluation extends Model
                 if ($answer !== null && $answer !== '') {
                     // Obtener información de dimensión/dominio/categoría
                     $dimensionInfo = $this->getDimensionInfo($questionKey, $referenceGuide);
-                    
+
                     // Crear o actualizar la pregunta
                     $this->questions()->updateOrCreate(
                         [
@@ -110,35 +111,45 @@ class Evaluation extends Model
     private function getDimensionInfo($questionNumber, $referenceGuide)
     {
         $dimensions = config('question_dimensions', []);
-        
+
         // Verificar que la configuración existe y es un array
-        if (!is_array($dimensions) || empty($dimensions)) {
+        if (! is_array($dimensions) || empty($dimensions)) {
             return [];
         }
-        
+
         foreach ($dimensions as $categoryName => $domains) {
-            if (!is_array($domains)) continue;
-            
+            if (! is_array($domains)) {
+                continue;
+            }
+
             foreach ($domains as $domainName => $dimensionGroups) {
-                if (!is_array($dimensionGroups)) continue;
-                
+                if (! is_array($dimensionGroups)) {
+                    continue;
+                }
+
                 foreach ($dimensionGroups as $dimensionName => $questions) {
-                    if (!is_array($questions)) continue;
-                    
+                    if (! is_array($questions)) {
+                        continue;
+                    }
+
                     if (in_array($questionNumber, $questions)) {
                         try {
                             // Buscar las entidades en la base de datos
                             $category = \App\Models\Category::firstWhere('name', $categoryName);
-                            if (!$category) continue;
+                            if (! $category) {
+                                continue;
+                            }
 
                             $domain = \App\Models\Domain::where('name', $domainName)
-                                             ->where('category_id', $category->id)
-                                             ->first();
-                            if (!$domain) continue;
+                                ->where('category_id', $category->id)
+                                ->first();
+                            if (! $domain) {
+                                continue;
+                            }
 
                             $dimension = \App\Models\Dimension::where('name', $dimensionName)
-                                                  ->where('domain_id', $domain->id)
-                                                  ->first();
+                                ->where('domain_id', $domain->id)
+                                ->first();
 
                             return [
                                 'category_id' => $category->id,
@@ -146,7 +157,8 @@ class Evaluation extends Model
                                 'dimension_id' => $dimension->id ?? null,
                             ];
                         } catch (\Exception $e) {
-                            \Log::error('Error al obtener información de dimensión: ' . $e->getMessage());
+                            \Log::error('Error al obtener información de dimensión: '.$e->getMessage());
+
                             continue;
                         }
                     }
@@ -171,34 +183,36 @@ class Evaluation extends Model
             \Log::warning('getValueForAnswer recibió un array, esto debería manejarse antes', [
                 'answer' => $answer,
                 'questionKey' => $questionKey,
-                'referenceGuide' => $referenceGuide
+                'referenceGuide' => $referenceGuide,
             ]);
+
             return null;
         }
 
         // Log para debugging otros tipos inesperados
-        if (!is_string($answer) && !is_int($answer) && !is_float($answer) && !is_bool($answer)) {
+        if (! is_string($answer) && ! is_int($answer) && ! is_float($answer) && ! is_bool($answer)) {
             \Log::warning('getValueForAnswer recibió un tipo de dato inesperado', [
                 'answer' => $answer,
                 'answer_type' => gettype($answer),
                 'questionKey' => $questionKey,
-                'referenceGuide' => $referenceGuide
+                'referenceGuide' => $referenceGuide,
             ]);
         }
 
         $answerValues = config('answer_values', []);
-        
+
         // Verificar que la configuración tenga la estructura esperada
-        if (!is_array($answerValues) || empty($answerValues)) {
+        if (! is_array($answerValues) || empty($answerValues)) {
             // Si la respuesta ya es numérica, devolverla como está
             if (is_numeric($answer)) {
-                return (float)$answer;
+                return (float) $answer;
             }
+
             return null;
         }
-        
+
         // Verificar que $answer sea un tipo válido para usar como clave de array
-        if (!is_string($answer) && !is_int($answer) && !is_float($answer)) {
+        if (! is_string($answer) && ! is_int($answer) && ! is_float($answer)) {
             // Manejar respuestas booleanas (del quiz pueden venir true/false)
             if (is_bool($answer)) {
                 $answer = $answer ? 'true' : 'false';
@@ -207,16 +221,16 @@ class Evaluation extends Model
                 $answer = (string) $answer;
             }
         }
-        
+
         // Comprobar si la pregunta está en el grupo 1
-        if (isset($answerValues['group1']['questions']) && 
+        if (isset($answerValues['group1']['questions']) &&
             is_array($answerValues['group1']['questions']) &&
             in_array($questionKey, $answerValues['group1']['questions'])) {
             return $answerValues['group1']['values'][$answer] ?? null;
         }
-        
+
         // Comprobar si la pregunta está en el grupo 2
-        if (isset($answerValues['group2']['questions']) && 
+        if (isset($answerValues['group2']['questions']) &&
             is_array($answerValues['group2']['questions']) &&
             in_array($questionKey, $answerValues['group2']['questions'])) {
             return $answerValues['group2']['values'][$answer] ?? null;
@@ -225,11 +239,11 @@ class Evaluation extends Model
         // Si no se pudo determinar el grupo, comprobar ambos grupos
         // Verificar que $answer sea un tipo válido para usar como clave de array
         if (is_string($answer) || is_int($answer) || is_float($answer)) {
-            if (isset($answerValues['group1']['values']) && 
+            if (isset($answerValues['group1']['values']) &&
                 is_array($answerValues['group1']['values']) &&
                 array_key_exists($answer, $answerValues['group1']['values'])) {
                 return $answerValues['group1']['values'][$answer];
-            } elseif (isset($answerValues['group2']['values']) && 
+            } elseif (isset($answerValues['group2']['values']) &&
                       is_array($answerValues['group2']['values']) &&
                       array_key_exists($answer, $answerValues['group2']['values'])) {
                 return $answerValues['group2']['values'][$answer];
@@ -238,7 +252,7 @@ class Evaluation extends Model
 
         // Si la respuesta ya es numérica, devolverla como está
         if (is_numeric($answer)) {
-            return (float)$answer;
+            return (float) $answer;
         }
 
         return null;

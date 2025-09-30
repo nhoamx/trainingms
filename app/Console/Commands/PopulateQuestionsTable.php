@@ -37,6 +37,7 @@ class PopulateQuestionsTable extends Command
         $evaluationsCount = Evaluation::count();
         if ($evaluationsCount === 0) {
             $this->error('No hay evaluaciones para procesar.');
+
             return 1;
         }
 
@@ -68,9 +69,9 @@ class PopulateQuestionsTable extends Command
         } catch (\Exception $e) {
             DB::rollBack();
             $this->newLine();
-            $this->error('Error al procesar las evaluaciones: ' . $e->getMessage());
-            Log::error('Error al poblar la tabla questions: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+            $this->error('Error al procesar las evaluaciones: '.$e->getMessage());
+            Log::error('Error al poblar la tabla questions: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return 1;
@@ -83,7 +84,7 @@ class PopulateQuestionsTable extends Command
     private function processEvaluation(Evaluation $evaluation)
     {
         // Verificar si la evaluación tiene datos
-        if (!$evaluation->data || !is_array($evaluation->data)) {
+        if (! $evaluation->data || ! is_array($evaluation->data)) {
             return;
         }
 
@@ -112,7 +113,7 @@ class PopulateQuestionsTable extends Command
     {
         foreach ($evaluation->data as $questionKey => $answer) {
             // Ignorar si no es una pregunta válida
-            if (!is_string($questionKey) || !str_starts_with($questionKey, 'pregunta_')) {
+            if (! is_string($questionKey) || ! str_starts_with($questionKey, 'pregunta_')) {
                 continue;
             }
 
@@ -140,7 +141,7 @@ class PopulateQuestionsTable extends Command
     {
         foreach ($evaluation->data as $questionKey => $answer) {
             // Verificar si es un número (pregunta)
-            if (!is_numeric($questionKey) && !preg_match('/^\d+$/', $questionKey)) {
+            if (! is_numeric($questionKey) && ! preg_match('/^\d+$/', $questionKey)) {
                 continue;
             }
 
@@ -175,11 +176,11 @@ class PopulateQuestionsTable extends Command
 
         // Combinar edad_d1 y edad_d2 en 'edad' si ambos existen
         if (isset($data['edad_d1']) && isset($data['edad_d2'])) {
-            $data['edad'] = $data['edad_d1'] . '.' . $data['edad_d2'];
+            $data['edad'] = $data['edad_d1'].'.'.$data['edad_d2'];
         }
 
         foreach ($data as $questionKey => $answer) {
-            if (!is_string($questionKey)) {
+            if (! is_string($questionKey)) {
                 continue;
             }
 
@@ -204,7 +205,7 @@ class PopulateQuestionsTable extends Command
     private function processGeneric(Evaluation $evaluation)
     {
         foreach ($evaluation->data as $questionKey => $answer) {
-            if (!is_string($questionKey)) {
+            if (! is_string($questionKey)) {
                 continue;
             }
 
@@ -241,16 +242,20 @@ class PopulateQuestionsTable extends Command
                     if (in_array($questionNumber, $questions)) {
                         // Buscar las entidades en la base de datos
                         $category = Category::firstWhere('name', $categoryName);
-                        if (!$category) continue;
+                        if (! $category) {
+                            continue;
+                        }
 
                         $domain = Domain::where('name', $domainName)
-                                         ->where('category_id', $category->id)
-                                         ->first();
-                        if (!$domain) continue;
+                            ->where('category_id', $category->id)
+                            ->first();
+                        if (! $domain) {
+                            continue;
+                        }
 
                         $dimension = Dimension::where('name', $dimensionName)
-                                              ->where('domain_id', $domain->id)
-                                              ->first();
+                            ->where('domain_id', $domain->id)
+                            ->first();
 
                         return [
                             'category_id' => $category->id,
@@ -280,13 +285,13 @@ class PopulateQuestionsTable extends Command
 
         // Determinar a qué grupo pertenece la pregunta
         $questionNumber = null;
-        
+
         // Usar el questionKey pasado como parámetro
         // Comprobar si la pregunta está en el grupo 1
         if (in_array($questionKey, $answerValues['group1']['questions'] ?? [])) {
             return $answerValues['group1']['values'][$answer] ?? null;
         }
-        
+
         // Comprobar si la pregunta está en el grupo 2
         if (in_array($questionKey, $answerValues['group2']['questions'] ?? [])) {
             return $answerValues['group2']['values'][$answer] ?? null;
@@ -301,7 +306,7 @@ class PopulateQuestionsTable extends Command
 
         // Si la respuesta ya es numérica, devolverla como está
         if (is_numeric($answer)) {
-            return (float)$answer;
+            return (float) $answer;
         }
 
         return null;
