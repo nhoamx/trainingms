@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Spatie\Browsershot\Browsershot;
 
 class OMRController extends Controller
 {
@@ -102,7 +102,7 @@ class OMRController extends Controller
     }
 
     /**
-     * Genera PDF con las hojas OMR
+     * Genera PDF con las hojas OMR usando Browsershot
      */
     private function generatePdf(string $viewName, string $title, array $data, Request $request)
     {
@@ -123,13 +123,6 @@ class OMRController extends Controller
             return str_pad(trim($folio), 4, '0', STR_PAD_LEFT);
         }, $folios);
 
-        // Configurar DomPDF para tamaño carta y márgenes de 10mm
-        $pdf = PDF::setOptions([
-            'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true,
-            'defaultFont' => 'Arial',
-        ]);
-
         // Generar una página por cada folio
         $htmlContent = '';
         foreach ($folios as $index => $folio) {
@@ -142,17 +135,32 @@ class OMRController extends Controller
             }
         }
 
-        $pdf->loadHTML($htmlContent);
-        $pdf->setPaper('letter', 'portrait');
-
-        // Configurar márgenes de 10mm (aproximadamente 28 puntos)
-        $pdf->setOption('margin-top', 28);
-        $pdf->setOption('margin-bottom', 28);
-        $pdf->setOption('margin-left', 28);
-        $pdf->setOption('margin-right', 28);
-
+        // Generar nombre de archivo temporal y final
         $filename = str_replace(' ', '_', strtolower($title)).'_'.date('Y-m-d_H-i-s').'.pdf';
+        $tempPath = storage_path('app/temp/'.$filename);
 
-        return $pdf->download($filename);
+        // Crear directorio temporal si no existe
+        if (! file_exists(dirname($tempPath))) {
+            mkdir(dirname($tempPath), 0755, true);
+        }
+
+        // Configurar Browsershot para WSL/Windows
+        $browsershot = Browsershot::html($htmlContent)
+            ->setOption('landscape', false)
+            ->format('Letter')
+            ->margins(10, 10, 10, 10) // top, right, bottom, left en mm
+            ->showBackground()
+            ->waitUntilNetworkIdle();
+
+        // Configurar node y npm paths si estamos en WSL
+        if (PHP_OS_FAMILY === 'Linux' && file_exists('/mnt/c/Program Files/nodejs/node.exe')) {
+            $browsershot->setNodeBinary('/mnt/c/Program Files/nodejs/node.exe');
+            $browsershot->setNpmBinary('/mnt/c/Program Files/nodejs/npm');
+        }
+
+        $browsershot->save($tempPath);
+
+        // Retornar el archivo para descarga y luego eliminarlo
+        return response()->download($tempPath)->deleteFileAfterSend(true);
     }
 }
