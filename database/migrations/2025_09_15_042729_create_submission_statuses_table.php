@@ -18,7 +18,7 @@ return new class extends Migration
             $table->uuid('organization_id');
             $table->unsignedBigInteger('quiz_id');
             $table->enum('status', ['pending', 'processing', 'completed', 'failed', 'retrying'])
-                  ->default('pending');
+                ->default('pending');
             $table->json('data_snapshot'); // Store the original submission data
             $table->text('error_message')->nullable();
             $table->timestamp('processed_at')->nullable();

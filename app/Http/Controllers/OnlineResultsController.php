@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Organization;
 use App\Models\OnlineAnswer;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
+use App\Models\Organization;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class OnlineResultsController extends Controller
 {
@@ -16,7 +15,7 @@ class OnlineResultsController extends Controller
     public function index($organizationId)
     {
         $organization = Organization::findOrFail($organizationId);
-        
+
         // Obtener participantes únicos con sus datos básicos
         $participants = OnlineAnswer::where('organization_id', $organizationId)
             ->select('personal_id', 'folio', 'quiz_id', 'created_at')
@@ -37,8 +36,8 @@ class OnlineResultsController extends Controller
                     'personal_id' => $participant->personal_id,
                     'folio' => $participant->folio,
                     'quiz_name' => $participant->quiz->name ?? 'Quiz eliminado',
-                    'quiz_type' => $participant->quiz ? 
-                        ($participant->quiz->is_cisneros ? 'Cisneros' : 
+                    'quiz_type' => $participant->quiz ?
+                        ($participant->quiz->is_cisneros ? 'Cisneros' :
                          ($participant->quiz->is_reduced ? 'Reducido' : 'Completo')) : 'N/A',
                     'completed_at' => $participant->created_at->format('d/m/Y H:i'),
                     'sexo' => $personalData->get('sexo')?->answer_value ?? 'N/A',
@@ -62,7 +61,7 @@ class OnlineResultsController extends Controller
     public function showParticipant($organizationId, $participantId)
     {
         $organization = Organization::findOrFail($organizationId);
-        
+
         // Obtener todas las respuestas del participante
         $answers = OnlineAnswer::where('organization_id', $organizationId)
             ->where('personal_id', $participantId)
@@ -103,8 +102,8 @@ class OnlineResultsController extends Controller
             'personal_id' => $participantId,
             'folio' => $answers->first()->folio,
             'quiz_name' => $answers->first()->quiz->name ?? 'Quiz eliminado',
-            'quiz_type' => $answers->first()->quiz ? 
-                ($answers->first()->quiz->is_cisneros ? 'Cisneros' : 
+            'quiz_type' => $answers->first()->quiz ?
+                ($answers->first()->quiz->is_cisneros ? 'Cisneros' :
                  ($answers->first()->quiz->is_reduced ? 'Reducido' : 'Completo')) : 'N/A',
             'completed_at' => $answers->first()->created_at->format('d/m/Y H:i'),
         ];
@@ -114,14 +113,15 @@ class OnlineResultsController extends Controller
 
         foreach ($answers as $answer) {
             $guide = $answer->reference_guide;
-            
+
             // Manejar imágenes del INE por separado
             if (in_array($answer->question_key, ['ine_frente', 'ine_reverso'])) {
                 $ineImages[$answer->question_key] = [
                     'path' => $answer->answer_value,
                     'url' => Storage::url($answer->answer_value),
-                    'exists' => Storage::disk('public')->exists($answer->answer_value)
+                    'exists' => Storage::disk('public')->exists($answer->answer_value),
                 ];
+
                 continue;
             }
 

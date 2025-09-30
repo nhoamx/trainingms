@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Question;
 use App\Models\Organization;
+use App\Models\Question;
 use Illuminate\Support\Facades\DB;
 
 class QuestionReportService
@@ -26,7 +26,7 @@ class QuestionReportService
         $guideIIIEvaluations = DB::table('evaluations as e1')
             ->join('evaluations as e2', function ($join) {
                 $join->on('e1.personal_id', '=', 'e2.personal_id')
-                     ->where('e2.reference_guide', '=', 'V');
+                    ->where('e2.reference_guide', '=', 'V');
             })
             ->where('e1.reference_guide', 'III')
             ->where('e1.organization_id', $organization->id)
@@ -37,7 +37,7 @@ class QuestionReportService
             ->toArray();
 
         // Aplicar filtros demográficos
-        if (!empty($filters)) {
+        if (! empty($filters)) {
             $guideIIIEvaluations = $this->applyDemographicFilters($guideIIIEvaluations, $filters);
         }
 
@@ -66,7 +66,7 @@ class QuestionReportService
         $query = DB::table('evaluations as e1')
             ->join('evaluations as e2', function ($join) {
                 $join->on('e1.personal_id', '=', 'e2.personal_id')
-                     ->where('e2.reference_guide', '=', 'V');
+                    ->where('e2.reference_guide', '=', 'V');
             })
             ->join('questions as q', 'q.evaluation_id', '=', 'e2.id')
             ->whereIn('e1.id', $evaluationIds)
@@ -74,16 +74,18 @@ class QuestionReportService
 
         // Aplicar filtros individuales
         foreach ($filters as $key => $value) {
-            if (empty($value)) continue;
+            if (empty($value)) {
+                continue;
+            }
 
             $query->where(function ($query) use ($key, $value) {
                 // Si es un array, usar whereIn
                 if (is_array($value)) {
                     $query->where('q.question', $key)
-                          ->whereIn('q.answer', $value);
+                        ->whereIn('q.answer', $value);
                 } else {
                     $query->where('q.question', $key)
-                          ->where('q.answer', $value);
+                        ->where('q.answer', $value);
                 }
             });
         }
@@ -102,7 +104,7 @@ class QuestionReportService
         $estadoCivilCounts = DB::table('evaluations as e1')
             ->join('evaluations as e2', function ($join) {
                 $join->on('e1.personal_id', '=', 'e2.personal_id')
-                     ->where('e2.reference_guide', '=', 'V');
+                    ->where('e2.reference_guide', '=', 'V');
             })
             ->join('questions as q', 'q.evaluation_id', '=', 'e2.id')
             ->whereIn('e1.id', $evaluationIds)
@@ -119,11 +121,11 @@ class QuestionReportService
                 ->where('reference_guide', 'III')
                 ->whereHas('evaluation', function ($query) use ($organization, $item) {
                     $query->where('organization_id', $organization->id)
-                          ->whereHas('questions', function ($q) use ($item) {
-                              $q->where('question', 'estado_civil')
+                        ->whereHas('questions', function ($q) use ($item) {
+                            $q->where('question', 'estado_civil')
                                 ->where('answer', $item->estado_civil)
                                 ->where('reference_guide', 'V');
-                          });
+                        });
                 })
                 ->get();
 
@@ -134,11 +136,17 @@ class QuestionReportService
             foreach ($answers as $answer) {
                 $value = (int) $answer->value;
 
-                if ($value === 0) $niveles['Nulo']++;
-                elseif ($value <= 1) $niveles['Bajo']++;
-                elseif ($value <= 2) $niveles['Medio']++;
-                elseif ($value <= 3) $niveles['Alto']++;
-                else $niveles['Muy Alto']++;
+                if ($value === 0) {
+                    $niveles['Nulo']++;
+                } elseif ($value <= 1) {
+                    $niveles['Bajo']++;
+                } elseif ($value <= 2) {
+                    $niveles['Medio']++;
+                } elseif ($value <= 3) {
+                    $niveles['Alto']++;
+                } else {
+                    $niveles['Muy Alto']++;
+                }
             }
 
             // Calcular porcentajes
@@ -157,7 +165,7 @@ class QuestionReportService
                 'niveles' => $niveles,
                 'nu_ba' => $nuBa,
                 'me_al_ma' => $meAlMa,
-                'cf' => round($cf)
+                'cf' => round($cf),
             ];
         }
 
@@ -173,12 +181,12 @@ class QuestionReportService
         $ageData = DB::table('evaluations as e1')
             ->join('evaluations as e2', function ($join) {
                 $join->on('e1.personal_id', '=', 'e2.personal_id')
-                     ->where('e2.reference_guide', '=', 'V');
+                    ->where('e2.reference_guide', '=', 'V');
             })
             ->join('questions as q1', 'q1.evaluation_id', '=', 'e2.id')
             ->join('questions as q2', function ($join) {
                 $join->on('q2.evaluation_id', '=', 'e2.id')
-                     ->where('q2.question', '=', 'edad_d2');
+                    ->where('q2.question', '=', 'edad_d2');
             })
             ->whereIn('e1.id', $evaluationIds)
             ->where('q1.question', 'edad_d1')
@@ -191,17 +199,22 @@ class QuestionReportService
             '26-35' => ['count' => 0, 'analysis' => []],
             '36-45' => ['count' => 0, 'analysis' => []],
             '46-55' => ['count' => 0, 'analysis' => []],
-            '56+' => ['count' => 0, 'analysis' => []]
+            '56+' => ['count' => 0, 'analysis' => []],
         ];
 
         foreach ($ageData as $item) {
-            $age = (int)($item->edad_d1 . $item->edad_d2);
+            $age = (int) ($item->edad_d1.$item->edad_d2);
             $range = '56+';
 
-            if ($age <= 25) $range = '18-25';
-            elseif ($age <= 35) $range = '26-35';
-            elseif ($age <= 45) $range = '36-45';
-            elseif ($age <= 55) $range = '46-55';
+            if ($age <= 25) {
+                $range = '18-25';
+            } elseif ($age <= 35) {
+                $range = '26-35';
+            } elseif ($age <= 45) {
+                $range = '36-45';
+            } elseif ($age <= 55) {
+                $range = '46-55';
+            }
 
             $ageRanges[$range]['count']++;
             $ageRanges[$range]['evaluations'][] = $item->id;
@@ -209,7 +222,9 @@ class QuestionReportService
 
         // Para cada rango de edad, analizar las respuestas
         foreach ($ageRanges as $range => &$data) {
-            if ($data['count'] === 0) continue;
+            if ($data['count'] === 0) {
+                continue;
+            }
 
             $evalIds = $data['evaluations'] ?? [];
             $answers = Question::whereIn('evaluation_id', $evalIds)
@@ -223,11 +238,17 @@ class QuestionReportService
             foreach ($answers as $answer) {
                 $value = (int) $answer->value;
 
-                if ($value === 0) $niveles['Nulo']++;
-                elseif ($value <= 1) $niveles['Bajo']++;
-                elseif ($value <= 2) $niveles['Medio']++;
-                elseif ($value <= 3) $niveles['Alto']++;
-                else $niveles['Muy Alto']++;
+                if ($value === 0) {
+                    $niveles['Nulo']++;
+                } elseif ($value <= 1) {
+                    $niveles['Bajo']++;
+                } elseif ($value <= 2) {
+                    $niveles['Medio']++;
+                } elseif ($value <= 3) {
+                    $niveles['Alto']++;
+                } else {
+                    $niveles['Muy Alto']++;
+                }
             }
 
             // Calcular porcentajes
@@ -244,7 +265,7 @@ class QuestionReportService
                 'niveles' => $niveles,
                 'nu_ba' => $nuBa,
                 'me_al_ma' => $meAlMa,
-                'cf' => round($cf)
+                'cf' => round($cf),
             ];
 
             unset($data['evaluations']);
@@ -261,7 +282,7 @@ class QuestionReportService
         $nivelAcademicoCounts = DB::table('evaluations as e1')
             ->join('evaluations as e2', function ($join) {
                 $join->on('e1.personal_id', '=', 'e2.personal_id')
-                     ->where('e2.reference_guide', '=', 'V');
+                    ->where('e2.reference_guide', '=', 'V');
             })
             ->join('questions as q', 'q.evaluation_id', '=', 'e2.id')
             ->whereIn('e1.id', $evaluationIds)
@@ -278,11 +299,11 @@ class QuestionReportService
                 ->where('reference_guide', 'III')
                 ->whereHas('evaluation', function ($query) use ($organization, $item) {
                     $query->where('organization_id', $organization->id)
-                          ->whereHas('questions', function ($q) use ($item) {
-                              $q->where('question', 'ultimo_nivel_estudio')
+                        ->whereHas('questions', function ($q) use ($item) {
+                            $q->where('question', 'ultimo_nivel_estudio')
                                 ->where('answer', $item->nivel)
                                 ->where('reference_guide', 'V');
-                          });
+                        });
                 })
                 ->get();
 
@@ -293,11 +314,17 @@ class QuestionReportService
             foreach ($answers as $answer) {
                 $value = (int) $answer->value;
 
-                if ($value === 0) $niveles['Nulo']++;
-                elseif ($value <= 1) $niveles['Bajo']++;
-                elseif ($value <= 2) $niveles['Medio']++;
-                elseif ($value <= 3) $niveles['Alto']++;
-                else $niveles['Muy Alto']++;
+                if ($value === 0) {
+                    $niveles['Nulo']++;
+                } elseif ($value <= 1) {
+                    $niveles['Bajo']++;
+                } elseif ($value <= 2) {
+                    $niveles['Medio']++;
+                } elseif ($value <= 3) {
+                    $niveles['Alto']++;
+                } else {
+                    $niveles['Muy Alto']++;
+                }
             }
 
             // Calcular porcentajes
@@ -316,7 +343,7 @@ class QuestionReportService
                 'niveles' => $niveles,
                 'nu_ba' => $nuBa,
                 'me_al_ma' => $meAlMa,
-                'cf' => round($cf)
+                'cf' => round($cf),
             ];
         }
 
@@ -338,7 +365,7 @@ class QuestionReportService
 
             // Contar respuestas
             foreach ($questionSet as $question) {
-                if (!isset($answerCounts[$question->answer])) {
+                if (! isset($answerCounts[$question->answer])) {
                     $answerCounts[$question->answer] = 0;
                 }
                 $answerCounts[$question->answer]++;
@@ -347,7 +374,7 @@ class QuestionReportService
             $statistics[$questionNumber] = [
                 'question' => $questionNumber,
                 'answers' => $answerCounts,
-                'total' => $questionSet->count()
+                'total' => $questionSet->count(),
             ];
         }
 
@@ -373,13 +400,14 @@ class QuestionReportService
             ->get()
             ->map(function ($item) {
                 $avgScore = $item->question_count > 0 ? $item->score / $item->question_count : 0;
+
                 return [
                     'id' => $item->id,
                     'name' => $item->name,
                     'score' => $item->score,
                     'question_count' => $item->question_count,
                     'avg_score' => $avgScore,
-                    'level' => $this->getScoreLevel($avgScore)
+                    'level' => $this->getScoreLevel($avgScore),
                 ];
             });
 
@@ -392,7 +420,7 @@ class QuestionReportService
     private function generateAnswersDistributionReport($questions)
     {
         $responseDistribution = [
-            'A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0
+            'A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0,
         ];
 
         foreach ($questions as $question) {
@@ -415,7 +443,7 @@ class QuestionReportService
             'union_libre' => 'Unión Libre',
             'divorciado' => 'Divorciado',
             'viudo' => 'Viudo',
-            'otro' => 'Otro'
+            'otro' => 'Otro',
         ];
 
         return $estados[$estadoCivil] ?? $estadoCivil;
@@ -440,7 +468,7 @@ class QuestionReportService
             'maestria_incompleta' => 'Maestría Incompleta',
             'maestria_terminada' => 'Maestría Terminada',
             'doctorado_incompleto' => 'Doctorado Incompleto',
-            'doctorado_terminado' => 'Doctorado Terminado'
+            'doctorado_terminado' => 'Doctorado Terminado',
         ];
 
         return $niveles[$nivel] ?? $nivel;
@@ -451,10 +479,19 @@ class QuestionReportService
      */
     private function getScoreLevel($score)
     {
-        if ($score <= 0) return 'Nulo';
-        if ($score <= 1) return 'Bajo';
-        if ($score <= 2) return 'Medio';
-        if ($score <= 3) return 'Alto';
+        if ($score <= 0) {
+            return 'Nulo';
+        }
+        if ($score <= 1) {
+            return 'Bajo';
+        }
+        if ($score <= 2) {
+            return 'Medio';
+        }
+        if ($score <= 3) {
+            return 'Alto';
+        }
+
         return 'Muy Alto';
     }
 
@@ -493,7 +530,7 @@ class QuestionReportService
         return DB::table('evaluations as e1')
             ->join('evaluations as e2', function ($join) {
                 $join->on('e1.personal_id', '=', 'e2.personal_id')
-                     ->where('e2.reference_guide', '=', 'V');
+                    ->where('e2.reference_guide', '=', 'V');
             })
             ->join('questions as q', 'q.evaluation_id', '=', 'e2.id')
             ->whereIn('e1.id', $evaluationIds)
@@ -510,12 +547,12 @@ class QuestionReportService
         $rawData = DB::table('evaluations as e1')
             ->join('evaluations as e2', function ($join) {
                 $join->on('e1.personal_id', '=', 'e2.personal_id')
-                     ->where('e2.reference_guide', '=', 'V');
+                    ->where('e2.reference_guide', '=', 'V');
             })
             ->join('questions as q1', 'q1.evaluation_id', '=', 'e2.id')
             ->join('questions as q2', function ($join) {
                 $join->on('q2.evaluation_id', '=', 'e2.id')
-                     ->where('q2.question', '=', 'edad_d2');
+                    ->where('q2.question', '=', 'edad_d2');
             })
             ->whereIn('e1.id', $evaluationIds)
             ->where('q1.question', 'edad_d1')
@@ -524,17 +561,22 @@ class QuestionReportService
 
         $processedData = [];
         foreach ($rawData as $item) {
-            $age = (int)($item->edad_d1 . $item->edad_d2);
+            $age = (int) ($item->edad_d1.$item->edad_d2);
             $range = '56+';
 
-            if ($age <= 25) $range = '18-25';
-            elseif ($age <= 35) $range = '26-35';
-            elseif ($age <= 45) $range = '36-45';
-            elseif ($age <= 55) $range = '46-55';
+            if ($age <= 25) {
+                $range = '18-25';
+            } elseif ($age <= 35) {
+                $range = '26-35';
+            } elseif ($age <= 45) {
+                $range = '36-45';
+            } elseif ($age <= 55) {
+                $range = '46-55';
+            }
 
-            $processedData[] = (object)[
+            $processedData[] = (object) [
                 'evaluation_id' => $item->evaluation_id,
-                'demographic_value' => $range
+                'demographic_value' => $range,
             ];
         }
 
@@ -567,7 +609,9 @@ class QuestionReportService
                     ->where('question', $questionNumber)
                     ->get();
 
-                if ($answers->isEmpty()) continue;
+                if ($answers->isEmpty()) {
+                    continue;
+                }
 
                 // Contar respuestas por nivel
                 $niveles = ['Nulo' => 0, 'Bajo' => 0, 'Medio' => 0, 'Alto' => 0, 'Muy Alto' => 0];
@@ -575,11 +619,17 @@ class QuestionReportService
                 foreach ($answers as $answer) {
                     $value = (int) $answer->value;
 
-                    if ($value === 0) $niveles['Nulo']++;
-                    elseif ($value <= 1) $niveles['Bajo']++;
-                    elseif ($value <= 2) $niveles['Medio']++;
-                    elseif ($value <= 3) $niveles['Alto']++;
-                    else $niveles['Muy Alto']++;
+                    if ($value === 0) {
+                        $niveles['Nulo']++;
+                    } elseif ($value <= 1) {
+                        $niveles['Bajo']++;
+                    } elseif ($value <= 2) {
+                        $niveles['Medio']++;
+                    } elseif ($value <= 3) {
+                        $niveles['Alto']++;
+                    } else {
+                        $niveles['Muy Alto']++;
+                    }
                 }
 
                 // Calcular totales
@@ -598,14 +648,14 @@ class QuestionReportService
                     'total' => $total,
                     'nu_ba' => $nuBa,
                     'me_al_ma' => $meAlMa,
-                    'cf' => round($cf)
+                    'cf' => round($cf),
                 ];
             }
 
             $report[$demographicValue] = [
                 'label' => $label,
                 'total' => count($evaluationIds),
-                'questions' => $questionStats
+                'questions' => $questionStats,
             ];
         }
 
@@ -626,12 +676,13 @@ class QuestionReportService
         $groupedByAge = $ageData->groupBy('demographic_value');
 
         foreach ($ageRanges as $range) {
-            if (!isset($groupedByAge[$range])) {
+            if (! isset($groupedByAge[$range])) {
                 $report[$range] = [
                     'label' => $range,
                     'total' => 0,
-                    'questions' => []
+                    'questions' => [],
                 ];
+
                 continue;
             }
 
@@ -647,7 +698,9 @@ class QuestionReportService
                     ->where('question', $questionNumber)
                     ->get();
 
-                if ($answers->isEmpty()) continue;
+                if ($answers->isEmpty()) {
+                    continue;
+                }
 
                 // Contar respuestas por nivel
                 $niveles = ['Nulo' => 0, 'Bajo' => 0, 'Medio' => 0, 'Alto' => 0, 'Muy Alto' => 0];
@@ -655,11 +708,17 @@ class QuestionReportService
                 foreach ($answers as $answer) {
                     $value = (int) $answer->value;
 
-                    if ($value === 0) $niveles['Nulo']++;
-                    elseif ($value <= 1) $niveles['Bajo']++;
-                    elseif ($value <= 2) $niveles['Medio']++;
-                    elseif ($value <= 3) $niveles['Alto']++;
-                    else $niveles['Muy Alto']++;
+                    if ($value === 0) {
+                        $niveles['Nulo']++;
+                    } elseif ($value <= 1) {
+                        $niveles['Bajo']++;
+                    } elseif ($value <= 2) {
+                        $niveles['Medio']++;
+                    } elseif ($value <= 3) {
+                        $niveles['Alto']++;
+                    } else {
+                        $niveles['Muy Alto']++;
+                    }
                 }
 
                 // Calcular totales
@@ -678,14 +737,14 @@ class QuestionReportService
                     'total' => $total,
                     'nu_ba' => $nuBa,
                     'me_al_ma' => $meAlMa,
-                    'cf' => round($cf)
+                    'cf' => round($cf),
                 ];
             }
 
             $report[$range] = [
                 'label' => $range,
                 'total' => count($evaluationIds),
-                'questions' => $questionStats
+                'questions' => $questionStats,
             ];
         }
 

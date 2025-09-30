@@ -9,7 +9,6 @@ use Inertia\Inertia;
 
 class AuthController extends Controller
 {
-
     /*
      * Show the login form.
      */
@@ -34,6 +33,7 @@ class AuthController extends Controller
 
         if (Auth::attempt($request->only('email', 'password'))) {
             $request->session()->regenerate();
+
             return redirect()->route('dashboard');
         }
 
@@ -41,7 +41,6 @@ class AuthController extends Controller
             'email' => 'Las credenciales no coinciden con nuestros registros.',
         ]);
     }
-
 
     /**
      * Log the user out of the application.

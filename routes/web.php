@@ -281,7 +281,7 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/q/{tempUrl}', [QuizController::class, 'showTemp'])->name('quiz.temp');
 Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])
     ->name('quiz.submit');
-//->middleware(\App\Http\Middleware\RateLimitQuizSubmissions::class);
+// ->middleware(\App\Http\Middleware\RateLimitQuizSubmissions::class);
 
 // Rutas públicas para las plantillas OMR de evaluación presencial
 Route::prefix('omr')->name('omr.')->group(function () {

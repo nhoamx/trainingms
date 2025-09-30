@@ -6,7 +6,6 @@ use App\Models\DepartmentArea;
 use App\Models\Organization;
 use App\Services\DepartmentAreaService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class DepartmentAreaController extends Controller
 {
@@ -20,7 +19,6 @@ class DepartmentAreaController extends Controller
     /**
      * Almacena un nuevo departamento en la base de datos.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
@@ -47,14 +45,13 @@ class DepartmentAreaController extends Controller
                 'title' => 'Departamento creado',
                 'message' => 'El departamento ha sido creado exitosamente.',
             ],
-            'area' => $area // Devolver el área creada para actualización reactiva
+            'area' => $area, // Devolver el área creada para actualización reactiva
         ]);
     }
 
     /**
      * Elimina un departamento específico.
      *
-     * @param  \App\Models\DepartmentArea  $departmentArea
      * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(DepartmentArea $departmentArea)
@@ -68,7 +65,7 @@ class DepartmentAreaController extends Controller
                 'type' => 'success',
                 'title' => 'Departamento eliminado',
                 'message' => 'El departamento ha sido eliminado exitosamente.',
-            ]
+            ],
         ]);
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Organization;
-use App\Models\Evaluation;
 
 class EvaluationService
 {
@@ -22,7 +21,7 @@ class EvaluationService
                     'reference_guide' => $evaluation->reference_guide,
                     'organization_id' => $evaluation->organization_id,
                     'personal_id' => $evaluation->personal_id,
-                    'total_score' => $evaluation->answers->sum('score')
+                    'total_score' => $evaluation->answers->sum('score'),
                 ];
             });
     }

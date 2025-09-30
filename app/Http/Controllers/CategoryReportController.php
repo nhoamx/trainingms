@@ -58,7 +58,6 @@ class CategoryReportController extends Controller
 
             // Obtener los datos desde el servicio para la carga inicial (por nivel de riesgo)
             $distribution = $this->categoryReportService->getCategoryRiskLevelDistribution();
-            Log::info("Distribución de personas por nivel de riesgo y categoría: ", $distribution->toArray());
 
             return Inertia::render('Reports/CategoryReport', [
                 'categoryDistribution' => $distribution,

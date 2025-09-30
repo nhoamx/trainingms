@@ -6,7 +6,6 @@ use App\Models\OccupationPosition;
 use App\Models\Organization;
 use App\Services\OccupationPositionService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class OccupationPositionController extends Controller
 {
@@ -20,7 +19,6 @@ class OccupationPositionController extends Controller
     /**
      * Almacena un nuevo puesto en la base de datos.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
@@ -47,14 +45,13 @@ class OccupationPositionController extends Controller
                 'title' => 'Puesto creado',
                 'message' => 'El puesto ha sido creado exitosamente.',
             ],
-            'position' => $position // Devolver el puesto creado para actualización reactiva
+            'position' => $position, // Devolver el puesto creado para actualización reactiva
         ]);
     }
 
     /**
      * Elimina un puesto específico.
      *
-     * @param  \App\Models\OccupationPosition  $occupationPosition
      * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(OccupationPosition $occupationPosition)
@@ -68,7 +65,7 @@ class OccupationPositionController extends Controller
                 'type' => 'success',
                 'title' => 'Puesto eliminado',
                 'message' => 'El puesto ha sido eliminado exitosamente.',
-            ]
+            ],
         ]);
     }
 }

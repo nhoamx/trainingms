@@ -17,20 +17,24 @@ class SubmissionStatus extends Model
         'error_message',
         'processed_at',
         'retry_count',
-        'session_id'
+        'session_id',
     ];
 
     protected $casts = [
         'data_snapshot' => 'array',
         'processed_at' => 'datetime',
-        'retry_count' => 'integer'
+        'retry_count' => 'integer',
     ];
 
     // Status constants
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_FAILED = 'failed';
+
     public const STATUS_RETRYING = 'retrying';
 
     /**
@@ -70,7 +74,7 @@ class SubmissionStatus extends Model
      */
     public function canRetry(): bool
     {
-        return $this->retry_count < 3 && 
+        return $this->retry_count < 3 &&
                in_array($this->status, [self::STATUS_FAILED, self::STATUS_RETRYING]);
     }
 
@@ -90,7 +94,7 @@ class SubmissionStatus extends Model
         $this->update([
             'status' => self::STATUS_COMPLETED,
             'processed_at' => now(),
-            'error_message' => null
+            'error_message' => null,
         ]);
     }
 
@@ -102,7 +106,7 @@ class SubmissionStatus extends Model
         $this->update([
             'status' => self::STATUS_FAILED,
             'error_message' => $errorMessage,
-            'retry_count' => $this->retry_count + 1
+            'retry_count' => $this->retry_count + 1,
         ]);
     }
 }

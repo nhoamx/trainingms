@@ -33,9 +33,10 @@ class MigrateEdadFields extends Command
 
         // Obtener todas las evaluaciones de tipo V
         $evaluations = Evaluation::where('reference_guide', 'V')->get();
-        
+
         if ($evaluations->count() === 0) {
             $this->info('No se encontraron evaluaciones de tipo V para procesar.');
+
             return 0;
         }
 
@@ -54,21 +55,21 @@ class MigrateEdadFields extends Command
                 $edadD1 = Question::where('evaluation_id', $evaluation->id)
                     ->where('question', 'edad_d1')
                     ->first();
-                    
+
                 $edadD2 = Question::where('evaluation_id', $evaluation->id)
                     ->where('question', 'edad_d2')
                     ->first();
 
                 // Si ambos campos existen, crear el campo combinado
                 if ($edadD1 && $edadD2) {
-                    $edadCombinada = $edadD1->answer . '' . $edadD2->answer;
+                    $edadCombinada = $edadD1->answer.''.$edadD2->answer;
 
                     // Verificar si ya existe el registro de 'edad'
                     $existingEdad = Question::where('evaluation_id', $evaluation->id)
                         ->where('question', 'edad')
                         ->first();
 
-                    if (!$existingEdad) {
+                    if (! $existingEdad) {
                         // Crear el nuevo registro para 'edad'
                         Question::create([
                             'evaluation_id' => $evaluation->id,
@@ -77,10 +78,10 @@ class MigrateEdadFields extends Command
                             'answer' => $edadCombinada,
                             'reference_guide' => $evaluation->reference_guide,
                         ]);
-                        
+
                         $created++;
                     }
-                    
+
                     $processed++;
                 }
 
@@ -90,21 +91,21 @@ class MigrateEdadFields extends Command
             DB::commit();
             $bar->finish();
             $this->newLine();
-            
-            $this->info("¡Migración completada exitosamente!");
+
+            $this->info('¡Migración completada exitosamente!');
             $this->info("Evaluaciones procesadas: {$processed}");
             $this->info("Registros 'edad' creados: {$created}");
-            
+
             return 0;
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             $this->newLine();
-            $this->error('Error durante la migración: ' . $e->getMessage());
-            Log::error('Error al migrar campos edad: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+            $this->error('Error durante la migración: '.$e->getMessage());
+            Log::error('Error al migrar campos edad: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return 1;
         }
     }

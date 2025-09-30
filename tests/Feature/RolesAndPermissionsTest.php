@@ -12,7 +12,9 @@ class RolesAndPermissionsTest extends TestCase
     use DatabaseTransactions;
 
     protected $superAdminUser;
+
     protected $adminUser;
+
     protected $companyUser;
 
     protected function setUp(): void
@@ -131,5 +133,4 @@ class RolesAndPermissionsTest extends TestCase
         $this->assertSoftDeleted('users', ['email' => $this->organizationUser->email]);
 
     }
-
 }

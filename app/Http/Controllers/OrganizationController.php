@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\EvaluationProcessingStatusChanged;
 use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -31,13 +30,13 @@ class OrganizationController extends Controller
     {
         // Validaciones del request
         $validatedData = $request->validate([
-            'name'  => 'required|string|max:255',
-            'logo'  => 'nullable|image|mimes:jpeg,png,gif|max:10240', // 10MB
+            'name' => 'required|string|max:255',
+            'logo' => 'nullable|image|mimes:jpeg,png,gif|max:10240', // 10MB
             'folio_organization' => 'nullable|numeric',
         ]);
 
         // Creamos la nueva organización
-        $organization = new Organization();
+        $organization = new Organization;
         $organization->name = $validatedData['name'];
         $organization->folio_organization = $validatedData['folio_organization'] ?? rand(100, 999);
 
@@ -59,16 +58,17 @@ class OrganizationController extends Controller
     {
         // Cargar relaciones de puestos y departamentos
         $organization->load([
-                'occupationPositions',
-                'departmentAreas',
-                'folioBatches' => function ($query) {
-                    $query->withCount([
-                        'folios as used_count' => function ($q) {
-                            $q->where('used', true);
-                        }
-                    ]);
-                }
-            ]);        
+            'occupationPositions',
+            'departmentAreas',
+            'folioBatches' => function ($query) {
+                $query->withCount([
+                    'folios as used_count' => function ($q) {
+                        $q->where('used', true);
+                    },
+                ]);
+            },
+        ]);
+
         return Inertia::render('Organizations/Edit', [
             'title' => 'Editar organización',
             'organization' => $organization,
@@ -79,8 +79,8 @@ class OrganizationController extends Controller
     {
         // Validaciones del request
         $request->validate([
-            'name'  => 'required|string|max:255',
-            'logo'  => 'nullable|image|mimes:jpeg,png,gif|max:10240', // 10MB
+            'name' => 'required|string|max:255',
+            'logo' => 'nullable|image|mimes:jpeg,png,gif|max:10240', // 10MB
             'folio_organization' => 'nullable|numeric',
         ]);
 
@@ -104,14 +104,14 @@ class OrganizationController extends Controller
             ->with('flash', [
                 'type' => 'success',
                 'title' => 'Organización actualizada exitosamente.',
-                'message' => 'Los datos de la organización han sido actualizados correctamente.'
+                'message' => 'Los datos de la organización han sido actualizados correctamente.',
             ]);
 
     }
 
     public function destroy(Organization $organization)
     {
-        if (!$organization->trashed()) {
+        if (! $organization->trashed()) {
             $organization->delete();
             $title = 'Organización Deshabilitada';
             $message = 'Organización deshabilitada exitosamente.';
@@ -125,7 +125,7 @@ class OrganizationController extends Controller
             ->with('flash', [
                 'type' => 'info',
                 'title' => $title,
-                'message' => $message
+                'message' => $message,
             ]);
     }
 
@@ -139,7 +139,7 @@ class OrganizationController extends Controller
             ->with('flash', [
                 'type' => 'info',
                 'title' => $title,
-                'message' => $message
+                'message' => $message,
             ]);
     }
 
@@ -147,9 +147,10 @@ class OrganizationController extends Controller
     public function listForDropdown()
     {
         $organizations = Organization::select('id', 'name')
-                                        ->whereNull('deleted_at')
-                                        ->orderBy('name')
-                                        ->get();
+            ->whereNull('deleted_at')
+            ->orderBy('name')
+            ->get();
+
         return response()->json($organizations);
     }
 
@@ -164,7 +165,7 @@ class OrganizationController extends Controller
             ->with('flash', [
                 'type' => 'success',
                 'title' => 'Organización eliminada permanentemente',
-                'message' => 'La organización ha sido eliminada permanentemente.'
+                'message' => 'La organización ha sido eliminada permanentemente.',
             ]);
     }
 }

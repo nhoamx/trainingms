@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Question;
-use App\Models\Category;
 use App\Models\Evaluation;
-use Illuminate\Support\Facades\DB;
+use App\Models\Question;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class GlobalResponseService
@@ -14,9 +13,6 @@ class GlobalResponseService
     /**
      * Obtiene el conteo global de respuestas por opción (A, B, C, D, E)
      * Implementa el Query #8 de la guía III: Conteo global de respuestas por opción
-     *
-     * @param string $referenceGuide
-     * @return Collection
      */
     public function getGlobalResponseCounts(string $referenceGuide = 'III'): Collection
     {
@@ -30,6 +26,7 @@ class GlobalResponseService
 
             if ($guidePersonalIds->isEmpty()) {
                 Log::warning("No se encontraron IDs de personal con evaluaciones de la Guía {$referenceGuide}.");
+
                 return collect();
             }
 
@@ -71,11 +68,12 @@ class GlobalResponseService
 
             return collect([
                 'total_responses' => $totalResponses,
-                'response_counts' => $responseMap
+                'response_counts' => $responseMap,
             ]);
 
         } catch (\Exception $e) {
-            Log::error("Error al obtener el conteo global de respuestas: " . $e->getMessage());
+            Log::error('Error al obtener el conteo global de respuestas: '.$e->getMessage());
+
             return collect();
         }
     }
@@ -83,9 +81,6 @@ class GlobalResponseService
     /**
      * Obtiene el conteo de respuestas por categoría y opción
      * Implementa el Query #9 de la guía III: Conteo de respuestas por categoría y opción
-     *
-     * @param string $referenceGuide
-     * @return Collection
      */
     public function getCategoryResponseCounts(string $referenceGuide = 'III'): Collection
     {
@@ -99,6 +94,7 @@ class GlobalResponseService
 
             if ($guidePersonalIds->isEmpty()) {
                 Log::warning("No se encontraron IDs de personal con evaluaciones de la Guía {$referenceGuide}.");
+
                 return collect();
             }
 
@@ -124,16 +120,14 @@ class GlobalResponseService
             return $categoryData;
 
         } catch (\Exception $e) {
-            Log::error("Error al obtener el conteo de respuestas por categoría y opción: " . $e->getMessage());
+            Log::error('Error al obtener el conteo de respuestas por categoría y opción: '.$e->getMessage());
+
             return collect();
         }
     }
 
     /**
      * Procesa los resultados de la consulta para estructurarlos por categoría
-     *
-     * @param Collection $results
-     * @return Collection
      */
     private function processCategoryResults(Collection $results): Collection
     {
@@ -143,7 +137,7 @@ class GlobalResponseService
 
         foreach ($groupedResults as $categoryId => $categoryResponses) {
             $categoryName = $categoryResponses->first()->category_name;
-            
+
             // Inicializamos contadores para cada tipo de respuesta
             $responsesByType = [
                 'A' => 0, // Siempre
@@ -152,30 +146,30 @@ class GlobalResponseService
                 'D' => 0, // Casi nunca
                 'E' => 0, // Nunca
             ];
-            
+
             // Sumamos las respuestas por tipo
             foreach ($categoryResponses as $response) {
                 if (isset($responsesByType[$response->answer])) {
                     $responsesByType[$response->answer] = $response->total_responses;
                 }
             }
-            
+
             // Calculamos el total de respuestas para esta categoría
             $totalResponses = array_sum($responsesByType);
-            
+
             // Calculamos porcentajes
             $percentages = [];
             foreach ($responsesByType as $type => $count) {
                 $percentages[$type] = $totalResponses > 0 ? ($count / $totalResponses) * 100 : 0;
             }
-            
+
             // Añadimos al resultado
             $categoryData->push([
                 'id' => $categoryId,
                 'name' => $categoryName,
                 'responses' => $responsesByType,
                 'percentages' => $percentages,
-                'total' => $totalResponses
+                'total' => $totalResponses,
             ]);
         }
 
@@ -185,9 +179,6 @@ class GlobalResponseService
     /**
      * Obtiene el conteo de personas únicas por categoría y opción de respuesta
      * Similar al Query #9 pero contando personas únicas en lugar de respuestas
-     *
-     * @param string $referenceGuide
-     * @return Collection
      */
     public function getPersonCountByCategoryAndResponse(string $referenceGuide = 'III'): Collection
     {
@@ -201,6 +192,7 @@ class GlobalResponseService
 
             if ($guidePersonalIds->isEmpty()) {
                 Log::warning("No se encontraron IDs de personal con evaluaciones de la Guía {$referenceGuide}.");
+
                 return collect();
             }
 
@@ -226,16 +218,14 @@ class GlobalResponseService
             return $categoryData;
 
         } catch (\Exception $e) {
-            Log::error("Error al obtener el conteo de personas por categoría y opción: " . $e->getMessage());
+            Log::error('Error al obtener el conteo de personas por categoría y opción: '.$e->getMessage());
+
             return collect();
         }
     }
 
     /**
      * Procesa los resultados de la consulta para estructurarlos por categoría (versión personas)
-     *
-     * @param Collection $results
-     * @return Collection
      */
     private function processPersonResults(Collection $results): Collection
     {
@@ -245,7 +235,7 @@ class GlobalResponseService
 
         foreach ($groupedResults as $categoryId => $categoryResponses) {
             $categoryName = $categoryResponses->first()->category_name;
-            
+
             // Inicializamos contadores para cada tipo de respuesta
             $responsesByType = [
                 'A' => 0, // Siempre
@@ -254,14 +244,14 @@ class GlobalResponseService
                 'D' => 0, // Casi nunca
                 'E' => 0, // Nunca
             ];
-            
+
             // Sumamos las personas por tipo de respuesta
             foreach ($categoryResponses as $response) {
                 if (isset($responsesByType[$response->answer])) {
                     $responsesByType[$response->answer] = $response->total_persons;
                 }
             }
-            
+
             // Calculamos el total de personas para esta categoría
             // Nota: No podemos simplemente sumar las personas de cada opción, ya que una persona puede contestar
             // diferentes opciones en diferentes preguntas de la misma categoría
@@ -271,20 +261,20 @@ class GlobalResponseService
                 ->whereNotNull('questions.answer')
                 ->select(DB::raw('COUNT(DISTINCT questions.personal_id) as total_persons'))
                 ->first()->total_persons;
-            
+
             // Calculamos porcentajes
             $percentages = [];
             foreach ($responsesByType as $type => $count) {
                 $percentages[$type] = $totalUniquePersons > 0 ? ($count / $totalUniquePersons) * 100 : 0;
             }
-            
+
             // Añadimos al resultado
             $categoryData->push([
                 'id' => $categoryId,
                 'name' => $categoryName,
                 'responses' => $responsesByType,
                 'percentages' => $percentages,
-                'total' => $totalUniquePersons
+                'total' => $totalUniquePersons,
             ]);
         }
 
@@ -294,9 +284,6 @@ class GlobalResponseService
     /**
      * Obtiene el conteo global de personas únicas por opción (A, B, C, D, E)
      * Similar al Query #8 pero contando personas únicas en lugar de respuestas
-     *
-     * @param string $referenceGuide
-     * @return Collection
      */
     public function getGlobalPersonCounts(string $referenceGuide = 'III'): Collection
     {
@@ -310,6 +297,7 @@ class GlobalResponseService
 
             if ($guidePersonalIds->isEmpty()) {
                 Log::warning("No se encontraron IDs de personal con evaluaciones de la Guía {$referenceGuide}.");
+
                 return collect();
             }
 
@@ -355,11 +343,12 @@ class GlobalResponseService
 
             return collect([
                 'total_persons' => $totalUniquePersons,
-                'person_counts' => $responseMap
+                'person_counts' => $responseMap,
             ]);
 
         } catch (\Exception $e) {
-            Log::error("Error al obtener el conteo global de personas: " . $e->getMessage());
+            Log::error('Error al obtener el conteo global de personas: '.$e->getMessage());
+
             return collect();
         }
     }

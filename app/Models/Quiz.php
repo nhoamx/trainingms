@@ -16,21 +16,20 @@ class Quiz extends Model
         'is_active',
         'organization_id',
         'is_reduced',
-        'is_cisneros'
+        'is_cisneros',
     ];
-
 
     protected $casts = [
         'expires_at' => 'datetime',
         'is_active' => 'boolean',
         'is_reduced' => 'boolean',
-        'is_cisneros' => 'boolean'
+        'is_cisneros' => 'boolean',
     ];
 
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
-                    ->where('expires_at', '>', now());
+            ->where('expires_at', '>', now());
     }
 
     public function isExpired()

@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Services\DimensionReportService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class DimensionReportController extends Controller
 {
@@ -19,7 +19,6 @@ class DimensionReportController extends Controller
     /**
      * Obtiene y devuelve la distribución de respuestas por dimensión y tipo
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function getDimensionRiskLevelDistribution(Request $request)
@@ -27,7 +26,7 @@ class DimensionReportController extends Controller
         try {
             // Verificación de autorización - ajusta según tus necesidades
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
 
@@ -36,7 +35,8 @@ class DimensionReportController extends Controller
 
             return response()->json($distribution);
         } catch (\Exception $e) {
-            Log::error("Error al obtener la distribución de personas por nivel de riesgo y dimensión: " . $e->getMessage());
+            Log::error('Error al obtener la distribución de personas por nivel de riesgo y dimensión: '.$e->getMessage());
+
             return response()->json(['error' => 'Error al procesar la solicitud'], 500);
         }
     }
@@ -44,7 +44,6 @@ class DimensionReportController extends Controller
     /**
      * Muestra la vista del reporte de visualización de dimensiones
      *
-     * @param Request $request
      * @return \Inertia\Response
      */
     public function showDimensionReport(Request $request)
@@ -52,7 +51,7 @@ class DimensionReportController extends Controller
         try {
             // Verificación de autorización - ajusta según tus necesidades
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 abort(403, 'No autorizado');
             }
 
@@ -61,10 +60,10 @@ class DimensionReportController extends Controller
 
             return Inertia::render('Reports/DimensionReport', [
                 'dimensionDistribution' => $distribution,
-                'title' => 'Reporte por Dimensiones'
+                'title' => 'Reporte por Dimensiones',
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al mostrar el reporte de dimensiones: " . $e->getMessage());
+            Log::error('Error al mostrar el reporte de dimensiones: '.$e->getMessage());
             abort(500, 'Error al procesar la solicitud');
         }
     }
@@ -72,7 +71,6 @@ class DimensionReportController extends Controller
     /**
      * Obtiene y devuelve la suma total del valor de respuestas por dimensión
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function getDimensionTotalScores(Request $request)
@@ -80,7 +78,7 @@ class DimensionReportController extends Controller
         try {
             // Verificación de autorización - ajusta según tus necesidades
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
 
@@ -89,7 +87,8 @@ class DimensionReportController extends Controller
 
             return response()->json($totalScores);
         } catch (\Exception $e) {
-            Log::error("Error al obtener la suma total de respuestas por dimensión: " . $e->getMessage());
+            Log::error('Error al obtener la suma total de respuestas por dimensión: '.$e->getMessage());
+
             return response()->json(['error' => 'Error al procesar la solicitud'], 500);
         }
     }
@@ -97,7 +96,6 @@ class DimensionReportController extends Controller
     /**
      * Muestra la vista del reporte de puntuación total por dimensión
      *
-     * @param Request $request
      * @return \Inertia\Response
      */
     public function showDimensionTotalScoreReport(Request $request)
@@ -105,7 +103,7 @@ class DimensionReportController extends Controller
         try {
             // Verificación de autorización - ajusta según tus necesidades
             $user = $request->user();
-            if (!$user->hasRole('organization') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (! $user->hasRole('organization') && ! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 abort(403, 'No autorizado');
             }
 
@@ -114,10 +112,10 @@ class DimensionReportController extends Controller
 
             return Inertia::render('Reports/DimensionTotalScoreReport', [
                 'dimensionTotalScores' => $totalScores,
-                'title' => 'Puntuación Total por Dimensiones'
+                'title' => 'Puntuación Total por Dimensiones',
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al mostrar el reporte de puntuación total por dimensiones: " . $e->getMessage());
+            Log::error('Error al mostrar el reporte de puntuación total por dimensiones: '.$e->getMessage());
             abort(500, 'Error al procesar la solicitud');
         }
     }

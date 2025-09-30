@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Question;
-use App\Models\Category;
 use App\Models\Evaluation;
-use Illuminate\Support\Facades\DB;
+use App\Models\Question;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class CategoryReportService
@@ -14,9 +13,6 @@ class CategoryReportService
     /**
      * Obtiene el conteo de personas únicas por categoría y tipo de respuesta
      * Implementa el Query #1 modificado de la guía III: Conteo de personas por categoría y tipo de respuesta
-     *
-     * @param string $referenceGuide
-     * @return Collection
      */
     public function getCategoryRiskLevelDistribution(string $referenceGuide = 'III'): Collection
     {
@@ -87,11 +83,11 @@ class CategoryReportService
             $data = [];
             foreach ($results as $row) {
                 $cat = $row->categoria_nombre;
-                if (!isset($data[$cat])) {
+                if (! isset($data[$cat])) {
                     // Inicializa todos los niveles en cero
                     $data[$cat] = [
                         'category_name' => $cat,
-                        'risk_levels' => array_fill_keys($niveles, 0)
+                        'risk_levels' => array_fill_keys($niveles, 0),
                     ];
                 }
                 $data[$cat]['risk_levels'][$row->nivel_riesgo] = (int) $row->total_personas;
@@ -99,16 +95,18 @@ class CategoryReportService
             // Si alguna categoría no tiene todos los niveles, los completa en cero
             foreach ($data as &$catData) {
                 foreach ($niveles as $nivel) {
-                    if (!isset($catData['risk_levels'][$nivel])) {
+                    if (! isset($catData['risk_levels'][$nivel])) {
                         $catData['risk_levels'][$nivel] = 0;
                     }
                 }
             }
             unset($catData);
+
             // Devuelve colección indexada
             return collect(array_values($data));
         } catch (\Throwable $e) {
-            Log::error("Error al obtener la distribución de personas por nivel de riesgo y categoría: " . $e->getMessage());
+            Log::error('Error al obtener la distribución de personas por nivel de riesgo y categoría: '.$e->getMessage());
+
             return collect();
         }
     }
@@ -116,9 +114,6 @@ class CategoryReportService
     /**
      * Obtiene la suma total del valor de respuestas por categoría
      * Implementa el Query #2 de la guía III: Suma total del valor de respuestas por categoría
-     *
-     * @param string $referenceGuide
-     * @return Collection
      */
     public function getCategoryTotalScores(string $referenceGuide = 'III'): Collection
     {
@@ -132,6 +127,7 @@ class CategoryReportService
 
             if ($guideIIIPersonalIds->isEmpty()) {
                 Log::warning("No se encontraron IDs de personal con evaluaciones de la Guía {$referenceGuide}.");
+
                 return collect();
             }
 
@@ -160,13 +156,14 @@ class CategoryReportService
                     'name' => $item->category_name,
                     'total_score' => $item->total_score,
                     'question_count' => $item->question_count,
-                    'avg_score' => round($avgScore, 2)
+                    'avg_score' => round($avgScore, 2),
                 ];
             });
 
             return $processedResults;
         } catch (\Exception $e) {
-            Log::error("Error al obtener la suma total de respuestas por categoría: " . $e->getMessage());
+            Log::error('Error al obtener la suma total de respuestas por categoría: '.$e->getMessage());
+
             return collect();
         }
     }

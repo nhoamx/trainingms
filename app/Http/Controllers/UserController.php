@@ -38,7 +38,7 @@ class UserController extends Controller
                 'title' => 'Crear usuario',
                 'route' => route('users.create'),
             ],
-            'users' => $users
+            'users' => $users,
         ]);
     }
 
@@ -47,19 +47,20 @@ class UserController extends Controller
      */
     public function create()
     {
-        $roles = Role::all()->map(fn($role) => [
-                'value' => $role->id,
-                'label' => $role->name,
-            ]);
+        $roles = Role::all()->map(fn ($role) => [
+            'value' => $role->id,
+            'label' => $role->name,
+        ]);
 
-        $organizations = Organization::all()->map(fn($organization) => [
-                'value' => $organization->id,
-                'label' => $organization->name,
-            ]);
+        $organizations = Organization::all()->map(fn ($organization) => [
+            'value' => $organization->id,
+            'label' => $organization->name,
+        ]);
+
         return Inertia::render('Users/Create', [
             'roles' => $roles,
             'organizations' => $organizations,
-            'title' => 'Crear usuario'
+            'title' => 'Crear usuario',
         ]);
     }
 
@@ -78,7 +79,7 @@ class UserController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        //Create the temporary password
+        // Create the temporary password
         $password = substr(md5(microtime()), 0, 8);
 
         // Crear usuario
@@ -92,7 +93,7 @@ class UserController extends Controller
         // Asignar rol
         $user->assignRole($request->role);
 
-        if($request->organization){
+        if ($request->organization) {
             $user->organization()->associate($request->organization);
             $user->save();
         }
@@ -104,15 +105,15 @@ class UserController extends Controller
     {
         return Inertia::render('Users/Edit', [
             'user' => $user->load(['roles', 'organization']),
-            'roles' => Role::all()->map(fn($role) => [
+            'roles' => Role::all()->map(fn ($role) => [
                 'value' => $role->id,
                 'label' => $role->name,
             ]),
-            'organizations' => Organization::all()->map(fn($organization) => [
+            'organizations' => Organization::all()->map(fn ($organization) => [
                 'value' => $organization->id,
                 'label' => $organization->name,
             ]),
-            'title' => 'Editar usuario'
+            'title' => 'Editar usuario',
         ]);
     }
 
@@ -137,7 +138,7 @@ class UserController extends Controller
         // Actualizar rol
         $user->syncRoles([$request->role]);
 
-        if($request->organization){
+        if ($request->organization) {
             $user->organization()->dissociate();
             $user->organization()->associate($request->organization);
         }
@@ -199,7 +200,7 @@ class UserController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'required|email|unique:users,email,'.$user->id,
             'password' => 'nullable|min:8|confirmed',
         ]);
 

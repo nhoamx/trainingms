@@ -2,11 +2,10 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Tests\TestCase;
 use App\Http\Controllers\QuizController;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use ReflectionClass;
+use Tests\TestCase;
 
 class CustomFieldNamingTest extends TestCase
 {
@@ -14,13 +13,13 @@ class CustomFieldNamingTest extends TestCase
 
     public function test_sanitize_field_name()
     {
-        $controller = new QuizController();
-        
+        $controller = new QuizController;
+
         // Use reflection to access private method
         $reflection = new ReflectionClass($controller);
         $method = $reflection->getMethod('sanitizeFieldName');
         $method->setAccessible(true);
-        
+
         // Test cases for field name sanitization
         $testCases = [
             'Sucursal' => 'sucursal',

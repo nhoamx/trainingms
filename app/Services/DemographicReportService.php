@@ -2,10 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\Evaluation;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class DemographicReportService
@@ -14,14 +13,13 @@ class DemographicReportService
      * Obtiene la distribución demográfica de personas por nivel de riesgo
      * usando datos de las guías V (demográficos) y III (evaluación psicosocial)
      *
-     * @param int|null $organizationId
-     * @return Collection
+     * @param  int|null  $organizationId
      */
     public function getDemographicDistribution($organizationId = null): Collection
     {
         try {
             // Si no se proporciona organizationId, usar el del usuario autenticado
-            if (!$organizationId) {
+            if (! $organizationId) {
                 $organizationId = Auth::user()->organization_id;
             }
 
@@ -46,14 +44,14 @@ class DemographicReportService
                 'ultimo_nivel_estudio' => 'Último Nivel de Estudio',
                 'experiencia_vida_laboral' => 'Experiencia Vida Laboral',
                 'departamento_seccion_area' => 'Departamento/Sección/Área',
-                'ocupacion_profesion_puesto' => 'Ocupación/Profesión/Puesto'
+                'ocupacion_profesion_puesto' => 'Ocupación/Profesión/Puesto',
             ];
 
             $result = collect();
 
             foreach ($demographicFields as $field => $title) {
                 $distribution = $this->processDemographicField($evaluations, $field, $title);
-                if (!$distribution->isEmpty()) {
+                if (! $distribution->isEmpty()) {
                     // Crear datos para gráficas (conteo total por demografía)
                     $chartData = $this->createChartData($distribution);
 
@@ -61,14 +59,15 @@ class DemographicReportService
                         'field' => $field,
                         'title' => $title,
                         'data' => $distribution, // Para las tablas (con niveles de riesgo)
-                        'chart_data' => $chartData // Para las gráficas (conteo total)
+                        'chart_data' => $chartData, // Para las gráficas (conteo total)
                     ]);
                 }
             }
 
             return $result;
         } catch (\Exception $e) {
-            Log::error("Error al obtener la distribución demográfica: " . $e->getMessage());
+            Log::error('Error al obtener la distribución demográfica: '.$e->getMessage());
+
             return collect();
         }
     }
@@ -99,6 +98,7 @@ class DemographicReportService
                 foreach ($questions as $question) {
                     $data[$question->question] = $question->answer;
                 }
+
                 return $data;
             });
 
@@ -131,7 +131,7 @@ class DemographicReportService
                 return [
                     'personal_id' => $personalId,
                     'demographic_data' => $demographicData,
-                    'risk_level' => $riskData->nivel_riesgo
+                    'risk_level' => $riskData->nivel_riesgo,
                 ];
             }
 
@@ -149,13 +149,14 @@ class DemographicReportService
         // Extraer valores del campo demográfico
         $fieldData = $evaluations->map(function ($item) use ($field) {
             $value = data_get($item['demographic_data'], $field);
+
             return [
                 'value' => $this->normalizeFieldValue($field, $value),
                 'risk_level' => $item['risk_level'],
-                'personal_id' => $item['personal_id']
+                'personal_id' => $item['personal_id'],
             ];
         })->filter(function ($item) {
-            return !empty($item['value']);
+            return ! empty($item['value']);
         });
 
         // Agrupar por valor del campo
@@ -177,7 +178,7 @@ class DemographicReportService
                 'name' => $value,
                 'risk_levels' => $riskDistribution,
                 'personal_by_risk' => $personalByRisk,
-                'total' => $items->count()
+                'total' => $items->count(),
             ];
         })->values();
     }
@@ -191,7 +192,7 @@ class DemographicReportService
             return [
                 'name' => $item['name'],
                 'value' => $item['total'],
-                'total' => $item['total']
+                'total' => $item['total'],
             ];
         })->toArray();
     }
@@ -213,28 +214,49 @@ class DemographicReportService
                     'operativo' => 'Operativo',
                     'supervisor' => 'Supervisor',
                     'prof_tecnoci' => 'Profesional/Técnico',
-                    'gerente' => 'Gerente'
+                    'gerente' => 'Gerente',
                 ];
                 $normalizedValue = strtolower(trim($value));
+
                 return $jobTypeMapping[$normalizedValue] ?? ucfirst($value);
             case 'edad':
                 // Convertir edad individual a rangos de edad
                 // Si el valor contiene punto (ej: "25.35"), tomar solo la parte entera
-                $ageValue = is_string($value) && strpos($value, '.') !== false 
-                    ? intval(explode('.', $value)[0]) 
+                $ageValue = is_string($value) && strpos($value, '.') !== false
+                    ? intval(explode('.', $value)[0])
                     : intval($value);
-                
-                if ($ageValue >= 15 && $ageValue <= 19) return '15–19';
-                if ($ageValue >= 20 && $ageValue <= 24) return '20–24';
-                if ($ageValue >= 25 && $ageValue <= 29) return '25–29';
-                if ($ageValue >= 30 && $ageValue <= 34) return '30–34';
-                if ($ageValue >= 35 && $ageValue <= 39) return '35–39';
-                if ($ageValue >= 40 && $ageValue <= 44) return '40–44';
-                if ($ageValue >= 45 && $ageValue <= 49) return '45–49';
-                if ($ageValue >= 50 && $ageValue <= 54) return '50–54';
-                if ($ageValue >= 55 && $ageValue <= 59) return '55–59';
-                if ($ageValue >= 60) return '60-mas';
-                
+
+                if ($ageValue >= 15 && $ageValue <= 19) {
+                    return '15–19';
+                }
+                if ($ageValue >= 20 && $ageValue <= 24) {
+                    return '20–24';
+                }
+                if ($ageValue >= 25 && $ageValue <= 29) {
+                    return '25–29';
+                }
+                if ($ageValue >= 30 && $ageValue <= 34) {
+                    return '30–34';
+                }
+                if ($ageValue >= 35 && $ageValue <= 39) {
+                    return '35–39';
+                }
+                if ($ageValue >= 40 && $ageValue <= 44) {
+                    return '40–44';
+                }
+                if ($ageValue >= 45 && $ageValue <= 49) {
+                    return '45–49';
+                }
+                if ($ageValue >= 50 && $ageValue <= 54) {
+                    return '50–54';
+                }
+                if ($ageValue >= 55 && $ageValue <= 59) {
+                    return '55–59';
+                }
+                if ($ageValue >= 60) {
+                    return '60-mas';
+                }
+
                 // Si no está en ningún rango válido, retornar vacío
                 return '';
 
@@ -246,9 +268,10 @@ class DemographicReportService
                     'hombre' => 'Masculino',
                     'mujer' => 'Femenino',
                     'male' => 'Masculino',
-                    'female' => 'Femenino'
+                    'female' => 'Femenino',
                 ];
                 $normalizedValue = strtolower(trim($value));
+
                 return $genderMapping[$normalizedValue] ?? ucfirst($value);
 
             case 'estado_civil':
@@ -261,9 +284,10 @@ class DemographicReportService
                     'divorciado' => 'Divorciado',
                     'separado' => 'Divorciado',
                     'viudo' => 'Otro',
-                    'otro' => 'Otro'
+                    'otro' => 'Otro',
                 ];
                 $normalizedValue = strtolower(trim($value));
+
                 return $civilStatusMapping[$normalizedValue] ?? ucfirst($value);
 
             case 'ultimo_nivel_estudio':
@@ -303,9 +327,10 @@ class DemographicReportService
                     'tecnico terminado' => 'Técnico Terminado',
                     'licenciatura terminada' => 'Licenciatura Terminada',
                     'licenciatura incompleta' => 'Licenciatura Incompleta',
-                    'maestria terminada' => 'Maestría Terminada'
+                    'maestria terminada' => 'Maestría Terminada',
                 ];
                 $normalizedValue = strtolower(trim($value));
+
                 return $educationMapping[$normalizedValue] ?? $value;
 
             case 'tipo_personal':
@@ -314,9 +339,10 @@ class DemographicReportService
                     'sindicalizado' => 'Sindicalizado',
                     'confianza' => 'Confianza',
                     'temporal' => 'Temporal',
-                    'base' => 'Sindicalizado'
+                    'base' => 'Sindicalizado',
                 ];
                 $normalizedValue = strtolower(trim($value));
+
                 return $personnelTypeMapping[$normalizedValue] ?? ucfirst($value);
 
             case 'tipo_contratacion':
@@ -333,6 +359,7 @@ class DemographicReportService
                     'indeterminado' => 'Tiempo Indeterminado',
                 ];
                 $normalizedValue = strtolower(trim($value));
+
                 return $contractMapping[$normalizedValue] ?? $value;
 
             case 'tipo_jornada':
@@ -348,9 +375,10 @@ class DemographicReportService
                     'fijo mixto' => 'Fijo Mixto (combinación de nocturno y diurno)',
                     'diurno' => 'Fijo Diurno (entre las 6:00 y 20:00 hrs)',
                     'nocturno' => 'Fijo Nocturno (entre las 20:00 y 6:00 hrs)',
-                    'mixto' => 'Fijo Mixto (combinación de nocturno y diurno)'
+                    'mixto' => 'Fijo Mixto (combinación de nocturno y diurno)',
                 ];
                 $normalizedValue = strtolower(trim($value));
+
                 return $scheduleMapping[$normalizedValue] ?? $value;
 
             case 'rotacion_turnos':
@@ -362,9 +390,10 @@ class DemographicReportService
                     'true' => 'Sí',
                     'false' => 'No',
                     '1' => 'Sí',
-                    '0' => 'No'
+                    '0' => 'No',
                 ];
                 $normalizedValue = strtolower(trim($value));
+
                 return $rotationMapping[$normalizedValue] ?? ucfirst($value);
 
             case 'tiempo_puesto_actual':
@@ -392,9 +421,10 @@ class DemographicReportService
                     'entre 10 y 14 años' => 'entre 10 y 14 años',
                     'entre 15 y 19 años' => 'entre 15 y 19 años',
                     'entre 20 y 24 años' => 'entre 20 y 24 años',
-                    '25 años o más' => '25 años o más'
+                    '25 años o más' => '25 años o más',
                 ];
                 $normalizedValue = strtolower(trim($value));
+
                 return $seniorityMapping[$normalizedValue] ?? $value;
 
             case 'experiencia_vida_laboral':
@@ -423,9 +453,10 @@ class DemographicReportService
                     'entre 10 y 14 años' => 'entre 10 y 14 años',
                     'entre 15 y 19 años' => 'entre 15 y 19 años',
                     'entre 20 y 24 años' => 'entre 20 y 24 años',
-                    '25 años o más' => '25 años o más'
+                    '25 años o más' => '25 años o más',
                 ];
                 $normalizedValue = strtolower(trim($value));
+
                 return $experienceMapping[$normalizedValue] ?? $value;
 
             case 'nivel_estudios':
@@ -433,6 +464,7 @@ class DemographicReportService
                 if (is_array($value)) {
                     return implode(' ', $value);
                 }
+
                 return $value;
 
             case 'departamento_seccion_area':

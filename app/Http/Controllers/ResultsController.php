@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Organization;
 use App\Models\Category;
 use App\Models\Evaluation;
+use App\Models\Organization;
 use App\Models\Question;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -26,12 +26,12 @@ class ResultsController extends Controller
             $evaluation = $organization->evaluations()->latest()->first();
         }
 
-        if (!$evaluation) {
+        if (! $evaluation) {
             return response()->json(['error' => 'No evaluation found for this organization'], 404);
         }
 
-        $results = Category::with(['domains.dimensions' => function($query) use ($evaluation) {
-            $query->withSum(['answers' => function($query) use ($evaluation) {
+        $results = Category::with(['domains.dimensions' => function ($query) use ($evaluation) {
+            $query->withSum(['answers' => function ($query) use ($evaluation) {
                 $query->where('evaluation_id', $evaluation->id);
             }], 'score');
         }])->get()->map(function ($category) {
@@ -47,7 +47,7 @@ class ResultsController extends Controller
                     return [
                         'id' => $dimension->id,
                         'name' => $dimension->name,
-                        'score' => $score
+                        'score' => $score,
                     ];
                 });
 
@@ -57,7 +57,7 @@ class ResultsController extends Controller
                     'id' => $domain->id,
                     'name' => $domain->name,
                     'score' => $domainScore,
-                    'dimensions' => $dimensions
+                    'dimensions' => $dimensions,
                 ];
             });
 
@@ -65,7 +65,7 @@ class ResultsController extends Controller
                 'id' => $category->id,
                 'name' => $category->name,
                 'score' => $categoryScore,
-                'domains' => $domains
+                'domains' => $domains,
             ];
         });
 
@@ -74,7 +74,7 @@ class ResultsController extends Controller
             'evaluation_id' => $evaluation->id,
             'folio' => $evaluation->folio,
             'created_at' => $evaluation->created_at,
-            'results' => $results
+            'results' => $results,
         ]);
     }
 
@@ -93,13 +93,13 @@ class ResultsController extends Controller
                     'id' => $evaluation->id,
                     'folio' => $evaluation->folio,
                     'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
-                    'total_score' => $evaluation->answers_sum_score ?? 0
+                    'total_score' => $evaluation->answers_sum_score ?? 0,
                 ];
             });
 
         return Inertia::render('Results/List', [
             'organization' => $organization->only('id', 'name'),
-            'evaluations' => $evaluations
+            'evaluations' => $evaluations,
         ]);
     }
 
@@ -245,7 +245,7 @@ class ResultsController extends Controller
             }
         }
 
-        $results = Category::with(['domains.dimensions.answers' => function($query) use ($evaluationForResults) {
+        $results = Category::with(['domains.dimensions.answers' => function ($query) use ($evaluationForResults) {
             $query->where('evaluation_id', $evaluationForResults->id)
                 ->select('id', 'dimension_id', 'question', 'answer', 'score');
         }])->get()->map(function ($category) {
@@ -267,16 +267,16 @@ class ResultsController extends Controller
                         $details[] = [
                             'categoria' => [
                                 'nombre' => $category->name,
-                                'puntaje' => 0 // Se actualizará después
+                                'puntaje' => 0, // Se actualizará después
                             ],
                             'dominio' => [
                                 'nombre' => $domain->name,
-                                'puntaje' => 0 // Se actualizará después
+                                'puntaje' => 0, // Se actualizará después
                             ],
                             'dimension' => $dimension->name,
                             'item' => $answer->question,
                             'respuesta' => $answer->answer,
-                            'puntaje' => $answer->score
+                            'puntaje' => $answer->score,
                         ];
                     }
                 }
@@ -313,16 +313,14 @@ class ResultsController extends Controller
             'results' => $results,
             'guideIResults' => $guideIResults,
             'guideVResults' => $guideVResults,
-            'guideIIIResults' => $guideIIIResults
+            'guideIIIResults' => $guideIIIResults,
         ]);
     }
 
     /**
      * Actualiza la respuesta de una pregunta de la Guía de Referencia V.
      *
-     * @param Request $request
-     * @param Evaluation $evaluation
-     * @param string $question
+     * @param  string  $question
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateGuideVQuestion(Request $request, Evaluation $evaluation, Question $question)
@@ -344,22 +342,19 @@ class ResultsController extends Controller
 
         // Actualizar la respuesta
         $question->update([
-            'answer' => $validated['answer']
+            'answer' => $validated['answer'],
         ]);
 
         return redirect()->back()->with([
             'success' => true,
             'message' => 'Respuesta actualizada correctamente',
-            'question' => $question->only('id', 'question', 'answer')
+            'question' => $question->only('id', 'question', 'answer'),
         ]);
     }
-    
+
     /**
      * Actualiza la respuesta de una pregunta de la Guía de Referencia III.
      *
-     * @param Request $request
-     * @param Evaluation $evaluation
-     * @param Question $question
      * @return \Illuminate\Http\RedirectResponse
      */
     public function updateGuideIIIQuestion(Request $request, Evaluation $evaluation, Question $question)
@@ -381,13 +376,13 @@ class ResultsController extends Controller
 
         // Actualizar la respuesta
         $question->update([
-            'answer' => $validated['answer']
+            'answer' => $validated['answer'],
         ]);
 
         return redirect()->back()->with([
             'success' => true,
             'message' => 'Respuesta actualizada correctamente',
-            'question' => $question->only('id', 'question', 'answer')
+            'question' => $question->only('id', 'question', 'answer'),
         ]);
     }
 }

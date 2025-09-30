@@ -9,7 +9,6 @@ class FolioBatchController extends Controller
     /**
      * Almacena un nuevo lote de folios.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -24,19 +23,19 @@ class FolioBatchController extends Controller
 
         // Calcular el siguiente número disponible para la organización
         $lastBatch = \App\Models\FolioBatch::where('organization_id', $request->organization_id)
-                              ->orderBy('end_number', 'desc')
-                              ->first();
-                              
+            ->orderBy('end_number', 'desc')
+            ->first();
+
         $startNumber = 1; // Valor predeterminado para iniciar
         if ($lastBatch) {
             $startNumber = $lastBatch->end_number + 1;
         }
-        
+
         $endNumber = $startNumber + $validated['quantity'] - 1;
-        
+
         try {
             \Illuminate\Support\Facades\DB::beginTransaction();
-            
+
             // Crear el lote
             $batch = \App\Models\FolioBatch::create([
                 'organization_id' => $validated['organization_id'],
@@ -47,7 +46,7 @@ class FolioBatchController extends Controller
                 'quantity' => $validated['quantity'],
                 'type' => $validated['type'],
             ]);
-            
+
             // Crear los folios individuales
             $folios = [];
             for ($i = $startNumber; $i <= $endNumber; $i++) {
@@ -60,17 +59,18 @@ class FolioBatchController extends Controller
                     'updated_at' => now(),
                 ];
             }
-            
+
             // Inserción masiva para mejor rendimiento
             \App\Models\Folio::insert($folios);
-            
+
             \Illuminate\Support\Facades\DB::commit();
-            
+
             return redirect()->back()->with('success', 'Lote de folios creado exitosamente');
-            
+
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();
-            return redirect()->back()->with('error', 'Error al crear el lote de folios: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Error al crear el lote de folios: '.$e->getMessage());
         }
     }
 
@@ -84,7 +84,7 @@ class FolioBatchController extends Controller
     {
         $batch = \App\Models\FolioBatch::findOrFail($batchId);
         $folios = $batch->folios()->orderBy('numeric_value')->get();
-        
+
         return response()->json($folios);
     }
 
@@ -97,35 +97,36 @@ class FolioBatchController extends Controller
     public function destroy($batchId)
     {
         $batch = \App\Models\FolioBatch::findOrFail($batchId);
-        
+
         // Verificar si hay folios utilizados
         $usedCount = $batch->folios()->where('used', true)->count();
         if ($usedCount > 0) {
             return response()->json([
-                'message' => 'No se puede eliminar el lote porque tiene folios que ya han sido utilizados.'
+                'message' => 'No se puede eliminar el lote porque tiene folios que ya han sido utilizados.',
             ], 422);
         }
-        
+
         try {
             \Illuminate\Support\Facades\DB::beginTransaction();
-            
+
             // Eliminar primero los folios
             $batch->folios()->delete();
-            
+
             // Eliminar el lote
             $batch->delete();
-            
+
             \Illuminate\Support\Facades\DB::commit();
-            
+
             return response()->json([
-                'message' => 'Lote de folios eliminado correctamente'
+                'message' => 'Lote de folios eliminado correctamente',
             ]);
-            
+
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al eliminar el lote de folios',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

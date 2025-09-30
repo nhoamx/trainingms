@@ -76,7 +76,7 @@ return [
                 66 => 'Mi trabajo me exige atender personas muy necesitadas de ayuda o enfermas',
                 67 => 'Para hacer mi trabajo debo demostrar sentimientos distintos a los míos',
                 68 => 'Mi trabajo me exige atender situaciones de violencia',
-            ]
+            ],
         ],
         'management' => [
             'condition' => 'Soy jefe de otros trabajadores',
@@ -85,8 +85,8 @@ return [
                 70 => 'Dificultan el logro de los resultados del trabajo',
                 71 => 'Cooperan poco cuando se necesita',
                 72 => 'Ignoran las sugerencias para mejorar su trabajo',
-            ]
-        ]
+            ],
+        ],
     ],
 
     'dimensions' => [
@@ -161,6 +161,6 @@ return [
             76 => 'Secuestro',
             77 => 'Amenazas',
             78 => 'Cualquier otro que ponga en riesgo su vida o salud, y/o la de otras personas',
-        ]
-    ]
+        ],
+    ],
 ];
