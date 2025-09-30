@@ -5,18 +5,101 @@
 @section('guide-title', 'GUÍA DE REFERENCIA III - CUESTIONARIO PARA IDENTIFICAR LOS FACTORES DE RIESGO PSICOSOCIAL')
 
 @section('content')
+<!-- Marcadores de referencia en las esquinas -->
+<div class="alignment-marker marker-top-left"></div>
+<div class="alignment-marker marker-top-right"></div>
+<div class="alignment-marker marker-bottom-left"></div>
+<div class="alignment-marker marker-bottom-right"></div>
+
 <style>
     .page-container {
         position: relative;
         margin: 0 auto;
-        padding: 10mm;
         background: white;
+    }
+    .folio-instructions-row { 
+        display: flex; 
+        gap: 6mm; 
+        margin-bottom: 6mm; 
+        align-items: flex-start; 
+    }
+    .folio-section { 
+        border: 2px solid black; 
+        padding: 3mm; 
+        background: #f8f8f8; 
+        position: relative; 
+        min-width: 60mm; 
+        max-width: 80mm; 
+        flex: 1; 
+    }
+    .folio-header { 
+        display: flex; 
+        gap: 1.5mm; 
+        margin-bottom: 2mm; 
+        align-items: center; 
+    }
+    .folio-digit-column { 
+        width: 8mm; 
+        text-align: center; 
+        font-weight: bold; 
+        font-size: 7px; 
+    }
+    .folio-position-header { 
+        flex: 1; 
+        text-align: center; 
+        font-size: 6px; 
+        font-weight: bold; 
+        border: 1px solid black; 
+        height: 4mm; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        background: white; 
+    }
+    .folio-row { 
+        display: flex; 
+        align-items: center; 
+        gap: 1.5mm; 
+        margin-bottom: 1.2mm; 
+        font-size: 5px; 
+        min-height: 3.5mm; 
+    }
+    .folio-digit-number { 
+        font-weight: bold; 
+        width: 8mm; 
+        text-align: center; 
+        flex-shrink: 0; 
+        font-size: 7px; 
+    }
+    .folio-bubbles-row { 
+        display: flex; 
+        gap: 1.5mm; 
+        align-items: center; 
+        flex: 1; 
+        justify-content: space-between; 
+    }
+    .instructions { 
+        flex: 2; 
+        min-width: 0; 
+        font-size: 7px;
+    }
+    .bubble-small { 
+        width: 2.5mm; 
+        height: 2.5mm; 
+        border: 1px solid black; 
+        border-radius: 50%; 
+        flex-shrink: 0; 
+    }
+    .folio-instructions-row {
+        margin-bottom: 4mm;
+        padding-bottom: 3mm;
+        border-bottom: 2px solid black;
     }
     .three-column-layout {
         display: flex;
         gap: 3mm;
         width: 100%;
-        margin-top: 5mm;
+        margin-top: 4mm;
     }
     .column {
         width: 32%;
@@ -60,29 +143,6 @@
         border: 1.5px solid black;
         border-radius: 50%;
     }
-    /* Marcadores de alineación OMR */
-    .reference-marker {
-        width: 4mm;
-        height: 4mm;
-        background: black;
-        position: absolute;
-    }
-    .reference-marker.top-left {
-        top: 5mm;
-        left: 5mm;
-    }
-    .reference-marker.top-right {
-        top: 5mm;
-        right: 5mm;
-    }
-    .reference-marker.bottom-left {
-        bottom: 5mm;
-        left: 5mm;
-    }
-    .reference-marker.bottom-right {
-        bottom: 5mm;
-        right: 5mm;
-    }
     .block-separator {
         height: 4mm;
         position: relative;
@@ -91,17 +151,6 @@
         align-items: center;
         justify-content: center;
     }
-    .block-marker {
-        width: 3mm;
-        height: 3mm;
-        background: black;
-    }
-    .instructions {
-        margin-bottom: 3mm;
-        font-size: 6px;
-        text-align: center;
-    }
-    /* Marcadores de esquina para bloques */
     .block-corner-marker {
         position: absolute;
         width: 2.5mm;
@@ -113,85 +162,42 @@
     .block-corner-marker.top-right { top: 0; right: 0; }
     .block-corner-marker.bottom-left { bottom: 0; left: 0; }
     .block-corner-marker.bottom-right { bottom: 0; right: 0; }
-    /* Estilos para folio usando patrón question-row-vertical */
-    .folio-section {
-        border: 1px solid black;
-        padding: 1mm;
-        padding-top: 2mm;
-        margin-bottom: 3mm;
-        background: #f8f8f8;
-    }
-    .folio-header {
-        display: flex;
-        gap: 1mm;
-        margin-bottom: 2mm;
-        align-items: center;
-    }
-    .folio-digit-column {
-        width: 8mm; /* Mismo ancho que question-number-vertical */
-        text-align: center;
-        font-weight: bold;
-        font-size: 7px;
-    }
-    .folio-position-header {
-        flex: 1;
-        text-align: center;
-        font-size: 6px;
-        font-weight: bold;
-        border: 1px solid black;
-        height: 4mm;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: white;
-    }
-    .folio-row {
-        display: flex;
-        align-items: center;
-        margin-bottom: 1.2mm; /* Mismo margin que question-row-vertical */
-        font-size: 6px;
-        min-height: 4mm; /* Mismo min-height que question-row-vertical */
-        gap: 1mm;
-    }
-    .folio-digit-number {
-        font-weight: bold;
-        width: 8mm; /* Mismo ancho que question-number-vertical */
-        text-align: center;
-        flex-shrink: 0;
-        font-size: 7px;
-    }
-    .folio-bubbles-row {
-        display: flex;
-        gap: 1mm;
-        align-items: center;
-        flex: 1;
-        justify-content: space-around; /* Mismo justify que answers-vertical */
-    }
-    .date-section {
-        display: flex;
-        gap: 5mm;
-        align-items: center;
-        margin: 2mm 0;
-        font-size: 6px;
-    }
-    .date-field {
-        display: flex;
-        align-items: center;
-        gap: 1mm;
-    }
-    .date-line {
-        border-bottom: 1px solid black;
-        width: 15mm;
-        height: 3mm;
-    }
 </style>
 
 <div class="page-container">
-    <!-- Marcadores de referencia en las esquinas -->
-    <div class="reference-marker top-left"></div>
-    <div class="reference-marker top-right"></div>
-    <div class="reference-marker bottom-left"></div>
-    <div class="reference-marker bottom-right"></div>
+    <div class="folio-instructions-row">
+        <div class="folio-section">
+            <!-- Header con espacios para escribir -->
+            <div class="folio-header">
+                <div class="folio-digit-column"></div>
+                @for($i = 0; $i < 9; $i++)
+                    <div class="folio-position-header"></div>
+                @endfor
+            </div>
+            <!-- Filas de dígitos con burbujas -->
+            @for($digit = 0; $digit <= 9; $digit++)
+                <div class="folio-row">
+                    <div class="folio-digit-number">{{ $digit }}</div>
+                    <div class="folio-bubbles-row">
+                        @for($i = 0; $i < 9; $i++)
+                            @php
+                                $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
+                                $isSelected = $folioDigit == $digit;
+                            @endphp
+                            <div class="bubble-small {{ $isSelected ? 'bubble-filled' : '' }}"></div>
+                        @endfor
+                    </div>
+                </div>
+            @endfor
+        </div>
+        <div class="instructions">
+            <h3 style="font-weight: bold; margin-bottom: 3mm; font-size: 8px;">INSTRUCCIONES:</h3>
+            <p style="font-size: 7px;">• Las siguientes preguntas están relacionadas con las actividades que realiza en su trabajo y las condiciones en que las hace.</p>
+            <p style="font-size: 7px;">• Marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
+            <p style="margin-left: 5mm; font-size: 7px;"><strong>Siempre - Casi siempre - Algunas veces - Casi nunca - Nunca</strong></p>
+            <p style="font-size: 7px;">• Es importante que conteste todas las preguntas.</p>
+        </div>
+    </div>
 
     @php
         // Combinar todas las preguntas en orden
@@ -223,49 +229,6 @@
     <div class="three-column-layout">
         @foreach($columns as $columnIndex => $columnQuestions)
             <div class="column">
-                @if($columnIndex == 0)
-                    <!-- Sección de folio usando patrón question-row-vertical -->
-                    <div class="folio-section" style="position: relative;">
-                        <!-- Marcadores de esquina -->
-                        <div class="block-corner-marker top-left"></div>
-                        <div class="block-corner-marker top-right"></div>
-                        <div class="block-corner-marker bottom-left"></div>
-                        <div class="block-corner-marker bottom-right"></div>
-                        <!-- Header con espacios para escribir -->
-                        <div class="folio-header">
-                            <div class="folio-digit-column"></div> <!-- Espacio vacío para alinear con números -->
-                            @for($i = 0; $i < 9; $i++)
-                                <div class="folio-position-header"></div>
-                            @endfor
-                        </div>
-                        <!-- Filas de dígitos con burbujas -->
-                        @for($digit = 0; $digit <= 9; $digit++)
-                            <div class="folio-row">
-                                <div class="folio-digit-number">{{ $digit }}</div>
-                                <div class="folio-bubbles-row">
-                                    @for($i = 0; $i < 9; $i++)
-                                        @php
-                                            $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
-                                            $isSelected = $folioDigit == $digit;
-                                        @endphp
-                                        <div class="bubble-tiny {{ $isSelected ? 'bubble-filled' : '' }}"></div>
-                                    @endfor
-                                </div>
-                            </div>
-                        @endfor
-                    </div>
-                @endif
-                
-                <!-- Header inicial con opciones de respuesta -->
-                {{-- <div class="column-header">
-                    <span></span>
-                    <span>A</span>
-                    <span>B</span>
-                    <span>C</span>
-                    <span>D</span>
-                    <span>E</span>
-                </div> --}}
-                
                 @php 
                     $questionCount = 0; 
                     $conditionalSectionsAdded = [];
