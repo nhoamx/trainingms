@@ -76,11 +76,17 @@ Nueva suite de tests `OMRPdfGenerationTest.php` con 9 tests:
 
 ### Frontend
 - **Componente**: `resources/js/Pages/Organizations/components/Folios.vue`
-  - Cambio de window.open() con query string a Inertia form POST
+  - ⚠️ **Fix crítico**: Reemplazo de Inertia `form.post()` por formulario HTML nativo
+  - **Razón**: Inertia no puede manejar descargas de archivos (espera respuestas JSON)
+  - **Solución**: Creación dinámica de formulario oculto que se envía vía POST tradicional
+- **Layout**: Agregado meta tag CSRF en `resources/views/app.blade.php`
 
 ### Testing
 - **Factory**: `database/factories/FolioBatchFactory.php`
 - **Tests**: `tests/Feature/OMRPdfGenerationTest.php` (9 tests, 28 assertions)
+
+### Documentación
+- **Fix PDF Download**: `docs/PDF_DOWNLOAD_FIX.md` - Explicación técnica detallada del problema y solución
 
 ## 📊 Resultados de Tests
 
