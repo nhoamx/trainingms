@@ -285,16 +285,62 @@ const generatePdf = () => {
     foliosToUse = selectedFolios.value;
   }
 
-  // Generar URL para el PDF
-  const baseUrl = `/omr/${selectedGuideType.value}`;
-  const params = new URLSearchParams({
-    download: 'pdf',
-    folios: foliosToUse
+  // Create a hidden form and submit it to trigger file download
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = route('omr.generate-pdf');
+  form.style.display = 'none';
+
+  // Add CSRF token
+  const csrfInput = document.createElement('input');
+  csrfInput.type = 'hidden';
+  csrfInput.name = '_token';
+  csrfInput.value = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  form.appendChild(csrfInput);
+
+  // Add organization_id
+  const orgInput = document.createElement('input');
+  orgInput.type = 'hidden';
+  orgInput.name = 'organization_id';
+  orgInput.value = props.organization.id;
+  form.appendChild(orgInput);
+
+  // Add folio_batch_id
+  const batchInput = document.createElement('input');
+  batchInput.type = 'hidden';
+  batchInput.name = 'folio_batch_id';
+  batchInput.value = selectedBatch.value.id;
+  form.appendChild(batchInput);
+
+  // Add guide_type
+  const typeInput = document.createElement('input');
+  typeInput.type = 'hidden';
+  typeInput.name = 'guide_type';
+  typeInput.value = selectedGuideType.value;
+  form.appendChild(typeInput);
+
+  // Add generate_all
+  const generateAllInput = document.createElement('input');
+  generateAllInput.type = 'hidden';
+  generateAllInput.name = 'generate_all';
+  generateAllInput.value = generateAll.value ? '1' : '0';
+  form.appendChild(generateAllInput);
+
+  // Add folios array
+  foliosToUse.forEach((folio, index) => {
+    const folioInput = document.createElement('input');
+    folioInput.type = 'hidden';
+    folioInput.name = `folios[${index}]`;
+    folioInput.value = folio;
+    form.appendChild(folioInput);
   });
-  
-  // Abrir en nueva ventana para descargar
-  window.open(`${baseUrl}?${params.toString()}`, '_blank');
-  
+
+  // Append form to body, submit, and remove
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+
+  // Close modal after submitting
   showPdfModal.value = false;
 };
 

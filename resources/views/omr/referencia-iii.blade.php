@@ -167,11 +167,13 @@
 <div class="page-container">
     <div class="folio-instructions-row">
         <div class="folio-section">
-            <!-- Header con espacios para escribir -->
+            <!-- Header con espacios para escribir los dígitos -->
             <div class="folio-header">
                 <div class="folio-digit-column"></div>
                 @for($i = 0; $i < 9; $i++)
-                    <div class="folio-position-header"></div>
+                    <div class="folio-position-header">
+                        {{ isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
+                    </div>
                 @endfor
             </div>
             <!-- Filas de dígitos con burbujas -->
