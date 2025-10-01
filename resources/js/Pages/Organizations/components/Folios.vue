@@ -285,17 +285,26 @@ const generatePdf = () => {
     foliosToUse = selectedFolios.value;
   }
 
-  // Generar URL para el PDF
-  const baseUrl = `/omr/${selectedGuideType.value}`;
-  const params = new URLSearchParams({
-    download: 'pdf',
-    folios: foliosToUse
+  // Create a form to POST the data
+  const form = useForm({
+    organization_id: props.organization.id,
+    folio_batch_id: selectedBatch.value.id,
+    guide_type: selectedGuideType.value,
+    generate_all: generateAll.value,
+    folios: foliosToUse,
   });
-  
-  // Abrir en nueva ventana para descargar
-  window.open(`${baseUrl}?${params.toString()}`, '_blank');
-  
-  showPdfModal.value = false;
+
+  // Submit the form and download the PDF
+  form.post(route('omr.generate-pdf'), {
+    preserveScroll: true,
+    onSuccess: () => {
+      showPdfModal.value = false;
+    },
+    onError: (errors) => {
+      console.error('Error generating PDF:', errors);
+      alert('Hubo un error al generar el PDF. Por favor intenta de nuevo.');
+    },
+  });
 };
 
 const closePdfModal = () => {

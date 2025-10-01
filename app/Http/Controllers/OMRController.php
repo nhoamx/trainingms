@@ -2,35 +2,165 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreOMRPdfRequest;
+use App\Models\FolioBatch;
+use App\Models\Organization;
 use Illuminate\Http\Request;
 use Spatie\Browsershot\Browsershot;
 
 class OMRController extends Controller
 {
     /**
-     * Mostrar hoja OMR para Guía de Referencia I
+     * Template type codes for extended folio format
      */
-    public function referenciaI(Request $request)
-    {
-        $config = config('referencia_i');
-        $questions = [];
+    private const TEMPLATE_TYPES = [
+        'referencia-i' => '01',
+        'referencia-iii' => '02',
+        'referencia-v' => '03',
+        'escala-cisneros' => '04',
+    ];
 
-        // Flatten the questions from all sections
+    /**
+     * Generate extended folio format: [template_type(2)][organization(3)][person(4)]
+     */
+    private function generateExtendedFolio(string $templateType, int $organizationFolio, string $personFolio): string
+    {
+        $typeCode = self::TEMPLATE_TYPES[$templateType] ?? '00';
+        $orgCode = str_pad((string) $organizationFolio, 3, '0', STR_PAD_LEFT);
+        $personCode = str_pad($personFolio, 4, '0', STR_PAD_LEFT);
+
+        return $typeCode.$orgCode.$personCode;
+    }
+
+    /**
+     * Generate and download PDF for batch of folios
+     */
+    public function generatePdf(StoreOMRPdfRequest $request)
+    {
+        $validated = $request->validated();
+
+        // Get organization and batch
+        $organization = Organization::findOrFail($validated['organization_id']);
+        $batch = FolioBatch::where('id', $validated['folio_batch_id'])
+            ->where('organization_id', $organization->id)
+            ->firstOrFail();
+
+        // Determine which folios to generate
+        $foliosToGenerate = [];
+        if ($validated['generate_all'] ?? false) {
+            // Generate all folios in the batch range
+            for ($i = $batch->start_number; $i <= $batch->end_number; $i++) {
+                $foliosToGenerate[] = str_pad((string) $i, 4, '0', STR_PAD_LEFT);
+            }
+        } else {
+            $foliosToGenerate = $validated['folios'] ?? [];
+        }
+
+        if (empty($foliosToGenerate)) {
+            return back()->with('error', 'No se proporcionaron folios para generar el PDF.');
+        }
+
+        // Get guide configuration
+        $guideType = $validated['guide_type'];
+        $viewData = $this->getGuideData($guideType);
+
+        // Generate extended folios and HTML content
+        $htmlContent = '';
+        foreach ($foliosToGenerate as $index => $personFolio) {
+            $extendedFolio = $this->generateExtendedFolio(
+                $guideType,
+                $organization->folio_organization ?? 0,
+                $personFolio
+            );
+
+            $pageData = array_merge($viewData, ['folio' => $extendedFolio]);
+            $htmlContent .= view("omr.{$guideType}", $pageData)->render();
+
+            // Add page break except for the last page
+            if ($index < count($foliosToGenerate) - 1) {
+                $htmlContent .= '<div style="page-break-after: always;"></div>';
+            }
+        }
+
+        // Generate PDF
+        $filename = str_replace('-', '_', $guideType).'_'.$organization->name.'_'.date('Y-m-d_H-i-s').'.pdf';
+        $tempPath = storage_path('app/temp/'.$filename);
+
+        // Create temp directory if it doesn't exist
+        if (! file_exists(dirname($tempPath))) {
+            mkdir(dirname($tempPath), 0755, true);
+        }
+
+        // Configure Browsershot
+        $browsershot = Browsershot::html($htmlContent)
+            ->noSandbox()
+            ->format('Letter')
+            ->margins(10, 10, 10, 10)
+            ->showBackground()
+            ->waitUntilNetworkIdle();
+
+        // Configure for WSL if needed
+        if (PHP_OS_FAMILY === 'Linux' && file_exists('/mnt/c/Program Files/nodejs/node.exe')) {
+            $browsershot->setNodeBinary('/mnt/c/Program Files/nodejs/node.exe');
+            $browsershot->setNpmBinary('/mnt/c/Program Files/nodejs/npm');
+        }
+
+        $browsershot->save($tempPath);
+
+        return response()->download($tempPath)->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Get guide-specific data for rendering
+     */
+    private function getGuideData(string $guideType): array
+    {
+        return match ($guideType) {
+            'referencia-i' => [
+                'questions' => $this->flattenQuestions(config('referencia_i')),
+                'totalQuestions' => count($this->flattenQuestions(config('referencia_i'))),
+            ],
+            'referencia-iii' => [
+                'generalQuestions' => config('referencia_iii.general'),
+                'conditionalSections' => config('referencia_iii.conditional_sections'),
+                'totalGeneralQuestions' => count(config('referencia_iii.general')),
+                'totalConditionalSections' => count(config('referencia_iii.conditional_sections')),
+            ],
+            'referencia-v' => [
+                'config' => config('referencia_v'),
+            ],
+            'escala-cisneros' => [
+                'questions' => config('escala_cisneros'),
+                'totalQuestions' => count(config('escala_cisneros')),
+            ],
+            default => [],
+        };
+    }
+
+    /**
+     * Flatten nested questions array
+     */
+    private function flattenQuestions(array $config): array
+    {
+        $questions = [];
         foreach ($config as $sectionQuestions) {
             $questions = array_merge($questions, $sectionQuestions);
         }
 
-        // Si se solicita PDF, generar y descargar
-        if ($request->has('download') && $request->download === 'pdf') {
-            return $this->generatePdf('referencia-i', 'Guía de Referencia I', [
-                'questions' => $questions,
-                'totalQuestions' => count($questions),
-            ], $request);
-        }
+        return $questions;
+    }
+
+    /**
+     * Mostrar hoja OMR para Guía de Referencia I
+     */
+    public function referenciaI(Request $request)
+    {
+        $questions = $this->flattenQuestions(config('referencia_i'));
 
         return view('omr.referencia-i', [
             'questions' => $questions,
             'totalQuestions' => count($questions),
+            'folio' => $request->input('folio', '000000000'), // Default 9-digit folio
         ]);
     }
 
@@ -40,24 +170,13 @@ class OMRController extends Controller
     public function referenciaIII(Request $request)
     {
         $config = config('referencia_iii');
-        $generalQuestions = $config['general'];
-        $conditionalSections = $config['conditional_sections'];
-
-        // Si se solicita PDF, generar y descargar
-        if ($request->has('download') && $request->download === 'pdf') {
-            return $this->generatePdf('referencia-iii', 'Guía de Referencia III', [
-                'generalQuestions' => $generalQuestions,
-                'conditionalSections' => $conditionalSections,
-                'totalGeneralQuestions' => count($generalQuestions),
-                'totalConditionalSections' => count($conditionalSections),
-            ], $request);
-        }
 
         return view('omr.referencia-iii', [
-            'generalQuestions' => $generalQuestions,
-            'conditionalSections' => $conditionalSections,
-            'totalGeneralQuestions' => count($generalQuestions),
-            'totalConditionalSections' => count($conditionalSections),
+            'generalQuestions' => $config['general'],
+            'conditionalSections' => $config['conditional_sections'],
+            'totalGeneralQuestions' => count($config['general']),
+            'totalConditionalSections' => count($config['conditional_sections']),
+            'folio' => $request->input('folio', '000000000'),
         ]);
     }
 
@@ -68,15 +187,9 @@ class OMRController extends Controller
     {
         $config = config('referencia_v');
 
-        // Si se solicita PDF, generar y descargar
-        if ($request->has('download') && $request->download === 'pdf') {
-            return $this->generatePdf('referencia-v', 'Guía de Referencia V', [
-                'config' => $config,
-            ], $request);
-        }
-
         return view('omr.referencia-v', [
             'config' => $config,
+            'folio' => $request->input('folio', '000000000'),
         ]);
     }
 
@@ -87,80 +200,10 @@ class OMRController extends Controller
     {
         $questions = config('escala_cisneros');
 
-        // Si se solicita PDF, generar y descargar
-        if ($request->has('download') && $request->download === 'pdf') {
-            return $this->generatePdf('escala-cisneros', 'Escala Cisneros', [
-                'questions' => $questions,
-                'totalQuestions' => count($questions),
-            ], $request);
-        }
-
         return view('omr.escala-cisneros', [
             'questions' => $questions,
             'totalQuestions' => count($questions),
+            'folio' => $request->input('folio', '000000000'),
         ]);
-    }
-
-    /**
-     * Genera PDF con las hojas OMR usando Browsershot
-     */
-    private function generatePdf(string $viewName, string $title, array $data, Request $request)
-    {
-        // Obtener folios de la request
-        $folios = $request->input('folios', []);
-
-        if (empty($folios)) {
-            return back()->with('error', 'No se proporcionaron folios para generar el PDF.');
-        }
-
-        // Si folios viene como string separado por comas, convertir a array
-        if (is_string($folios)) {
-            $folios = explode(',', $folios);
-        }
-
-        // Limpiar los folios y asegurar formato
-        $folios = array_map(function ($folio) {
-            return str_pad(trim($folio), 4, '0', STR_PAD_LEFT);
-        }, $folios);
-
-        // Generar una página por cada folio
-        $htmlContent = '';
-        foreach ($folios as $index => $folio) {
-            $pageData = array_merge($data, ['folio' => $folio]);
-            $htmlContent .= view("omr.$viewName", $pageData)->render();
-
-            // Agregar salto de página excepto en la última página
-            if ($index < count($folios) - 1) {
-                $htmlContent .= '<div style="page-break-after: always;"></div>';
-            }
-        }
-
-        // Generar nombre de archivo temporal y final
-        $filename = str_replace(' ', '_', strtolower($title)).'_'.date('Y-m-d_H-i-s').'.pdf';
-        $tempPath = storage_path('app/temp/'.$filename);
-
-        // Crear directorio temporal si no existe
-        if (! file_exists(dirname($tempPath))) {
-            mkdir(dirname($tempPath), 0755, true);
-        }
-
-        // Configurar Browsershot para WSL/Windows
-        $browsershot = Browsershot::html($htmlContent)
-            ->noSandbox()
-            ->format('Letter')
-            ->margins(10, 10, 10, 10) // top, right, bottom, left en mm
-            ->showBackground()
-            ->waitUntilNetworkIdle();
-
-        // Configurar node y npm paths si estamos en WSL
-        if (PHP_OS_FAMILY === 'Linux' && file_exists('/mnt/c/Program Files/nodejs/node.exe')) {
-            $browsershot->setNodeBinary('/mnt/c/Program Files/nodejs/node.exe');
-            $browsershot->setNpmBinary('/mnt/c/Program Files/nodejs/npm');
-        }
-
-        $browsershot->save($tempPath);
-
-        // Retornar el archivo para descarga y luego eliminarlo
-        return response()->download($tempPath)->deleteFileAfterSend(true);
     }
 }
