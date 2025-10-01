@@ -285,26 +285,63 @@ const generatePdf = () => {
     foliosToUse = selectedFolios.value;
   }
 
-  // Create a form to POST the data
-  const form = useForm({
-    organization_id: props.organization.id,
-    folio_batch_id: selectedBatch.value.id,
-    guide_type: selectedGuideType.value,
-    generate_all: generateAll.value,
-    folios: foliosToUse,
+  // Create a hidden form and submit it to trigger file download
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = route('omr.generate-pdf');
+  form.style.display = 'none';
+
+  // Add CSRF token
+  const csrfInput = document.createElement('input');
+  csrfInput.type = 'hidden';
+  csrfInput.name = '_token';
+  csrfInput.value = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  form.appendChild(csrfInput);
+
+  // Add organization_id
+  const orgInput = document.createElement('input');
+  orgInput.type = 'hidden';
+  orgInput.name = 'organization_id';
+  orgInput.value = props.organization.id;
+  form.appendChild(orgInput);
+
+  // Add folio_batch_id
+  const batchInput = document.createElement('input');
+  batchInput.type = 'hidden';
+  batchInput.name = 'folio_batch_id';
+  batchInput.value = selectedBatch.value.id;
+  form.appendChild(batchInput);
+
+  // Add guide_type
+  const typeInput = document.createElement('input');
+  typeInput.type = 'hidden';
+  typeInput.name = 'guide_type';
+  typeInput.value = selectedGuideType.value;
+  form.appendChild(typeInput);
+
+  // Add generate_all
+  const generateAllInput = document.createElement('input');
+  generateAllInput.type = 'hidden';
+  generateAllInput.name = 'generate_all';
+  generateAllInput.value = generateAll.value ? '1' : '0';
+  form.appendChild(generateAllInput);
+
+  // Add folios array
+  foliosToUse.forEach((folio, index) => {
+    const folioInput = document.createElement('input');
+    folioInput.type = 'hidden';
+    folioInput.name = `folios[${index}]`;
+    folioInput.value = folio;
+    form.appendChild(folioInput);
   });
 
-  // Submit the form and download the PDF
-  form.post(route('omr.generate-pdf'), {
-    preserveScroll: true,
-    onSuccess: () => {
-      showPdfModal.value = false;
-    },
-    onError: (errors) => {
-      console.error('Error generating PDF:', errors);
-      alert('Hubo un error al generar el PDF. Por favor intenta de nuevo.');
-    },
-  });
+  // Append form to body, submit, and remove
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+
+  // Close modal after submitting
+  showPdfModal.value = false;
 };
 
 const closePdfModal = () => {
