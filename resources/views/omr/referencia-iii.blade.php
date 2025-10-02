@@ -6,45 +6,40 @@
 
 @section('content')
 <style>
-    .page-container {
-        position: relative;
-        margin: 0 auto;
-        background: white;
-    }
     .folio-instructions-row { 
         display: flex; 
-        gap: 6mm; 
-        margin-bottom: 6mm; 
+        gap: 4mm; 
+        margin-bottom: 3mm; 
         align-items: flex-start; 
     }
     .folio-section { 
         border: 2px solid black; 
-        padding: 3mm; 
+        padding: 2mm; 
         background: #f8f8f8; 
         position: relative; 
-        min-width: 60mm; 
-        max-width: 80mm; 
+        min-width: 55mm; 
+        max-width: 70mm; 
         flex: 1; 
     }
     .folio-header { 
         display: flex; 
-        gap: 1.5mm; 
-        margin-bottom: 2mm; 
+        gap: 1mm; 
+        margin-bottom: 1.5mm; 
         align-items: center; 
     }
     .folio-digit-column { 
-        width: 8mm; 
+        width: 6mm; 
         text-align: center; 
         font-weight: bold; 
-        font-size: 7px; 
+        font-size: 6px; 
     }
     .folio-position-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 6px; 
+        font-size: 5px; 
         font-weight: bold; 
         border: 1px solid black; 
-        height: 4mm; 
+        height: 3.5mm; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
@@ -53,21 +48,21 @@
     .folio-row { 
         display: flex; 
         align-items: center; 
-        gap: 1.5mm; 
-        margin-bottom: 1.2mm; 
+        gap: 1mm; 
+        margin-bottom: 1mm; 
         font-size: 5px; 
-        min-height: 3.5mm; 
+        min-height: 3mm; 
     }
     .folio-digit-number { 
         font-weight: bold; 
-        width: 8mm; 
+        width: 6mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 7px; 
+        font-size: 6px; 
     }
     .folio-bubbles-row { 
         display: flex; 
-        gap: 1.5mm; 
+        gap: 1mm; 
         align-items: center; 
         flex: 1; 
         justify-content: space-between; 
@@ -75,7 +70,8 @@
     .instructions { 
         flex: 2; 
         min-width: 0; 
-        font-size: 7px;
+        font-size: 6.5px;
+        line-height: 1.3;
     }
     .bubble-small { 
         width: 2.5mm; 
@@ -85,15 +81,15 @@
         flex-shrink: 0; 
     }
     .folio-instructions-row {
-        margin-bottom: 4mm;
-        padding-bottom: 3mm;
-        border-bottom: 2px solid black;
+        margin-bottom: 3mm;
+        padding-bottom: 2mm;
+        border-bottom: 1.5px solid black;
     }
     .three-column-layout {
         display: flex;
-        gap: 3mm;
+        gap: 2mm;
         width: 100%;
-        margin-top: 4mm;
+        margin-top: 3mm;
     }
     .column {
         width: 32%;
@@ -103,42 +99,42 @@
         display: flex;
         justify-content: space-around;
         font-weight: bold;
-        font-size: 7px;
+        font-size: 6px;
         background: #f8f8f8;
         border: 1px solid black;
-        padding: 1.5mm;
-        margin-bottom: 2mm;
+        padding: 1mm;
+        margin-bottom: 1.5mm;
         text-align: center;
     }
     .question-row-vertical {
         display: flex;
         align-items: center;
-        margin-bottom: 1.2mm;
-        font-size: 6px;
-        min-height: 4mm;
+        margin-bottom: 1mm;
+        font-size: 5.5px;
+        min-height: 3.5mm;
     }
     .question-number-vertical {
         font-weight: bold;
-        width: 8mm;
+        width: 7mm;
         text-align: center;
         flex-shrink: 0;
-        font-size: 7px;
+        font-size: 6px;
     }
     .answers-vertical {
         display: flex;
-        gap: 1mm;
+        gap: 0.8mm;
         align-items: center;
         flex: 1;
         justify-content: space-around;
     }
     .bubble-tiny {
-        width: 3mm;
-        height: 3mm;
-        border: 1.5px solid black;
+        width: 2.5mm;
+        height: 2.5mm;
+        border: 1px solid black;
         border-radius: 50%;
     }
     .block-separator {
-        height: 4mm;
+        height: 3mm;
         position: relative;
         margin: 1mm 0;
         display: flex;
@@ -147,7 +143,7 @@
     }
     .block-corner-marker {
         position: absolute;
-        width: 2.5mm;
+        width: 2mm;
         height: 2.5mm;
         background: black;
         z-index: 2;
@@ -158,8 +154,7 @@
     .block-corner-marker.bottom-right { bottom: 0; right: 0; }
 </style>
 
-<div class="page-container">
-    <div class="folio-instructions-row">
+<div class="folio-instructions-row">
         <div class="folio-section">
             <!-- Header con espacios para escribir los dígitos -->
             <div class="folio-header">
@@ -279,6 +274,4 @@
         @endforeach
     </div>
 
-    
-</div>
 @endsection

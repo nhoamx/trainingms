@@ -12,7 +12,8 @@ class GenerateOmrTestPdfs extends Command
      *
      * @var string
      */
-    protected $signature = 'omr:generate-test-pdfs';
+    protected $signature = 'omr:generate-test-pdfs 
+                            {--pages=5 : Número de páginas a generar por PDF (5-10)}';
 
     /**
      * The console command description.
@@ -22,14 +23,19 @@ class GenerateOmrTestPdfs extends Command
     protected $description = 'Genera archivos PDF de prueba para cada template OMR con folios y respuestas de muestra';
 
     /**
-     * Test folios for each template type
+     * Template type codes (2 digits) based on OMRController structure
      */
-    private const TEST_FOLIOS = [
-        'referencia-i' => '130000001', // Template 13
-        'referencia-iii' => '120000001', // Template 12
-        'referencia-v' => '170000001', // Template 17
-        'escala-cisneros' => '140000001', // Template 14 (if needed)
+    private const TEMPLATE_TYPES = [
+        'referencia-i' => '01',
+        'referencia-iii' => '02',
+        'referencia-v' => '03',
+        'escala-cisneros' => '04',
     ];
+
+    /**
+     * Test organization code (3 digits) - can be customized
+     */
+    private const TEST_ORGANIZATION_CODE = '001';
 
     /**
      * Execute the console command.
@@ -37,6 +43,17 @@ class GenerateOmrTestPdfs extends Command
     public function handle(): int
     {
         $this->info('🚀 Generando PDFs de prueba para templates OMR...');
+        $this->newLine();
+
+        // Validate and get number of pages
+        $pages = (int) $this->option('pages');
+        if ($pages < 5 || $pages > 10) {
+            $this->error('❌ El número de páginas debe estar entre 5 y 10');
+
+            return Command::FAILURE;
+        }
+
+        $this->info("📄 Generando {$pages} páginas por PDF");
         $this->newLine();
 
         // Create output directory if it doesn't exist
@@ -61,8 +78,8 @@ class GenerateOmrTestPdfs extends Command
             $this->info("📄 Generando: {$name}");
 
             try {
-                $this->generateTestPdf($template, $outputPath);
-                $this->info("✅ {$name} generado exitosamente");
+                $this->generateTestPdf($template, $outputPath, $pages);
+                $this->info("✅ {$name} generado exitosamente con {$pages} páginas");
             } catch (\Exception $e) {
                 $this->error("❌ Error generando {$name}: {$e->getMessage()}");
 
@@ -79,25 +96,47 @@ class GenerateOmrTestPdfs extends Command
     }
 
     /**
-     * Generate test PDF for a specific template
+     * Generate extended folio format: [template_type(2)][organization(3)][person(4)]
      */
-    private function generateTestPdf(string $template, string $outputPath): void
+    private function generateExtendedFolio(string $templateType, int $personNumber): string
     {
-        $folio = self::TEST_FOLIOS[$template];
-        $viewData = $this->getTemplateData($template, $folio);
+        $typeCode = self::TEMPLATE_TYPES[$templateType] ?? '00';
+        $orgCode = self::TEST_ORGANIZATION_CODE;
+        $personCode = str_pad((string) $personNumber, 4, '0', STR_PAD_LEFT);
 
-        // Generate HTML content with filled bubbles
-        $html = view("omr.{$template}", $viewData)->render();
+        return $typeCode.$orgCode.$personCode;
+    }
 
-        // Inject JavaScript to fill sample bubbles
-        $html = $this->injectSampleAnswers($html, $template);
+    /**
+     * Generate test PDF for a specific template with multiple pages
+     */
+    private function generateTestPdf(string $template, string $outputPath, int $pages): void
+    {
+        $htmlContent = '';
+
+        // Generate HTML for each page with different person folio (only last 4 digits change)
+        for ($i = 1; $i <= $pages; $i++) {
+            // Generate folio with structure: [template(2)][org(3)][person(4)]
+            $folio = $this->generateExtendedFolio($template, $i);
+            $viewData = $this->getTemplateData($template, $folio);
+
+            // Generate HTML content (empty - no pre-filled answers for manual testing)
+            $html = view("omr.{$template}", $viewData)->render();
+
+            $htmlContent .= $html;
+
+            // Add page break except for the last page
+            if ($i < $pages) {
+                $htmlContent .= '<div style="page-break-after: always;"></div>';
+            }
+        }
 
         // Generate PDF filename
         $filename = "{$template}.pdf";
         $pdfPath = storage_path("app/{$outputPath}/{$filename}");
 
         // Configure Browsershot
-        $browsershot = Browsershot::html($html)
+        $browsershot = Browsershot::html($htmlContent)
             ->noSandbox()
             ->format('Letter')
             ->margins(10, 10, 10, 10)
@@ -155,81 +194,5 @@ class GenerateOmrTestPdfs extends Command
         }
 
         return $questions;
-    }
-
-    /**
-     * Inject sample answers by adding CSS to fill specific bubbles
-     */
-    private function injectSampleAnswers(string $html, string $template): string
-    {
-        // Add CSS to fill sample bubbles for testing
-        $sampleAnswersCSS = $this->getSampleAnswersCSS($template);
-
-        // Inject CSS before closing </head> tag
-        $html = str_replace('</head>', "{$sampleAnswersCSS}</head>", $html);
-
-        return $html;
-    }
-
-    /**
-     * Generate CSS to fill sample bubbles based on template type
-     */
-    private function getSampleAnswersCSS(string $template): string
-    {
-        $css = '<style type="text/css">';
-
-        switch ($template) {
-            case 'referencia-i':
-                // Fill folio bubbles for "130000001"
-                $css .= $this->getFolioBubbleCSS(['1', '3', '0', '0', '0', '0', '0', '0', '1']);
-                // Fill some question answers (SÍ for questions 1, 3, 5, 7, NO for 2, 4, 6, 8)
-                for ($i = 1; $i <= 24; $i++) {
-                    $answer = ($i % 2 === 1) ? 0 : 1; // 0 = SÍ, 1 = NO (alternating)
-                    $css .= ".question-row:nth-of-type({$i}) .option-group:nth-of-type(".($answer + 1).') .bubble { background-color: black !important; }';
-                }
-                break;
-
-            case 'referencia-iii':
-                // Fill folio bubbles for "120000001"
-                $css .= $this->getFolioBubbleCSS(['1', '2', '0', '0', '0', '0', '0', '0', '1']);
-                // Fill sample answers for questions (A, B, C, D alternating pattern)
-                for ($i = 1; $i <= 30; $i++) {
-                    $answer = ($i - 1) % 4; // Rotate through A, B, C, D
-                    $css .= ".question-row:nth-of-type({$i}) .option-group:nth-of-type(".($answer + 1).') .bubble { background-color: black !important; }';
-                }
-                break;
-
-            case 'referencia-v':
-                // Fill folio bubbles for "170000001"
-                $css .= $this->getFolioBubbleCSS(['1', '7', '0', '0', '0', '0', '0', '0', '1']);
-                // Fill some demographic bubbles (this is more complex, add basic pattern)
-                $css .= '.demographic-row:nth-of-type(1) .bubble-small:first-of-type { background-color: black !important; }';
-                $css .= '.demographic-row:nth-of-type(3) .bubble-small:nth-of-type(2) { background-color: black !important; }';
-                break;
-        }
-
-        $css .= '</style>';
-
-        return $css;
-    }
-
-    /**
-     * Generate CSS to fill folio bubbles based on folio digits
-     */
-    private function getFolioBubbleCSS(array $digits): string
-    {
-        $css = '';
-
-        foreach ($digits as $position => $digit) {
-            // Position is 0-indexed, but CSS nth-of-type is 1-indexed
-            $positionIndex = $position + 1;
-            // Digit row: row 1 = digit 0, row 2 = digit 1, etc.
-            $digitRow = intval($digit) + 1;
-
-            // Select the bubble in the correct position and digit row
-            $css .= ".folio-row:nth-of-type({$digitRow}) .bubble-small:nth-of-type({$positionIndex}) { background-color: black !important; }";
-        }
-
-        return $css;
     }
 }

@@ -23,7 +23,7 @@
             min-height: 279.4mm;  /* US Letter height */
             margin: 0 auto;
             background: white;
-            padding: 10mm;
+            padding: 8mm 10mm;
             position: relative;
             page-break-after: always;
         }
@@ -64,57 +64,60 @@
         /* Encabezado */
         .header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 8px;
             border-bottom: 2px solid black;
-            padding-bottom: 10px;
+            padding-bottom: 5px;
         }
 
         .header h1 {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
+            line-height: 1.1;
         }
 
         .header h2 {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
+            line-height: 1.1;
         }
 
         .header p {
-            font-size: 10px;
+            font-size: 9px;
+            margin-bottom: 2px;
         }
 
         /* Estilos de folio y fecha movidos a plantillas individuales */
 
         /* Contenido principal */
         .content {
-            margin-top: 10mm;
+            margin-top: 6mm;
             clear: both;
         }
 
         /* Burbujas para respuestas */
         .bubble {
-            width: 4mm;
-            height: 4mm;
+            width: 3.5mm;
+            height: 3.5mm;
             border: 1px solid black;
             border-radius: 50%;
             display: inline-block;
-            margin: 0 2mm 0 1mm;
+            margin: 0 1.5mm 0 0.5mm;
             vertical-align: middle;
         }
         
         .bubble-small {
-            width: 3mm;
-            height: 3mm;
+            width: 2.5mm;
+            height: 2.5mm;
             border: 1px solid black;
             border-radius: 50%;
         }
         
         .bubble-tiny {
-            width: 3mm;
-            height: 3mm;
-            border: 1.5px solid black;
+            width: 2mm;
+            height: 2mm;
+            border: 1px solid black;
             border-radius: 50%;
         }
         
@@ -127,32 +130,33 @@
         .question-row {
             display: flex;
             align-items: center;
-            margin-bottom: 4mm;
-            min-height: 6mm;
+            margin-bottom: 3mm;
+            min-height: 5mm;
         }
 
         .question-number {
-            width: 10mm;
+            width: 8mm;
             font-weight: bold;
             flex-shrink: 0;
+            font-size: 9px;
         }
 
         .answer-options {
             flex: 1;
             display: flex;
             align-items: center;
-            gap: 3mm;
+            gap: 2mm;
         }
 
         .option-group {
             display: flex;
             align-items: center;
-            gap: 1mm;
+            gap: 0.5mm;
         }
 
         .option-label {
-            font-size: 10px;
-            margin-right: 1mm;
+            font-size: 9px;
+            margin-right: 0.5mm;
         }
 
         /* Secciones específicas */
