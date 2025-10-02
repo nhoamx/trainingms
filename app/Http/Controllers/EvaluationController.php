@@ -104,7 +104,6 @@ class EvaluationController extends Controller
         $newOrganizationId = $validated['new_organization_id']; // Ahora $newOrganizationId será el UUID string
 
         if ($organization->id == $newOrganizationId) {
-            Log::warning('Intento de reasignar a la misma organización.'); // Log advertencia
 
             return back()->with('error', 'No se puede reasignar las evaluaciones a la misma organización.');
         }
