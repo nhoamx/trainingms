@@ -84,9 +84,6 @@ from alinear_con_marcadores import detectar_marcadores, alinear_imagen, IDEAL_PO
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
 # Mapeo de template types a archivos de referencia
-# Nota: Todos los templates usan los mismos marcadores de alineación,
-# por lo que usamos una referencia genérica para alinear.
-# Este mapeo está disponible para validaciones futuras si es necesario.
 REFERENCE_IMAGES = {
     '01': '/app/reference-referencia-i.png',      # Referencia I
     '02': '/app/reference-referencia-iii.png',    # Referencia III
@@ -94,35 +91,73 @@ REFERENCE_IMAGES = {
     '04': '/app/reference-referencia-i.png',      # Escala Cisneros (usar Ref I como fallback)
 }
 
+def get_reference_image_for_template(template_type):
+    """
+    Obtiene la imagen de referencia correcta según el template type.
+    """
+    ref_path = REFERENCE_IMAGES.get(template_type, '/app/reference-referencia-i.png')
+    
+    ref_img = cv2.imread(ref_path)
+    if ref_img is None:
+        logging.warning(f"No se pudo cargar {ref_path}, usando referencia por defecto")
+        ref_img = cv2.imread('/app/reference-referencia-i.png')
+        if ref_img is None:
+            # Último fallback
+            ref_img = cv2.imread('/app/reference-test-page.png')
+            logging.warning("Usando referencia legacy")
+    else:
+        logging.info(f"Usando referencia para template {template_type}: {ref_path}")
+    
+    return ref_img
+
+def detect_template_type_from_image(image_file, detector):
+    """
+    Intenta detectar el template type leyendo los primeros 2 dígitos del folio.
+    Esto se hace ANTES de la alineación precisa, por lo que puede tener errores.
+    Si no se puede detectar, retorna '01' (Referencia I) como default.
+    """
+    try:
+        folio_data = detector.detect_bubbles(image_file, config.folio_configuration)
+        folio = "".join(str(value) for value in folio_data.values() if value is not None)
+        
+        if folio and len(folio) >= 2:
+            template_type = folio[:2]
+            if template_type in REFERENCE_IMAGES:
+                logging.info(f"Template type detectado: {template_type} del folio preliminar: {folio}")
+                return template_type
+        
+        logging.warning(f"No se pudo detectar template type del folio '{folio}', usando default '02' (Ref III)")
+        return '02'  # Default a Referencia III que es la más común
+    except Exception as e:
+        logging.warning(f"Error detectando template type: {e}, usando default '02'")
+        return '02'
+
 aligned_image_files = []
 outputs_aligned_folder = "/app/outputs_aligned"
 output_original_folder = "/app/output_original"
 os.makedirs(outputs_aligned_folder, exist_ok=True)
 os.makedirs(output_original_folder, exist_ok=True)
 
-# Cargar referencia genérica para alineación (todos los templates tienen los mismos marcadores)
-ref_img = cv2.imread("/app/reference-referencia-i.png")
-if ref_img is None:
-    ref_img = cv2.imread("/app/reference-test-page.png")
-    logging.warning("Usando referencia legacy para alineación")
-else:
-    logging.info("Usando referencia para alineación: reference-referencia-i.png")
-
-ref_marcadores = detectar_marcadores(ref_img, debug_path=None, n_points=6)
-ref_esquinas = [ref_marcadores[0], ref_marcadores[1], ref_marcadores[4], ref_marcadores[5]]
-
 for image_file in image_files:
-#    logging.info("==============================")
-#    logging.info(f"Procesando imagen: {image_file}")
+    logging.info("="*50)
+    logging.info(f"Procesando imagen: {image_file}")
     try:
         # Guardar copia de la imagen original
         original_save_path = os.path.join(output_original_folder, os.path.basename(image_file))
         if not os.path.exists(original_save_path):
             import shutil
             shutil.copy(image_file, original_save_path)
-#            logging.info(f"Imagen original guardada en: {original_save_path}")
+            logging.info(f"Imagen original guardada")
         
-        # --- Paso 1: Alinear la imagen con referencia genérica ---
+        # --- Paso 1: Detectar template type de forma preliminar ---
+        template_type = detect_template_type_from_image(image_file, detector)
+        
+        # --- Paso 2: Cargar referencia específica para ese template ---
+        ref_img = get_reference_image_for_template(template_type)
+        ref_marcadores = detectar_marcadores(ref_img, debug_path=None, n_points=6)
+        ref_esquinas = [ref_marcadores[0], ref_marcadores[1], ref_marcadores[4], ref_marcadores[5]]
+        
+        # --- Paso 3: Alinear la imagen con la referencia específica ---
         img = cv2.imread(image_file)
         img_marcadores = detectar_marcadores(img, debug_path=None, n_points=6)
         img_esquinas = [img_marcadores[0], img_marcadores[1], img_marcadores[4], img_marcadores[5]]
@@ -130,10 +165,10 @@ for image_file in image_files:
         aligned_filename = os.path.basename(image_file).replace(".png", "_aligned.png")
         aligned_save_path = os.path.join(outputs_aligned_folder, aligned_filename)
         cv2.imwrite(aligned_save_path, alineada)
-#        logging.info(f"Imagen alineada guardada en: {aligned_save_path}")
+        logging.info(f"Imagen alineada guardada: {aligned_filename}")
         aligned_image_files.append(aligned_save_path)
     except Exception as e:
-#        logging.warning(f"No se pudo alinear {image_file}: {e}. Se omite esta imagen.")
+        logging.warning(f"No se pudo alinear {image_file}: {e}. Se omite esta imagen.")
         continue
 
 # --- El resto del pipeline usa las imágenes alineadas ---
