@@ -10,6 +10,7 @@ El archivo `docker/main.py` se encarga de este proceso.
 
 ## Tareas
 - Debemos verificar los templates de OMR en la ruta `resources/views/omr`, debemos hacer que todos los templates de OMR que tenemos en el sistema puedan ser detectados y alineados correctamente por el codigo en `docker/main.py`.
+- Los 4 marcadores siempre deben estar en las esquinas de la hoja, entonces debemos tener todo estandarizado dentro de los templates de los archivos de referencia.
 - Vas a modificar los archivos de OMR en `resources/views/omr` para que puedan ser detectados y alineados correctamente por el codigo en `docker/main.py`.
 - Si es necesario, vas a modificar el codigo en `docker/main.py` para que pueda detectar y alinear correctamente los templates de OMR que tenemos en el sistema.
 - Vas a crear un comando que nos creara en storage 3 archivos pdf de prueba, uno por cada template de OMR que tenemos en el sistema. El comando debe llamarse `omr:generate-test-pdfs` y debe crear los archivos en `storage/app/omr-test-pdfs`. Los archivos deben tener el nombre del template, por ejemplo: `referencia-i.pdf`, `referencia-iii.pdf`, `referencia-v.pdf`.

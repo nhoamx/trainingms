@@ -23,7 +23,8 @@ def detect_folio(image_file, detector):
         # Combinar los valores detectados en un único string
         folio = "".join(str(value) for value in folio_data.values() if value is not None)
         print(f"Folio detectado en {image_file}: {folio}")
-        if not folio:
+        if not folio or len(folio) < 9:
+            print(f"ADVERTENCIA: Folio incompleto o inválido: '{folio}' (longitud: {len(folio)})")
             folio = "unknown"
         return folio
     except Exception as e:
@@ -75,11 +76,23 @@ import cv2
 import logging
 from alinear_con_marcadores import detectar_marcadores, alinear_imagen, IDEAL_POSITIONS, LABELS
 
-# Configurar logging
-#logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+import cv2
+import logging
+from alinear_con_marcadores import detectar_marcadores, alinear_imagen, IDEAL_POSITIONS, LABELS
 
-# Cargar la imagen de referencia una sola vez
-ref_img = cv2.imread("/app/reference-test-page.png")  # Cambia por tu imagen de referencia real
+# Configurar logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+
+# Determinar qué referencia usar según el folio detectado (si está disponible)
+# Por defecto, usaremos una referencia genérica
+ref_img = cv2.imread("/app/reference-referencia-i.png")
+if ref_img is None:
+    # Fallback a la referencia anterior si no existe la nueva
+    ref_img = cv2.imread("/app/reference-test-page.png")
+    logging.warning("Usando referencia legacy. Considera generar una nueva con generate_reference.py")
+else:
+    logging.info("Usando referencia actualizada: reference-referencia-i.png")
+
 ref_marcadores = detectar_marcadores(ref_img, debug_path=None, n_points=6)
 ref_esquinas = [ref_marcadores[0], ref_marcadores[1], ref_marcadores[4], ref_marcadores[5]]
 
@@ -115,24 +128,29 @@ for image_file in image_files:
 
 # --- El resto del pipeline usa las imágenes alineadas ---
 for image_file in aligned_image_files:
-#    logging.info(f"Procesando imagen alineada: {image_file}")
+    logging.info(f"Procesando imagen alineada: {image_file}")
 
     # Detectar el folio a partir de la imagen alineada
     folio = detect_folio(image_file, detector)
 
-    # Validar que el folio inicie con 12, 13 o 17
-    if not (folio.startswith('12') or folio.startswith('13') or folio.startswith('17')):
-#        logging.warning(f"Imagen {image_file} skipeada: folio '{folio}' no inicia con 12, 13 o 17.")
+    # Validar que el folio inicie con 12, 13, 14 o 17
+    valid_prefixes = ['12', '13', '14', '17']
+    is_valid = any(folio.startswith(prefix) for prefix in valid_prefixes)
+    
+    if not is_valid:
+        logging.warning(f"Imagen {image_file} skipeada: folio '{folio}' no inicia con {', '.join(valid_prefixes)}.")
         continue
+    
+    logging.info(f"Folio válido detectado: {folio}")
 
     # Guardar la imagen alineada con el folio en output_images
     new_image_path = os.path.join(output_folder, f"{folio}.png")
     try:
         import shutil
         shutil.copy(image_file, new_image_path)
-#        logging.info(f"Imagen alineada copiada y guardada como: {new_image_path}")
+        logging.info(f"Imagen alineada copiada y guardada como: {new_image_path}")
     except Exception as e:
-#        logging.error(f"No se pudo copiar {image_file} a {new_image_path}: {e}")
+        logging.error(f"No se pudo copiar {image_file} a {new_image_path}: {e}")
         continue
 
     # --- Limpiar archivos page_#.png de output_images y dejar solo los {folio}.png ---
@@ -146,21 +164,24 @@ for image_file in aligned_image_files:
 
     # Seleccionar la configuración de evaluación según el prefijo del folio
     if folio.startswith("12"):
-        # Referencia de evaluacion principal
+        # Referencia de evaluacion principal (Referencia III)
         evaluation_config = config.evaluation_01
-        print(f"Folio {folio} referencia III")
+        logging.info(f"Folio {folio} → Referencia III")
     elif folio.startswith("13"):
-        # Referencia de acontecimientos
+        # Referencia de acontecimientos traumáticos (Referencia I)
         evaluation_config = config.reference_i
-        print(f"Folio {folio} referencia I")
+        logging.info(f"Folio {folio} → Referencia I")
+    elif folio.startswith("14"):
+        # Escala Cisneros
+        evaluation_config = config.escala_cisneros if hasattr(config, 'escala_cisneros') else config.evaluation_01
+        logging.info(f"Folio {folio} → Escala Cisneros")
     elif folio.startswith("17"):
-        # Datos del evaluado
+        # Datos del evaluado (Referencia V)
         evaluation_config = config.reference_v
-        print(f"Folio {folio} referencia V")
+        logging.info(f"Folio {folio} → Referencia V")
     else:
-        # Si el folio no empieza con 12, 13 o 17, se puede asignar una configuración por defecto
-        #evaluation_config = config.evaluation_01
-        print(f"Folio {folio} no hace match cno ninguna referencia")
+        # Si el folio no empieza con 12, 13, 14 o 17
+        logging.warning(f"Folio {folio} no hace match con ninguna referencia")
         continue
 
     # Obtener las respuestas de la evaluación y guardar el JSON

@@ -5,12 +5,6 @@
 @section('guide-title', 'GUÍA DE REFERENCIA V - DATOS GENERALES DEL TRABAJADOR Y DEL CENTRO DE TRABAJO')
 
 @section('content')
-<!-- Marcadores de referencia en las esquinas -->
-<div class="alignment-marker marker-top-left"></div>
-<div class="alignment-marker marker-top-right"></div>
-<div class="alignment-marker marker-bottom-left"></div>
-<div class="alignment-marker marker-bottom-right"></div>
-
 <style>
     .page-container { position: relative; margin: 0 auto; padding: 8mm; background: white; font-size: 6px; }
     .folio-instructions-row { display: flex; gap: 6mm; margin-bottom: 4mm; align-items: flex-start; }

@@ -5,12 +5,6 @@
 @section('guide-title', 'GUÍA DE REFERENCIA III - CUESTIONARIO PARA IDENTIFICAR LOS FACTORES DE RIESGO PSICOSOCIAL')
 
 @section('content')
-<!-- Marcadores de referencia en las esquinas -->
-<div class="alignment-marker marker-top-left"></div>
-<div class="alignment-marker marker-top-right"></div>
-<div class="alignment-marker marker-bottom-left"></div>
-<div class="alignment-marker marker-bottom-right"></div>
-
 <style>
     .page-container {
         position: relative;

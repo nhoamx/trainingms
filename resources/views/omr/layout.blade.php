@@ -232,7 +232,11 @@
 </head>
 <body>
     <div class="page">
-        <!-- Marcadores de alineación -->
+        <!-- Marcadores de alineación en las 4 esquinas -->
+        <div class="alignment-marker marker-top-left"></div>
+        <div class="alignment-marker marker-top-right"></div>
+        <div class="alignment-marker marker-bottom-left"></div>
+        <div class="alignment-marker marker-bottom-right"></div>
 
         <!-- Encabezado -->
         <div class="header">
