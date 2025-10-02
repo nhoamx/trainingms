@@ -81,8 +81,8 @@
         line-height: 1.3;
     }
     .bubble-small { 
-        width: 2.5mm; 
-        height: 2.5mm; 
+        width: 3.5mm; 
+        height: 3.5mm; 
         border: 1px solid black; 
         border-radius: 50%; 
         flex-shrink: 0; 
@@ -146,8 +146,8 @@
         justify-content: space-around;
     }
     .bubble-tiny {
-        width: 2.5mm;
-        height: 2.5mm;
+        width: 3.5mm;
+        height: 3.5mm;
         border: 1px solid black;
         border-radius: 50%;
     }

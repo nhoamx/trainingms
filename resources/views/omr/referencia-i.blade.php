@@ -74,8 +74,8 @@
         line-height: 1.3;
     }
     .bubble-small { 
-        width: 2.5mm; 
-        height: 2.5mm; 
+        width: 3.5mm; 
+        height: 3.5mm; 
         border: 1px solid black; 
         border-radius: 50%; 
         flex-shrink: 0; 
@@ -117,8 +117,8 @@
         font-weight: bold;
     }
     .bubble {
-        width: 3mm;
-        height: 3mm;
+        width: 4mm;
+        height: 4mm;
         border: 1px solid black;
         border-radius: 50%;
         flex-shrink: 0;
@@ -151,7 +151,10 @@
                     @for($i = 0; $i < 9; $i++)
                         @php
                             $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
-                            $isSelected = $folioDigit == $digit;
+                            // For Referencia I, don't fill bubbles in last 4 positions (person code)
+                            // Only fill template code (0-1) and organization code (2-4)
+                            $shouldFill = $i < 5 && $folioDigit == $digit;
+                            $isSelected = $shouldFill;
                         @endphp
                         <div class="bubble-small {{ $isSelected ? 'bubble-filled' : '' }}"></div>
                     @endfor
