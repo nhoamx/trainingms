@@ -5,52 +5,43 @@
 @section('guide-title', 'GUÍA DE REFERENCIA III - CUESTIONARIO PARA IDENTIFICAR LOS FACTORES DE RIESGO PSICOSOCIAL')
 
 @section('content')
-<!-- Marcadores de referencia en las esquinas -->
-<div class="alignment-marker marker-top-left"></div>
-<div class="alignment-marker marker-top-right"></div>
-<div class="alignment-marker marker-bottom-left"></div>
-<div class="alignment-marker marker-bottom-right"></div>
-
 <style>
-    .page-container {
-        position: relative;
-        margin: 0 auto;
-        background: white;
-    }
     .folio-instructions-row { 
         display: flex; 
-        gap: 6mm; 
-        margin-bottom: 6mm; 
+        gap: 4mm; 
+        margin-bottom: 3mm;
+        padding-bottom: 2mm;
+        border-bottom: 1.5px solid black;
         align-items: flex-start; 
     }
     .folio-section { 
         border: 2px solid black; 
-        padding: 3mm; 
+        padding: 2mm; 
         background: #f8f8f8; 
         position: relative; 
-        min-width: 60mm; 
-        max-width: 80mm; 
+        min-width: 55mm; 
+        max-width: 70mm; 
         flex: 1; 
     }
     .folio-header { 
         display: flex; 
-        gap: 1.5mm; 
-        margin-bottom: 2mm; 
+        gap: 1mm; 
+        margin-bottom: 1.5mm; 
         align-items: center; 
     }
     .folio-digit-column { 
-        width: 8mm; 
+        width: 6mm; 
         text-align: center; 
         font-weight: bold; 
-        font-size: 7px; 
+        font-size: 6px; 
     }
     .folio-position-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 6px; 
+        font-size: 5px; 
         font-weight: bold; 
         border: 1px solid black; 
-        height: 4mm; 
+        height: 3.5mm; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
@@ -59,29 +50,35 @@
     .folio-row { 
         display: flex; 
         align-items: center; 
-        gap: 1.5mm; 
-        margin-bottom: 1.2mm; 
+        gap: 1mm; 
+        margin-bottom: 1mm; 
         font-size: 5px; 
-        min-height: 3.5mm; 
+        min-height: 3mm; 
     }
     .folio-digit-number { 
         font-weight: bold; 
-        width: 8mm; 
+        width: 6mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 7px; 
+        font-size: 6px; 
     }
     .folio-bubbles-row { 
         display: flex; 
-        gap: 1.5mm; 
+        gap: 1mm; 
         align-items: center; 
         flex: 1; 
         justify-content: space-between; 
     }
+    .right-side-container {
+        flex: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 2mm;
+        min-width: 0;
+    }
     .instructions { 
-        flex: 2; 
-        min-width: 0; 
-        font-size: 7px;
+        font-size: 6.5px;
+        line-height: 1.3;
     }
     .bubble-small { 
         width: 2.5mm; 
@@ -90,16 +87,11 @@
         border-radius: 50%; 
         flex-shrink: 0; 
     }
-    .folio-instructions-row {
-        margin-bottom: 4mm;
-        padding-bottom: 3mm;
-        border-bottom: 2px solid black;
-    }
     .three-column-layout {
         display: flex;
-        gap: 3mm;
+        gap: 2mm;
         width: 100%;
-        margin-top: 4mm;
+        margin-top: 3mm;
     }
     .column {
         width: 32%;
@@ -109,63 +101,98 @@
         display: flex;
         justify-content: space-around;
         font-weight: bold;
-        font-size: 7px;
-        background: #f8f8f8;
+        font-size: 6px;
+        background: #e8e8e8;
         border: 1px solid black;
-        padding: 1.5mm;
+        padding: 1mm 0.5mm;
         margin-bottom: 2mm;
         text-align: center;
+    }
+    .column-header-label {
+        flex: 1;
+        text-align: center;
+        font-weight: bold;
+    }
+    .column-header-options {
+        display: flex;
+        justify-content: space-around;
+        flex: 5;
+        gap: 0.8mm;
+    }
+    .option-label {
+        flex: 1;
+        font-size: 6px;
+        font-weight: bold;
     }
     .question-row-vertical {
         display: flex;
         align-items: center;
-        margin-bottom: 1.2mm;
-        font-size: 6px;
-        min-height: 4mm;
+        margin-bottom: 1mm;
+        font-size: 5.5px;
+        min-height: 3.5mm;
     }
     .question-number-vertical {
         font-weight: bold;
-        width: 8mm;
+        width: 7mm;
         text-align: center;
         flex-shrink: 0;
-        font-size: 7px;
+        font-size: 6px;
     }
     .answers-vertical {
         display: flex;
-        gap: 1mm;
+        gap: 0.8mm;
         align-items: center;
         flex: 1;
         justify-content: space-around;
     }
     .bubble-tiny {
-        width: 3mm;
-        height: 3mm;
-        border: 1.5px solid black;
-        border-radius: 50%;
-    }
-    .block-separator {
-        height: 4mm;
-        position: relative;
-        margin: 1mm 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .block-corner-marker {
-        position: absolute;
         width: 2.5mm;
         height: 2.5mm;
-        background: black;
-        z-index: 2;
+        border: 1px solid black;
+        border-radius: 50%;
     }
-    .block-corner-marker.top-left { top: 0; left: 0; }
-    .block-corner-marker.top-right { top: 0; right: 0; }
-    .block-corner-marker.bottom-left { bottom: 0; left: 0; }
-    .block-corner-marker.bottom-right { bottom: 0; right: 0; }
+    
+    /* CITSATS-s1 Section Styles */
+    .citsats-section {
+        width: 50%;
+        padding: 2mm;
+    }
+    .citsats-title {
+        font-weight: bold;
+        font-size: 7px;
+        margin-bottom: 2mm;
+        text-align: left;
+        margin-left: 2mm;
+    }
+    .citsats-question {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5mm;
+        font-size: 5.5px;
+    }
+    .citsats-number {
+        font-weight: bold;
+        width: 7mm;
+        text-align: center;
+        font-size: 6px;
+    }
+    .citsats-options {
+        display: flex;
+        gap: 3mm;
+        align-items: center;
+    }
+    .citsats-option {
+        display: flex;
+        align-items: center;
+        gap: 1mm;
+    }
+    .citsats-option-label {
+        font-size: 6px;
+        font-weight: bold;
+    }
 </style>
 
-<div class="page-container">
-    <div class="folio-instructions-row">
+<div class="folio-instructions-row">
         <div class="folio-section">
             <!-- Header con espacios para escribir los dígitos -->
             <div class="folio-header">
@@ -192,12 +219,35 @@
                 </div>
             @endfor
         </div>
-        <div class="instructions">
-            <h3 style="font-weight: bold; margin-bottom: 3mm; font-size: 8px;">INSTRUCCIONES:</h3>
-            <p style="font-size: 7px;">• Las siguientes preguntas están relacionadas con las actividades que realiza en su trabajo y las condiciones en que las hace.</p>
-            <p style="font-size: 7px;">• Marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
-            <p style="margin-left: 5mm; font-size: 7px;"><strong>Siempre - Casi siempre - Algunas veces - Casi nunca - Nunca</strong></p>
-            <p style="font-size: 7px;">• Es importante que conteste todas las preguntas.</p>
+        
+        <div class="right-side-container">
+            <div class="instructions">
+                <h3 style="font-weight: bold; margin-bottom: 3mm; font-size: 8px;">INSTRUCCIONES:</h3>
+                <p style="font-size: 7px;">• Las siguientes preguntas están relacionadas con las actividades que realiza en su trabajo y las condiciones en que las hace.</p>
+                <p style="font-size: 7px;">• Marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
+                <p style="margin-left: 5mm; font-size: 7px;"><strong>Siempre - Casi siempre - Algunas veces - Casi nunca - Nunca</strong></p>
+                <p style="font-size: 7px;">• Es importante que conteste todas las preguntas.</p>
+            </div>
+            
+            <!-- CITSATS-s1 Section: ocupando solo 1 de las 2 columnas del lado derecho -->
+            <div class="citsats-section">
+                <div class="citsats-title">CITSATS-s1</div>
+                @for($i = 1; $i <= 6; $i++)
+                    <div class="citsats-question">
+                        <div class="citsats-number">{{ $i }}</div>
+                        <div class="citsats-options">
+                            <div class="citsats-option">
+                                <span class="citsats-option-label">SÍ</span>
+                                <div class="bubble-tiny"></div>
+                            </div>
+                            <div class="citsats-option">
+                                <span class="citsats-option-label">NO</span>
+                                <div class="bubble-tiny"></div>
+                            </div>
+                        </div>
+                    </div>
+                @endfor
+            </div>
         </div>
     </div>
 
@@ -231,24 +281,22 @@
     <div class="three-column-layout">
         @foreach($columns as $columnIndex => $columnQuestions)
             <div class="column">
+                <!-- Column Header with A, B, C, D, E labels -->
+                <div class="column-header">
+                    <div class="column-header-label">#</div>
+                    <div class="column-header-options">
+                        <div class="option-label">A</div>
+                        <div class="option-label">B</div>
+                        <div class="option-label">C</div>
+                        <div class="option-label">D</div>
+                        <div class="option-label">E</div>
+                    </div>
+                </div>
+                
                 @php 
-                    $questionCount = 0; 
                     $conditionalSectionsAdded = [];
                 @endphp
                 @foreach($columnQuestions as $number => $questionData)
-                    @php $questionCount++; @endphp
-                    
-                    <!-- Añadir header de bloque cada 10 preguntas -->
-                    @if($questionCount % 10 == 1 && $questionCount > 1)
-                        <!-- Separador a la misma altura en todas las columnas -->
-                        <div class="block-separator" style="display: flex; align-items: center; position: relative;">
-                            <!-- Marcadores de esquina del bloque -->
-                            <div class="block-corner-marker top-left"></div>
-                            <div class="block-corner-marker top-right"></div>
-                            <div class="block-corner-marker bottom-left"></div>
-                            <div class="block-corner-marker bottom-right"></div>
-                        </div>
-                    @endif
                     
                     <!-- Si es pregunta condicional (65-72), añadir SÍ/NO antes -->
                     @if($questionData['type'] == 'conditional' && !in_array($questionData['section_key'], $conditionalSectionsAdded))
@@ -285,6 +333,4 @@
         @endforeach
     </div>
 
-    
-</div>
 @endsection
