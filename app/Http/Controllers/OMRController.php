@@ -22,12 +22,19 @@ class OMRController extends Controller
 
     /**
      * Generate extended folio format: [template_type(2)][organization(3)][person(4)]
+     * For Referencia I, person code is left empty (filled manually later)
      */
     private function generateExtendedFolio(string $templateType, int $organizationFolio, string $personFolio): string
     {
         $typeCode = self::TEMPLATE_TYPES[$templateType] ?? '00';
         $orgCode = str_pad((string) $organizationFolio, 3, '0', STR_PAD_LEFT);
-        $personCode = str_pad($personFolio, 4, '0', STR_PAD_LEFT);
+        
+        // For Referencia I, leave person code empty (to be filled manually)
+        if ($templateType === 'referencia-i') {
+            $personCode = ''; // 4 spaces - no bubbles filled
+        } else {
+            $personCode = str_pad($personFolio, 4, '0', STR_PAD_LEFT);
+        }
 
         return $typeCode.$orgCode.$personCode;
     }

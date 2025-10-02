@@ -9,7 +9,9 @@
     .folio-instructions-row { 
         display: flex; 
         gap: 4mm; 
-        margin-bottom: 3mm; 
+        margin-bottom: 3mm;
+        padding-bottom: 2mm;
+        border-bottom: 1.5px solid black;
         align-items: flex-start; 
     }
     .folio-section { 
@@ -67,9 +69,14 @@
         flex: 1; 
         justify-content: space-between; 
     }
+    .right-side-container {
+        flex: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 2mm;
+        min-width: 0;
+    }
     .instructions { 
-        flex: 2; 
-        min-width: 0; 
         font-size: 6.5px;
         line-height: 1.3;
     }
@@ -79,11 +86,6 @@
         border: 1px solid black; 
         border-radius: 50%; 
         flex-shrink: 0; 
-    }
-    .folio-instructions-row {
-        margin-bottom: 3mm;
-        padding-bottom: 2mm;
-        border-bottom: 1.5px solid black;
     }
     .three-column-layout {
         display: flex;
@@ -100,11 +102,27 @@
         justify-content: space-around;
         font-weight: bold;
         font-size: 6px;
-        background: #f8f8f8;
+        background: #e8e8e8;
         border: 1px solid black;
-        padding: 1mm;
-        margin-bottom: 1.5mm;
+        padding: 1mm 0.5mm;
+        margin-bottom: 2mm;
         text-align: center;
+    }
+    .column-header-label {
+        flex: 1;
+        text-align: center;
+        font-weight: bold;
+    }
+    .column-header-options {
+        display: flex;
+        justify-content: space-around;
+        flex: 5;
+        gap: 0.8mm;
+    }
+    .option-label {
+        flex: 1;
+        font-size: 6px;
+        font-weight: bold;
     }
     .question-row-vertical {
         display: flex;
@@ -133,25 +151,45 @@
         border: 1px solid black;
         border-radius: 50%;
     }
-    .block-separator {
-        height: 3mm;
-        position: relative;
-        margin: 1mm 0;
+    
+    /* CITSATS-s1 Section Styles */
+    .citsats-section {
+        width: 50%;
+        padding: 2mm;
+    }
+    .citsats-title {
+        font-weight: bold;
+        font-size: 7px;
+        margin-bottom: 2mm;
+        text-align: left;
+        margin-left: 2mm;
+    }
+    .citsats-question {
         display: flex;
         align-items: center;
-        justify-content: center;
+        margin-bottom: 1.5mm;
+        font-size: 5.5px;
     }
-    .block-corner-marker {
-        position: absolute;
-        width: 2mm;
-        height: 2.5mm;
-        background: black;
-        z-index: 2;
+    .citsats-number {
+        font-weight: bold;
+        width: 7mm;
+        text-align: center;
+        font-size: 6px;
     }
-    .block-corner-marker.top-left { top: 0; left: 0; }
-    .block-corner-marker.top-right { top: 0; right: 0; }
-    .block-corner-marker.bottom-left { bottom: 0; left: 0; }
-    .block-corner-marker.bottom-right { bottom: 0; right: 0; }
+    .citsats-options {
+        display: flex;
+        gap: 3mm;
+        align-items: center;
+    }
+    .citsats-option {
+        display: flex;
+        align-items: center;
+        gap: 1mm;
+    }
+    .citsats-option-label {
+        font-size: 6px;
+        font-weight: bold;
+    }
 </style>
 
 <div class="folio-instructions-row">
@@ -181,12 +219,35 @@
                 </div>
             @endfor
         </div>
-        <div class="instructions">
-            <h3 style="font-weight: bold; margin-bottom: 3mm; font-size: 8px;">INSTRUCCIONES:</h3>
-            <p style="font-size: 7px;">• Las siguientes preguntas están relacionadas con las actividades que realiza en su trabajo y las condiciones en que las hace.</p>
-            <p style="font-size: 7px;">• Marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
-            <p style="margin-left: 5mm; font-size: 7px;"><strong>Siempre - Casi siempre - Algunas veces - Casi nunca - Nunca</strong></p>
-            <p style="font-size: 7px;">• Es importante que conteste todas las preguntas.</p>
+        
+        <div class="right-side-container">
+            <div class="instructions">
+                <h3 style="font-weight: bold; margin-bottom: 3mm; font-size: 8px;">INSTRUCCIONES:</h3>
+                <p style="font-size: 7px;">• Las siguientes preguntas están relacionadas con las actividades que realiza en su trabajo y las condiciones en que las hace.</p>
+                <p style="font-size: 7px;">• Marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
+                <p style="margin-left: 5mm; font-size: 7px;"><strong>Siempre - Casi siempre - Algunas veces - Casi nunca - Nunca</strong></p>
+                <p style="font-size: 7px;">• Es importante que conteste todas las preguntas.</p>
+            </div>
+            
+            <!-- CITSATS-s1 Section: ocupando solo 1 de las 2 columnas del lado derecho -->
+            <div class="citsats-section">
+                <div class="citsats-title">CITSATS-s1</div>
+                @for($i = 1; $i <= 6; $i++)
+                    <div class="citsats-question">
+                        <div class="citsats-number">{{ $i }}</div>
+                        <div class="citsats-options">
+                            <div class="citsats-option">
+                                <span class="citsats-option-label">SÍ</span>
+                                <div class="bubble-tiny"></div>
+                            </div>
+                            <div class="citsats-option">
+                                <span class="citsats-option-label">NO</span>
+                                <div class="bubble-tiny"></div>
+                            </div>
+                        </div>
+                    </div>
+                @endfor
+            </div>
         </div>
     </div>
 
@@ -220,24 +281,22 @@
     <div class="three-column-layout">
         @foreach($columns as $columnIndex => $columnQuestions)
             <div class="column">
+                <!-- Column Header with A, B, C, D, E labels -->
+                <div class="column-header">
+                    <div class="column-header-label">#</div>
+                    <div class="column-header-options">
+                        <div class="option-label">A</div>
+                        <div class="option-label">B</div>
+                        <div class="option-label">C</div>
+                        <div class="option-label">D</div>
+                        <div class="option-label">E</div>
+                    </div>
+                </div>
+                
                 @php 
-                    $questionCount = 0; 
                     $conditionalSectionsAdded = [];
                 @endphp
                 @foreach($columnQuestions as $number => $questionData)
-                    @php $questionCount++; @endphp
-                    
-                    <!-- Añadir header de bloque cada 10 preguntas -->
-                    @if($questionCount % 10 == 1 && $questionCount > 1)
-                        <!-- Separador a la misma altura en todas las columnas -->
-                        <div class="block-separator" style="display: flex; align-items: center; position: relative;">
-                            <!-- Marcadores de esquina del bloque -->
-                            <div class="block-corner-marker top-left"></div>
-                            <div class="block-corner-marker top-right"></div>
-                            <div class="block-corner-marker bottom-left"></div>
-                            <div class="block-corner-marker bottom-right"></div>
-                        </div>
-                    @endif
                     
                     <!-- Si es pregunta condicional (65-72), añadir SÍ/NO antes -->
                     @if($questionData['type'] == 'conditional' && !in_array($questionData['section_key'], $conditionalSectionsAdded))
