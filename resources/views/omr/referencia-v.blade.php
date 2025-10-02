@@ -5,43 +5,41 @@
 @section('guide-title', 'GUÍA DE REFERENCIA V - DATOS GENERALES DEL TRABAJADOR Y DEL CENTRO DE TRABAJO')
 
 @section('content')
-<!-- Marcadores de referencia en las esquinas -->
-<div class="alignment-marker marker-top-left"></div>
-<div class="alignment-marker marker-top-right"></div>
-<div class="alignment-marker marker-bottom-left"></div>
-<div class="alignment-marker marker-bottom-right"></div>
-
 <style>
-    .page-container { position: relative; margin: 0 auto; padding: 8mm; background: white; font-size: 6px; }
-    .folio-instructions-row { display: flex; gap: 6mm; margin-bottom: 4mm; align-items: flex-start; }
+    .folio-instructions-row { 
+        display: flex; 
+        gap: 4mm; 
+        margin-bottom: 2.5mm; 
+        align-items: flex-start; 
+    }
     .folio-section { 
         border: 2px solid black; 
-        padding: 3mm; 
+        padding: 2mm; 
         background: #f8f8f8; 
         position: relative; 
-        min-width: 60mm; 
-        max-width: 80mm; 
+        min-width: 50mm; 
+        max-width: 65mm; 
         flex: 1; 
     }
     .folio-header { 
         display: flex; 
-        gap: 1.5mm; 
-        margin-bottom: 2mm; 
+        gap: 1mm; 
+        margin-bottom: 1.5mm; 
         align-items: center; 
     }
     .folio-digit-column { 
-        width: 8mm; 
+        width: 6mm; 
         text-align: center; 
         font-weight: bold; 
-        font-size: 7px; 
+        font-size: 6px; 
     }
     .folio-position-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 6px; 
+        font-size: 5px; 
         font-weight: bold; 
         border: 1px solid black; 
-        height: 4mm; 
+        height: 3.5mm; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
@@ -50,67 +48,199 @@
     .folio-row { 
         display: flex; 
         align-items: center; 
-        gap: 1.5mm; 
-        margin-bottom: 1.2mm; 
+        gap: 1mm; 
+        margin-bottom: 1mm; 
         font-size: 5px; 
-        min-height: 3.5mm; 
+        min-height: 3mm; 
     }
     .folio-digit-number { 
         font-weight: bold; 
-        width: 8mm; 
+        width: 6mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 7px; 
+        font-size: 6px; 
     }
     .folio-bubbles-row { 
         display: flex; 
-        gap: 1.5mm; 
+        gap: 1mm; 
         align-items: center; 
         flex: 1; 
         justify-content: space-between; 
     }
-    .instructions { flex: 2; min-width: 0; font-size: 7px; }
-    
-    .folio-instructions-row {
-        margin-bottom: 4mm;
-        padding-bottom: 3mm;
-        border-bottom: 2px solid black;
+    .instructions { 
+        flex: 2; 
+        min-width: 0; 
+        font-size: 6px;
+        line-height: 1.3;
     }
     
-    .three-column-layout { display: flex; gap: 4mm; margin-top: 4mm; }
-    .column { width: 32%; page-break-inside: avoid; }
-    .section-title { font-weight: bold; font-size: 7px; margin-bottom: 2mm; text-align: center; background: #f0f0f0; padding: 1mm; border: 1px solid black; }
-    .demographic-row { display: flex; align-items: center; margin-bottom: 1mm; min-height: 3.5mm; font-size: 6px; }
-    .option-label { font-weight: bold; width: 6mm; text-align: center; flex-shrink: 0; font-size: 6px; margin-right: 1mm; }
-    .option-text { flex: 1; font-size: 6px; margin-right: 1mm; }
-    .bubble-small { width: 2.5mm; height: 2.5mm; border: 1px solid black; border-radius: 50%; flex-shrink: 0; }
+    .folio-instructions-row {
+        margin-bottom: 2.5mm;
+        padding-bottom: 2mm;
+        border-bottom: 1.5px solid black;
+    }
     
-    .age-section { display: flex; gap: 2mm; margin-bottom: 2mm; }
-    .age-column {  }
-    .age-header { font-weight: bold; text-align: center; font-size: 5px; margin-bottom: 1mm; border: 1px solid black; padding: 0.5mm; background: #f0f0f0; }
-    .age-row { display: flex; align-items: center; margin-bottom: 0.8mm; }
-    .age-number { width: 4mm; text-align: center; font-size: 5px; font-weight: bold; }
-    .age-bubbles { display: flex; gap: 0.5mm; margin-left: 1mm; }
+    .three-column-layout { 
+        display: flex; 
+        gap: 2.5mm; 
+        margin-top: 2.5mm; 
+    }
+    .column { 
+        width: 32%; 
+        page-break-inside: avoid; 
+    }
+    .section-title { 
+        font-weight: bold; 
+        font-size: 6px; 
+        margin-bottom: 1.5mm; 
+        text-align: center; 
+        background: #f0f0f0; 
+        padding: 0.8mm; 
+        border: 1px solid black; 
+        line-height: 1.2;
+    }
+    .demographic-row { 
+        display: flex; 
+        align-items: center; 
+        margin-bottom: 0.8mm; 
+        min-height: 3mm; 
+        font-size: 5.5px; 
+    }
+    .option-label { 
+        font-weight: bold; 
+        width: 5mm; 
+        text-align: center; 
+        flex-shrink: 0; 
+        font-size: 5.5px; 
+        margin-right: 0.8mm; 
+    }
+    .option-text { 
+        flex: 1; 
+        font-size: 5.5px; 
+        margin-right: 0.8mm; 
+        line-height: 1.2;
+    }
+    .bubble-small { 
+        width: 2.5mm; 
+        height: 2.5mm; 
+        border: 1px solid black; 
+        border-radius: 50%; 
+        flex-shrink: 0; 
+    }
     
-    .studies-section { margin-bottom: 2mm; }
-    .studies-header { display: flex; gap: 1mm; margin-bottom: 1mm; }
-    .studies-label { flex: 2; font-size: 6px; }
-    .studies-col-header { flex: 1; text-align: center; font-size: 5px; font-weight: bold; border: 1px solid black; padding: 0.5mm; background: #f0f0f0; }
-    .studies-row { display: flex; align-items: center; margin-bottom: 1mm; gap: 1mm; }
-    .studies-text { flex: 2; font-size: 6px; }
-    .studies-option { flex: 1; display: flex; justify-content: center; }
+    .age-section { 
+        display: flex; 
+        gap: 1.5mm; 
+        margin-bottom: 1.5mm; 
+    }
+    .age-column { flex: 1; }
+    .age-header { 
+        font-weight: bold; 
+        text-align: center; 
+        font-size: 5px; 
+        margin-bottom: 0.8mm; 
+        border: 1px solid black; 
+        padding: 0.5mm; 
+        background: #f0f0f0; 
+    }
+    .age-row { 
+        display: flex; 
+        align-items: center; 
+        margin-bottom: 0.6mm; 
+    }
+    .age-number { 
+        width: 4mm; 
+        text-align: center; 
+        font-size: 5px; 
+        font-weight: bold; 
+    }
+    .age-bubbles { 
+        display: flex; 
+        gap: 0.5mm; 
+        margin-left: 0.8mm; 
+    }
     
-    .coding-section { margin-bottom: 2mm; }
-    .coding-title { font-weight: bold; font-size: 6px; margin-bottom: 1mm; }
-    .coding-subtitle { font-size: 5px; margin-bottom: 1mm; font-style: italic; }
-    .coding-grid { display: grid; grid-template-columns: 6mm repeat(5, 1fr); gap: 1mm; margin-bottom: 1mm; }
-    .coding-header { text-align: center; font-size: 5px; font-weight: bold; border: 1px solid black; padding: 0.5mm; background: #f0f0f0; }
-    .coding-row-label { text-align: center; font-weight: bold; font-size: 5px; border: 1px solid black; padding: 0.5mm; background: #f8f8f8; }
-    .coding-cell { display: flex; justify-content: center; align-items: center; }
+    .studies-section { 
+        margin-bottom: 1.5mm; 
+    }
+    .studies-header { 
+        display: flex; 
+        gap: 0.8mm; 
+        margin-bottom: 0.8mm; 
+    }
+    .studies-label { 
+        flex: 2; 
+        font-size: 5.5px; 
+    }
+    .studies-col-header { 
+        flex: 1; 
+        text-align: center; 
+        font-size: 4.5px; 
+        font-weight: bold; 
+        border: 1px solid black; 
+        padding: 0.4mm; 
+        background: #f0f0f0; 
+    }
+    .studies-row { 
+        display: flex; 
+        align-items: center; 
+        margin-bottom: 0.8mm; 
+        gap: 0.8mm; 
+    }
+    .studies-text { 
+        flex: 2; 
+        font-size: 5.5px; 
+        line-height: 1.2;
+    }
+    .studies-option { 
+        flex: 1; 
+        display: flex; 
+        justify-content: center; 
+    }
+    
+    .coding-section { 
+        margin-bottom: 1.5mm; 
+    }
+    .coding-title { 
+        font-weight: bold; 
+        font-size: 5.5px; 
+        margin-bottom: 0.8mm; 
+    }
+    .coding-subtitle { 
+        font-size: 5px; 
+        margin-bottom: 0.8mm; 
+        font-style: italic; 
+    }
+    .coding-grid { 
+        display: grid; 
+        grid-template-columns: 5mm repeat(5, 1fr); 
+        gap: 0.8mm; 
+        margin-bottom: 0.8mm; 
+    }
+    .coding-header { 
+        text-align: center; 
+        font-size: 4.5px; 
+        font-weight: bold; 
+        border: 1px solid black; 
+        padding: 0.4mm; 
+        background: #f0f0f0; 
+    }
+    .coding-row-label { 
+        text-align: center; 
+        font-weight: bold; 
+        font-size: 5px; 
+        border: 1px solid black; 
+        padding: 0.4mm; 
+        background: #f8f8f8; 
+    }
+    .coding-cell { 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+    }
 </style>
 
-<div class="page-container">
-    <div class="folio-instructions-row">
+<div class="folio-instructions-row">
         <div class="folio-section">
             <!-- Header con espacios para escribir los dígitos -->
             <div class="folio-header">
@@ -138,10 +268,10 @@
             @endfor
         </div>
         <div class="instructions">
-            <h3 style="font-weight: bold; margin-bottom: 2mm; font-size: 8px;">INSTRUCCIONES:</h3>
-            <p style="font-size: 7px;">• Las siguientes preguntas están relacionadas con sus datos generales, características sociodemográficas y las del centro de trabajo.</p>
-            <p style="font-size: 7px;">• Para responder marque completamente con tinta azul o negra el círculo de la opción que corresponda a su situación.</p>
-            <p style="font-size: 7px;">• Es importante que conteste todas las preguntas.</p>
+            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 7px;">INSTRUCCIONES:</h3>
+            <p style="font-size: 6px; margin-bottom: 0.8mm;">• Las siguientes preguntas están relacionadas con sus datos generales, características sociodemográficas y las del centro de trabajo.</p>
+            <p style="font-size: 6px; margin-bottom: 0.8mm;">• Para responder marque completamente con tinta azul o negra el círculo de la opción que corresponda a su situación.</p>
+            <p style="font-size: 6px;">• Es importante que conteste todas las preguntas.</p>
         </div>
     </div>
 
@@ -333,6 +463,5 @@
 </div>
     </div>
 </div>
-
 
 @endsection
