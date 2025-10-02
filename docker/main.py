@@ -83,18 +83,38 @@ from alinear_con_marcadores import detectar_marcadores, alinear_imagen, IDEAL_PO
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
-# Determinar qué referencia usar según el folio detectado (si está disponible)
-# Por defecto, usaremos una referencia genérica
-ref_img = cv2.imread("/app/reference-referencia-i.png")
-if ref_img is None:
-    # Fallback a la referencia anterior si no existe la nueva
-    ref_img = cv2.imread("/app/reference-test-page.png")
-    logging.warning("Usando referencia legacy. Considera generar una nueva con generate_reference.py")
-else:
-    logging.info("Usando referencia actualizada: reference-referencia-i.png")
+# Mapeo de template types a archivos de referencia
+REFERENCE_IMAGES = {
+    '01': '/app/reference-referencia-i.png',      # Referencia I
+    '02': '/app/reference-referencia-iii.png',    # Referencia III
+    '03': '/app/reference-referencia-v.png',      # Referencia V
+    '04': '/app/reference-referencia-i.png',      # Escala Cisneros (usar Ref I como fallback)
+}
 
-ref_marcadores = detectar_marcadores(ref_img, debug_path=None, n_points=6)
-ref_esquinas = [ref_marcadores[0], ref_marcadores[1], ref_marcadores[4], ref_marcadores[5]]
+def get_reference_image(folio):
+    """
+    Obtiene la imagen de referencia correcta según el template type del folio.
+    Los primeros 2 dígitos del folio indican el template type.
+    """
+    if not folio or len(folio) < 2:
+        logging.warning(f"Folio inválido '{folio}', usando referencia por defecto")
+        return cv2.imread('/app/reference-referencia-i.png')
+    
+    template_type = folio[:2]
+    ref_path = REFERENCE_IMAGES.get(template_type, '/app/reference-referencia-i.png')
+    
+    ref_img = cv2.imread(ref_path)
+    if ref_img is None:
+        logging.warning(f"No se pudo cargar {ref_path}, usando referencia por defecto")
+        ref_img = cv2.imread('/app/reference-referencia-i.png')
+        if ref_img is None:
+            # Último fallback
+            ref_img = cv2.imread('/app/reference-test-page.png')
+            logging.warning("Usando referencia legacy")
+    else:
+        logging.info(f"Usando referencia para template {template_type}: {ref_path}")
+    
+    return ref_img
 
 aligned_image_files = []
 outputs_aligned_folder = "/app/outputs_aligned"
@@ -112,8 +132,17 @@ for image_file in image_files:
             import shutil
             shutil.copy(image_file, original_save_path)
 #            logging.info(f"Imagen original guardada en: {original_save_path}")
-        # --- Paso 1: Alinear la imagen ---
+        
+        # --- Paso 1: Detectar folio preliminar para determinar qué referencia usar ---
         img = cv2.imread(image_file)
+        preliminary_folio = detect_folio(image_file, detector)
+        
+        # --- Paso 2: Seleccionar referencia correcta según template type ---
+        ref_img = get_reference_image(preliminary_folio)
+        ref_marcadores = detectar_marcadores(ref_img, debug_path=None, n_points=6)
+        ref_esquinas = [ref_marcadores[0], ref_marcadores[1], ref_marcadores[4], ref_marcadores[5]]
+        
+        # --- Paso 3: Alinear la imagen con la referencia correcta ---
         img_marcadores = detectar_marcadores(img, debug_path=None, n_points=6)
         img_esquinas = [img_marcadores[0], img_marcadores[1], img_marcadores[4], img_marcadores[5]]
         alineada = alinear_imagen(img, ref_esquinas, img_esquinas, (ref_img.shape[1], ref_img.shape[0]))
@@ -133,12 +162,12 @@ for image_file in aligned_image_files:
     # Detectar el folio a partir de la imagen alineada
     folio = detect_folio(image_file, detector)
 
-    # Validar que el folio inicie con 12, 13, 14 o 17
-    valid_prefixes = ['12', '13', '14', '17']
+    # Validar que el folio inicie con 01, 02, 03, 04 (template types)
+    valid_prefixes = ['01', '02', '03', '04']
     is_valid = any(folio.startswith(prefix) for prefix in valid_prefixes)
     
     if not is_valid:
-        logging.warning(f"Imagen {image_file} skipeada: folio '{folio}' no inicia con {', '.join(valid_prefixes)}.")
+        logging.warning(f"Imagen {image_file} skipeada: folio '{folio}' no inicia con template válido {', '.join(valid_prefixes)}.")
         continue
     
     logging.info(f"Folio válido detectado: {folio}")
@@ -162,27 +191,28 @@ for image_file in aligned_image_files:
         except Exception as e:
             pass  # O puedes loguear el error si lo deseas
 
-    # Seleccionar la configuración de evaluación según el prefijo del folio
-    if folio.startswith("12"):
-        # Referencia de evaluacion principal (Referencia III)
-        evaluation_config = config.evaluation_01
-        logging.info(f"Folio {folio} → Referencia III")
-    elif folio.startswith("13"):
-        # Referencia de acontecimientos traumáticos (Referencia I)
+    # Seleccionar la configuración de evaluación según el template type (primeros 2 dígitos)
+    template_type = folio[:2]
+    
+    if template_type == "01":
+        # Referencia I - Acontecimientos traumáticos
         evaluation_config = config.reference_i
-        logging.info(f"Folio {folio} → Referencia I")
-    elif folio.startswith("14"):
+        logging.info(f"Folio {folio} → Referencia I (Acontecimientos Traumáticos)")
+    elif template_type == "02":
+        # Referencia III - Evaluación principal
+        evaluation_config = config.evaluation_01
+        logging.info(f"Folio {folio} → Referencia III (Evaluación Principal)")
+    elif template_type == "03":
+        # Referencia V - Datos del evaluado
+        evaluation_config = config.reference_v
+        logging.info(f"Folio {folio} → Referencia V (Datos Demográficos)")
+    elif template_type == "04":
         # Escala Cisneros
         evaluation_config = config.escala_cisneros if hasattr(config, 'escala_cisneros') else config.evaluation_01
-        logging.info(f"Folio {folio} → Escala Cisneros")
-    elif folio.startswith("17"):
-        # Datos del evaluado (Referencia V)
-        evaluation_config = config.reference_v
-        logging.info(f"Folio {folio} → Referencia V")
+        logging.info(f"Folio {folio} → Escala Cisneros (Mobbing)")
     else:
-        # Si el folio no empieza con 12, 13, 14 o 17
-        logging.warning(f"Folio {folio} no hace match con ninguna referencia")
-        continue
+        logging.warning(f"Template type '{template_type}' no reconocido, usando evaluación por defecto")
+        evaluation_config = config.evaluation_01
 
     # Obtener las respuestas de la evaluación y guardar el JSON
     get_main_answers(new_image_path, detector, evaluation_config, folio)
