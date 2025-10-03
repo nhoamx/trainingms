@@ -17,9 +17,18 @@ IDEAL_POSITIONS = {
 
 LABELS = ["TL", "TR", "ML", "MR", "BL", "BR"]
 
+# Para documentos con solo 4 marcadores (esquinas)
+LABELS_4_CORNERS = ["TL", "TR", "BL", "BR"]
+IDEAL_POSITIONS_4_CORNERS = {
+    "TL": (200, 200),      # top-left
+    "TR": (2281, 200),     # top-right
+    "BL": (200, 3310),     # bottom-left
+    "BR": (2281, 3310),    # bottom-right
+}
+
 # === Configuración de recorte ===
-CROP_TOP = 430
-CROP_BOTTOM = 250
+CROP_TOP = 50      # Reducido drasticamente de 430 a 50
+CROP_BOTTOM = 250  # Mantener recorte inferior
 
 def recortar_imagen(imagen, top=CROP_TOP, bottom=CROP_BOTTOM):
     """
@@ -50,6 +59,93 @@ def ajustar_coordenadas_marcadores(marcadores, offset_y):
     for (x, y) in marcadores:
         marcadores_ajustados.append((x, y + offset_y))
     return marcadores_ajustados
+
+def detectar_marcadores_4_esquinas(imagen, umbral=150, min_area=3000, debug_path=None):
+    """
+    Detecta solo los 4 marcadores de las esquinas (TL, TR, BL, BR).
+    """
+    # Recortar la imagen
+    imagen_recortada, offset_y = recortar_imagen(imagen)
+    
+    # Detectar en la imagen recortada
+    gris = cv2.cvtColor(imagen_recortada, cv2.COLOR_BGR2GRAY)
+    _, binaria = cv2.threshold(gris, umbral, 255, cv2.THRESH_BINARY_INV)
+    contornos, _ = cv2.findContours(binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    print(f"Contornos detectados en imagen recortada: {len(contornos)}")
+    
+    marcadores = []
+    areas = []
+    for c in contornos:
+        area = cv2.contourArea(c)
+        if area > min_area:
+            M = cv2.moments(c)
+            if M["m00"] != 0:
+                cx = int(M["m10"] / M["m00"])
+                cy = int(M["m01"] / M["m00"])
+                marcadores.append((cx, cy))
+                areas.append(area)
+    
+    print(f"Marcadores filtrados por área en imagen recortada: {len(marcadores)}")
+    
+    # Buscar los centros detectados más cercanos a las posiciones ideales (solo 4 esquinas)
+    if len(marcadores) < 4:
+        raise Exception(f"No se detectaron al menos 4 marcadores esquina, se detectaron {len(marcadores)}")
+    
+    # Ajustar las posiciones ideales para la imagen recortada
+    ideal_positions_ajustadas = {}
+    for label, (ideal_x, ideal_y) in IDEAL_POSITIONS_4_CORNERS.items():
+        # Escalar las posiciones ideales a las dimensiones de la imagen recortada
+        scale_x = imagen_recortada.shape[1] / 2481
+        scale_y = imagen_recortada.shape[0] / (3510 - CROP_TOP - CROP_BOTTOM)
+        
+        scaled_x = int(ideal_x * scale_x)
+        # Ajustar la Y considerando el recorte superior
+        scaled_y = int((ideal_y - CROP_TOP) * scale_y)
+        
+        ideal_positions_ajustadas[label] = (scaled_x, scaled_y)
+    
+    # Para cada posición ideal, buscar el marcador detectado más cercano (sin repetir)
+    ordered = []
+    marcadores_restantes = marcadores.copy()
+    for label in LABELS_4_CORNERS:
+        ideal = np.array(ideal_positions_ajustadas[label])
+        # Buscar el más cercano
+        dists = [np.linalg.norm(ideal - np.array(pt)) for pt in marcadores_restantes]
+        idx_min = int(np.argmin(dists))
+        ordered.append(marcadores_restantes[idx_min])
+        marcadores_restantes.pop(idx_min)
+    
+    # Ajustar coordenadas a la imagen original
+    ordered_original = ajustar_coordenadas_marcadores(ordered, offset_y)
+    
+    print("Marcadores 4 esquinas seleccionados (x, y):", list(zip(LABELS_4_CORNERS, ordered_original)))
+    
+    # Imagen de depuración
+    if debug_path is not None:
+        debug_img = imagen.copy()  # Usar imagen original para debug
+        
+        # Dibujar líneas de recorte
+        cv2.line(debug_img, (0, CROP_TOP), (imagen.shape[1], CROP_TOP), (255, 255, 0), 3)
+        cv2.line(debug_img, (0, imagen.shape[0] - CROP_BOTTOM), (imagen.shape[1], imagen.shape[0] - CROP_BOTTOM), (255, 255, 0), 3)
+        cv2.putText(debug_img, "4 ESQUINAS MODE", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 0), 3)
+        
+        # Dibujar marcadores detectados
+        for i, (cx, cy) in enumerate(ordered_original):
+            cv2.circle(debug_img, (cx, cy), 30, (0, 0, 255), 5)
+            cv2.putText(debug_img, LABELS_4_CORNERS[i], (cx+10, cy-10), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 0, 0), 4)
+            
+            # Dibuja la posición ideal también
+            ideal_x, ideal_y = IDEAL_POSITIONS_4_CORNERS[LABELS_4_CORNERS[i]]
+            scale_x = imagen.shape[1] / 2481
+            scale_y = imagen.shape[0] / 3510
+            ix = int(ideal_x * scale_x)
+            iy = int(ideal_y * scale_y)
+            cv2.circle(debug_img, (ix, iy), 15, (0, 255, 0), 3)
+        
+        cv2.imwrite(debug_path, debug_img)
+        print(f"Imagen de depuración (4 esquinas) guardada en {debug_path}")
+    
+    return ordered_original
 
 def detectar_marcadores(imagen, umbral=150, min_area=3000, debug_path=None, n_points=6):
     """

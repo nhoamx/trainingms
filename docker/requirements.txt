@@ -6,3 +6,4 @@ imutils
 scipy
 pdf2image
 PyPDF2
+flask

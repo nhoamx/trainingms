@@ -11,3 +11,5 @@ services:
       - .:/app
     working_dir: /
     container_name: training-and-ms
+    ports:
+      - "5000:5000"
