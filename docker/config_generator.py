@@ -136,21 +136,71 @@ def main():
     print("="*60)
     print("  GENERADOR DE CONFIGURACIÓN OMR")
     print("="*60)
+    print("\n¿Para qué TEMPLATE quieres generar la configuración?\n")
+    print("Templates disponibles:")
+    print("  01 - Referencia I (Acontecimientos Traumáticos)")
+    print("  02 - Referencia III (Evaluación Principal)")
+    print("  03 - Referencia V (Datos Demográficos)")
+    print("  04 - Escala Cisneros (Mobbing)")
+    print()
+    
+    template = input("Selecciona template (01/02/03/04): ").strip()
+    
+    template_names = {
+        '01': 'Referencia I',
+        '02': 'Referencia III',
+        '03': 'Referencia V',
+        '04': 'Escala Cisneros'
+    }
+    
+    if template not in template_names:
+        print("❌ Template inválido")
+        return
+    
+    print(f"\n📋 Generando configuración para: {template_names[template]}")
+    print("="*60)
     print("\nSelecciona qué tipo de configuración quieres generar:\n")
-    print("1. Folio (9 columnas x 10 dígitos)")
-    print("2. Evaluación con 5 opciones (A, B, C, D, E)")
-    print("3. Preguntas SÍ/NO")
-    print("4. Salir")
+    print("1. Folio (9 columnas x 10 dígitos) - COMPARTIDO por todos los templates")
+    print("2. Preguntas con 5 opciones (A, B, C, D, E) - Para Ref III")
+    print("3. Preguntas SÍ/NO - Para Ref I o CITSATS-s1")
+    print("4. Datos demográficos - Para Ref V")
+    print("5. Salir")
     
     choice = input("\nOpción: ").strip()
     
+    config_var_names = {
+        '01': 'reference_i',
+        '02': 'referencia_iii',
+        '03': 'reference_v',
+        '04': 'escala_cisneros'
+    }
+    
     if choice == "1":
         generate_folio_config()
+        print(f"\n💡 NOTA: El folio es COMPARTIDO por todos los templates.")
+        print("   Guárdalo como 'folio_configuration' en config.py")
     elif choice == "2":
+        if template not in ['02', '04']:
+            print(f"⚠️  ADVERTENCIA: {template_names[template]} normalmente NO usa 5 opciones")
+            if input("¿Continuar de todos modos? (s/n): ").lower() != 's':
+                return
         generate_evaluation_config()
+        print(f"\n💡 Guárdalo como '{config_var_names[template]}' en config.py")
     elif choice == "3":
+        if template not in ['01']:
+            print(f"💡 Generando preguntas SÍ/NO para {template_names[template]}")
+            if template == '02':
+                print("   (Probablemente para sección CITSATS-s1)")
         generate_yesno_config()
+        print(f"\n💡 Guárdalo como '{config_var_names[template]}' en config.py")
     elif choice == "4":
+        if template != '03':
+            print(f"⚠️  ADVERTENCIA: {template_names[template]} normalmente NO usa datos demográficos")
+            if input("¿Continuar de todos modos? (s/n): ").lower() != 's':
+                return
+        print("💡 Para datos demográficos, usa el formato de reference_v en config.py")
+        print("   Cada sección (sexo, edad, etc.) tiene su propia estructura")
+    elif choice == "5":
         print("Saliendo...")
         sys.exit(0)
     else:

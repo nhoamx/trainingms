@@ -10,40 +10,14 @@ Este documento explica cómo calibrar las coordenadas de las burbujas en los tem
 
 ## 🎯 Estructura del archivo `config.py`
 
-El archivo `docker/config.py` contiene las configuraciones para cada template:
+El archivo `docker/config.py` contiene configuraciones **separadas** para cada template:
 
-### 1. **folio_configuration**
-Define las 9 columnas del folio (F1-F9), cada una con 10 burbujas (0-9)
+### **Configuración Compartida**
+- **`folio_configuration`** - Usado por TODOS los templates (9 columnas x 10 dígitos)
 
-```python
-folio_configuration = {
-    'F1': {  # Primera columna del folio (Template Type - dígito 1)
-        '0': (x, y, width, height),  # Coordenadas de la burbuja para el dígito 0
-        '1': (x, y, width, height),  # Coordenadas de la burbuja para el dígito 1
-        # ... hasta '9'
-    },
-    'F2': { ... },  # Segunda columna (Template Type - dígito 2)
-    # ... hasta F9
-}
-```
+### **Configuraciones Específicas por Template**
 
-### 2. **evaluation_01** (Referencia III)
-Define las preguntas principales con 5 opciones cada una (A, B, C, D, E)
-
-```python
-evaluation_01 = {
-    '1': {  # Pregunta 1
-        'A': (x, y, width, height),  # Siempre
-        'B': (x, y, width, height),  # Casi siempre
-        'C': (x, y, width, height),  # Algunas veces
-        'D': (x, y, width, height),  # Casi nunca
-        'E': (x, y, width, height),  # Nunca
-    },
-    # ... hasta la última pregunta
-}
-```
-
-### 3. **reference_i** (Referencia I - Acontecimientos Traumáticos)
+#### **Template 01: `reference_i`** (Referencia I - Acontecimientos Traumáticos)
 Define 24 preguntas con 2 opciones (SÍ/NO)
 
 ```python
@@ -56,8 +30,32 @@ reference_i = {
 }
 ```
 
-### 4. **reference_v** (Referencia V - Datos Demográficos)
-Define secciones demográficas variadas (edad, género, estado civil, etc.)
+#### **Template 02: `referencia_iii`** (Referencia III - Evaluación Principal)
+Define ~46 preguntas con 5 opciones cada una (A, B, C, D, E) + CITSATS-s1
+
+```python
+referencia_iii = {
+    # Preguntas principales
+    '1': {
+        'A': (x, y, width, height),  # Siempre
+        'B': (x, y, width, height),  # Casi siempre
+        'C': (x, y, width, height),  # Algunas veces
+        'D': (x, y, width, height),  # Casi nunca
+        'E': (x, y, width, height),  # Nunca
+    },
+    # ... más preguntas
+    
+    # Sección CITSATS-s1 (a añadir)
+    'CITSATS_1': {
+        'SI': (x, y, width, height),
+        'NO': (x, y, width, height),
+    },
+    # ... hasta CITSATS_6
+}
+```
+
+#### **Template 03: `reference_v`** (Referencia V - Datos Demográficos)
+Define secciones demográficas variadas con diferentes formatos
 
 ```python
 reference_v = {
@@ -70,8 +68,22 @@ reference_v = {
         '20-24': (x, y, width, height),
         # ... otros rangos
     },
-    # ... otras secciones
+    'estado_civil': {
+        'soltero': (x, y, width, height),
+        'casado': (x, y, width, height),
+        # ... otros estados
+    },
+    # ... otras secciones (escolaridad, ocupación, jornada, etc.)
 }
+```
+
+#### **Template 04: `escala_cisneros`** (Escala Cisneros - Mobbing)
+Por ahora usa la misma estructura que Referencia III (a definir después)
+
+### **Aliases de Compatibilidad**
+```python
+# Alias para código legacy
+evaluation_01 = referencia_iii
 ```
 
 ## 🛠️ Proceso de Calibración
