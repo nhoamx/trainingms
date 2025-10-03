@@ -165,16 +165,11 @@
             font-weight: bold;
             margin: 10mm 0 5mm 0;
             text-align: center;
-            background: #e0e0e0;
             padding: 2mm;
             border: 1px solid black;
         }
 
         .instructions {
-            background: #f8f8f8;
-            border: 1px solid #ccc;
-            padding: 3mm;
-            margin-bottom: 5mm;
             font-size: 10px;
         }
 
