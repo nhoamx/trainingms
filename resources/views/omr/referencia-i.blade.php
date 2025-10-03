@@ -15,7 +15,6 @@
     .folio-section { 
         border: 2px solid black; 
         padding: 2mm; 
-        background: #f8f8f8; 
         position: relative; 
         min-width: 55mm; 
         max-width: 70mm; 
@@ -36,7 +35,7 @@
     .folio-position-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 5px; 
+        font-size: 10px; 
         font-weight: bold; 
         border: 1px solid black; 
         height: 3.5mm; 
@@ -50,7 +49,7 @@
         align-items: center; 
         gap: 1mm; 
         margin-bottom: 1mm; 
-        font-size: 5px; 
+        font-size: 10px; 
         min-height: 3mm; 
     }
     .folio-digit-number { 
@@ -58,7 +57,7 @@
         width: 6mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 6px; 
+        font-size: 10px; 
     }
     .folio-bubbles-row { 
         display: flex; 
@@ -70,23 +69,22 @@
     .instructions { 
         flex: 2; 
         min-width: 0; 
-        font-size: 6.5px;
+        font-size: 7.5px;
         line-height: 1.3;
     }
     .bubble-small { 
-        width: 3.5mm; 
-        height: 3.5mm; 
-        border: 1px solid black; 
+        width: 4.5mm; 
+        height: 4.5mm; 
+        border: 1.5px solid black; 
         border-radius: 50%; 
         flex-shrink: 0; 
     }
     .folio-instructions-row {
-        margin-bottom: 3mm;
-        padding-bottom: 2mm;
-        border-bottom: 1.5px solid black;
+        margin-bottom: 0mm;
+        padding-bottom: 0mm;
     }
     .content-section {
-        margin-top: 2mm;
+        margin-top: 0mm;
     }
     .question-row {
         display: flex;
@@ -98,12 +96,12 @@
         width: 6mm;
         font-weight: bold;
         flex-shrink: 0;
-        font-size: 6px;
+        font-size: 12px;
     }
     .question-text {
         flex: 1;
         margin-right: 3mm;
-        font-size: 6px;
+        font-size: 12px;
         line-height: 1.2;
     }
     .option-group {
@@ -113,20 +111,20 @@
         margin: 0 1.5mm;
     }
     .option-label {
-        font-size: 6px;
+        font-size: 12px;
         font-weight: bold;
     }
     .bubble {
-        width: 4mm;
-        height: 4mm;
-        border: 1px solid black;
+        width: 5mm;
+        height: 5mm;
+        border: 1.5px solid black;
         border-radius: 50%;
         flex-shrink: 0;
     }
     .section-title {
         font-weight: bold;
         margin-bottom: 2mm;
-        font-size: 8px;
+        font-size: 9px;
         text-align: center;
     }
 </style>
@@ -163,12 +161,12 @@
         @endfor
         </div>
         <div class="instructions">
-            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 7px;">INSTRUCCIONES:</h3>
-            <p style="font-size: 6px; margin-bottom: 0.8mm;">• Las siguientes preguntas están relacionadas con las situaciones que ha experimentado durante o con motivo del trabajo en las últimas 4 semanas.</p>
-            <p style="font-size: 6px; margin-bottom: 0.8mm;">• Para responder las preguntas marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
-            <p style="margin-left: 3mm; font-size: 6px; margin-bottom: 0.8mm;"><strong>SÍ</strong> = Si experimentó la situación que se pregunta</p>
-            <p style="margin-left: 3mm; font-size: 6px; margin-bottom: 0.8mm;"><strong>NO</strong> = Si NO experimentó la situación que se pregunta</p>
-            <p style="font-size: 6px;">• Es importante que conteste todas las preguntas.</p>
+            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 13px;">INSTRUCCIONES:</h3>
+            <p style="font-size: 12px; margin-bottom: 0.8mm;">• Las siguientes preguntas están relacionadas con las situaciones que ha experimentado durante o con motivo del trabajo en las últimas 4 semanas.</p>
+            <p style="font-size: 12px; margin-bottom: 0.8mm;">• Para responder las preguntas marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
+            <p style="margin-left: 3mm; font-size: 12px; margin-bottom: 0.8mm;"><strong>SÍ</strong> = Si experimentó la situación que se pregunta</p>
+            <p style="margin-left: 3mm; font-size: 12px; margin-bottom: 0.8mm;"><strong>NO</strong> = Si NO experimentó la situación que se pregunta</p>
+            <p style="font-size: 12px;">• Es importante que conteste todas las preguntas.</p>
         </div>
     </div>
 

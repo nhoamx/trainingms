@@ -17,7 +17,6 @@
     .folio-section { 
         border: 2px solid black; 
         padding: 2mm; 
-        background: #f8f8f8; 
         position: relative; 
         min-width: 55mm; 
         max-width: 70mm; 
@@ -38,7 +37,7 @@
     .folio-position-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 5px; 
+        font-size: 10px; 
         font-weight: bold; 
         border: 1px solid black; 
         height: 3.5mm; 
@@ -60,7 +59,7 @@
         width: 6mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 6px; 
+        font-size: 10px; 
     }
     .folio-bubbles-row { 
         display: flex; 
@@ -77,13 +76,13 @@
         min-width: 0;
     }
     .instructions { 
-        font-size: 6.5px;
+        font-size: 7.5px;
         line-height: 1.3;
     }
     .bubble-small { 
-        width: 3.5mm; 
-        height: 3.5mm; 
-        border: 1px solid black; 
+        width: 4.5mm; 
+        height: 4.5mm; 
+        border: 1.5px solid black; 
         border-radius: 50%; 
         flex-shrink: 0; 
     }
@@ -101,8 +100,7 @@
         display: flex;
         justify-content: space-around;
         font-weight: bold;
-        font-size: 6px;
-        background: #e8e8e8;
+        font-size: 7px;
         border: 1px solid black;
         padding: 1mm 0.5mm;
         margin-bottom: 2mm;
@@ -121,14 +119,14 @@
     }
     .option-label {
         flex: 1;
-        font-size: 6px;
+        font-size: 11px;
         font-weight: bold;
     }
     .question-row-vertical {
         display: flex;
         align-items: center;
         margin-bottom: 1mm;
-        font-size: 5.5px;
+        font-size: 6.5px;
         min-height: 3.5mm;
     }
     .question-number-vertical {
@@ -136,7 +134,7 @@
         width: 7mm;
         text-align: center;
         flex-shrink: 0;
-        font-size: 6px;
+        font-size: 11px;
     }
     .answers-vertical {
         display: flex;
@@ -146,9 +144,9 @@
         justify-content: space-around;
     }
     .bubble-tiny {
-        width: 3.5mm;
-        height: 3.5mm;
-        border: 1px solid black;
+        width: 4.5mm;
+        height: 4.5mm;
+        border: 1.5px solid black;
         border-radius: 50%;
     }
     
@@ -159,7 +157,7 @@
     }
     .citsats-title {
         font-weight: bold;
-        font-size: 7px;
+        font-size: 11px;
         margin-bottom: 2mm;
         text-align: left;
         margin-left: 2mm;
@@ -168,13 +166,13 @@
         display: flex;
         align-items: center;
         margin-bottom: 1.5mm;
-        font-size: 5.5px;
+        font-size: 6.5px;
     }
     .citsats-number {
         font-weight: bold;
         width: 7mm;
         text-align: center;
-        font-size: 6px;
+        font-size: 7px;
     }
     .citsats-options {
         display: flex;
@@ -187,7 +185,7 @@
         gap: 1mm;
     }
     .citsats-option-label {
-        font-size: 6px;
+        font-size: 11px;
         font-weight: bold;
     }
 </style>
@@ -222,11 +220,11 @@
         
         <div class="right-side-container">
             <div class="instructions">
-                <h3 style="font-weight: bold; margin-bottom: 3mm; font-size: 8px;">INSTRUCCIONES:</h3>
-                <p style="font-size: 7px;">• Las siguientes preguntas están relacionadas con las actividades que realiza en su trabajo y las condiciones en que las hace.</p>
-                <p style="font-size: 7px;">• Marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
-                <p style="margin-left: 5mm; font-size: 7px;"><strong>Siempre - Casi siempre - Algunas veces - Casi nunca - Nunca</strong></p>
-                <p style="font-size: 7px;">• Es importante que conteste todas las preguntas.</p>
+                <h3 style="font-weight: bold; font-size: 10px;">INSTRUCCIONES:</h3>
+                <p style="font-size: 10px;">• Las siguientes preguntas están relacionadas con las actividades que realiza en su trabajo y las condiciones en que las hace.</p>
+                <p style="font-size: 10px;">• Marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
+                <p style="margin-left: 5mm; font-size: 10px;"><strong>Siempre - Casi siempre - Algunas veces - Casi nunca - Nunca</strong></p>
+                <p style="font-size: 10px;">• Es importante que conteste todas las preguntas.</p>
             </div>
             
             <!-- CITSATS-s1 Section: ocupando solo 1 de las 2 columnas del lado derecho -->
@@ -306,11 +304,11 @@
                                 <div style="display: flex; gap: 4mm; align-items: center;">
                                     <div></div>
                                     <div style="display: flex; align-items: center; gap: 1mm;">
-                                        <span style="font-size: 6px; font-weight: bold;">SÍ</span>
+                                        <span style="font-size: 12px; font-weight: bold;">SÍ</span>
                                         <div class="bubble-tiny"></div>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 1mm;">
-                                        <span style="font-size: 6px; font-weight: bold;">NO</span>
+                                        <span style="font-size: 12px; font-weight: bold;">NO</span>
                                         <div class="bubble-tiny"></div>
                                     </div>
                                 </div>

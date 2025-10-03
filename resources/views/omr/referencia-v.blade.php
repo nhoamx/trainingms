@@ -15,7 +15,6 @@
     .folio-section { 
         border: 2px solid black; 
         padding: 2mm; 
-        background: #f8f8f8; 
         position: relative; 
         min-width: 50mm; 
         max-width: 65mm; 
@@ -36,7 +35,7 @@
     .folio-position-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 5px; 
+        font-size: 10px; 
         font-weight: bold; 
         border: 1px solid black; 
         height: 3.5mm; 
@@ -50,7 +49,7 @@
         align-items: center; 
         gap: 1mm; 
         margin-bottom: 1mm; 
-        font-size: 5px; 
+        font-size: 10px; 
         min-height: 3mm; 
     }
     .folio-digit-number { 
@@ -58,7 +57,7 @@
         width: 6mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 6px; 
+        font-size: 10px; 
     }
     .folio-bubbles-row { 
         display: flex; 
@@ -70,7 +69,7 @@
     .instructions { 
         flex: 2; 
         min-width: 0; 
-        font-size: 6px;
+        font-size: 7px;
         line-height: 1.3;
     }
     
@@ -91,10 +90,10 @@
     }
     .section-title { 
         font-weight: bold; 
-        font-size: 6px; 
+        font-size: 10px; 
         margin-bottom: 1.5mm; 
+        margin-top: 0mm;
         text-align: center; 
-        background: #f0f0f0; 
         padding: 0.8mm; 
         border: 1px solid black; 
         line-height: 1.2;
@@ -104,26 +103,27 @@
         align-items: center; 
         margin-bottom: 0.8mm; 
         min-height: 3mm; 
-        font-size: 5.5px; 
+        font-size: 6.5px; 
     }
     .option-label { 
         font-weight: bold; 
         width: 5mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 5.5px; 
+        font-size: 10px; 
         margin-right: 0.8mm; 
     }
     .option-text { 
         flex: 1; 
-        font-size: 5.5px; 
+        font-size: 10px; 
         margin-right: 0.8mm; 
+        margin-left: 0.8mm;
         line-height: 1.2;
     }
     .bubble-small { 
-        width: 3.5mm; 
-        height: 3.5mm; 
-        border: 1px solid black; 
+        width: 4.5mm; 
+        height: 4.5mm; 
+        border: 1.5px solid black; 
         border-radius: 50%; 
         flex-shrink: 0; 
     }
@@ -137,11 +137,10 @@
     .age-header { 
         font-weight: bold; 
         text-align: center; 
-        font-size: 5px; 
+        font-size: 6px; 
         margin-bottom: 0.8mm; 
         border: 1px solid black; 
         padding: 0.5mm; 
-        background: #f0f0f0; 
     }
     .age-row { 
         display: flex; 
@@ -151,7 +150,7 @@
     .age-number { 
         width: 4mm; 
         text-align: center; 
-        font-size: 5px; 
+        font-size: 10px; 
         font-weight: bold; 
     }
     .age-bubbles { 
@@ -170,16 +169,15 @@
     }
     .studies-label { 
         flex: 2; 
-        font-size: 5.5px; 
+        font-size: 6.5px; 
     }
     .studies-col-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 4.5px; 
+        font-size: 9px; 
         font-weight: bold; 
         border: 1px solid black; 
         padding: 0.4mm; 
-        background: #f0f0f0; 
     }
     .studies-row { 
         display: flex; 
@@ -189,7 +187,7 @@
     }
     .studies-text { 
         flex: 2; 
-        font-size: 5.5px; 
+        font-size: 6.5px; 
         line-height: 1.2;
     }
     .studies-option { 
@@ -203,11 +201,11 @@
     }
     .coding-title { 
         font-weight: bold; 
-        font-size: 5.5px; 
+        font-size: 10px; 
         margin-bottom: 0.8mm; 
     }
     .coding-subtitle { 
-        font-size: 5px; 
+        font-size: 10px; 
         margin-bottom: 0.8mm; 
         font-style: italic; 
     }
@@ -219,19 +217,17 @@
     }
     .coding-header { 
         text-align: center; 
-        font-size: 4.5px; 
+        font-size: 10px; 
         font-weight: bold; 
         border: 1px solid black; 
         padding: 0.4mm; 
-        background: #f0f0f0; 
     }
     .coding-row-label { 
         text-align: center; 
         font-weight: bold; 
-        font-size: 5px; 
+        font-size: 10px; 
         border: 1px solid black; 
         padding: 0.4mm; 
-        background: #f8f8f8; 
     }
     .coding-cell { 
         display: flex; 
@@ -268,10 +264,10 @@
             @endfor
         </div>
         <div class="instructions">
-            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 7px;">INSTRUCCIONES:</h3>
-            <p style="font-size: 6px; margin-bottom: 0.8mm;">• Las siguientes preguntas están relacionadas con sus datos generales, características sociodemográficas y las del centro de trabajo.</p>
-            <p style="font-size: 6px; margin-bottom: 0.8mm;">• Para responder marque completamente con tinta azul o negra el círculo de la opción que corresponda a su situación.</p>
-            <p style="font-size: 6px;">• Es importante que conteste todas las preguntas.</p>
+            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 10px;">INSTRUCCIONES:</h3>
+            <p style="font-size: 10px; margin-bottom: 0.8mm;">• Las siguientes preguntas están relacionadas con sus datos generales, características sociodemográficas y las del centro de trabajo.</p>
+            <p style="font-size: 10px; margin-bottom: 0.8mm;">• Para responder marque completamente con tinta azul o negra el círculo de la opción que corresponda a su situación.</p>
+            <p style="font-size: 10px;">• Es importante que conteste todas las preguntas.</p>
         </div>
     </div>
 
