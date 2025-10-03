@@ -18,17 +18,23 @@ def detect_folio(image_file, detector):
     Detecta el folio a partir de la imagen usando la configuración de folio.
     Retorna el folio como string o "unknown" en caso de error.
     """
+    import logging
     try:
+        logging.info(f"Intentando detectar folio en {image_file}")
         folio_data = detector.detect_bubbles(image_file, config.folio_configuration)
+        logging.debug(f"Datos de folio detectados: {folio_data}")
+        
         # Combinar los valores detectados en un único string
         folio = "".join(str(value) for value in folio_data.values() if value is not None)
-        print(f"Folio detectado en {image_file}: {folio}")
+        logging.info(f"Folio detectado en {image_file}: {folio}")
+        
         if not folio or len(folio) < 9:
-            print(f"ADVERTENCIA: Folio incompleto o inválido: '{folio}' (longitud: {len(folio)})")
+            logging.warning(f"Folio incompleto o inválido: '{folio}' (longitud: {len(folio) if folio else 0})")
+            logging.debug(f"Datos completos de folio: {folio_data}")
             folio = "unknown"
         return folio
     except Exception as e:
-        print(f"Error detectando folio en {image_file}: {e}")
+        logging.error(f"Error detectando folio en {image_file}: {e}", exc_info=True)
         return "unknown"
 
 def get_main_answers(image_file, detector, evaluation_config, folio):
