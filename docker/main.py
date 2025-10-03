@@ -52,6 +52,97 @@ def get_main_answers(image_file, detector, evaluation_config, folio):
     except Exception as e:
         print(f"Error procesando {image_file}: {e}")
 
+def get_referencia_iii_complete_answers(image_file, detector, folio):
+    """
+    Obtiene las respuestas completas de Referencia III con todas sus 5 secciones:
+    1. referencia_iii - 46 preguntas principales
+    2. customer_service_conditional - pregunta condicional SI|NO 
+    3. customer_service_questions - preguntas 65-68 con opciones A-E
+    4. conditional_management - pregunta condicional gestión SI|NO
+    5. management_questions - preguntas 69-72 con opciones A-E
+    6. citsats_s1 - 6 preguntas con SI|NO
+    """
+    import logging
+    try:
+        complete_answers = {}
+        
+        # 1. Sección principal - 46 preguntas
+        logging.info("Detectando sección principal (46 preguntas)...")
+        main_answers = detector.detect_bubbles(image_file, config.config_legacy.referencia_iii)
+        complete_answers['referencia_iii'] = main_answers
+        
+        # 2. Pregunta condicional servicio cliente (primera definición - solo SI|NO)
+        logging.info("Detectando pregunta condicional servicio cliente...")
+        customer_service_conditional = {
+            'condition': {
+                'SI': (1719, 2306, 45, 45),  # A de la primera definición
+                'NO': (1874, 2306, 45, 45),  # B de la primera definición
+            }
+        }
+        cs_conditional = detector.detect_bubbles(image_file, customer_service_conditional)
+        complete_answers['customer_service_conditional'] = cs_conditional
+        
+        # 3. Preguntas de servicio cliente 65-68 (segunda definición completa)
+        logging.info("Detectando preguntas de servicio cliente...")
+        if hasattr(config, 'config_legacy') and hasattr(config.config_legacy, 'customer_service_questions'):
+            cs_answers = detector.detect_bubbles(image_file, config.config_legacy.customer_service_questions)
+            complete_answers['customer_service_questions'] = cs_answers
+        else:
+            logging.warning("No se encontró config.config_legacy.customer_service_questions")
+        
+        # 4. Pregunta condicional gestión
+        logging.info("Detectando pregunta condicional gestión...")
+        if hasattr(config, 'config_legacy') and hasattr(config.config_legacy, 'conditional_management'):
+            cm_answers = detector.detect_bubbles(image_file, config.config_legacy.conditional_management)
+            complete_answers['conditional_management'] = cm_answers
+        else:
+            logging.warning("No se encontró config.config_legacy.conditional_management")
+        
+        # 5. Preguntas de gestión 69-72
+        logging.info("Detectando preguntas de gestión...")
+        if hasattr(config, 'config_legacy') and hasattr(config.config_legacy, 'management_questions'):
+            mg_answers = detector.detect_bubbles(image_file, config.config_legacy.management_questions)
+            complete_answers['management_questions'] = mg_answers
+        else:
+            logging.warning("No se encontró config.config_legacy.management_questions")
+        
+        # 6. CITSATS-s1
+        logging.info("Detectando sección CITSATS-s1...")
+        if hasattr(config, 'config_legacy') and hasattr(config.config_legacy, 'citsats_s1'):
+            citsats_answers = detector.detect_bubbles(image_file, config.config_legacy.citsats_s1)
+            complete_answers['citsats_s1'] = citsats_answers
+        else:
+            logging.warning("No se encontró config.config_legacy.citsats_s1")
+        
+        # Guardar el JSON completo
+        json_filename = f"{folio}.json"
+        json_output_path = os.path.join(output_json_folder, json_filename)
+        with open(json_output_path, 'w') as json_file:
+            json.dump(complete_answers, json_file, indent=4)
+        
+        logging.info(f"Resultados completos de Referencia III guardados en: {json_output_path}")
+        logging.info(f"Secciones detectadas: {list(complete_answers.keys())}")
+        
+    except Exception as e:
+        logging.error(f"Error procesando Referencia III completa en {image_file}: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+
+def get_main_answers_legacy(image_file, detector, evaluation_config, folio):
+    """
+    Obtiene las respuestas de la evaluación utilizando la configuración de evaluación
+    y guarda el resultado en un JSON con el nombre basado en el folio.
+    """
+    try:
+        answers = detector.detect_bubbles(image_file, evaluation_config)
+        json_filename = f"{folio}.json"
+        json_output_path = os.path.join(output_json_folder, json_filename)
+        with open(json_output_path, 'w') as json_file:
+            json.dump(answers, json_file, indent=4)
+        print(f"Resultados guardados en: {json_output_path}")
+    except Exception as e:
+        print(f"Error procesando {image_file}: {e}")
+
 # Limpieza de las carpetas de salida (output, outputs_aligned, output_original)
 def limpiar_carpeta(path):
     import shutil, os
@@ -80,11 +171,7 @@ detector = BubbleDetector()
 print("Procesando imágenes y detectando folios...")
 import cv2
 import logging
-from alinear_con_marcadores import detectar_marcadores, alinear_imagen, IDEAL_POSITIONS, LABELS
-
-import cv2
-import logging
-from alinear_con_marcadores import detectar_marcadores, alinear_imagen, IDEAL_POSITIONS, LABELS
+from alinear_con_marcadores import detectar_marcadores_4_esquinas, alinear_imagen, IDEAL_POSITIONS, LABELS
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
@@ -160,13 +247,13 @@ for image_file in image_files:
         
         # --- Paso 2: Cargar referencia específica para ese template ---
         ref_img = get_reference_image_for_template(template_type)
-        ref_marcadores = detectar_marcadores(ref_img, debug_path=None, n_points=6)
-        ref_esquinas = [ref_marcadores[0], ref_marcadores[1], ref_marcadores[4], ref_marcadores[5]]
+        ref_marcadores = detectar_marcadores_4_esquinas(ref_img, debug_path=None)
+        ref_esquinas = ref_marcadores  # Usar los 4 marcadores directamente
         
         # --- Paso 3: Alinear la imagen con la referencia específica ---
         img = cv2.imread(image_file)
-        img_marcadores = detectar_marcadores(img, debug_path=None, n_points=6)
-        img_esquinas = [img_marcadores[0], img_marcadores[1], img_marcadores[4], img_marcadores[5]]
+        img_marcadores = detectar_marcadores_4_esquinas(img, debug_path=None)
+        img_esquinas = img_marcadores  # Usar los 4 marcadores directamente
         alineada = alinear_imagen(img, ref_esquinas, img_esquinas, (ref_img.shape[1], ref_img.shape[0]))
         aligned_filename = os.path.basename(image_file).replace(".png", "_aligned.png")
         aligned_save_path = os.path.join(outputs_aligned_folder, aligned_filename)
@@ -218,23 +305,24 @@ for image_file in aligned_image_files:
     
     if template_type == "01":
         # Referencia I - Acontecimientos traumáticos
-        evaluation_config = config.reference_i
+        evaluation_config = config.config_legacy.referencia_i if hasattr(config.config_legacy, 'referencia_i') else config.config_legacy.referencia_iii
         logging.info(f"Folio {folio} → Referencia I (Acontecimientos Traumáticos)")
+        get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
     elif template_type == "02":
-        # Referencia III - Evaluación principal
-        evaluation_config = config.evaluation_01
-        logging.info(f"Folio {folio} → Referencia III (Evaluación Principal)")
+        # Referencia III - Evaluación principal COMPLETA (5 secciones)
+        logging.info(f"Folio {folio} → Referencia III COMPLETA (5 secciones)")
+        get_referencia_iii_complete_answers(new_image_path, detector, folio)
     elif template_type == "03":
         # Referencia V - Datos del evaluado
-        evaluation_config = config.reference_v
+        evaluation_config = config.config_legacy.referencia_v if hasattr(config.config_legacy, 'referencia_v') else config.config_legacy.referencia_iii
         logging.info(f"Folio {folio} → Referencia V (Datos Demográficos)")
+        get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
     elif template_type == "04":
         # Escala Cisneros
-        evaluation_config = config.escala_cisneros if hasattr(config, 'escala_cisneros') else config.evaluation_01
+        evaluation_config = config.config_legacy.escala_cisneros if hasattr(config.config_legacy, 'escala_cisneros') else config.config_legacy.referencia_iii
         logging.info(f"Folio {folio} → Escala Cisneros (Mobbing)")
+        get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
     else:
         logging.warning(f"Template type '{template_type}' no reconocido, usando evaluación por defecto")
-        evaluation_config = config.evaluation_01
-
-    # Obtener las respuestas de la evaluación y guardar el JSON
-    get_main_answers(new_image_path, detector, evaluation_config, folio)
+        evaluation_config = config.config_legacy.referencia_iii
+        get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
