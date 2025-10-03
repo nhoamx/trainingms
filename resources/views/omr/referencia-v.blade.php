@@ -187,7 +187,7 @@
     }
     .studies-text { 
         flex: 2; 
-        font-size: 6.5px; 
+        font-size: 10px; 
         line-height: 1.2;
     }
     .studies-option { 
