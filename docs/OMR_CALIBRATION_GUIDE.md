@@ -76,6 +76,64 @@ reference_v = {
 
 ## 🛠️ Proceso de Calibración
 
+**IMPORTANTE:** Docker NO puede abrir ventanas gráficas. Las herramientas de calibración funcionan de dos formas:
+
+### **Opción A: Detección Automática (RECOMENDADA para desarrollo)**
+
+Usa el script `auto_detect_bubbles.py` que analiza la imagen y genera las coordenadas automáticamente:
+
+```bash
+# 1. Procesa el PDF para generar imagen alineada
+docker exec -it training-and-ms python /app/main.py
+
+# 2. Ejecuta detección automática
+docker exec -it training-and-ms python /app/auto_detect_bubbles.py /app/outputs_aligned/page_1_aligned.png
+
+# 3. Revisa el archivo generado
+cat docker/bubble_coordinates.json
+
+# 4. El script imprime código Python listo para copiar a config.py
+```
+
+**Ventajas:**
+- ✅ No requiere interfaz gráfica
+- ✅ Funciona directamente en Docker
+- ✅ Detecta burbujas automáticamente
+- ✅ Genera código Python listo para usar
+
+**Desventajas:**
+- ⚠️ Puede requerir ajustes manuales si la detección no es perfecta
+
+### **Opción B: Manual con Visualizador de Imágenes (Más precisa)**
+
+Para calibración manual cuando la detección automática no funciona bien:
+
+```bash
+# 1. Procesa el PDF
+docker exec -it training-and-ms python /app/main.py
+
+# 2. Copia imagen alineada a tu máquina local
+Copy-Item "docker\outputs_aligned\page_1_aligned.png" "calibration_temp.png"
+
+# 3. Abre la imagen en un programa con coordenadas:
+#    - Paint (muestra X,Y en la esquina inferior)
+#    - Photoshop/GIMP (coordenadas en barra de herramientas)
+#    - Navegador + DevTools
+
+# 4. Anota las coordenadas manualmente para cada burbuja
+
+# 5. Usa config_generator.py LOCALMENTE (no en Docker)
+python docker/config_generator.py
+```
+
+**Ventajas:**
+- ✅ Máxima precisión
+- ✅ Control total sobre cada coordenada
+
+**Desventajas:**
+- ⚠️ Más trabajo manual
+- ⚠️ Requiere copiar archivos del contenedor
+
 ### Paso 1: Generar Imagen Alineada
 
 ```bash
@@ -91,20 +149,65 @@ docker exec -it training-and-ms python /app/main.py
 
 Esto generará imágenes alineadas en `docker/outputs_aligned/`
 
-### Paso 2: Abrir Herramienta de Calibración
+### Paso 2: Detectar Burbujas Automáticamente
 
 ```bash
-# Para Referencia III
-docker exec -it training-and-ms python /app/calibrate_bubbles.py /app/outputs_aligned/page_1_aligned.png
-
-# Para Referencia I
-docker exec -it training-and-ms python /app/calibrate_bubbles.py /app/outputs_aligned/page_1_aligned.png
-
-# Para Referencia V
-docker exec -it training-and-ms python /app/calibrate_bubbles.py /app/outputs_aligned/page_1_aligned.png
+# Ejecuta el detector automático
+docker exec -it training-and-ms python /app/auto_detect_bubbles.py /app/outputs_aligned/page_1_aligned.png
 ```
 
-### Paso 3: Capturar Coordenadas
+El script:
+1. Detecta todas las burbujas automáticamente
+2. Las agrupa por filas y columnas
+3. Genera un archivo `bubble_coordinates.json` con todas las coordenadas
+4. Imprime código Python listo para copiar a `config.py`
+
+**Salida esperada:**
+```
+Analizando imagen: /app/outputs_aligned/page_1_aligned.png
+Dimensiones de imagen: 2481x3510
+Contornos detectados: 523
+Burbujas detectadas: 234
+
+=== ANÁLISIS DE ESTRUCTURA ===
+Filas detectadas: 23
+  Fila 1: 10 burbujas, Y≈785, X: [655, 715, 775, 830, 885]...
+  ...
+
+✅ Coordenadas guardadas en: bubble_coordinates.json
+
+=== GENERANDO CONFIGURACIÓN DE FOLIO ===
+
+# Pega esto en docker/config.py:
+
+folio_configuration = {
+    'F1': {
+        '0': (655, 785, 35, 35),
+        '1': (655, 845, 35, 35),
+        ...
+```
+
+### Paso 3: Revisar y Ajustar (Si es necesario)
+
+```bash
+# Ver el archivo JSON completo
+cat docker/bubble_coordinates.json
+
+# Si necesitas ajustar coordenadas manualmente, copia la imagen
+Copy-Item "docker\outputs_aligned\page_1_aligned.png" "temp_calibration.png"
+# Ábrela en Paint/Photoshop y verifica las coordenadas
+```
+
+### Paso 2 (Alternativo): Abrir Herramienta de Calibración
+
+**NOTA:** Esta opción NO funciona en Docker sin interfaz gráfica. Solo úsala si ejecutas Python localmente en tu máquina con entorno gráfico.
+
+```bash
+# SOLO SI TIENES INTERFAZ GRÁFICA (no en Docker)
+python docker/calibrate_bubbles.py imagen_alineada.png
+```
+
+### Paso 3 (Alternativo): Capturar Coordenadas Manualmente
 
 La herramienta `calibrate_bubbles.py` abre una ventana interactiva:
 
@@ -207,20 +310,34 @@ Después de calibrar:
 ## 🎯 Comandos Rápidos
 
 ```bash
-# Generar PDFs de prueba
+# === FLUJO COMPLETO DE CALIBRACIÓN AUTOMÁTICA ===
+
+# 1. Generar PDFs de prueba
 php artisan omr:generate-test-pdfs --pages=5
 
-# Copiar PDF específico
+# 2. Copiar PDF al contenedor
 Copy-Item "storage\app\omr-test-pdfs\referencia-iii.pdf" "docker\input\evaluation.pdf"
 
-# Procesar
+# 3. Procesar para generar imagen alineada
 docker exec -it training-and-ms python /app/main.py
 
-# Calibrar (reemplaza page_1 con el archivo correcto)
-docker exec -it training-and-ms python /app/calibrate_bubbles.py /app/outputs_aligned/page_1_aligned.png
+# 4. Detectar burbujas automáticamente
+docker exec -it training-and-ms python /app/auto_detect_bubbles.py /app/outputs_aligned/page_1_aligned.png
 
-# Ver resultados
-cat docker/output/*.json
+# 5. Revisar resultados
+cat docker/bubble_coordinates.json
+
+# 6. Copiar código generado a config.py (impreso en la terminal)
+
+# === CALIBRACIÓN MANUAL (si auto-detección falla) ===
+
+# Copiar imagen a local para análisis manual
+Copy-Item "docker\outputs_aligned\page_1_aligned.png" "calibration_temp.png"
+
+# Abrir en Paint/Photoshop y anotar coordenadas manualmente
+
+# Usar generador interactivo LOCALMENTE (no en Docker)
+python docker/config_generator.py
 ```
 
 ## ✅ Checklist de Calibración
