@@ -2,6 +2,9 @@
 
 return [
     'sexo' => ['Masculino', 'Femenino'],
+    // Rango de edad en años
+    // Se registra 01, 05, 12, 13, 15 ..., 70
+    // El array es asociativo para filtrar valores y generar reportes
     'edad' => [
         '15 - 19',
         '20 - 24',

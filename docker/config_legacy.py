@@ -730,3 +730,202 @@ referencia_i = {
         'NO': (2250, 2362, 35, 35),
     },
 }
+
+
+# Referencia V
+
+sexo = {
+    'masculino': (231, 1291, 35, 35),  # Masculino
+    'femenino': (233, 1350, 35, 35),  # Femenino
+}
+
+edad = {
+    'decenas': {
+        '0': (277, 1475, 45, 45),
+        '1': (279, 1529, 45, 45),
+        '2': (279, 1584, 45, 45),
+        '3': (277, 1638, 45, 45),
+        '4': (277, 1694, 45, 45),
+        '5': (279, 1749, 45, 45),
+        '6': (280, 1802, 45, 45),
+        '7': (276, 1857, 45, 45),
+        '8': (279, 1910, 45, 45),
+        '9': (277, 1965, 45, 45),
+    },
+    'unidades': {
+        '0': (621, 1475, 45, 45),
+        '1': (621, 1531, 45, 45),
+        '2': (622, 1584, 45, 45),
+        '3': (621, 1638, 45, 45),
+        '4': (621, 1694, 45, 45),
+        '5': (621, 1749, 45, 45),
+        '6': (621, 1802, 45, 45),
+        '7': (621, 1860, 45, 45),
+        '8': (623, 1912, 45, 45),
+        '9': (622, 1965, 45, 45),
+    }
+}
+
+estado_civil = {
+    'casado': (226, 2112, 45, 45),
+    'soltero': (228, 2170, 45, 45),
+    'union_libre': (228, 2226, 45, 45),
+    'divorciado': (228, 2284, 45, 45),
+    'viudo': (228, 2341, 45, 45),
+}
+
+tipo_personal = {
+    'sindicalizado': (225, 2468, 45, 45),
+    'confianza': (228, 2522, 45, 45),
+    'ninguno': (228, 2580, 45, 45),
+}
+
+sin_formacion = {
+    'sin_formacion': (1320, 1341, 45, 45),
+}
+
+primaria = {
+    'terminada': (1320, 1396, 45, 45),  # Primaria Terminada
+    'incompleta': (1490, 1397, 45, 45),  # Primaria Incompleta
+}
+
+secundaria = {
+    'terminada': (1319, 1452, 45, 45),  # Secundaria Terminada
+    'incompleta': (1491, 1454, 45, 45),  # Secundaria Incompleta
+}
+
+preparatoria = {
+    'terminada': (1319, 1519, 45, 45),  # Preparatoria o Bachillerato Terminada
+    'incompleta': (1491, 1522, 45, 45),  # Preparatoria o Bachillerato Incompleta
+}
+
+tecnico_superior = {
+    'terminada': (1319, 1589, 45, 45),  # Técnico Superior Terminada
+    'incompleta': (1493, 1587, 45, 45),  # Técnico Superior Incompleta
+}
+
+licenciatura = {
+    'terminada': (1317, 1645, 45, 45),  # Licenciatura Terminada
+    'incompleta': (1494, 1642, 45, 45),  # Licenciatura Incompleta
+}
+
+maestria = {
+    'terminada': (1323, 1702, 45, 45),  # Maestría Terminada
+    'incompleta': (1493, 1699, 45, 45),  # Maestría Incompleta
+}
+
+doctorado = {
+    'terminada': (1316, 1758, 45, 45),  # Doctorado Terminada
+    'incompleta': (1493, 1755, 45, 45),  # Doctorado Incompleta
+}
+
+tipo_puesto = {
+    'operativo': (922, 1893, 45, 45),
+    'profesional_o_tecnico': (926, 1949, 45, 45),
+    'supervisor': (926, 2006, 45, 45),
+    'gerente': (925, 2065, 45, 45),
+}
+
+tipo_contratacion = {
+    'por_obra_o_proyecto': (925, 2193, 45, 45),
+    'por_tiempo_determinado_(temporal)': (925, 2251, 45, 45),
+    'tiempo_indeterminado': (928, 2306, 45, 45),
+    'honorarios': (925, 2364, 45, 45),
+}
+
+tipo_jornada = {
+    'fijo_nocturno_(entre_las_20:00_y_6:00_hrs)': (923, 2493, 45, 45),
+    'fijo_diurno_(entre_las_6:00_y_20:00_hrs)': (923, 2554, 45, 45),
+    'fijo_mixto_(combinacion_de_nocturno_y_diurno)': (925, 2609, 45, 45),
+}
+
+rotacion_turnos = {
+    'si': (1628, 1288, 45, 45),
+    'no': (1628, 1345, 45, 45),
+}
+
+tiempo_puesto_actual = {
+    'menos_de_6_meses': (1628, 1475, 45, 45),
+    'entre_6_meses_y_1_ano': (1626, 1532, 45, 45),
+    'entre_1_a_4_anos': (1625, 1591, 45, 45),
+    'entre_5_a_9_anos': (1628, 1647, 45, 45),
+    'entre_10_a_14_anos': (1629, 1702, 45, 45),
+    'entre_15_a_19_anos': (1625, 1762, 45, 45),
+    'entre_20_a_24_anos': (1626, 1816, 45, 45),
+    '25_anos_o_mas': (1623, 1874, 45, 45),
+}
+
+experiencia_laboral = {
+    'menos_de_6_meses': (1626, 2003, 45, 45),
+    'entre_6_meses_y_1_ano': (1625, 2063, 45, 45),
+    'entre_1_a_4_anos': (1626, 2122, 45, 45),
+    'entre_5_a_9_anos': (1620, 2176, 45, 45),
+    'entre_10_a_14_anos': (1626, 2231, 45, 45),
+    'entre_15_a_19_anos': (1628, 2287, 45, 45),
+}
+
+ocupacion = {
+    'fila1': {
+        'A': (1719, 2502, 45, 45),
+        'B': (1842, 2500, 45, 45),
+        'C': (1968, 2500, 45, 45),
+        'D': (2091, 2497, 45, 45),
+        'E': (2214, 2499, 45, 45),
+    },
+    'fila2': {
+        'A': (1719, 2555, 45, 45),
+        'B': (1849, 2555, 45, 45),
+        'C': (1967, 2558, 45, 45),
+        'D': (2093, 2561, 45, 45),
+        'E': (2216, 2555, 45, 45),
+    }
+}
+
+
+departamento = {
+    'fila1': {
+        'A': (1719, 2763, 45, 45),
+        'B': (1845, 2761, 45, 45),
+        'C': (1968, 2761, 45, 45),
+        'D': (2091, 2764, 45, 45),
+        'E': (2217, 2763, 45, 45),
+    },
+    'fila2': {
+        'A': (1719, 2821, 45, 45),
+        'B': (1846, 2819, 45, 45),
+        'C': (1968, 2818, 45, 45),
+        'D': (2094, 2819, 45, 45),
+        'E': (2214, 2819, 45, 45),
+    }
+}
+
+# Referencia V - Estructura consolidada para main.py
+referencia_v = {
+    'sexo': sexo,
+    'edad': edad,
+    'estado_civil': estado_civil,
+    'tipo_personal': tipo_personal,
+    'nivel_estudios': {
+        'sin_formacion': sin_formacion,
+        'primaria': primaria,
+        'secundaria': secundaria,
+        'preparatoria': preparatoria,
+        'tecnico_superior': tecnico_superior,
+        'licenciatura': licenciatura,
+        'maestria': maestria,
+        'doctorado': doctorado,
+    },
+    'tipo_puesto': tipo_puesto,
+    'tipo_contratacion': tipo_contratacion,
+    'tipo_jornada': tipo_jornada,
+    'rotacion_turnos': rotacion_turnos,
+    'tiempo_puesto_actual': tiempo_puesto_actual,
+    'experiencia_laboral': experiencia_laboral,
+    'ocupacion': ocupacion,
+    'departamento': departamento,
+}
+
+
+
+
+
