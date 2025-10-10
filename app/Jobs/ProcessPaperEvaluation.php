@@ -23,7 +23,7 @@ class ProcessPaperEvaluation implements ShouldQueue
 
     protected ?string $initiatorUserId;
 
-    public int $timeout = 300;
+    public int $timeout = 1200;
 
     /**
      * Create a new job instance.
