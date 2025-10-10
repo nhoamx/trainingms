@@ -307,6 +307,77 @@ For questions or issues:
 3. Examine types in `resources/js/types/reports.ts`
 4. Consult component in `resources/js/Components/ReportSummaryDashboard.vue`
 
+## Bug Fixes (Post-Migration)
+
+### Issue #1: Domain and Category Risk Levels Always Showing "Nulo"
+**Root Cause:** 
+- `getDomainRiskLevel()` and `getCategoryRiskLevel()` methods were using non-existent config files (`config('domain_risk_thresholds')` and generic fallback thresholds
+- This caused all domains/categories to fall into "Nulo" classification regardless of actual scores
+
+**Solution:**
+- Added NOM-035 specific threshold methods: `getDomainRiskThresholds()` and `getCategoryRiskThresholds()`
+- Embedded proper NOM-035 threshold arrays directly in service (10 domains, 5 categories)
+- Updated risk calculation methods to use these specific thresholds instead of generic ones
+
+**Files Changed:**
+- `app/Services/PaperEvaluationReportService.php`
+
+**Verification:**
+- All tests passing (8 tests, 38 assertions)
+- Risk levels now correctly classified per NOM-035 standards
+
+### Issue #2: Participant Tab Ziggy Routing Error
+**Root Cause:**
+- `ParticipantReport.vue` was using old route `responses.personal` with `personalId` parameter
+- New routing uses `organization.results.detail` with `personalFolio` parameter
+- `PaperEvaluation` model uses `personal_folio` field, not `personal_id`
+
+**Solution:**
+- Updated route from `route('responses.personal', { organizationId, personalId })` 
+- Changed to `route('organization.results.detail', { organization, personalFolio })`
+- Updated key from `participant.personal_id` to `participant.personal_folio`
+- Updated display text from "Participante" to "Folio" for consistency
+
+**Files Changed:**
+- `resources/js/Components/ParticipantReport.vue`
+
+**Verification:**
+- Frontend build successful
+- Route parameters now match new routing structure
+
+### Issue #3: Risk Level Button URLs Incorrect
+**Root Cause:**
+- `RiskActionButtons.vue` modal links used old route `responses.personal` with `personalId` parameter
+- Should redirect to new route format using `personal_folio`
+
+**Solution:**
+- Updated modal links from `route('responses.personal', { organizationId, personalId })` 
+- Changed to `route('organization.results.detail', { organization, personalFolio })`
+- Updated iteration variable from `id` to `folio` for clarity
+
+**Files Changed:**
+- `resources/js/Components/RiskActionButtons.vue`
+
+**Verification:**
+- Frontend build successful
+- Links now redirect to correct detail pages
+
+### Testing After Fixes
+All automated tests passing:
+```bash
+php artisan test --filter=PaperEvaluationReportService
+# PASS - 8 passed (38 assertions)
+
+php artisan test --filter=DashboardReportIntegrationTest
+# PASS - 6 passed (26 assertions)
+```
+
+Code style compliance verified:
+```bash
+vendor/bin/pint app/Services/PaperEvaluationReportService.php
+# PASS - 1 file
+```
+
 ## Version History
 
 - **v1.0** (2025-10-09): Initial migration complete
@@ -314,3 +385,8 @@ For questions or issues:
   - Frontend TypeScript refactoring
   - Comprehensive testing
   - Documentation
+- **v1.1** (2025-10-09): Bug fixes post-migration
+  - Fixed domain/category risk level calculations using NOM-035 thresholds
+  - Fixed routing errors in ParticipantReport and RiskActionButtons
+  - Updated all route references to use new `organization.results.detail` pattern
+
