@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Evaluation;
 use App\Models\Organization;
+use App\Models\PaperEvaluation;
 use App\Models\Question;
+use App\Services\PaperEvaluationScoreService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,6 +15,10 @@ use Inertia\Inertia;
 class ResultsController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(
+        protected PaperEvaluationScoreService $scoreService
+    ) {}
 
     public function organizationResults(Organization $organization, Request $request)
     {
@@ -82,238 +88,141 @@ class ResultsController extends Controller
     {
         $this->authorize('view-organization-results', $organization);
 
-        $evaluations = $organization->evaluations()
-            ->where('reference_guide', 'III')
-            ->select('id', 'folio', 'created_at')
-            ->withSum('answers', 'score')
+        // Group paper evaluations by personal_folio
+        $evaluationGroups = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('source', 'paper')
+            ->where('processing_status', 'completed')
+            ->orderBy('personal_folio')
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function ($evaluation) {
+            ->groupBy('personal_folio')
+            ->map(function ($evaluations, $personalFolio) {
+                $evaluationTypes = $evaluations->pluck('evaluation_type')->unique()->values();
+
+                // Get the Referencia III evaluation for score
+                $referenciaIII = $evaluations->firstWhere('evaluation_type', 'referencia_iii');
+                $totalScore = 0;
+
+                if ($referenciaIII) {
+                    $scores = $this->scoreService->calculateReferenciaIIIScores($referenciaIII);
+                    $totalScore = $scores['total_score'];
+                }
+
                 return [
-                    'id' => $evaluation->id,
-                    'folio' => $evaluation->folio,
-                    'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
-                    'total_score' => $evaluation->answers_sum_score ?? 0,
+                    'personal_folio' => $personalFolio,
+                    'evaluation_types' => $evaluationTypes,
+                    'total_score' => $totalScore,
+                    'created_at' => $evaluations->first()->created_at->format('Y-m-d H:i:s'),
+                    'evaluations' => $evaluations->map(function ($eval) {
+                        return [
+                            'id' => $eval->id,
+                            'folio' => $eval->folio,
+                            'evaluation_type' => $eval->evaluation_type,
+                        ];
+                    }),
                 ];
-            });
+            })
+            ->values();
 
         return Inertia::render('Results/List', [
             'organization' => $organization->only('id', 'name'),
-            'evaluations' => $evaluations,
+            'evaluationGroups' => $evaluationGroups,
         ]);
     }
 
-    public function showDetailedResults(Organization $organization, Evaluation $evaluation)
+    public function showDetailedResults(Organization $organization, string $personalFolio)
     {
         $this->authorize('view-organization-results', $organization);
 
-        if ($evaluation->organization_id !== $organization->id) {
-            abort(403, 'La evaluación no pertenece a esta organización');
+        // Get all evaluations for this personal folio
+        $evaluations = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('personal_folio', $personalFolio)
+            ->where('source', 'paper')
+            ->where('processing_status', 'completed')
+            ->get();
+
+        if ($evaluations->isEmpty()) {
+            abort(404, 'No se encontraron evaluaciones para este folio personal');
         }
 
-        // Obtener resultados de las otras guías relacionadas
+        // Get individual evaluations by type
+        $referenciaI = $evaluations->firstWhere('evaluation_type', 'referencia_i');
+        $referenciaIII = $evaluations->firstWhere('evaluation_type', 'referencia_iii');
+        $referenciaV = $evaluations->firstWhere('evaluation_type', 'referencia_v');
+        $cisneros = $evaluations->firstWhere('evaluation_type', 'cisneros');
+
+        // Calculate scores for Referencia III
+        $results = [];
+        $totalScore = 0;
+
+        if ($referenciaIII) {
+            $detailedResults = $this->scoreService->getDetailedResults($referenciaIII);
+            $scores = $this->scoreService->calculateReferenciaIIIScores($referenciaIII);
+            $totalScore = $scores['total_score'];
+            $results = $detailedResults;
+        }
+
+        // Format Guide I results
         $guideIResults = null;
-        $guideVResults = null;
-        $guideIIIResults = null;
-        $evaluationForResults = $evaluation;
-
-        if ($evaluation->reference_guide === 'III') {
-            // Cargar las evaluaciones de la guía I y V relacionadas
-            $guideIResults = Evaluation::where('organization_id', $organization->id)
-                ->where('reference_guide', 'I')
-                ->where('personal_id', $evaluation->personal_id)
-                ->latest()
-                ->first();
-
-            if ($guideIResults) {
-                $guideIResults = [
-                    'id' => $guideIResults->id,
-                    'folio' => $guideIResults->folio,
-                    'created_at' => $guideIResults->created_at->format('Y-m-d H:i:s'),
-                    'answers' => $guideIResults->data,
-                ];
-            }
-
-            $guideVResults = Evaluation::where('organization_id', $organization->id)
-                ->where('reference_guide', 'V')
-                ->where('personal_id', $evaluation->personal_id)
-                ->latest()
-                ->first();
-
-            if ($guideVResults) {
-                $questions = $guideVResults->questions()->select('id', 'question', 'answer')->get();
-                $guideVResults = [
-                    'id' => $guideVResults->id,
-                    'folio' => $guideVResults->folio,
-                    'created_at' => $guideVResults->created_at->format('Y-m-d H:i:s'),
-                    'questions' => $questions,
-                ];
-            }
-
-            $questions = $evaluation->questions()->select('id', 'question', 'answer')->get();
-            $guideIIIResults = [
-                'id' => $evaluation->id,
-                'folio' => $evaluation->folio,
-                'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
-                'questions' => $questions,
-            ];
-        } elseif ($evaluation->reference_guide === 'I') {
-            // Resultados de la guía I corresponden a esta evaluación
+        if ($referenciaI) {
             $guideIResults = [
-                'id' => $evaluation->id,
-                'folio' => $evaluation->folio,
-                'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
-                'answers' => $evaluation->data,
+                'id' => $referenciaI->id,
+                'folio' => $referenciaI->folio,
+                'created_at' => $referenciaI->created_at->format('Y-m-d H:i:s'),
+                'answers' => $referenciaI->referencia_i_answers ?? [],
             ];
-
-            // Intentar cargar la guía V relacionada (independiente de que exista la III)
-            $guideVResultsModel = Evaluation::where('organization_id', $organization->id)
-                ->where('reference_guide', 'V')
-                ->where('personal_id', $evaluation->personal_id)
-                ->latest()
-                ->first();
-
-            if ($guideVResultsModel) {
-                $questions = $guideVResultsModel->questions()->select('id', 'question', 'answer')->get();
-                $guideVResults = [
-                    'id' => $guideVResultsModel->id,
-                    'folio' => $guideVResultsModel->folio,
-                    'created_at' => $guideVResultsModel->created_at->format('Y-m-d H:i:s'),
-                    'questions' => $questions,
-                ];
-            }
-
-            // Buscar evaluación de la guía III relacionada
-            $relatedGuideIII = Evaluation::where('organization_id', $organization->id)
-                ->where('reference_guide', 'III')
-                ->where('personal_id', $evaluation->personal_id)
-                ->latest()
-                ->first();
-
-            if ($relatedGuideIII) {
-                $questions = $relatedGuideIII->questions()->select('id', 'question', 'answer')->get();
-                $guideIIIResults = [
-                    'id' => $relatedGuideIII->id,
-                    'folio' => $relatedGuideIII->folio,
-                    'created_at' => $relatedGuideIII->created_at->format('Y-m-d H:i:s'),
-                    'questions' => $questions,
-                ];
-                $evaluationForResults = $relatedGuideIII;
-            }
-        } elseif ($evaluation->reference_guide === 'V') {
-            // Resultados de la guía V corresponden a esta evaluación
-            $questions = $evaluation->questions()->select('id', 'question', 'answer')->get();
-            $guideVResults = [
-                'id' => $evaluation->id,
-                'folio' => $evaluation->folio,
-                'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
-                'questions' => $questions,
-            ];
-
-            // Siempre intentar cargar la guía I relacionada
-            $guideIResultsModel = Evaluation::where('organization_id', $organization->id)
-                ->where('reference_guide', 'I')
-                ->where('personal_id', $evaluation->personal_id)
-                ->latest()
-                ->first();
-
-            if ($guideIResultsModel) {
-                $guideIResults = [
-                    'id' => $guideIResultsModel->id,
-                    'folio' => $guideIResultsModel->folio,
-                    'created_at' => $guideIResultsModel->created_at->format('Y-m-d H:i:s'),
-                    'answers' => $guideIResultsModel->data,
-                ];
-            }
-
-            // Buscar evaluación de la guía III relacionada
-            $relatedGuideIII = Evaluation::where('organization_id', $organization->id)
-                ->where('reference_guide', 'III')
-                ->where('personal_id', $evaluation->personal_id)
-                ->latest()
-                ->first();
-
-            if ($relatedGuideIII) {
-                $questions = $relatedGuideIII->questions()->select('id', 'question', 'answer')->get();
-                $guideIIIResults = [
-                    'id' => $relatedGuideIII->id,
-                    'folio' => $relatedGuideIII->folio,
-                    'created_at' => $relatedGuideIII->created_at->format('Y-m-d H:i:s'),
-                    'questions' => $questions,
-                ];
-                $evaluationForResults = $relatedGuideIII;
-            }
         }
 
-        $results = Category::with(['domains.dimensions.answers' => function ($query) use ($evaluationForResults) {
-            $query->where('evaluation_id', $evaluationForResults->id)
-                ->select('id', 'dimension_id', 'question', 'answer', 'score');
-        }])->get()->map(function ($category) {
-            $categoryScore = 0;
-            $details = [];
+        // Format Guide III results
+        $guideIIIResults = null;
+        if ($referenciaIII) {
+            $guideIIIResults = [
+                'id' => $referenciaIII->id,
+                'folio' => $referenciaIII->folio,
+                'created_at' => $referenciaIII->created_at->format('Y-m-d H:i:s'),
+                'answers' => $referenciaIII->referencia_iii_answers ?? [],
+                'conditional' => $referenciaIII->referencia_iii_conditional ?? [],
+                'citsats_s1' => $referenciaIII->citsats_s1 ?? [],
+            ];
+        }
 
-            foreach ($category->domains as $domain) {
-                $domainScore = 0;
+        // Format Guide V results
+        $guideVResults = null;
+        if ($referenciaV) {
+            $guideVResults = [
+                'id' => $referenciaV->id,
+                'folio' => $referenciaV->folio,
+                'created_at' => $referenciaV->created_at->format('Y-m-d H:i:s'),
+                'demographic_data' => $referenciaV->demographic_data ?? [],
+            ];
+        }
 
-                foreach ($domain->dimensions as $dimension) {
-                    // Calcular score de la dimensión sumando los scores de sus respuestas
-                    $dimensionScore = $dimension->answers->sum('score');
-
-                    // Agregar al score del dominio
-                    $domainScore += $dimensionScore;
-
-                    // Agregar detalles de las respuestas
-                    foreach ($dimension->answers as $answer) {
-                        $details[] = [
-                            'categoria' => [
-                                'nombre' => $category->name,
-                                'puntaje' => 0, // Se actualizará después
-                            ],
-                            'dominio' => [
-                                'nombre' => $domain->name,
-                                'puntaje' => 0, // Se actualizará después
-                            ],
-                            'dimension' => $dimension->name,
-                            'item' => $answer->question,
-                            'respuesta' => $answer->answer,
-                            'puntaje' => $answer->score,
-                        ];
-                    }
-                }
-
-                // Actualizar el score de dominio en todos los registros relacionados
-                foreach ($details as &$detail) {
-                    if ($detail['dominio']['nombre'] === $domain->name) {
-                        $detail['dominio']['puntaje'] = $domainScore;
-                    }
-                }
-
-                // Agregar al score de la categoría
-                $categoryScore += $domainScore;
-            }
-
-            // Actualizar el score de categoría en todos los registros
-            foreach ($details as &$detail) {
-                if ($detail['categoria']['nombre'] === $category->name) {
-                    $detail['categoria']['puntaje'] = $categoryScore;
-                }
-            }
-
-            return $details;
-        })->flatten(1)->values();
+        // Format Cisneros results
+        $cisnerosResults = null;
+        if ($cisneros) {
+            $cisnerosResults = [
+                'id' => $cisneros->id,
+                'folio' => $cisneros->folio,
+                'created_at' => $cisneros->created_at->format('Y-m-d H:i:s'),
+                'answers' => $cisneros->cisneros_answers ?? [],
+            ];
+        }
 
         return Inertia::render('Results/Detail', [
             'organization' => $organization->only('id', 'name'),
+            'personalFolio' => $personalFolio,
             'evaluation' => [
-                'id' => $evaluation->id,
-                'folio' => $evaluation->folio,
-                'created_at' => $evaluation->created_at->format('Y-m-d H:i:s'),
-                'reference_guide' => $evaluation->reference_guide,
+                'id' => $referenciaIII?->id ?? $evaluations->first()->id,
+                'folio' => $referenciaIII?->folio ?? $evaluations->first()->folio,
+                'created_at' => $referenciaIII?->created_at->format('Y-m-d H:i:s') ?? $evaluations->first()->created_at->format('Y-m-d H:i:s'),
+                'personal_folio' => $personalFolio,
             ],
+            'totalScore' => $totalScore,
             'results' => $results,
             'guideIResults' => $guideIResults,
             'guideVResults' => $guideVResults,
             'guideIIIResults' => $guideIIIResults,
+            'cisnerosResults' => $cisnerosResults,
         ]);
     }
 

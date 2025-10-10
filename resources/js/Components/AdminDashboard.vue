@@ -50,6 +50,17 @@
         </div>
         <div class="bg-gray-50 px-5 py-3">
           <div class="space-y-2">
+            <!-- Botón para ver evaluaciones -->
+            <a :href="route('organization.results.list', { organization: org.id })"
+              class="w-full flex items-center justify-center text-green-600 hover:text-green-800 font-medium py-2 transition-colors border border-green-200 rounded-md hover:bg-green-50">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Ver Evaluaciones
+            </a>
+
             <!-- Botón para reporte tradicional -->
             <a :href="route('organization.report', { id: org.id })"
               class="w-full flex items-center justify-center text-blue-600 hover:text-blue-800 font-medium py-2 transition-colors border border-blue-200 rounded-md hover:bg-blue-50">
