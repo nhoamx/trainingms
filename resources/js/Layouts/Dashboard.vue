@@ -163,8 +163,8 @@
             </div>
         </header>
         <main>
-        <!-- Pass current user id to Notification component so it listens to private channel -->
-        <Notification :user-id="user?.id" />
+        <!-- Persistent notification stack - survives page navigation -->
+        <NotificationStack :user-id="user?.id" />
             <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                 <slot />
             </div>
@@ -178,7 +178,7 @@ import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuIt
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import {computed, onMounted} from 'vue'
 import { usePage } from '@inertiajs/vue3'
-import Notification from "../Components/Notification.vue";
+import NotificationStack from "../Components/NotificationStack.vue";
 
 const page = usePage()
 
