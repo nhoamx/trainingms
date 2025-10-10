@@ -165,35 +165,161 @@ class ResultsController extends Controller
         // Format Guide I results
         $guideIResults = null;
         if ($referenciaI) {
+            $questions = config('guide_i_questions');
+            $answers = $referenciaI->referencia_i_answers ?? [];
+            $mappedAnswers = [];
+            foreach ($answers as $key => $value) {
+                $label = $questions[$key] ?? $key;
+                $mappedAnswers[$label] = $value;
+            }
             $guideIResults = [
                 'id' => $referenciaI->id,
                 'folio' => $referenciaI->folio,
                 'created_at' => $referenciaI->created_at->format('Y-m-d H:i:s'),
-                'answers' => $referenciaI->referencia_i_answers ?? [],
+                'answers' => $mappedAnswers,
             ];
         }
 
         // Format Guide III results
         $guideIIIResults = null;
         if ($referenciaIII) {
+            $questions = config('referencia_iii.general');
+            $conditionalSections = config('referencia_iii.conditional_sections');
+            $acontecimientos = config('referencia_iii.acontecimientos_traumaticos');
+            $answers = $referenciaIII->referencia_iii_answers ?? [];
+            $mappedAnswers = [];
+            foreach ($answers as $key => $value) {
+                $num = (int) ltrim($key, '0');
+                $label = $questions[$num] ?? $key;
+                $mappedAnswers[$label] = $value;
+            }
+            // Condicionales: incluir la condición y mapear cada pregunta
+            $conditional = $referenciaIII->referencia_iii_conditional ?? [];
+            $mappedConditional = [];
+            foreach ($conditionalSections as $sectionKey => $section) {
+                if (isset($conditional[$sectionKey])) {
+                    $sectionData = $conditional[$sectionKey];
+                    $conditionValue = $sectionData['condition'] ?? null;
+                    $questionsData = $sectionData['questions'] ?? [];
+                    $sectionLabel = $section['condition'];
+                    $mappedQuestions = [];
+                    foreach ($questionsData as $qKey => $qValue) {
+                        $qNum = (int) ltrim($qKey, '0');
+                        $qLabel = $section['questions'][$qNum] ?? $qKey;
+                        $mappedQuestions[$qLabel] = $qValue;
+                    }
+                    $mappedConditional[] = [
+                        'section' => $sectionLabel,
+                        'condition' => $conditionValue,
+                        'questions' => $mappedQuestions,
+                    ];
+                }
+            }
+            // CITSATS: usar el bloque de acontecimientos_traumaticos
+            $citsats = $referenciaIII->citsats_s1 ?? [];
+            $mappedCitsats = [];
+            if (! empty($citsats)) {
+                $citsatsQuestions = $acontecimientos['questions'] ?? [];
+                foreach ($citsats as $key => $value) {
+                    $num = (int) ltrim($key, '0');
+                    $label = $citsatsQuestions[$num] ?? $key;
+                    $mappedCitsats[$label] = $value;
+                }
+            }
             $guideIIIResults = [
                 'id' => $referenciaIII->id,
                 'folio' => $referenciaIII->folio,
                 'created_at' => $referenciaIII->created_at->format('Y-m-d H:i:s'),
-                'answers' => $referenciaIII->referencia_iii_answers ?? [],
-                'conditional' => $referenciaIII->referencia_iii_conditional ?? [],
-                'citsats_s1' => $referenciaIII->citsats_s1 ?? [],
+                'answers' => $mappedAnswers,
+                'conditional' => $mappedConditional,
+                'citsats_s1' => $mappedCitsats,
             ];
         }
 
         // Format Guide V results
         $guideVResults = null;
         if ($referenciaV) {
+            $demographic = $referenciaV->demographic_data ?? [];
+            $labels = [
+                'sexo' => 'Sexo',
+                'edad' => 'Edad',
+                'estado_civil' => 'Estado Civil',
+                'nivel_estudios' => 'Nivel de Estudios',
+                'ocupacion_puesto' => 'Ocupación/Puesto',
+                'departamento_seccion_area' => 'Departamento/Sección/Área',
+                'tipo_puesto' => 'Tipo de Puesto',
+                'tipo_contratacion' => 'Tipo de Contratación',
+                'tipo_personal' => 'Tipo de Personal',
+                'tipo_jornada' => 'Tipo de Jornada',
+                'rotacion_turnos' => 'Rotación de Turnos',
+                'tiempo_puesto_actual' => 'Tiempo en el Puesto Actual',
+                'tiempo_experiencia_laboral' => 'Tiempo de Experiencia Laboral',
+            ];
+            $configV = config('referencia_v');
+            $mappedDemographic = [];
+            foreach ($demographic as $key => $value) {
+                $label = $labels[$key] ?? $key;
+                $displayValue = '';
+                // Edad: puede venir como array { decenas, unidades }
+                if ($key === 'edad' && is_array($value) && isset($value['decenas'], $value['unidades'])) {
+                    $displayValue = $value['decenas'].$value['unidades'];
+                }
+                // Sexo
+                elseif ($key === 'sexo' && is_string($value)) {
+                    $displayValue = strtolower($value) === 'femenino' ? 'Femenino' : (strtolower($value) === 'masculino' ? 'Masculino' : ucfirst($value));
+                }
+                // Estado civil
+                elseif ($key === 'estado_civil' && is_string($value)) {
+                    $map = ['union_libre' => 'Unión libre', 'casado' => 'Casado', 'soltero' => 'Soltero', 'divorciado' => 'Divorciado', 'viudo' => 'Viudo'];
+                    $displayValue = $map[$value] ?? ucfirst($value);
+                }
+                // Nivel de estudios
+                elseif ($key === 'nivel_estudios' && is_array($value)) {
+                    foreach ($value as $nivel => $datos) {
+                        if (is_array($datos) && ! empty($datos['seleccionado'])) {
+                            $labelNivel = ucfirst(str_replace('_', ' ', $nivel));
+                            if (! empty($datos['completado'])) {
+                                $labelNivel .= $datos['completado'] === 'completo' ? ' (Terminada)' : ' (Incompleta)';
+                            }
+                            $displayValue = $labelNivel;
+                            break;
+                        }
+                    }
+                }
+                // Ocupación/Puesto y Departamento
+                elseif (($key === 'ocupacion_puesto' || $key === 'departamento_seccion_area' || $key === 'ocupacion' || $key === 'departamento') && is_array($value)) {
+                    $vals = array_filter(array_values($value), fn ($v) => ! is_null($v) && $v !== '');
+                    $displayValue = $vals ? implode(' ', $vals) : 'Sin respuesta';
+                }
+                // Tipo de puesto, contratación, personal, jornada, rotación, etc.
+                elseif (in_array($key, ['tipo_puesto', 'tipo_contratacion', 'tipo_personal', 'tipo_jornada', 'rotacion_turnos'])) {
+                    $displayValue = is_string($value) ? ucwords(str_replace(['_', '-'], [' ', ' '], $value)) : '';
+                }
+                // Experiencia laboral y tiempo en el puesto actual - usar mapeo correcto
+                elseif (in_array($key, ['tiempo_puesto_actual', 'experiencia_laboral', 'tiempo_experiencia_laboral'])) {
+                    if (is_string($value)) {
+                        // Reemplazar guiones bajos y "anos" por "años"
+                        $displayValue = str_replace('_', ' ', $value);
+                        $displayValue = str_replace('anos', 'años', $displayValue);
+                        // Capitalizar correctamente
+                        $displayValue = ucfirst($displayValue);
+                        // Reemplazar "a" por "a" en rangos (Entre 5 a 9 años)
+                        $displayValue = preg_replace('/\s+a\s+(\d)/', ' a $1', $displayValue);
+                    } else {
+                        $displayValue = '';
+                    }
+                }
+                // Si no, mostrar como string
+                else {
+                    $displayValue = is_array($value) ? json_encode($value) : (string) $value;
+                }
+                $mappedDemographic[$label] = $displayValue;
+            }
             $guideVResults = [
                 'id' => $referenciaV->id,
                 'folio' => $referenciaV->folio,
                 'created_at' => $referenciaV->created_at->format('Y-m-d H:i:s'),
-                'demographic_data' => $referenciaV->demographic_data ?? [],
+                'demographic_data' => $mappedDemographic,
             ];
         }
 
@@ -216,6 +342,10 @@ class ResultsController extends Controller
                 'folio' => $referenciaIII?->folio ?? $evaluations->first()->folio,
                 'created_at' => $referenciaIII?->created_at->format('Y-m-d H:i:s') ?? $evaluations->first()->created_at->format('Y-m-d H:i:s'),
                 'personal_folio' => $personalFolio,
+                'has_guide_i' => (bool) $referenciaI,
+                'has_guide_iii' => (bool) $referenciaIII,
+                'has_guide_v' => (bool) $referenciaV,
+                'has_cisneros' => false,
             ],
             'totalScore' => $totalScore,
             'results' => $results,

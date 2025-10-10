@@ -202,10 +202,7 @@ const navigation = computed(() => {
 
     return [
         { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
-        { name: 'Evaluaciones', href: '#', current: route().current('evaluations.*'), items: [
-            { name: 'Cargar resultados', href: route('evaluations.load'), current: route().current('evaluations.load') },
-            { name: 'Resultados', href: route('evaluations.index'), current: route().current('evaluations.index') },
-        ] },
+        { name: 'Cargar Evaluación', href: route('evaluations.load'), current: route().current('evaluations.load') },
         { name: 'Organizaciones', href: '#', current: route().current('organizations.*'), items: [
             { name: 'Listado', href: route('organizations.index'), current: route().current('organizations.index') },
             { name: 'Crear', href: route('organizations.create'), current: route().current('organizations.create') },

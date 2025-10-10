@@ -47,8 +47,11 @@ class PaperEvaluationScoreService
                     $dimensionItems = [];
 
                     foreach ($questions as $questionNumber) {
-                        $questionKey = sprintf('%02d', $questionNumber);
-                        $answer = $answers[$questionKey] ?? null;
+                        // Intentar con diferentes formatos de clave
+                        $answer = $answers[$questionNumber] 
+                            ?? $answers[sprintf('%02d', $questionNumber)] 
+                            ?? $answers[(string)$questionNumber] 
+                            ?? null;
 
                         if ($answer) {
                             $score = $this->getAnswerValue($questionNumber, $answer, $answerValues);
@@ -57,7 +60,7 @@ class PaperEvaluationScoreService
 
                             $dimensionItems[] = [
                                 'question_number' => $questionNumber,
-                                'question_key' => $questionKey,
+                                'question_key' => sprintf('%02d', $questionNumber),
                                 'answer' => $answer,
                                 'score' => $score,
                             ];
@@ -116,6 +119,7 @@ class PaperEvaluationScoreService
     {
         $scores = $this->calculateReferenciaIIIScores($evaluation);
         $questionDimensions = config('question_dimensions');
+        $referenciaIIIQuestions = config('referencia_iii.general');
 
         $detailedResults = [];
 
@@ -131,6 +135,9 @@ class PaperEvaluationScoreService
                     $dimensionData = $scores['dimensions'][$dimensionKey] ?? ['score' => 0, 'items' => []];
 
                     foreach ($dimensionData['items'] as $item) {
+                        $questionNumber = $item['question_number'];
+                        $questionText = $referenciaIIIQuestions[$questionNumber] ?? "Pregunta {$questionNumber}";
+                        
                         $detailedResults[] = [
                             'categoria' => [
                                 'nombre' => $categoryName,
@@ -141,7 +148,8 @@ class PaperEvaluationScoreService
                                 'puntaje' => $domainScore,
                             ],
                             'dimension' => $dimensionName,
-                            'item' => $item['question_number'],
+                            'item' => $questionText,
+                            'item_numero' => $questionNumber,
                             'respuesta' => $item['answer'],
                             'puntaje' => $item['score'],
                         ];
