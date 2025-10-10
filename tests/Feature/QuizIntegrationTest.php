@@ -5,12 +5,12 @@ namespace Tests\Feature;
 use App\Models\OnlineAnswer;
 use App\Models\Organization;
 use App\Models\Quiz;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class QuizIntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     public function test_complete_quiz_flow_for_all_types()
     {

@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\QuizController;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use ReflectionClass;
 use Tests\TestCase;
 
 class CustomFieldNamingTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     public function test_sanitize_field_name()
     {

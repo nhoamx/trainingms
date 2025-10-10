@@ -28,19 +28,25 @@ class EvaluationService
 
     public function getAllEvaluationsByOrganization()
     {
-        // Solo traemos las organizaciones y un conteo de evaluaciones
-        return Organization::withCount(['evaluations', 'quizzes'])
-            ->get()
-            ->map(function ($organization) {
-                return [
-                    'id' => $organization->id,
-                    'name' => $organization->name,
-                    'logo' => $organization->logo,
-                    'evaluations_count' => $organization->evaluations_count,
-                    'online_quizzes_count' => $organization->quizzes_count,
-                    // Indicador para ver el reporte, el frontend usará el id
-                ];
-            });
+        // Traer organizaciones y contar PaperEvaluations (source=paper, status=completed)
+        $orgs = Organization::all();
+        $orgIds = $orgs->pluck('id');
+        $paperCounts = \App\Models\PaperEvaluation::whereIn('organization_id', $orgIds)
+            ->where('source', 'paper')
+            ->where('processing_status', 'completed')
+            ->selectRaw('organization_id, personal_folio, COUNT(*) as count')
+            ->groupBy(['organization_id', 'personal_folio'])
+            ->pluck('count', 'organization_id');
+
+        return $orgs->map(function ($organization) use ($paperCounts) {
+            return [
+                'id' => $organization->id,
+                'name' => $organization->name,
+                'logo' => $organization->logo,
+                'evaluations_count' => $paperCounts[$organization->id] ?? 0,
+                'online_quizzes_count' => $organization->quizzes_count,
+            ];
+        });
     }
 
     public function getDemographicData(Organization $organization)

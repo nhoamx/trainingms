@@ -128,6 +128,131 @@ def get_referencia_iii_complete_answers(image_file, detector, folio):
         import traceback
         logging.error(traceback.format_exc())
 
+def get_referencia_v_complete_answers(image_file, detector, folio, min_fill_threshold=800):
+    """
+    Obtiene las respuestas completas de Referencia V con todas sus subsecciones demográficas.
+    A diferencia de las otras referencias, aquí cada subsección es independiente.
+    
+    Args:
+        min_fill_threshold: Umbral mínimo de píxeles para considerar una burbuja marcada (default 800)
+    """
+    import logging
+    try:
+        complete_answers = {}
+        
+        # Procesar subsecciones simples
+        simple_subsections = [
+            ('sexo', 'sexo'),
+            ('edad', 'edad'),
+            ('estado_civil', 'estado_civil'),
+            ('tipo_personal', 'tipo_personal'),
+            ('tipo_puesto', 'tipo_puesto'),
+            ('tipo_contratacion', 'tipo_contratacion'),
+            ('tipo_jornada', 'tipo_jornada'),
+            ('rotacion_turnos', 'rotacion_turnos'),
+            ('tiempo_puesto_actual', 'tiempo_puesto_actual'),
+            ('experiencia_laboral', 'experiencia_laboral'),
+            ('ocupacion', 'ocupacion'),
+            ('departamento', 'departamento'),
+        ]
+        
+        for section_name, config_attr in simple_subsections:
+            logging.info(f"Detectando subsección: {section_name}...")
+            if hasattr(config.config_legacy, config_attr):
+                section_config = getattr(config.config_legacy, config_attr)
+                
+                # Para secciones especiales con estructura anidada (edad, ocupacion, departamento)
+                if section_name == 'edad':
+                    # Edad tiene estructura especial: {'decenas': {...}, 'unidades': {...}}
+                    edad_result = {}
+                    if 'decenas' in section_config:
+                        decenas_answer = detector.detect_bubbles(image_file, {'decenas': section_config['decenas']}, min_fill_threshold=min_fill_threshold)
+                        edad_result['decenas'] = decenas_answer.get('decenas')
+                    if 'unidades' in section_config:
+                        unidades_answer = detector.detect_bubbles(image_file, {'unidades': section_config['unidades']}, min_fill_threshold=min_fill_threshold)
+                        edad_result['unidades'] = unidades_answer.get('unidades')
+                    complete_answers[section_name] = edad_result
+                elif section_name in ['ocupacion', 'departamento']:
+                    # Ocupación y departamento tienen estructura: {'fila1': {...}, 'fila2': {...}}
+                    result = {}
+                    if 'fila1' in section_config:
+                        fila1_answer = detector.detect_bubbles(image_file, {'fila1': section_config['fila1']}, min_fill_threshold=min_fill_threshold)
+                        result['fila1'] = fila1_answer.get('fila1')
+                    if 'fila2' in section_config:
+                        fila2_answer = detector.detect_bubbles(image_file, {'fila2': section_config['fila2']}, min_fill_threshold=min_fill_threshold)
+                        result['fila2'] = fila2_answer.get('fila2')
+                    complete_answers[section_name] = result
+                else:
+                    # Secciones normales
+                    section_answer = detector.detect_bubbles(image_file, {section_name: section_config}, min_fill_threshold=min_fill_threshold)
+                    complete_answers[section_name] = section_answer.get(section_name)
+            else:
+                logging.warning(f"No se encontró config.config_legacy.{config_attr}")
+        
+        # --- Procesamiento especial para nivel_estudios ---
+        logging.info("Procesando nivel_estudios (consolidado)...")
+        if hasattr(config.config_legacy, 'referencia_v') and 'nivel_estudios' in config.config_legacy.referencia_v:
+            nivel_estudios_config = config.config_legacy.referencia_v['nivel_estudios']
+            
+            # Estructura para el resultado consolidado
+            nivel_estudios_result = {
+                'sin_formacion': False,
+                'primaria': False,
+                'secundaria': False,
+                'preparatoria': False,
+                'tecnico_superior': False,
+                'licenciatura': False,
+                'maestria': False,
+                'doctorado': False,
+            }
+            
+            # Procesar cada nivel educativo
+            niveles = ['sin_formacion', 'primaria', 'secundaria', 'preparatoria', 
+                      'tecnico_superior', 'licenciatura', 'maestria', 'doctorado']
+            
+            logging.info("Procesando nivel_estudios (consolidado)...")
+            for nivel in niveles:
+                if nivel in nivel_estudios_config:
+                    nivel_config = nivel_estudios_config[nivel]
+                    
+                    if nivel == 'sin_formacion':
+                        # sin_formacion solo tiene una opción
+                        answer = detector.detect_bubbles(image_file, {nivel: nivel_config}, min_fill_threshold=min_fill_threshold)
+                        detected_option = answer.get(nivel)
+                        # Solo marcar como True si se detectó algo (no None)
+                        if detected_option == 'sin_formacion':
+                            nivel_estudios_result['sin_formacion'] = True
+                        # Si es None, queda en False (default)
+                    else:
+                        # Otros niveles tienen 'terminada' e 'incompleta'
+                        answer = detector.detect_bubbles(image_file, {nivel: nivel_config}, min_fill_threshold=min_fill_threshold)
+                        detected_option = answer.get(nivel)
+                        
+                        # Solo crear estructura si realmente se detectó algo
+                        if detected_option == 'terminada':
+                            nivel_estudios_result[nivel] = {'seleccionado': True, 'completado': 'completo'}
+                        elif detected_option == 'incompleta':
+                            nivel_estudios_result[nivel] = {'seleccionado': True, 'completado': 'incompleto'}
+                        # Si detected_option es None, queda en False (default)
+            
+            complete_answers['nivel_estudios'] = nivel_estudios_result
+        else:
+            logging.warning("No se encontró nivel_estudios en referencia_v")
+        
+        # Guardar el JSON completo
+        json_filename = f"{folio}.json"
+        json_output_path = os.path.join(output_json_folder, json_filename)
+        with open(json_output_path, 'w') as json_file:
+            json.dump(complete_answers, json_file, indent=4)
+        
+        logging.info(f"Resultados completos de Referencia V guardados en: {json_output_path}")
+        logging.info(f"Subsecciones detectadas: {list(complete_answers.keys())}")
+        
+    except Exception as e:
+        logging.error(f"Error procesando Referencia V completa en {image_file}: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+
 def get_main_answers_legacy(image_file, detector, evaluation_config, folio):
     """
     Obtiene las respuestas de la evaluación utilizando la configuración de evaluación
@@ -309,14 +434,13 @@ for image_file in aligned_image_files:
         logging.info(f"Folio {folio} → Referencia I (Acontecimientos Traumáticos)")
         get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
     elif template_type == "02":
-        # Referencia III - Evaluación principal COMPLETA (5 secciones)
-        logging.info(f"Folio {folio} → Referencia III COMPLETA (5 secciones)")
+        # Referencia III - Evaluación principal COMPLETA (6 secciones)
+        logging.info(f"Folio {folio} → Referencia III COMPLETA (6 secciones)")
         get_referencia_iii_complete_answers(new_image_path, detector, folio)
     elif template_type == "03":
-        # Referencia V - Datos del evaluado
-        evaluation_config = config.config_legacy.referencia_v if hasattr(config.config_legacy, 'referencia_v') else config.config_legacy.referencia_iii
-        logging.info(f"Folio {folio} → Referencia V (Datos Demográficos)")
-        get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
+        # Referencia V - Datos del evaluado (20 subsecciones)
+        logging.info(f"Folio {folio} → Referencia V COMPLETA (20 subsecciones demográficas)")
+        get_referencia_v_complete_answers(new_image_path, detector, folio)
     elif template_type == "04":
         # Escala Cisneros
         evaluation_config = config.config_legacy.escala_cisneros if hasattr(config.config_legacy, 'escala_cisneros') else config.config_legacy.referencia_iii

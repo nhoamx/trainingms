@@ -19,11 +19,11 @@
             </div>
 
             <ul v-else class="divide-y divide-gray-200">
-                <li v-for="(participant, index) in props.personalCalifications" :key="participant.personal_id"
+                <li v-for="(participant, index) in props.personalCalifications" :key="participant.personal_folio"
                     class="hover:bg-gray-50 transition-colors duration-150 ease-in-out p-0">
-                    <a :href="route('responses.personal', { 
-                        organizationId: props.organizationId,
-                        personalId: participant.personal_id
+                    <a :href="route('organization.results.detail', { 
+                        organization: props.organizationId,
+                        personalFolio: participant.personal_folio
                       })" class="flex justify-between items-center p-4 w-full h-full no-underline text-inherit"
                         style="display: flex;">
                         <div class="flex items-center space-x-3">
@@ -31,7 +31,7 @@
                                 class="bg-blue-100 text-blue-800 font-bold rounded-full h-8 w-8 flex items-center justify-center">
                                 {{ index + 1 }}
                             </div>
-                            <span class="font-medium">Participante {{ participant.personal_id }}</span>
+                            <span class="font-medium">Folio {{ participant.personal_folio }}</span>
                         </div>
                         <div class="flex items-center">
                             <div class="hidden sm:block mx-4 w-32 border-b border-dotted border-gray-300"></div>

@@ -9,6 +9,7 @@ import cv2
 import base64
 import sys
 import os
+import unicodedata
 
 app = Flask(__name__)
 
@@ -423,15 +424,124 @@ HTML_TEMPLATE = """
         function updateDisplay() {
             document.getElementById('bubbleCount').textContent = coordinates.length;
             
+            const section = document.getElementById('sectionType').value;
+            const startQuestion = parseInt(document.getElementById('startQuestion').value) || 1;
+            
             let html = '';
             coordinates.forEach((bubble, i) => {
+                let label = getItemLabel(section, i, startQuestion);
                 html += `<div class="coord-item bubble-complete">
-                    <strong>Burbuja ${i + 1}:</strong> (${bubble.x}, ${bubble.y}, ${bubble.width}, ${bubble.height})
+                    <strong>${label}:</strong> (${bubble.x}, ${bubble.y}, ${bubble.width}, ${bubble.height})
                     <br><small style="color: #aaa;">Centro: (${bubble.centerX}, ${bubble.centerY})</small>
                 </div>`;
             });
             
             document.getElementById('coordsList').innerHTML = html || '<p style="color: #888;">No hay coordenadas capturadas aún...</p>';
+        }
+        
+        function getItemLabel(section, bubbleIndex, startQuestion) {
+            if (section === 'folio') {
+                const columnIndex = Math.floor(bubbleIndex / 10);
+                const digitIndex = bubbleIndex % 10;
+                return `F${columnIndex + 1}, Dígito ${digitIndex}`;
+            } else if (section === 'referencia-i') {
+                const questionIndex = Math.floor(bubbleIndex / 2);
+                const optionIndex = bubbleIndex % 2;
+                return `Pregunta ${startQuestion + questionIndex}, ${optionIndex === 0 ? 'SI' : 'NO'}`;
+            } else if (section === 'referencia-iii') {
+                const questionIndex = Math.floor(bubbleIndex / 5);
+                const optionIndex = bubbleIndex % 5;
+                const options = ['A', 'B', 'C', 'D', 'E'];
+                return `Pregunta ${startQuestion + questionIndex}, ${options[optionIndex]}`;
+            } else if (section === 'referencia-iii-cond-customer') {
+                return `Condición Servicio Cliente, ${bubbleIndex === 0 ? 'SÍ' : 'NO'}`;
+            } else if (section === 'referencia-iii-cond-management') {
+                return `Condición Gestión, ${bubbleIndex === 0 ? 'SÍ' : 'NO'}`;
+            } else if (section === 'referencia-iii-customer') {
+                const questionIndex = Math.floor(bubbleIndex / 5);
+                const optionIndex = bubbleIndex % 5;
+                const options = ['A', 'B', 'C', 'D', 'E'];
+                return `Pregunta ${65 + questionIndex}, ${options[optionIndex]}`;
+            } else if (section === 'referencia-iii-management') {
+                const questionIndex = Math.floor(bubbleIndex / 5);
+                const optionIndex = bubbleIndex % 5;
+                const options = ['A', 'B', 'C', 'D', 'E'];
+                return `Pregunta ${69 + questionIndex}, ${options[optionIndex]}`;
+            } else if (section === 'referencia-iii-citsats') {
+                const questionIndex = Math.floor(bubbleIndex / 2);
+                const optionIndex = bubbleIndex % 2;
+                return `CITSATS ${startQuestion + questionIndex}, ${optionIndex === 0 ? 'SI' : 'NO'}`;
+            } else if (section === 'referencia-v-sexo') {
+                const options = ['Masculino', 'Femenino'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-edad') {
+                if (bubbleIndex < 10) {
+                    return `Edad Decenas: ${bubbleIndex}`;
+                } else {
+                    return `Edad Unidades: ${bubbleIndex - 10}`;
+                }
+            } else if (section === 'referencia-v-estado-civil') {
+                const options = ['Casado', 'Soltero', 'Unión libre', 'Divorciado', 'Viudo'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-tipo-personal') {
+                const options = ['Sindicalizado', 'Confianza', 'Ninguno'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-estudios-sin-formacion') {
+                return 'Sin formación';
+            } else if (section === 'referencia-v-estudios-primaria') {
+                const options = ['Primaria Terminada', 'Primaria Incompleta'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-estudios-secundaria') {
+                const options = ['Secundaria Terminada', 'Secundaria Incompleta'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-estudios-preparatoria') {
+                const options = ['Preparatoria Terminada', 'Preparatoria Incompleta'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-estudios-tecnico') {
+                const options = ['Técnico Superior Terminada', 'Técnico Superior Incompleta'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-estudios-licenciatura') {
+                const options = ['Licenciatura Terminada', 'Licenciatura Incompleta'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-estudios-maestria') {
+                const options = ['Maestría Terminada', 'Maestría Incompleta'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-estudios-doctorado') {
+                const options = ['Doctorado Terminado', 'Doctorado Incompleto'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-tipo-puesto') {
+                const options = ['Operativo', 'Profesional o técnico', 'Supervisor', 'Gerente'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-tipo-contratacion') {
+                const options = ['Por obra o proyecto', 'Por tiempo determinado', 'Tiempo indeterminado', 'Honorarios'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-tipo-jornada') {
+                const options = ['Fijo nocturno', 'Fijo diurno', 'Fijo mixto'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-rotacion-turnos') {
+                const options = ['Sí', 'No'];
+                return `Rotación: ${options[bubbleIndex]}`;
+            } else if (section === 'referencia-v-tiempo-puesto') {
+                const options = ['< 6 meses', '6 meses-1 año', '1-4 años', '5-9 años', '10-14 años', '15-19 años', '20-24 años', '25+ años'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-experiencia-laboral') {
+                const options = ['< 6 meses', '6 meses-1 año', '1-4 años', '5-9 años', '10-14 años', '15-19 años'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'referencia-v-ocupacion') {
+                if (bubbleIndex < 5) {
+                    return `Ocupación Fila 1, Col ${String.fromCharCode(65 + bubbleIndex)}`;
+                } else {
+                    return `Ocupación Fila 2, Col ${String.fromCharCode(65 + (bubbleIndex - 5))}`;
+                }
+            } else if (section === 'referencia-v-departamento') {
+                if (bubbleIndex < 5) {
+                    return `Departamento Fila 1, Col ${String.fromCharCode(65 + bubbleIndex)}`;
+                } else {
+                    return `Departamento Fila 2, Col ${String.fromCharCode(65 + (bubbleIndex - 5))}`;
+                }
+            } else {
+                return `Burbuja ${bubbleIndex + 1}`;
+            }
         }
 
         function resetCoordinates() {
@@ -531,6 +641,80 @@ HTML_TEMPLATE = """
                 const questionIndex = Math.floor(bubbleCount / 2);
                 const optionIndex = bubbleCount % 2;
                 itemText = `CITSATS ${startQuestion + questionIndex}, ${optionIndex === 0 ? 'SI' : 'NO'}`;
+            } else if (section === 'referencia-v-sexo') {
+                const options = ['Masculino', 'Femenino'];
+                itemText = bubbleCount < 2 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-edad') {
+                if (bubbleCount < 10) {
+                    itemText = `Edad - Decenas: ${bubbleCount}`;
+                } else if (bubbleCount < 20) {
+                    itemText = `Edad - Unidades: ${bubbleCount - 10}`;
+                } else {
+                    itemText = 'Edad completa';
+                }
+            } else if (section === 'referencia-v-estado-civil') {
+                const options = ['Casado', 'Soltero', 'Unión libre', 'Divorciado', 'Viudo'];
+                itemText = bubbleCount < 5 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-tipo-personal') {
+                const options = ['Sindicalizado', 'Confianza', 'Ninguno'];
+                itemText = bubbleCount < 3 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-estudios-sin-formacion') {
+                itemText = bubbleCount === 0 ? 'Sin formación' : 'Completo';
+            } else if (section === 'referencia-v-estudios-primaria') {
+                const options = ['Primaria Terminada', 'Primaria Incompleta'];
+                itemText = bubbleCount < 2 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-estudios-secundaria') {
+                const options = ['Secundaria Terminada', 'Secundaria Incompleta'];
+                itemText = bubbleCount < 2 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-estudios-preparatoria') {
+                const options = ['Preparatoria Terminada', 'Preparatoria Incompleta'];
+                itemText = bubbleCount < 2 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-estudios-tecnico') {
+                const options = ['Técnico Superior Terminada', 'Técnico Superior Incompleta'];
+                itemText = bubbleCount < 2 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-estudios-licenciatura') {
+                const options = ['Licenciatura Terminada', 'Licenciatura Incompleta'];
+                itemText = bubbleCount < 2 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-estudios-maestria') {
+                const options = ['Maestría Terminada', 'Maestría Incompleta'];
+                itemText = bubbleCount < 2 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-estudios-doctorado') {
+                const options = ['Doctorado Terminado', 'Doctorado Incompleto'];
+                itemText = bubbleCount < 2 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-tipo-puesto') {
+                const options = ['Operativo', 'Profesional o técnico', 'Supervisor', 'Gerente'];
+                itemText = bubbleCount < 4 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-tipo-contratacion') {
+                const options = ['Por obra o proyecto', 'Por tiempo determinado', 'Tiempo indeterminado', 'Honorarios'];
+                itemText = bubbleCount < 4 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-tipo-jornada') {
+                const options = ['Fijo nocturno', 'Fijo diurno', 'Fijo mixto'];
+                itemText = bubbleCount < 3 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-rotacion-turnos') {
+                const options = ['Sí', 'No'];
+                itemText = bubbleCount < 2 ? `Rotación: ${options[bubbleCount]}` : 'Completo';
+            } else if (section === 'referencia-v-tiempo-puesto') {
+                const options = ['< 6 meses', '6 meses-1 año', '1-4 años', '5-9 años', '10-14 años', '15-19 años', '20-24 años', '25+ años'];
+                itemText = bubbleCount < 8 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-experiencia-laboral') {
+                const options = ['< 6 meses', '6 meses-1 año', '1-4 años', '5-9 años', '10-14 años', '15-19 años'];
+                itemText = bubbleCount < 6 ? options[bubbleCount] : 'Completo';
+            } else if (section === 'referencia-v-ocupacion') {
+                if (bubbleCount < 5) {
+                    itemText = `Ocupación - Fila 1, Columna ${String.fromCharCode(65 + bubbleCount)}`;
+                } else if (bubbleCount < 10) {
+                    itemText = `Ocupación - Fila 2, Columna ${String.fromCharCode(65 + (bubbleCount - 5))}`;
+                } else {
+                    itemText = 'Ocupación completa';
+                }
+            } else if (section === 'referencia-v-departamento') {
+                if (bubbleCount < 5) {
+                    itemText = `Departamento - Fila 1, Columna ${String.fromCharCode(65 + bubbleCount)}`;
+                } else if (bubbleCount < 10) {
+                    itemText = `Departamento - Fila 2, Columna ${String.fromCharCode(65 + (bubbleCount - 5))}`;
+                } else {
+                    itemText = 'Departamento completo';
+                }
             } else if (section === 'referencia-v') {
                 itemText = `Elemento ${bubbleCount + 1}`;
             } else {
@@ -601,8 +785,13 @@ def set_section():
 @app.route('/generate_python')
 def generate_python():
     """Generate Python code for config.py based on current section."""
-    code = generate_config_code()
-    return jsonify({'code': code})
+    try:
+        code = generate_config_code()
+        return jsonify({'code': code})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 def generate_config_code():
     """Generate the appropriate Python code based on section type."""
@@ -872,62 +1061,66 @@ def generate_custom_code(bubbles):
     return code
 
 def generate_referencia_v_simple_code(bubbles, section_key, options):
-    """Genera código para secciones simples de Referencia V con opciones predefinidas"""
-    code = f"'{section_key}': [\n"
-    for i, bubble in enumerate(bubbles):
-        option_name = options[i] if i < len(options) else f"Opción {i+1}"
-        code += f"        {{'x': {bubble['x']}, 'y': {bubble['y']}}},  # {option_name}\n"
-    code += "    ],"
+    """Genera código para secciones simples de Referencia V con opciones predefinidas en formato variable = { clave: (x,y,w,h) }"""
+    def normalize(label: str) -> str:
+        nf = unicodedata.normalize('NFD', label)
+        no_accents = ''.join(ch for ch in nf if unicodedata.category(ch) != 'Mn')
+        return no_accents.lower().replace(' ', '_').replace('/', '_').replace('-', '_')
+
+    code = f"{section_key} = {{\n"
+    for i, b in enumerate(bubbles):
+        x, y, w, h = b
+        raw_label = options[i] if i < len(options) else f"Opción {i+1}"
+        key = normalize(raw_label)
+        code += f"    '{key}': ({x}, {y}, {w}, {h}),\n"
+    code += "}\n"
     return code
 
 def generate_referencia_v_edad_code(bubbles):
-    """Genera código para la sección de edad (2 dígitos: decenas y unidades)"""
-    code = "'edad': {\n"
-    code += "        'decenas': [\n"
-    
-    # Primeros 10 bubbles para decenas (0-9)
+    """Genera código para la sección de edad con formato edad = { 'decenas': {'0':(...),...}, 'unidades': {...} }"""
+    code = "edad = {\n"
+    code += "    'decenas': {\n"
     for i in range(min(10, len(bubbles))):
-        code += f"            {{'x': {bubbles[i]['x']}, 'y': {bubbles[i]['y']}}},  # {i}\n"
-    code += "        ],\n"
-    
-    code += "        'unidades': [\n"
-    # Siguientes 10 bubbles para unidades (0-9)
+        x, y, w, h = bubbles[i]
+        code += f"        '{i}': ({x}, {y}, {w}, {h}),\n"
+    code += "    },\n"
+    code += "    'unidades': {\n"
     for i in range(10, min(20, len(bubbles))):
         digit = i - 10
-        code += f"            {{'x': {bubbles[i]['x']}, 'y': {bubbles[i]['y']}}},  # {digit}\n"
-    code += "        ]\n"
-    code += "    },"
+        x, y, w, h = bubbles[i]
+        code += f"        '{digit}': ({x}, {y}, {w}, {h}),\n"
+    code += "    }\n"
+    code += "}\n"
     return code
 
 def generate_referencia_v_estudios_code(bubbles, section_key, nivel_name):
-    """Genera código para secciones de estudios con opciones Terminada/Incompleta"""
-    code = f"'{section_key}': [\n"
+    """Genera código para secciones de estudios -> variable = { 'terminada': (...), 'incompleta': (...) }"""
     terminada_incompleta = ['Terminada', 'Incompleta']
-    
-    for i, bubble in enumerate(bubbles):
-        option_name = terminada_incompleta[i] if i < len(terminada_incompleta) else f"Opción {i+1}"
-        code += f"        {{'x': {bubble['x']}, 'y': {bubble['y']}}},  # {nivel_name} {option_name}\n"
-    code += "    ],"
+    code = f"{section_key} = {{\n"
+    for i, b in enumerate(bubbles):
+        x, y, w, h = b
+        raw_label = terminada_incompleta[i] if i < len(terminada_incompleta) else f"Opción {i+1}"
+        key = 'terminada' if i == 0 else ('incompleta' if i == 1 else f'opcion_{i+1}')
+        code += f"    '{key}': ({x}, {y}, {w}, {h}),  # {nivel_name} {raw_label}\n"
+    code += "}\n"
     return code
 
 def generate_referencia_v_coding_code(bubbles, section_key, section_name):
-    """Genera código para grillas de codificación (2 filas x 5 columnas A-E)"""
-    code = f"'{section_key}': {{\n"
-    
-    # Primera fila (columnas A-E)
-    code += "        'fila1': [\n"
+    """Genera código para grillas de codificación (2 filas x 5 columnas A-E) en formato variable = { 'fila1': {'A':(...)} }"""
+    code = f"{section_key} = {{\n"
+    code += "    'fila1': {\n"
     for i in range(min(5, len(bubbles))):
+        x, y, w, h = bubbles[i]
         letter = chr(ord('A') + i)
-        code += f"            {{'x': {bubbles[i]['x']}, 'y': {bubbles[i]['y']}}},  # {letter}\n"
-    code += "        ],\n"
-    
-    # Segunda fila (columnas A-E)
-    code += "        'fila2': [\n"
+        code += f"        '{letter}': ({x}, {y}, {w}, {h}),\n"
+    code += "    },\n"
+    code += "    'fila2': {\n"
     for i in range(5, min(10, len(bubbles))):
+        x, y, w, h = bubbles[i]
         letter = chr(ord('A') + (i - 5))
-        code += f"            {{'x': {bubbles[i]['x']}, 'y': {bubbles[i]['y']}}},  # {letter}\n"
-    code += "        ]\n"
-    code += "    },"
+        code += f"        '{letter}': ({x}, {y}, {w}, {h}),\n"
+    code += "    }\n"
+    code += "}\n"
     return code
 
 def main():
