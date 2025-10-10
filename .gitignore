@@ -25,7 +25,7 @@ yarn-error.log
 /docker/output_images
 /docker/output_original
 /docker/outputs_aligned
-/docker/input
+/docker/input/
 /docker/.idea
 /docker/log.log
 /docker/__pycache__/

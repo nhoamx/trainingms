@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\ProcessEvaluation;
+use App\Jobs\ProcessPaperEvaluation;
 use App\Models\Evaluation;
 use App\Models\Organization;
 use Illuminate\Http\Request;
@@ -50,8 +50,8 @@ class EvaluationController extends Controller
         // Nombre o ID del contenedor (según salida de `docker ps`)
         $containerName = 'training-and-ms';
 
-        // 3. Despachar el job que se encargará de copiar el archivo y ejecutar el comando
-        ProcessEvaluation::dispatch($fullPath, $containerName);
+        // 3. Despachar el nuevo job para procesamiento mejorado
+        ProcessPaperEvaluation::dispatch($fullPath, $containerName);
 
         // Redirigir a la lista de evaluaciones con un mensaje de éxito
         return redirect()

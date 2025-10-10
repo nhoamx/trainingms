@@ -4,13 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\Organization;
 use App\Models\Quiz;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 class QuizCompletionTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use DatabaseTransactions, WithFaker;
 
     protected function setUp(): void
     {
@@ -22,7 +22,7 @@ class QuizCompletionTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[test]
     public function normal_quiz_completion_returns_correct_data()
     {
         // Create a normal quiz
@@ -100,7 +100,7 @@ class QuizCompletionTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[test]
     public function reduced_quiz_completion_returns_correct_data()
     {
         // Create a reduced quiz
@@ -158,7 +158,7 @@ class QuizCompletionTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[test]
     public function cisneros_quiz_completion_returns_correct_data()
     {
         // Create a Cisneros quiz
@@ -224,7 +224,7 @@ class QuizCompletionTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[test]
     public function completion_page_receives_folio_and_personal_id()
     {
         // Create a quiz
@@ -259,7 +259,7 @@ class QuizCompletionTest extends TestCase
         );
     }
 
-    /** @test */
+    #[test]
     public function user_experience_remains_unchanged_across_quiz_types()
     {
         $quizTypes = [
