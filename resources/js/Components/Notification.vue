@@ -35,7 +35,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { CheckCircleIcon, ExclamationCircleIcon, ArrowPathIcon } from '@heroicons/vue/24/outline'
 import { XMarkIcon } from '@heroicons/vue/20/solid'
 
@@ -60,14 +60,43 @@ const updateNotificationContent = (status) => {
     }
 }
 
+const props = defineProps({
+    userId: {
+        type: String,
+        required: false,
+    }
+})
+
+let channelName = null
+
 onMounted(() => {
-    Echo.channel('evaluation-processing')
-        .listen('.evaluation.status', (e) => {
-            console.log(e)
+    // Use a private channel for per-user notifications when userId is provided.
+    channelName = props.userId ? `evaluation-processing.${props.userId}` : 'evaluation-processing'
+
+    if (props.userId && window.Echo && window.Echo.private) {
+        window.Echo.private(channelName).listen('.evaluation.status', (e) => {
             show.value = !e.finished
             currentStatus.value = e.status
             message.value = e.message
             updateNotificationContent(e.status)
         });
+    } else if (window.Echo) {
+        window.Echo.channel(channelName).listen('.evaluation.status', (e) => {
+            show.value = !e.finished
+            currentStatus.value = e.status
+            message.value = e.message
+            updateNotificationContent(e.status)
+        });
+    }
+})
+
+onUnmounted(() => {
+    try {
+        if (channelName && window.Echo && typeof window.Echo.leaveChannel === 'function') {
+            window.Echo.leaveChannel(channelName)
+        }
+    } catch (err) {
+        // ignore
+    }
 })
 </script>

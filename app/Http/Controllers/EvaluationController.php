@@ -51,7 +51,8 @@ class EvaluationController extends Controller
         $containerName = 'training-and-ms';
 
         // 3. Despachar el nuevo job para procesamiento mejorado
-        ProcessPaperEvaluation::dispatch($fullPath, $containerName);
+        $userId = optional($request->user())->id;
+        ProcessPaperEvaluation::dispatch($fullPath, $containerName, $userId);
 
         // Redirigir a la lista de evaluaciones con un mensaje de éxito
         return redirect()

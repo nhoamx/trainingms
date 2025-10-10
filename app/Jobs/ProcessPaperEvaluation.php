@@ -21,15 +21,18 @@ class ProcessPaperEvaluation implements ShouldQueue
 
     protected string $containerName;
 
+    protected ?string $initiatorUserId;
+
     public int $timeout = 300;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $fullPath, string $containerName)
+    public function __construct(string $fullPath, string $containerName, ?string $initiatorUserId = null)
     {
         $this->fullPath = $fullPath;
         $this->containerName = $containerName;
+        $this->initiatorUserId = $initiatorUserId;
     }
 
     /**
@@ -40,7 +43,8 @@ class ProcessPaperEvaluation implements ShouldQueue
         broadcast(new EvaluationProcessingStatusChanged(
             'running',
             'El procesamiento ha iniciado',
-            false
+            false,
+            $this->initiatorUserId
         ));
 
         try {
@@ -59,7 +63,8 @@ class ProcessPaperEvaluation implements ShouldQueue
             broadcast(new EvaluationProcessingStatusChanged(
                 'finished',
                 'El procesamiento ha finalizado exitosamente',
-                true
+                true,
+                $this->initiatorUserId
             ));
 
         } catch (\Exception $e) {
@@ -71,7 +76,8 @@ class ProcessPaperEvaluation implements ShouldQueue
             broadcast(new EvaluationProcessingStatusChanged(
                 'error',
                 'Error durante el procesamiento: '.$e->getMessage(),
-                false
+                false,
+                $this->initiatorUserId
             ));
 
             throw $e;
@@ -172,6 +178,7 @@ class ProcessPaperEvaluation implements ShouldQueue
                     'referencia_i_answers' => $structuredData['referencia_i_answers'] ?? null,
                     'referencia_iii_answers' => $structuredData['referencia_iii_answers'] ?? null,
                     'referencia_iii_conditional' => $structuredData['referencia_iii_conditional'] ?? null,
+                    'citsats_s1' => $structuredData['citsats_s1'] ?? null,
                     'cisneros_answers' => $structuredData['cisneros_answers'] ?? null,
                     'raw_data' => $rawData,
                 ]

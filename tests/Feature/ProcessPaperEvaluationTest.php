@@ -11,6 +11,15 @@ class ProcessPaperEvaluationTest extends TestCase
 {
     use DatabaseTransactions;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Ensure the paper_evaluations table is empty before each test to avoid
+        // interference from other tests or pre-seeded data.
+        PaperEvaluation::query()->delete();
+    }
+
     public function test_can_parse_folio_correctly(): void
     {
         $folio = '019530001';

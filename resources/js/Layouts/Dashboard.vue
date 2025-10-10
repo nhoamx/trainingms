@@ -163,7 +163,8 @@
             </div>
         </header>
         <main>
-            <Notification />
+        <!-- Pass current user id to Notification component so it listens to private channel -->
+        <Notification :user-id="user?.id" />
             <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                 <slot />
             </div>
