@@ -246,34 +246,69 @@ Esto permite ver cualquier error o warning del script Python directamente en los
 
 ```php
 // En processJsonResults()
-$maxAttempts = 60;      // Máximo de intentos (default: 60)
-$attemptDelay = 10;     // Segundos entre intentos (default: 10)
-// Tiempo máximo = maxAttempts * attemptDelay = 600 segundos (10 minutos)
+$maxAttempts = 120;     // Máximo de intentos (matches job timeout)
+$attemptDelay = 10;     // Segundos entre intentos
+// Tiempo máximo = 120 * 10 = 1200 segundos = 20 minutos
+
+$maxNoNewFilesAttempts = 12; // Exit si no hay nuevos por 2 minutos
+// Idle timeout = 12 * 10 = 120 segundos = 2 minutos
 
 // Frecuencia de broadcast al usuario
 if ($attempt % 3 === 0) // Cada 3 intentos = 30 segundos
 ```
 
 **Recomendaciones:**
-- Para PDFs pequeños (1-5 páginas): 60 intentos es más que suficiente
-- Para PDFs grandes (50+ páginas): Considerar aumentar `$maxAttempts` a 120 (20 minutos)
-- `$attemptDelay = 10` segundos es un buen balance entre responsividad y carga del servidor
+- **maxAttempts:** Debe igualar el job timeout (120 attempts = 20 min = 1200s)
+- **attemptDelay:** 10 segundos es óptimo (balance entre responsividad y carga)
+- **maxNoNewFilesAttempts:** 12 intentos (2 min) es suficiente para detectar fin de procesamiento
+- Para PDFs muy grandes (100+ páginas): Aumentar timeout del Job y maxAttempts proporcionalmente
 
 ### Timeout del Job
 
-El timeout del Job debe ser mayor que el polling máximo:
+El timeout del Job debe igualar el polling máximo:
 
 ```php
-public int $timeout = 1200; // 20 minutos (mayor que 10 min de polling)
+public int $timeout = 1200; // 20 minutos
+// = maxAttempts (120) * attemptDelay (10)
 ```
+
+**Importante:** Estos valores deben estar sincronizados para evitar que el Job se mate antes de que el polling termine.
+
+### Prevención de Duplicados
+
+El sistema previene duplicados en múltiples niveles:
+
+1. **Polling Incremental:**
+   ```php
+   $processedFiles = []; // Track archivos procesados
+   $newFiles = array_diff($jsonFiles, $processedFiles);
+   ```
+
+2. **Database-level:**
+   ```php
+   PaperEvaluation::updateOrCreate(
+       ['folio' => $folio], // Unique constraint
+       [...]
+   );
+   ```
+
+3. **Early Exit:**
+   ```php
+   if (count($processedFiles) > 0 && $noNewFilesCount >= 12) {
+       break; // No esperar innecesariamente
+   }
+   ```
 
 ## Ventajas de Esta Solución
 
 ✅ **Robusto:** Maneja correctamente el timing asíncrono del procesamiento OCR  
-✅ **Informativo:** El usuario ve el progreso en tiempo real  
-✅ **Debuggeable:** Logs detallados en cada paso  
+✅ **Incremental:** Procesa archivos conforme aparecen (no espera a todos)  
+✅ **Sin Duplicados:** `array_diff()` + `updateOrCreate()` previenen reprocesamiento  
+✅ **Eficiente:** Exit automático cuando no hay nuevos archivos por 2 minutos  
+✅ **Informativo:** El usuario ve el progreso en tiempo real con contadores  
+✅ **Debuggeable:** Logs detallados de cada archivo procesado  
 ✅ **Configurable:** Parámetros ajustables según necesidades  
-✅ **Fail-safe:** Timeout claro si algo falla  
+✅ **Fail-safe:** Timeout claro sincronizado con Job timeout  
 ✅ **Backwards Compatible:** No requiere cambios en el script Python  
 
 ## Testing
@@ -300,8 +335,25 @@ tail -f storage/logs/laravel.log
 # - "Ejecutando análisis OCR..."
 # - "Esperando resultados del análisis..."
 # - "Analizando documento... (30s transcurridos)"
-# - "Analizando documento... (60s transcurridos)"
+# - "Procesados 1 formularios..." ← Primer archivo detectado
+# - "Analizando documento... (1 procesados, 60s transcurridos)"
+# - "Procesados 2 formularios..." ← Segundo archivo
+# - "Procesados 3 formularios..."
 # - etc.
+
+# Los logs mostrarán:
+tail -f storage/logs/laravel.log
+
+# Ejemplo de output esperado:
+# [INFO] Waiting for JSON files...
+# [INFO] No JSON files found yet. Waiting... (Attempt 3/120)
+# [INFO] New JSON files found (new_count: 1, total_processed: 0)
+# [INFO] Processed file (file: ABC-001-REF3-00001.json, total_processed: 1)
+# [INFO] Waiting for more files... (Processed: 1, No new files: 3/12)
+# [INFO] New JSON files found (new_count: 1, total_processed: 1)
+# [INFO] Processed file (file: ABC-001-REF3-00002.json, total_processed: 2)
+# [INFO] No new files detected for 2 minutes. Assuming processing complete.
+# [INFO] JSON processing completed (total_processed: 2, total_wait_time: 180 seconds)
 ```
 
 ## Archivos Modificados
@@ -344,26 +396,28 @@ Por ahora, el polling de JSONs debería ser suficiente y es la solución más si
 ## Commit Message
 
 ```
-fix: implement polling mechanism for OCR JSON output
+fix: improve OCR polling with incremental processing and duplicate prevention
 
 Problem:
-- docker exec returns immediately (code 0) before Python script finishes
-- Job failed with "No JSON files found" because it checked too early
-- OCR processing takes time, JSONs created after command returns
+- Previous polling waited for all JSONs, then processed all at once
+- Python creates JSONs one by one over time (not all at once)
+- Risk of processing same file multiple times
+- Job timeout (20 min) didn't match polling timeout (10 min)
 
 Solution:
-- Added polling loop with 60 attempts @ 10s intervals (10 min max wait)
-- Progress broadcasts every 30s: "Analyzing document... (Xs elapsed)"
-- Detailed logging of each polling attempt
-- Capture Python script output for debugging
-- Improved status broadcasts at each processing stage
+- Incremental processing: process each JSON as it appears
+- Track processed files with $processedFiles array
+- Use array_diff() to detect only NEW files
+- Early exit after 2 min idle (no new files)
+- Sync timeouts: 120 attempts * 10s = 1200s = 20 min (matches job timeout)
+- Real-time progress: "Procesados X formularios..."
 
 Benefits:
-- Robust handling of async OCR processing
-- Real-time progress updates for users
-- Better debugging with comprehensive logs
-- Configurable timeout and retry parameters
-- Backwards compatible (no Python changes needed)
+- No duplicate processing (array_diff + updateOrCreate)
+- Faster completion (doesn't wait full 20 min if done early)
+- Better UX with real-time file count updates
+- Proper timeout synchronization
+- Handles one-by-one JSON generation correctly
 
-Verified with production logs showing timing issue pattern.
+Updated: docs/OCR_POLLING_FIX.md with incremental processing details
 ```
