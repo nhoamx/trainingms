@@ -42,7 +42,7 @@ class ProcessPaperEvaluation implements ShouldQueue
     {
         broadcast(new EvaluationProcessingStatusChanged(
             'running',
-            'El procesamiento ha iniciado',
+            'Copiando PDF al contenedor...',
             false,
             $this->initiatorUserId
         ));
@@ -51,11 +51,32 @@ class ProcessPaperEvaluation implements ShouldQueue
             // 1. Copy PDF to Docker container
             $this->copyPdfToContainer();
 
+            broadcast(new EvaluationProcessingStatusChanged(
+                'running',
+                'Ejecutando análisis OCR...',
+                false,
+                $this->initiatorUserId
+            ));
+
             // 2. Execute OCR processing
             $this->executeOcrProcessing();
 
+            broadcast(new EvaluationProcessingStatusChanged(
+                'running',
+                'Esperando resultados del análisis...',
+                false,
+                $this->initiatorUserId
+            ));
+
             // 3. Process JSON results and store in new structure
             $this->processJsonResults();
+
+            broadcast(new EvaluationProcessingStatusChanged(
+                'running',
+                'Guardando resultados en la base de datos...',
+                false,
+                $this->initiatorUserId
+            ));
 
             // 4. Cleanup uploaded files
             $this->cleanupFiles();
@@ -106,27 +127,87 @@ class ProcessPaperEvaluation implements ShouldQueue
      */
     protected function executeOcrProcessing(): void
     {
-        $execCommand = "docker exec {$this->containerName} python /app/main.py";
+        $execCommand = "docker exec {$this->containerName} python /app/main.py 2>&1";
+
+        Log::info('Starting OCR processing in container');
 
         exec($execCommand, $execOutput, $execReturn);
 
-        if ($execReturn !== 0) {
-            throw new \RuntimeException('Error al ejecutar el comando en el contenedor. Código: '.$execReturn);
+        // Log the output for debugging
+        if (! empty($execOutput)) {
+            Log::info('Python script output:', ['output' => implode("\n", $execOutput)]);
         }
 
-        Log::info('OCR processing completed successfully');
+        if ($execReturn !== 0) {
+            Log::error('Docker exec failed', [
+                'return_code' => $execReturn,
+                'output' => $execOutput,
+            ]);
+            throw new \RuntimeException("Error al ejecutar el comando en el contenedor. Código: {$execReturn}");
+        }
+
+        Log::info('OCR processing command completed successfully');
     }
 
     /**
      * Process JSON results from OCR and store in structured format
+     * Implements polling mechanism to wait for JSON files to be created
      */
     protected function processJsonResults(): void
     {
         $outputFolder = base_path('docker/output');
+        $maxAttempts = 60; // Wait up to 10 minutes (60 attempts * 10 seconds)
+        $attemptDelay = 10; // Wait 10 seconds between attempts
+        $attempt = 0;
+
+        Log::info('Waiting for JSON files to be created...', [
+            'output_folder' => $outputFolder,
+            'max_wait_time' => ($maxAttempts * $attemptDelay).' seconds',
+        ]);
+
+        // Polling loop to wait for JSON files
+        while ($attempt < $maxAttempts) {
+            $jsonFiles = glob($outputFolder.'/*.json');
+
+            if ($jsonFiles && count($jsonFiles) > 0) {
+                Log::info('JSON files found', [
+                    'count' => count($jsonFiles),
+                    'attempt' => $attempt + 1,
+                    'wait_time' => ($attempt * $attemptDelay).' seconds',
+                ]);
+                break;
+            }
+
+            $attempt++;
+
+            if ($attempt < $maxAttempts) {
+                Log::info("No JSON files found yet. Waiting... (Attempt {$attempt}/{$maxAttempts})");
+
+                // Send progress update every 3 attempts (30 seconds)
+                if ($attempt % 3 === 0) {
+                    $waitedTime = $attempt * $attemptDelay;
+                    broadcast(new EvaluationProcessingStatusChanged(
+                        'running',
+                        "Analizando documento... ({$waitedTime}s transcurridos)",
+                        false,
+                        $this->initiatorUserId
+                    ));
+                }
+
+                sleep($attemptDelay);
+            }
+        }
+
+        // Final check after polling
         $jsonFiles = glob($outputFolder.'/*.json');
 
-        if (! $jsonFiles) {
-            throw new \RuntimeException('No se encontraron archivos JSON para procesar');
+        if (! $jsonFiles || count($jsonFiles) === 0) {
+            Log::error('No JSON files found after polling', [
+                'output_folder' => $outputFolder,
+                'total_wait_time' => ($maxAttempts * $attemptDelay).' seconds',
+                'attempts' => $maxAttempts,
+            ]);
+            throw new \RuntimeException('No se encontraron archivos JSON para procesar después de esperar '.($maxAttempts * $attemptDelay).' segundos');
         }
 
         Log::info('Processing '.count($jsonFiles).' JSON files');
