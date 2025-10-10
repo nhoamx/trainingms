@@ -151,44 +151,91 @@ class ProcessPaperEvaluation implements ShouldQueue
 
     /**
      * Process JSON results from OCR and store in structured format
-     * Implements polling mechanism to wait for JSON files to be created
+     * Implements polling mechanism to wait for JSON files and process them incrementally
      */
     protected function processJsonResults(): void
     {
         $outputFolder = base_path('docker/output');
-        $maxAttempts = 60; // Wait up to 10 minutes (60 attempts * 10 seconds)
+        $maxAttempts = 120; // Wait up to 20 minutes (120 attempts * 10 seconds)
         $attemptDelay = 10; // Wait 10 seconds between attempts
         $attempt = 0;
+        $processedFiles = []; // Track already processed files
+        $noNewFilesCount = 0; // Track attempts with no new files
+        $maxNoNewFilesAttempts = 12; // Exit if no new files for 2 minutes (12 * 10s)
 
         Log::info('Waiting for JSON files to be created...', [
             'output_folder' => $outputFolder,
             'max_wait_time' => ($maxAttempts * $attemptDelay).' seconds',
         ]);
 
-        // Polling loop to wait for JSON files
+        // Polling loop to wait for and process JSON files incrementally
         while ($attempt < $maxAttempts) {
             $jsonFiles = glob($outputFolder.'/*.json');
 
-            if ($jsonFiles && count($jsonFiles) > 0) {
-                Log::info('JSON files found', [
-                    'count' => count($jsonFiles),
+            // Filter out already processed files
+            $newFiles = array_diff($jsonFiles ?: [], $processedFiles);
+
+            if (! empty($newFiles)) {
+                Log::info('New JSON files found', [
+                    'new_count' => count($newFiles),
+                    'total_processed' => count($processedFiles),
                     'attempt' => $attempt + 1,
                     'wait_time' => ($attempt * $attemptDelay).' seconds',
                 ]);
-                break;
+
+                // Process new files immediately
+                foreach ($newFiles as $jsonFile) {
+                    $this->processJsonFile($jsonFile);
+                    $processedFiles[] = $jsonFile;
+
+                    Log::info('Processed file', [
+                        'file' => basename($jsonFile),
+                        'total_processed' => count($processedFiles),
+                    ]);
+                }
+
+                // Reset no-new-files counter since we found new files
+                $noNewFilesCount = 0;
+
+                // Broadcast progress
+                broadcast(new EvaluationProcessingStatusChanged(
+                    'running',
+                    'Procesados '.count($processedFiles).' formularios...',
+                    false,
+                    $this->initiatorUserId
+                ));
+            } else {
+                $noNewFilesCount++;
+
+                // If we've processed at least one file and no new files for 2 minutes, consider done
+                if (count($processedFiles) > 0 && $noNewFilesCount >= $maxNoNewFilesAttempts) {
+                    Log::info('No new files detected for 2 minutes. Assuming processing complete.', [
+                        'total_processed' => count($processedFiles),
+                        'idle_time' => ($noNewFilesCount * $attemptDelay).' seconds',
+                    ]);
+                    break;
+                }
             }
 
             $attempt++;
 
             if ($attempt < $maxAttempts) {
-                Log::info("No JSON files found yet. Waiting... (Attempt {$attempt}/{$maxAttempts})");
+                if (count($processedFiles) === 0) {
+                    Log::info("No JSON files found yet. Waiting... (Attempt {$attempt}/{$maxAttempts})");
+                } else {
+                    Log::info('Waiting for more files... (Processed: '.count($processedFiles).", No new files: {$noNewFilesCount}/{$maxNoNewFilesAttempts})");
+                }
 
                 // Send progress update every 3 attempts (30 seconds)
                 if ($attempt % 3 === 0) {
                     $waitedTime = $attempt * $attemptDelay;
+                    $message = count($processedFiles) > 0
+                        ? 'Analizando documento... ('.count($processedFiles)." procesados, {$waitedTime}s transcurridos)"
+                        : "Analizando documento... ({$waitedTime}s transcurridos)";
+
                     broadcast(new EvaluationProcessingStatusChanged(
                         'running',
-                        "Analizando documento... ({$waitedTime}s transcurridos)",
+                        $message,
                         false,
                         $this->initiatorUserId
                     ));
@@ -198,23 +245,20 @@ class ProcessPaperEvaluation implements ShouldQueue
             }
         }
 
-        // Final check after polling
-        $jsonFiles = glob($outputFolder.'/*.json');
-
-        if (! $jsonFiles || count($jsonFiles) === 0) {
+        // Final validation
+        if (count($processedFiles) === 0) {
             Log::error('No JSON files found after polling', [
                 'output_folder' => $outputFolder,
-                'total_wait_time' => ($maxAttempts * $attemptDelay).' seconds',
-                'attempts' => $maxAttempts,
+                'total_wait_time' => ($attempt * $attemptDelay).' seconds',
+                'attempts' => $attempt,
             ]);
-            throw new \RuntimeException('No se encontraron archivos JSON para procesar después de esperar '.($maxAttempts * $attemptDelay).' segundos');
+            throw new \RuntimeException('No se encontraron archivos JSON para procesar después de esperar '.($attempt * $attemptDelay).' segundos');
         }
 
-        Log::info('Processing '.count($jsonFiles).' JSON files');
-
-        foreach ($jsonFiles as $jsonFile) {
-            $this->processJsonFile($jsonFile);
-        }
+        Log::info('JSON processing completed', [
+            'total_processed' => count($processedFiles),
+            'total_wait_time' => ($attempt * $attemptDelay).' seconds',
+        ]);
     }
 
     /**

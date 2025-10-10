@@ -23,38 +23,82 @@ El análisis OCR puede tomar varios minutos dependiendo del tamaño y complejida
 
 ## Solución Implementada
 
-### 1. Polling Mechanism
+### 1. Polling Mechanism Incremental
 
-Implementamos un sistema de **polling con retry logic** que espera activamente a que aparezcan los archivos JSON:
+Implementamos un sistema de **polling incremental** que procesa archivos JSON conforme van apareciendo:
 
 ```php
 protected function processJsonResults(): void
 {
     $outputFolder = base_path('docker/output');
-    $maxAttempts = 60;      // 60 intentos
+    $maxAttempts = 120;     // 120 intentos (matches job timeout)
     $attemptDelay = 10;     // 10 segundos entre intentos
-                            // = 10 minutos máximo de espera
+                            // = 20 minutos máximo de espera (igual al job timeout)
     
-    // Loop de polling
+    $processedFiles = [];   // Track archivos ya procesados
+    $noNewFilesCount = 0;   // Track tiempo sin nuevos archivos
+    $maxNoNewFilesAttempts = 12; // Exit si no hay nuevos por 2 minutos
+    
+    // Loop de polling incremental
     while ($attempt < $maxAttempts) {
         $jsonFiles = glob($outputFolder.'/*.json');
         
-        if ($jsonFiles && count($jsonFiles) > 0) {
-            // ¡Encontrados! Procesar...
-            break;
+        // Solo procesar archivos NUEVOS (no procesados aún)
+        $newFiles = array_diff($jsonFiles ?: [], $processedFiles);
+        
+        if (!empty($newFiles)) {
+            // Procesar inmediatamente los nuevos archivos
+            foreach ($newFiles as $jsonFile) {
+                $this->processJsonFile($jsonFile);
+                $processedFiles[] = $jsonFile; // Marcar como procesado
+            }
+            
+            $noNewFilesCount = 0; // Reset contador
+            
+            broadcast("Procesados ".count($processedFiles)." formularios...");
+        } else {
+            $noNewFilesCount++;
+            
+            // Si ya procesamos al menos 1 y no hay nuevos por 2 min, terminar
+            if (count($processedFiles) > 0 && $noNewFilesCount >= 12) {
+                break; // Procesamiento completo
+            }
         }
         
-        $attempt++;
-        sleep($attemptDelay);  // Esperar 10 segundos antes del siguiente intento
+        sleep(10); // Esperar 10 segundos
     }
 }
 ```
 
+**Características Mejoradas:**
+
+1. **Procesamiento Incremental:** 
+   - Procesa archivos JSON conforme aparecen (1 por 1)
+   - No espera a que todos terminen
+   - Usa `array_diff()` para detectar solo archivos nuevos
+
+2. **No Duplicados:**
+   - `$processedFiles` rastrea archivos ya procesados
+   - `updateOrCreate()` en `processJsonFile()` previene duplicados en DB
+   - Cada archivo se procesa exactamente una vez
+
+3. **Early Exit Inteligente:**
+   - Si ya procesó archivos Y no aparecen nuevos por 2 minutos → Sale exitosamente
+   - Evita esperar innecesariamente los 20 minutos completos
+
+4. **Timeout Sincronizado:**
+   - Job timeout: 20 minutos (`public int $timeout = 1200`)
+   - Polling max: 20 minutos (`120 attempts × 10s = 1200s`)
+   - Perfectamente alineados
+
 **Características:**
-- ⏱️ Espera hasta **10 minutos** (configurable)
-- 🔄 Verifica cada **10 segundos** si aparecieron archivos JSON
-- 📊 Logging detallado de cada intento
-- 🚨 Timeout con mensaje claro si no se encuentran archivos
+- ⏱️ Espera hasta **20 minutos** (igual al timeout del Job)
+- 🔄 Verifica cada **10 segundos** si aparecieron archivos JSON nuevos
+- ✅ Procesa archivos **incrementalmente** (conforme aparecen)
+- 🚫 Evita **duplicados** - rastrea archivos ya procesados
+- 🏁 **Exit automático** si no hay nuevos archivos por 2 minutos
+- 📊 Logging detallado de cada archivo procesado
+- 🚨 Timeout con mensaje claro si no se encuentra ningún archivo
 
 ### 2. Progress Broadcasts Mejorados
 
@@ -81,15 +125,19 @@ public function handle(): void
 
 ### 3. Updates Durante el Polling
 
-El usuario recibe actualizaciones **cada 30 segundos** mientras el sistema espera:
+El usuario recibe actualizaciones **cada 30 segundos** con el progreso real:
 
 ```php
 // Cada 3 intentos (30 segundos)
 if ($attempt % 3 === 0) {
     $waitedTime = $attempt * $attemptDelay;
+    $message = count($processedFiles) > 0 
+        ? "Analizando documento... (".count($processedFiles)." procesados, {$waitedTime}s transcurridos)"
+        : "Analizando documento... ({$waitedTime}s transcurridos)";
+    
     broadcast(new EvaluationProcessingStatusChanged(
         'running',
-        "Analizando documento... ({$waitedTime}s transcurridos)",
+        $message,
         false,
         $this->initiatorUserId
     ));
@@ -97,27 +145,41 @@ if ($attempt % 3 === 0) {
 ```
 
 **El usuario ve:**
-- "Analizando documento... (30s transcurridos)"
-- "Analizando documento... (60s transcurridos)"
-- "Analizando documento... (90s transcurridos)"
+- "Analizando documento... (30s transcurridos)" ← Sin archivos aún
+- "Analizando documento... (1 procesados, 60s transcurridos)" ← Primer archivo
+- "Analizando documento... (3 procesados, 90s transcurridos)" ← Tres archivos
+- "Procesados 5 formularios..." ← Actualización inmediata al procesar cada nuevo archivo
 - etc.
 
 ### 4. Logging Mejorado
 
-Agregamos logging exhaustivo para debugging:
+Agregamos logging exhaustivo para debugging, incluyendo archivos procesados:
 
 ```php
 Log::info('Waiting for JSON files to be created...', [
     'output_folder' => $outputFolder,
-    'max_wait_time' => '600 seconds',
+    'max_wait_time' => '1200 seconds',
 ]);
 
-Log::info("No JSON files found yet. Waiting... (Attempt 5/60)");
+Log::info('New JSON files found', [
+    'new_count' => 2,
+    'total_processed' => 3,
+    'attempt' => 15,
+]);
 
-Log::info('JSON files found', [
-    'count' => 3,
-    'attempt' => 5,
-    'wait_time' => '50 seconds',
+Log::info('Processed file', [
+    'file' => 'ABC-001-REF3-00001.json',
+    'total_processed' => 4,
+]);
+
+Log::info('No new files detected for 2 minutes. Assuming processing complete.', [
+    'total_processed' => 5,
+    'idle_time' => '120 seconds',
+]);
+
+Log::info('JSON processing completed', [
+    'total_processed' => 5,
+    'total_wait_time' => '350 seconds',
 ]);
 ```
 
@@ -147,22 +209,35 @@ Esto permite ver cualquier error o warning del script Python directamente en los
 4. FALLO
 ```
 
-### Ahora (Robusto)
+### Primera Versión (Polling Básico)
+```
+1. Copiar PDF → ✅
+2. docker exec python → ✅
+3. Polling Loop → 🔄 Esperar todos los JSONs
+   - Espera 0s-600s hasta que TODOS los archivos estén listos
+4. Procesar todos los JSONs de golpe
+5. PROBLEMA: Intentaba procesar los mismos archivos múltiples veces
+```
+
+### Versión Final (Polling Incremental) ✅
 ```
 1. Copiar PDF → ✅ Broadcast: "Copiando PDF..."
 2. docker exec python → ✅ Broadcast: "Ejecutando análisis OCR..."
-3. Polling Loop → 🔄 Broadcast: "Esperando resultados..."
-   - Intento 1 (0s): No encontrado
-   - Intento 2 (10s): No encontrado
-   - Intento 3 (20s): No encontrado → Broadcast: "Analizando documento... (30s transcurridos)"
-   - Intento 4 (30s): No encontrado
-   - Intento 5 (40s): No encontrado
-   - Intento 6 (50s): No encontrado → Broadcast: "Analizando documento... (60s transcurridos)"
-   - ...
-   - Intento 15 (140s): ✅ ¡JSON encontrado!
-4. Procesar JSONs → ✅ Broadcast: "Guardando resultados..."
-5. Cleanup → ✅
-6. Completado → ✅ Broadcast: "Procesamiento finalizado"
+3. Polling Loop Incremental → 🔄 Broadcast: "Esperando resultados..."
+   - Intento 1 (0s): No hay archivos
+   - Intento 2 (10s): No hay archivos
+   - Intento 3 (20s): No hay archivos → Broadcast: "Analizando documento... (30s transcurridos)"
+   - Intento 5 (40s): ¡Aparece ABC-001-REF3-00001.json!
+     → Procesar inmediatamente
+     → Marcar como procesado
+     → Broadcast: "Procesados 1 formularios..."
+   - Intento 6 (50s): No hay nuevos (solo el procesado)
+   - Intento 8 (70s): ¡Aparece ABC-001-REF3-00002.json!
+     → Procesar inmediatamente (sin reprocesar 00001)
+     → Broadcast: "Procesados 2 formularios..."
+   - Intento 9-20: Sin nuevos archivos
+   - Después de 2 min sin nuevos → Exit exitoso
+4. Completado → ✅ Broadcast: "Procesamiento finalizado"
 ```
 
 ## Configuración
