@@ -230,7 +230,7 @@ class ProcessPaperEvaluation implements ShouldQueue
                         'questions' => $rawData['management_questions'] ?? null,
                     ],
                 ];
-                $structuredData['cisneros_answers'] = $rawData['citsats_s1'] ?? null;
+                $structuredData['citsats_s1'] = $rawData['citsats_s1'] ?? null;
                 break;
 
             case 'referencia_v':
@@ -240,7 +240,7 @@ class ProcessPaperEvaluation implements ShouldQueue
 
             case 'cisneros':
                 // Cisneros scale - mobbing questions
-                $structuredData['cisneros_answers'] = $rawData;
+                $structuredData['cisneros_answers'] = $rawData['cisneros'] ?? null;
                 break;
         }
 

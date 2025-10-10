@@ -37,6 +37,7 @@ return new class extends Migration
             $table->json('referencia_i_answers')->nullable(); // Guide I PTSD questions
             $table->json('referencia_iii_answers')->nullable(); // Reference III workplace questions
             $table->json('referencia_iii_conditional')->nullable(); // Conditional questions (customer service, management)
+            $table->json('citsats_s1')->nullable(); // Cisneros scale mobbing questions
             $table->json('cisneros_answers')->nullable(); // Cisneros scale mobbing questions
             $table->json('raw_data')->nullable(); // Original JSON from OCR for auditing
 
