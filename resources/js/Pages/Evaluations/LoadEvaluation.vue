@@ -1,12 +1,19 @@
 <script setup>
 import { useForm } from '@inertiajs/vue3'
+import { ref, onMounted, onUnmounted } from 'vue'
 import Dashboard from '../../Layouts/Dashboard.vue';
 import Card from "../../Components/Card.vue";
-import { DocumentIcon } from '@heroicons/vue/24/solid';
+import { DocumentIcon, CheckCircleIcon, ExclamationCircleIcon, ArrowPathIcon } from '@heroicons/vue/24/solid';
 
 const form = useForm({
     file: null,
 });
+
+const processingStatus = ref(null);
+const processingMessage = ref('');
+const isProcessing = ref(false);
+const showStatusPanel = ref(false);
+let channel = null;
 
 // Callback para actualizar el campo file cuando se selecciona el archivo
 function handleFileChange(e) {
@@ -30,16 +37,83 @@ function handleDragOver(e) {
 
 const submit = () => {
     if (!form.file) return;
+    
+    // Show status panel when submission starts
+    showStatusPanel.value = true;
+    isProcessing.value = true;
+    
     form.post(route('evaluations.store'), {
         preserveScroll: true,
         onProgress: (progressEvent) => {
             // Actualizamos el progreso del formulario (inertia ya lo asigna a form.progress)
             form.progress = progressEvent.percentage;
+            processingStatus.value = 'uploading';
+            processingMessage.value = `Subiendo archivo: ${progressEvent.percentage.toFixed(0)}%`;
         },
         onSuccess: () => {
             form.reset('file');
+            processingStatus.value = 'queued';
+            processingMessage.value = 'Archivo subido. Procesamiento en cola...';
         },
+        onError: () => {
+            processingStatus.value = 'error';
+            processingMessage.value = 'Error al subir el archivo';
+            isProcessing.value = false;
+        }
     });
+};
+
+// Setup Echo listener for real-time updates
+onMounted(() => {
+    if (window.Echo) {
+        channel = window.Echo.channel('evaluation-processing')
+            .listen('.evaluation.status', (event) => {
+                processingStatus.value = event.status;
+                processingMessage.value = event.message;
+                
+                if (event.status === 'finished' || event.status === 'error') {
+                    isProcessing.value = false;
+                }
+            });
+    }
+});
+
+// Cleanup Echo listener
+onUnmounted(() => {
+    if (channel) {
+        channel.stopListening('.evaluation.status');
+        window.Echo.leaveChannel('evaluation-processing');
+    }
+});
+
+const getStatusIcon = () => {
+    switch (processingStatus.value) {
+        case 'running':
+        case 'uploading':
+        case 'queued':
+            return ArrowPathIcon;
+        case 'finished':
+            return CheckCircleIcon;
+        case 'error':
+            return ExclamationCircleIcon;
+        default:
+            return ArrowPathIcon;
+    }
+};
+
+const getStatusColor = () => {
+    switch (processingStatus.value) {
+        case 'running':
+        case 'uploading':
+        case 'queued':
+            return 'text-blue-600';
+        case 'finished':
+            return 'text-green-600';
+        case 'error':
+            return 'text-red-600';
+        default:
+            return 'text-gray-600';
+    }
 };
 </script>
 
@@ -70,6 +144,8 @@ const submit = () => {
                                         name="file-upload"
                                         type="file"
                                         class="sr-only"
+                                        accept="application/pdf"
+                                        :disabled="isProcessing"
                                         @change="handleFileChange"
                                     />
                                 </label>
@@ -83,26 +159,49 @@ const submit = () => {
                         </div>
                     </div>
                 </div>
-                <!-- Mostrar el progreso de la carga si existe -->
-                <div v-if="form.processing" class="mt-4">
-                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div
-                            class="bg-indigo-600 h-2.5 rounded-full"
-                            :style="{ width: form.progress ? form.progress + '%' : '0%' }"
-                        ></div>
+                
+                <!-- Status Panel with Real-time Updates -->
+                <div v-if="showStatusPanel" class="mt-6">
+                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <div class="flex items-center gap-3">
+                            <component 
+                                :is="getStatusIcon()" 
+                                :class="['size-6', getStatusColor(), { 'animate-spin': isProcessing }]"
+                                aria-hidden="true"
+                            />
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">
+                                    {{ processingMessage }}
+                                </p>
+                                <!-- Upload Progress Bar -->
+                                <div v-if="form.processing && processingStatus === 'uploading'" class="mt-2">
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div
+                                            class="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                                            :style="{ width: form.progress ? form.progress + '%' : '0%' }"
+                                        ></div>
+                                    </div>
+                                </div>
+                                <!-- Processing Animation -->
+                                <div v-else-if="isProcessing && processingStatus !== 'uploading'" class="mt-2">
+                                    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                        <div class="bg-indigo-600 h-2 rounded-full animate-pulse w-full"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <p class="mt-1 text-sm text-gray-600">
-                        Progreso: {{ form.progress ? form.progress.toFixed(0) : 0 }}%
-                    </p>
                 </div>
+
                 <div class="mt-6 flex items-center justify-end gap-x-6">
                     <!-- Deshabilitar el botón si no se ha seleccionado archivo o se está procesando -->
                     <button
                         type="submit"
-                        class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                        :disabled="!form.file || form.processing"
+                        class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        :disabled="!form.file || isProcessing"
                     >
-                        Cargar y registrar
+                        <span v-if="isProcessing">Procesando...</span>
+                        <span v-else>Cargar y registrar</span>
                     </button>
                 </div>
             </form>
