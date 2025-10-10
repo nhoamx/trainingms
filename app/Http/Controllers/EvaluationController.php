@@ -54,9 +54,9 @@ class EvaluationController extends Controller
         $userId = optional($request->user())->id;
         ProcessPaperEvaluation::dispatch($fullPath, $containerName, $userId);
 
-        // Redirigir a la lista de evaluaciones con un mensaje de éxito
+        // Redirigir al dashboard del admin con un mensaje de éxito
         return redirect()
-            ->route('evaluations.index')
+            ->route('dashboard')
             ->with('flash', [
                 'type' => 'success',
                 'title' => 'Evaluación cargada exitosamente',

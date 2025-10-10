@@ -163,7 +163,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('organization.results.list')
         ->middleware('can:view-organization-results,organization');
 
-    Route::get('/organizacion/{organization}/resultados/{evaluation}', [ResultsController::class, 'showDetailedResults'])
+    Route::get('/organizacion/{organization}/resultados/{personalFolio}', [ResultsController::class, 'showDetailedResults'])
         ->name('organization.results.detail')
         ->middleware('can:view-organization-results,organization');
 

@@ -74,7 +74,7 @@
                             <!-- Domains Summary -->
                             <div class="bg-white p-6 rounded-lg shadow">
                                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Dominios</h3>
-                                <div class="space-y-2">
+                                <div class="space-y-2 max-h-64 overflow-y-auto">
                                     <div v-for="domain in domainScores" :key="domain.name" class="flex justify-between items-center">
                                         <span class="text-gray-700 text-sm">{{ domain.name }}:</span>
                                         <span class="font-semibold">{{ domain.score }}</span>
@@ -92,34 +92,24 @@
                                         <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Categoría</th>
                                         <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Dominio</th>
                                         <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Dimensión</th>
-                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Ítem</th>
+                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Items</th>
                                         <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Puntaje</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
-                                    <template v-for="(cat, catIdx) in groupedResults" :key="catIdx">
-                                        <template v-for="(dom, domIdx) in cat.dominios" :key="domIdx">
-                                            <template v-for="(dim, dimIdx) in dom.dimensiones" :key="dimIdx">
-                                                <template v-for="(item, itemIdx) in dim.items" :key="itemIdx">
-                                                    <tr>
-                                                        <td v-if="domIdx === 0 && dimIdx === 0 && itemIdx === 0" :rowspan="cat.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle font-medium bg-gray-50">
-                                                            {{ cat.nombre }}
-                                                            <div class="text-xs text-gray-500 font-normal">Puntaje: {{ cat.puntaje }}</div>
-                                                        </td>
-                                                        <td v-if="dimIdx === 0 && itemIdx === 0" :rowspan="dom.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle font-medium">
-                                                            {{ dom.nombre }}
-                                                            <div class="text-xs text-gray-500 font-normal">Puntaje: {{ dom.puntaje }}</div>
-                                                        </td>
-                                                        <td v-if="itemIdx === 0" :rowspan="dim.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle text-sm">
-                                                            {{ dim.nombre }}
-                                                        </td>
-                                                        <td class="px-6 py-4 border border-gray-200 text-center text-sm">{{ item.nombre }}</td>
-                                                        <td class="px-6 py-4 border border-gray-200 text-center font-semibold">{{ item.puntaje }}</td>
-                                                    </tr>
-                                                </template>
-                                            </template>
-                                        </template>
-                                    </template>
+                                    <tr v-for="(row, index) in results" :key="index">
+                                        <td class="px-6 py-4 border border-gray-200 text-center">
+                                            <div class="font-medium">{{ row.categoria.nombre }}</div>
+                                            <div class="text-sm text-gray-500">Puntaje: {{ row.categoria.puntaje }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 border border-gray-200 text-center">
+                                            <div class="font-medium">{{ row.dominio.nombre }}</div>
+                                            <div class="text-sm text-gray-500">Puntaje: {{ row.dominio.puntaje }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 border border-gray-200 text-center text-sm">{{ row.dimension }}</td>
+                                        <td class="px-6 py-4 border border-gray-200 text-center text-sm">{{ row.item }}</td>
+                                        <td class="px-6 py-4 border border-gray-200 text-center font-semibold">{{ row.puntaje }}</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -167,47 +157,40 @@
                             </div>
 
                             <!-- Conditional Questions -->
-                            <div v-if="guideIIIResults.conditional && guideIIIResults.conditional.length > 0">
+                            <div v-if="guideIIIResults.conditional && Object.keys(guideIIIResults.conditional).length > 0">
                                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Preguntas Condicionales</h3>
-                                <div v-for="(section, idx) in guideIIIResults.conditional" :key="idx" class="mb-6">
-                                    <div class="font-semibold text-blue-700 mb-1">{{ section.section }}: <span class="font-normal text-gray-700">{{ section.condition }}</span></div>
-                                    <div class="overflow-x-auto">
-                                        <table class="min-w-full divide-y divide-gray-200">
-                                            <thead class="bg-gray-50">
-                                                <tr>
-                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pregunta</th>
-                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Respuesta</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="bg-white divide-y divide-gray-200">
-                                                <tr v-for="(answer, question) in section.questions" :key="question">
-                                                    <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ question }}</td>
-                                                    <td class="px-6 py-4 text-sm text-gray-700">{{ answer }}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- CITSATS-S1 -->
-                            <div v-if="guideIIIResults.citsats_s1 && Object.keys(guideIIIResults.citsats_s1).length > 0">
-                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Acontecimientos Traumáticos (CITSATS-S1)</h3>
                                 <div class="overflow-x-auto">
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead class="bg-gray-50">
                                             <tr>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pregunta</th>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Respuesta</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
-                                            <tr v-for="(answer, idx) in Object.values(guideIIIResults.citsats_s1)" :key="idx">
-                                                <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ idx + 1 }}</td>
-                                                <td class="px-6 py-4 text-sm text-gray-700">
-                                                    <span v-if="citsatsQuestions[idx + 73]">{{ citsatsQuestions[idx + 73] }}</span>
-                                                </td>
+                                            <tr v-for="(answer, question) in guideIIIResults.conditional" :key="question">
+                                                <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ question }}</td>
+                                                <td class="px-6 py-4 text-sm text-gray-700">{{ answer }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- CITSATS-S1 -->
+                            <div v-if="guideIIIResults.citsats_s1 && Object.keys(guideIIIResults.citsats_s1).length > 0">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">CITSATS-S1</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pregunta</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Respuesta</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            <tr v-for="(answer, question) in guideIIIResults.citsats_s1" :key="question">
+                                                <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ question }}</td>
                                                 <td class="px-6 py-4 text-sm text-gray-700">{{ answer }}</td>
                                             </tr>
                                         </tbody>
@@ -234,7 +217,7 @@
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
                                         <tr v-for="(value, field) in guideVResults.demographic_data" :key="field">
-                                            <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ field }}</td>
+                                            <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ formatFieldName(field) }}</td>
                                             <td class="px-6 py-4 text-sm text-gray-700">{{ value }}</td>
                                         </tr>
                                     </tbody>
@@ -278,128 +261,78 @@
     </Dashboard>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import Dashboard from "../../Layouts/Dashboard.vue";
-import type {
-    Organization,
-    Evaluation,
-    DetailedResultRow,
-    GuideIResults,
-    GuideIIIResults,
-    GuideVResults,
-    CisnerosResults,
-    Tab,
-    GroupedCategory,
-    CategorySummary,
-    DomainSummary
-} from '../../types/results';
 
-interface Props {
-    organization: Organization;
-    personalFolio: string;
-    evaluation: Evaluation;
-    totalScore: number;
-    results: DetailedResultRow[];
-    guideIResults: GuideIResults | null;
-    guideVResults: GuideVResults | null;
-    guideIIIResults: GuideIIIResults | null;
-    cisnerosResults: CisnerosResults | null;
-}
-
-const props = withDefaults(defineProps<Props>(), {
-    totalScore: 0,
-    results: () => [],
-    guideIResults: null,
-    guideVResults: null,
-    guideIIIResults: null,
-    cisnerosResults: null
+const props = defineProps({
+    organization: {
+        type: Object,
+        required: true
+    },
+    personalFolio: {
+        type: String,
+        required: true
+    },
+    evaluation: {
+        type: Object,
+        required: true
+    },
+    totalScore: {
+        type: Number,
+        default: 0
+    },
+    results: {
+        type: Array,
+        default: () => []
+    },
+    guideIResults: {
+        type: Object,
+        default: null
+    },
+    guideVResults: {
+        type: Object,
+        default: null
+    },
+    guideIIIResults: {
+        type: Object,
+        default: null
+    },
+    cisnerosResults: {
+        type: Object,
+        default: null
+    }
 });
 
-// Agrupa los resultados para renderizar la tabla jerárquica con rowspan
-const groupedResults = computed<GroupedCategory[]>(() => {
-    if (!props.results.length) return [];
-    const cats: GroupedCategory[] = [];
-    const catMap: Record<string, GroupedCategory> = {};
-    
-    props.results.forEach(row => {
-        let cat = catMap[row.categoria.nombre];
-        if (!cat) {
-            cat = {
-                nombre: row.categoria.nombre,
-                puntaje: row.categoria.puntaje,
-                dominios: [],
-                rowspan: 0
-            };
-            catMap[row.categoria.nombre] = cat;
-            cats.push(cat);
-        }
-        
-        let dom = cat.dominios.find(d => d.nombre === row.dominio.nombre);
-        if (!dom) {
-            dom = {
-                nombre: row.dominio.nombre,
-                puntaje: row.dominio.puntaje,
-                dimensiones: [],
-                rowspan: 0
-            };
-            cat.dominios.push(dom);
-        }
-        
-        let dim = dom.dimensiones.find(d => d.nombre === row.dimension);
-        if (!dim) {
-            dim = {
-                nombre: row.dimension,
-                items: [],
-                rowspan: 0
-            };
-            dom.dimensiones.push(dim);
-        }
-        
-        dim.items.push({ nombre: row.item, puntaje: row.puntaje });
-    });
-    
-    // Calcular rowspans correctamente
-    cats.forEach(cat => {
-        cat.rowspan = 0;
-        cat.dominios.forEach(dom => {
-            dom.rowspan = 0;
-            dom.dimensiones.forEach(dim => {
-                dim.rowspan = dim.items.length;
-                dom.rowspan += dim.rowspan;
-            });
-            cat.rowspan += dom.rowspan;
-        });
-    });
-    
-    return cats;
-});
+const currentTab = ref('summary');
 
-const currentTab = ref<string>('summary');
-
-const availableTabs = computed<Tab[]>(() => {
-    const tabs: Tab[] = [];
-    if (props.results && props.results.length) {
+const availableTabs = computed(() => {
+    const tabs = [];
+    
+    if (props.guideIIIResults) {
         tabs.push({ key: 'summary', label: 'Resumen' });
     }
-    if (props.evaluation?.has_guide_i) {
+    
+    if (props.guideIResults) {
         tabs.push({ key: 'guideI', label: 'Guía I' });
     }
-    if (props.evaluation?.has_guide_iii) {
+    
+    if (props.guideIIIResults) {
         tabs.push({ key: 'guideIII', label: 'Guía III' });
     }
-    if (props.evaluation?.has_guide_v) {
+    
+    if (props.guideVResults) {
         tabs.push({ key: 'guideV', label: 'Guía V' });
     }
-    if (props.evaluation?.has_cisneros) {
-        tabs.push({ key: 'cisneros', label: 'CISNEROS' });
-    }
+    
+    tabs.push({ key: 'cisneros', label: 'CISNEROS' });
+    
     return tabs;
 });
 
-const categoryScores = computed<CategorySummary[]>(() => {
-    const categories: Record<string, CategorySummary> = {};
+const categoryScores = computed(() => {
+    const categories = {};
     props.results.forEach(row => {
         if (!categories[row.categoria.nombre]) {
             categories[row.categoria.nombre] = {
@@ -411,8 +344,8 @@ const categoryScores = computed<CategorySummary[]>(() => {
     return Object.values(categories);
 });
 
-const domainScores = computed<DomainSummary[]>(() => {
-    const domains: Record<string, DomainSummary> = {};
+const domainScores = computed(() => {
+    const domains = {};
     props.results.forEach(row => {
         const key = `${row.categoria.nombre}|${row.dominio.nombre}`;
         if (!domains[key]) {
@@ -425,7 +358,7 @@ const domainScores = computed<DomainSummary[]>(() => {
     return Object.values(domains);
 });
 
-const getRiskLevel = (score: number): string => {
+const getRiskLevel = (score) => {
     if (score < 50) return 'Nulo';
     if (score < 75) return 'Bajo';
     if (score < 99) return 'Medio';
@@ -433,9 +366,9 @@ const getRiskLevel = (score: number): string => {
     return 'Muy Alto';
 };
 
-const getRiskLevelClass = (score: number): string => {
+const getRiskLevelClass = (score) => {
     const level = getRiskLevel(score);
-    const classes: Record<string, string> = {
+    const classes = {
         'Nulo': 'text-green-600',
         'Bajo': 'text-yellow-600',
         'Medio': 'text-orange-600',
@@ -445,14 +378,7 @@ const getRiskLevelClass = (score: number): string => {
     return classes[level] || 'text-gray-600';
 };
 
-// Preguntas CITSATS (73-78) - Solo para referencia visual
-const citsatsQuestions: Record<number, string> = {
-    73: 'Accidente que tenga como consecuencia la muerte, la pérdida de un miembro o una lesión grave',
-    74: 'Asaltos',
-    75: 'Actos violentos que derivaron en lesiones graves',
-    76: 'Secuestro',
-    77: 'Amenazas',
-    78: 'Cualquier otro que ponga en riesgo su vida o salud, y/o la de otras personas',
+const formatFieldName = (field) => {
+    return field.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
-
 </script>
