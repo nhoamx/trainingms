@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\DemographicReportService;
+use App\Services\PaperEvaluationReportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -11,13 +12,19 @@ class DemographicReportController extends Controller
 {
     protected $demographicReportService;
 
-    public function __construct(DemographicReportService $demographicReportService)
-    {
+    protected $paperReportService;
+
+    public function __construct(
+        DemographicReportService $demographicReportService,
+        PaperEvaluationReportService $paperReportService
+    ) {
         $this->demographicReportService = $demographicReportService;
+        $this->paperReportService = $paperReportService;
     }
 
     /**
      * Obtiene y devuelve la distribución demográfica por nivel de riesgo
+     * UPDATED: Now uses PaperEvaluation model instead of legacy models
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -33,8 +40,8 @@ class DemographicReportController extends Controller
             // Obtener ID de organización desde parámetros o del usuario
             $organizationId = $request->get('organization_id') ?? $user->organization_id;
 
-            // Obtener los datos desde el servicio
-            $distribution = $this->demographicReportService->getDemographicDistribution($organizationId);
+            // Use new PaperEvaluationReportService instead of legacy service
+            $distribution = $this->paperReportService->getDemographicDistribution($organizationId);
 
             return response()->json($distribution);
         } catch (\Exception $e) {
@@ -58,8 +65,11 @@ class DemographicReportController extends Controller
                 abort(403, 'No autorizado');
             }
 
+            // Obtener ID de organización desde parámetros o del usuario
+            $organizationId = $request->get('organization_id') ?? $user->organization_id;
+
             // Obtener los datos desde el servicio para la carga inicial
-            $distribution = $this->demographicReportService->getDemographicDistribution();
+            $distribution = $this->paperReportService->getDemographicDistribution($organizationId);
 
             return Inertia::render('Reports/DemographicReport', [
                 'demographicDistribution' => $distribution,

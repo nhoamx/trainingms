@@ -3,19 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Services\DimensionItemSummaryService;
+use App\Services\PaperEvaluationReportService;
 use Illuminate\Http\Request;
 
 class DimensionItemSummaryController extends Controller
 {
     protected $service;
 
-    public function __construct(DimensionItemSummaryService $service)
-    {
+    protected $paperReportService;
+
+    public function __construct(
+        DimensionItemSummaryService $service,
+        PaperEvaluationReportService $paperReportService
+    ) {
         $this->service = $service;
+        $this->paperReportService = $paperReportService;
     }
 
     /**
      * Endpoint unificado para obtener todos los datos del reporte para una organización.
+     * UPDATED: Now uses PaperEvaluation model instead of legacy models
      * Incluye tanto los datos crudos como los agrupados por nivel de riesgo.
      *
      * @return \Illuminate\Http\JsonResponse
@@ -34,7 +41,8 @@ class DimensionItemSummaryController extends Controller
         }
 
         try {
-            $data = $this->service->getReportSummaryByOrganization($organizationId);
+            // Use new PaperEvaluationReportService instead of legacy service
+            $data = $this->paperReportService->getReportSummaryByOrganization($organizationId);
 
             return response()->json($data);
         } catch (\Exception $e) {

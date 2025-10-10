@@ -47,15 +47,15 @@
               </div>
               <div class="max-h-60 overflow-y-auto">
                 <ul class="divide-y divide-gray-200">
-                  <li v-for="id in selectedPersonal" :key="id" class="px-4 py-2 text-sm hover:bg-gray-50">
+                  <li v-for="folio in selectedPersonal" :key="folio" class="px-4 py-2 text-sm hover:bg-gray-50">
                     <Link 
-                      :href="route('responses.personal', { 
-                        organizationId: props.organizationId,
-                        personalId: id 
+                      :href="route('organization.results.detail', { 
+                        organization: props.organizationId,
+                        personalFolio: folio 
                       })"
                       class="text-blue-600 hover:text-blue-800 hover:underline"
                     >
-                      {{ id }}
+                      {{ folio }}
                     </Link>
                   </li>
                 </ul>
