@@ -178,6 +178,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reporte', [DashboardController::class, 'reportByOrganization'])
             ->name('admin.report');
 
+        // PDF Report Routes
+        Route::prefix('reportes/pdf')->name('reports.pdf.')->group(function () {
+            Route::get('/demografico/{organization}', [\App\Http\Controllers\ReportPdfController::class, 'downloadDemographicReport'])
+                ->name('demographic');
+            Route::get('/diagnostico/{organization}', [\App\Http\Controllers\ReportPdfController::class, 'downloadDiagnosticReport'])
+                ->name('diagnostic');
+            Route::get('/ejecutivo/{organization}', [\App\Http\Controllers\ReportPdfController::class, 'downloadExecutiveReport'])
+                ->name('executive');
+        });
+
         Route::controller(EvaluationController::class)
             ->prefix('/evaluaciones')
             ->group(function () {

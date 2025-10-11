@@ -52,6 +52,72 @@ const selectedOrgId = ref<string | null>(extractOrgId(props.currentOrganization)
 const canSelectOrg = computed(() => props.isAdmin || props.isSuperAdmin);
 
 /**
+ * Download PDF reports
+ */
+const downloadPdfReport = async (reportType: 'demographic' | 'diagnostic' | 'executive') => {
+    if (!selectedOrgId.value) {
+        alert('Por favor selecciona una organización');
+        return;
+    }
+
+    const routes = {
+        demographic: `/reportes/pdf/demografico/${selectedOrgId.value}`,
+        diagnostic: `/reportes/pdf/diagnostico/${selectedOrgId.value}`,
+        executive: `/reportes/pdf/ejecutivo/${selectedOrgId.value}`,
+    };
+
+    try {
+        // Use fetch API with credentials to maintain session
+        const response = await fetch(routes[reportType], {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/pdf',
+            }
+        });
+
+        if (!response.ok) {
+            // If response is JSON, it's an error message
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || errorData.message || `Error: ${response.status}`);
+            }
+            throw new Error(`Error: ${response.status}`);
+        }
+
+        // Get the blob from response
+        const blob = await response.blob();
+        
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Extract filename from Content-Disposition header or use default
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = `reporte-${reportType}-${selectedOrgId.value}.pdf`;
+        if (contentDisposition) {
+            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+            if (matches != null && matches[1]) {
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+        
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error descargando el reporte:', error);
+        alert(error instanceof Error ? error.message : 'Error al generar el reporte. Por favor intenta de nuevo.');
+    }
+};
+
+/**
  * Process raw category data into grouped format for charts
  */
 const processedCategoryData = computed<GroupedReportItem[]>(() => {
@@ -288,6 +354,46 @@ watch(() => props.currentOrganization, (newOrg) => {
 
 <template>
     <div>
+        <!-- PDF Download Buttons -->
+        <div v-if="(isAdmin || isSuperAdmin) && selectedOrgId" class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+            <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Descargar Reportes en PDF
+            </h3>
+            <div class="flex gap-3 flex-wrap">
+                <button
+                    @click="downloadPdfReport('demographic')"
+                    class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Informe Demográfico
+                </button>
+                <button
+                    @click="downloadPdfReport('diagnostic')"
+                    class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Informe de Diagnóstico
+                </button>
+                <button
+                    @click="downloadPdfReport('executive')"
+                    class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors shadow-sm opacity-50 cursor-not-allowed"
+                    disabled
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Informe Ejecutivo (Próximamente)
+                </button>
+            </div>
+        </div>
+
         <!-- Tab Navigation -->
         <div class="flex gap-2 mb-6 flex-wrap">
             <button
