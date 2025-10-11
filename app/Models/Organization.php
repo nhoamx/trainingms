@@ -15,7 +15,51 @@ class Organization extends Model
         'name',
         'logo',
         'folio_organization',
+        'razon_social',
+        'rfc',
+        'registro_patronal',
+        'calle_numero',
+        'colonia',
+        'codigo_postal',
+        'municipio',
+        'estado',
+        'contacto_nombre',
+        'contacto_puesto',
+        'contacto_email',
+        'contacto_movil',
+        'responsable_nombre',
+        'responsable_puesto',
+        'responsable_email',
+        'responsable_movil',
+        'actividad_principal',
+        'total_trabajadores',
+        'total_hombres',
+        'total_mujeres',
+        'muestra_aplicada',
+        'muestra_hombres',
+        'muestra_mujeres',
+        'comite_integrantes',
+        'comite_hombres',
+        'comite_mujeres',
+        'fecha_aplicacion',
+        'justificacion_muestra',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'fecha_aplicacion' => 'date',
+            'total_trabajadores' => 'integer',
+            'total_hombres' => 'integer',
+            'total_mujeres' => 'integer',
+            'muestra_aplicada' => 'integer',
+            'muestra_hombres' => 'integer',
+            'muestra_mujeres' => 'integer',
+            'comite_integrantes' => 'integer',
+            'comite_hombres' => 'integer',
+            'comite_mujeres' => 'integer',
+        ];
+    }
 
     public function users()
     {
