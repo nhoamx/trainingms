@@ -152,12 +152,14 @@
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead class="bg-gray-50">
                                             <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N°</th>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pregunta</th>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Respuesta</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
                                             <tr v-for="(answer, question) in guideIIIResults.answers" :key="question">
+                                                <td class="px-6 py-4 text-sm font-semibold text-indigo-600">{{ getQuestionNumber(question) }}</td>
                                                 <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ question }}</td>
                                                 <td class="px-6 py-4 text-sm text-gray-700">{{ answer }}</td>
                                             </tr>
@@ -175,12 +177,14 @@
                                         <table class="min-w-full divide-y divide-gray-200">
                                             <thead class="bg-gray-50">
                                                 <tr>
+                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N°</th>
                                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pregunta</th>
                                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Respuesta</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="bg-white divide-y divide-gray-200">
                                                 <tr v-for="(answer, question) in section.questions" :key="question">
+                                                    <td class="px-6 py-4 text-sm font-semibold text-indigo-600">{{ getQuestionNumber(question) }}</td>
                                                     <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ question }}</td>
                                                     <td class="px-6 py-4 text-sm text-gray-700">{{ answer }}</td>
                                                 </tr>
@@ -197,14 +201,14 @@
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead class="bg-gray-50">
                                             <tr>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N°</th>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pregunta</th>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Respuesta</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
                                             <tr v-for="(answer, idx) in Object.values(guideIIIResults.citsats_s1)" :key="idx">
-                                                <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ idx + 1 }}</td>
+                                                <td class="px-6 py-4 text-sm font-semibold text-indigo-600">{{ idx + 73 }}</td>
                                                 <td class="px-6 py-4 text-sm text-gray-700">
                                                     <span v-if="citsatsQuestions[idx + 73]">{{ citsatsQuestions[idx + 73] }}</span>
                                                 </td>
@@ -453,6 +457,87 @@ const citsatsQuestions: Record<number, string> = {
     76: 'Secuestro',
     77: 'Amenazas',
     78: 'Cualquier otro que ponga en riesgo su vida o salud, y/o la de otras personas',
+};
+
+// Mapeo de texto de pregunta a número (Referencia III completa)
+const questionNumberMap: Record<string, number> = {
+    'El espacio donde trabajo me permite realizar mis actividades de manera segura e higiénica': 1,
+    'Mi trabajo me exige hacer mucho esfuerzo físico': 2,
+    'Me preocupa sufrir un accidente en mi trabajo': 3,
+    'Considero que en mi trabajo se aplican las normas de seguridad y salud en el trabajo': 4,
+    'Considero que las actividades que realizo son peligrosas': 5,
+    'Por la cantidad de trabajo que tengo debo quedarme tiempo adicional a mi turno': 6,
+    'Por la cantidad de trabajo que tengo debo trabajar sin parar': 7,
+    'Considero que es necesario mantener un ritmo de trabajo acelerado': 8,
+    'Mi trabajo exige que esté muy concentrado': 9,
+    'Mi trabajo requiere que memorice mucha información': 10,
+    'En mi trabajo tengo que tomar decisiones difíciles muy rápido': 11,
+    'Mi trabajo exige que atienda varios asuntos al mismo tiempo': 12,
+    'En mi trabajo soy responsable de cosas de mucho valor': 13,
+    'Respondo ante mi jefe por los resultados de toda mi área de trabajo': 14,
+    'En el trabajo me dan órdenes contradictorias': 15,
+    'Considero que en mi trabajo me piden hacer cosas innecesarias': 16,
+    'Trabajo horas extras más de tres veces a la semana': 17,
+    'Mi trabajo me exige laborar en días de descanso, festivos o fines de semana': 18,
+    'Considero que el tiempo en el trabajo es mucho y perjudica mis actividades familiares o personales': 19,
+    'Debo atender asuntos de trabajo cuando estoy en casa': 20,
+    'Pienso en las actividades familiares o personales cuando estoy en mi trabajo': 21,
+    'Pienso que mis responsabilidades familiares afectan mi trabajo': 22,
+    'Mi trabajo permite que desarrolle nuevas habilidades': 23,
+    'En mi trabajo puedo aspirar a un mejor puesto': 24,
+    'Durante mi jornada de trabajo puedo tomar pausas cuando las necesito': 25,
+    'Puedo decidir cuánto trabajo realizo durante la jornada laboral': 26,
+    'Puedo decidir la velocidad a la que realizo mis actividades en mi trabajo': 27,
+    'Puedo cambiar el orden de las actividades que realizo en mi trabajo': 28,
+    'Los cambios que se presentan en mi trabajo dificultan mi labor': 29,
+    'Cuando se presentan cambios en mi trabajo se tienen en cuenta mis ideas o aportaciones': 30,
+    'Me informan con claridad cuáles son mis funciones': 31,
+    'Me explican claramente los resultados que debo obtener en mi trabajo': 32,
+    'Me explican claramente los objetivos de mi trabajo': 33,
+    'Me informan con quién puedo resolver problemas o asuntos de trabajo': 34,
+    'Me permiten asistir a capacitaciones relacionadas con mi trabajo': 35,
+    'Recibo capacitación útil para hacer mi trabajo': 36,
+    'Mi jefe ayuda a organizar mejor el trabajo': 37,
+    'Mi jefe tiene en cuenta mis puntos de vista y opiniones': 38,
+    'Mi jefe me comunica a tiempo la información relacionada con el trabajo': 39,
+    'La orientación que me da mi jefe me ayuda a realizar mejor mi trabajo': 40,
+    'Mi jefe ayuda a solucionar los problemas que se presentan en el trabajo': 41,
+    'Puedo confiar en mis compañeros de trabajo': 42,
+    'Entre compañeros solucionamos los problemas de trabajo de forma respetuosa': 43,
+    'En mi trabajo me hacen sentir parte del grupo': 44,
+    'Cuando tenemos que realizar trabajo de equipo los compañeros colaboran': 45,
+    'Mis compañeros de trabajo me ayudan cuando tengo dificultades': 46,
+    'Me informan sobre lo que hago bien en mi trabajo': 47,
+    'La forma como evalúan mi trabajo en mi centro de trabajo me ayuda a mejorar mi desempeño': 48,
+    'En mi centro de trabajo me pagan a tiempo mi salario': 49,
+    'El pago que recibo es el que merezco por el trabajo que realizo': 50,
+    'Si obtengo los resultados esperados en mi trabajo me recompensan o reconocen': 51,
+    'Las personas que hacen bien el trabajo pueden crecer laboralmente': 52,
+    'Considero que mi trabajo es estable': 53,
+    'En mi trabajo existe continua rotación de personal': 54,
+    'Siento orgullo de laborar en este centro de trabajo': 55,
+    'Me siento comprometido con mi trabajo': 56,
+    'En mi trabajo puedo expresarme libremente sin interrupciones': 57,
+    'Recibo críticas constantes a mi persona y/o trabajo': 58,
+    'Recibo burlas, calumnias, difamaciones, humillaciones o ridiculizaciones': 59,
+    'Se ignora mi presencia o se me excluye de las reuniones de trabajo y en la toma de decisiones': 60,
+    'Se manipulan las situaciones de trabajo para hacerme parecer un mal trabajador': 61,
+    'Se ignoran mis éxitos laborales y se atribuyen a otros trabajadores': 62,
+    'Me bloquean o impiden las oportunidades que tengo para obtener ascenso o mejora en mi trabajo': 63,
+    'He presenciado actos de violencia en mi centro de trabajo': 64,
+    'Atiendo clientes o usuarios muy enojados': 65,
+    'Mi trabajo me exige atender personas muy necesitadas de ayuda o enfermas': 66,
+    'Para hacer mi trabajo debo demostrar sentimientos distintos a los míos': 67,
+    'Mi trabajo me exige atender situaciones de violencia': 68,
+    'Comunican tarde los asuntos de trabajo': 69,
+    'Dificultan el logro de los resultados del trabajo': 70,
+    'Cooperan poco cuando se necesita': 71,
+    'Ignoran las sugerencias para mejorar su trabajo': 72,
+};
+
+// Función para obtener el número de pregunta a partir del texto
+const getQuestionNumber = (questionText: string): number => {
+    return questionNumberMap[questionText] || 0;
 };
 
 </script>
