@@ -21,11 +21,12 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
-/docker/output
-/docker/output_images
-/docker/output_original
-/docker/outputs_aligned
-/docker/input/
+/docker/output/*
+/docker/output_images/*
+/docker/output_original/*
+/docker/outputs_aligned/*
+/docker/input/*
+/docker/output_with_markers/*
 /docker/.idea
 /docker/log.log
 /docker/__pycache__/

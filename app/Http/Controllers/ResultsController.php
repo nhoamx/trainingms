@@ -353,6 +353,7 @@ class ResultsController extends Controller
             'guideVResults' => $guideVResults,
             'guideIIIResults' => $guideIIIResults,
             'cisnerosResults' => $cisnerosResults,
+            'isAdmin' => auth()->user()->hasRole(['admin', 'super-admin']),
         ]);
     }
 

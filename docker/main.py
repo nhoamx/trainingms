@@ -4,14 +4,20 @@ import os
 import shutil
 import config
 import json
+import cv2
+import numpy as np
 
 # Definir rutas absolutas dentro del contenedor
 output_folder = "/app/output_images"
 output_json_folder = "/app/output"
+output_with_markers_folder = "/app/output_with_markers"
+input_folder = "/app/input"
 
 # Crear las carpetas de salida si no existen
 os.makedirs(output_folder, exist_ok=True)
 os.makedirs(output_json_folder, exist_ok=True)
+os.makedirs(output_with_markers_folder, exist_ok=True)
+os.makedirs(input_folder, exist_ok=True)
 
 def detect_folio(image_file, detector):
     """
@@ -68,51 +74,33 @@ def get_referencia_iii_complete_answers(image_file, detector, folio):
         
         # 1. Sección principal - 46 preguntas
         logging.info("Detectando sección principal (46 preguntas)...")
-        main_answers = detector.detect_bubbles(image_file, config.config_legacy.referencia_iii)
+        main_answers = detector.detect_bubbles(image_file, config.referencia_iii)
         complete_answers['referencia_iii'] = main_answers
         
         # 2. Pregunta condicional servicio cliente (primera definición - solo SI|NO)
         logging.info("Detectando pregunta condicional servicio cliente...")
-        customer_service_conditional = {
-            'condition': {
-                'SI': (1719, 2306, 45, 45),  # A de la primera definición
-                'NO': (1874, 2306, 45, 45),  # B de la primera definición
-            }
-        }
-        cs_conditional = detector.detect_bubbles(image_file, customer_service_conditional)
+        cs_conditional = detector.detect_bubbles(image_file, config.conditional_customer_service)
         complete_answers['customer_service_conditional'] = cs_conditional
         
         # 3. Preguntas de servicio cliente 65-68 (segunda definición completa)
         logging.info("Detectando preguntas de servicio cliente...")
-        if hasattr(config, 'config_legacy') and hasattr(config.config_legacy, 'customer_service_questions'):
-            cs_answers = detector.detect_bubbles(image_file, config.config_legacy.customer_service_questions)
-            complete_answers['customer_service_questions'] = cs_answers
-        else:
-            logging.warning("No se encontró config.config_legacy.customer_service_questions")
+        cs_answers = detector.detect_bubbles(image_file, config.customer_service_questions)
+        complete_answers['customer_service_questions'] = cs_answers
         
         # 4. Pregunta condicional gestión
         logging.info("Detectando pregunta condicional gestión...")
-        if hasattr(config, 'config_legacy') and hasattr(config.config_legacy, 'conditional_management'):
-            cm_answers = detector.detect_bubbles(image_file, config.config_legacy.conditional_management)
-            complete_answers['conditional_management'] = cm_answers
-        else:
-            logging.warning("No se encontró config.config_legacy.conditional_management")
+        cm_answers = detector.detect_bubbles(image_file, config.conditional_management)
+        complete_answers['conditional_management'] = cm_answers
         
         # 5. Preguntas de gestión 69-72
         logging.info("Detectando preguntas de gestión...")
-        if hasattr(config, 'config_legacy') and hasattr(config.config_legacy, 'management_questions'):
-            mg_answers = detector.detect_bubbles(image_file, config.config_legacy.management_questions)
-            complete_answers['management_questions'] = mg_answers
-        else:
-            logging.warning("No se encontró config.config_legacy.management_questions")
+        mg_answers = detector.detect_bubbles(image_file, config.management_questions)
+        complete_answers['management_questions'] = mg_answers
         
         # 6. CITSATS-s1
         logging.info("Detectando sección CITSATS-s1...")
-        if hasattr(config, 'config_legacy') and hasattr(config.config_legacy, 'citsats_s1'):
-            citsats_answers = detector.detect_bubbles(image_file, config.config_legacy.citsats_s1)
-            complete_answers['citsats_s1'] = citsats_answers
-        else:
-            logging.warning("No se encontró config.config_legacy.citsats_s1")
+        citsats_answers = detector.detect_bubbles(image_file, config.citsats_s1)
+        complete_answers['citsats_s1'] = citsats_answers
         
         # Guardar el JSON completo
         json_filename = f"{folio}.json"
@@ -158,8 +146,8 @@ def get_referencia_v_complete_answers(image_file, detector, folio, min_fill_thre
         
         for section_name, config_attr in simple_subsections:
             logging.info(f"Detectando subsección: {section_name}...")
-            if hasattr(config.config_legacy, config_attr):
-                section_config = getattr(config.config_legacy, config_attr)
+            if hasattr(config, config_attr):
+                section_config = getattr(config, config_attr)
                 
                 # Para secciones especiales con estructura anidada (edad, ocupacion, departamento)
                 if section_name == 'edad':
@@ -187,12 +175,12 @@ def get_referencia_v_complete_answers(image_file, detector, folio, min_fill_thre
                     section_answer = detector.detect_bubbles(image_file, {section_name: section_config}, min_fill_threshold=min_fill_threshold)
                     complete_answers[section_name] = section_answer.get(section_name)
             else:
-                logging.warning(f"No se encontró config.config_legacy.{config_attr}")
+                logging.warning(f"No se encontró config.{config_attr}")
         
         # --- Procesamiento especial para nivel_estudios ---
         logging.info("Procesando nivel_estudios (consolidado)...")
-        if hasattr(config.config_legacy, 'referencia_v') and 'nivel_estudios' in config.config_legacy.referencia_v:
-            nivel_estudios_config = config.config_legacy.referencia_v['nivel_estudios']
+        if hasattr(config, 'reference_v') and 'nivel_estudios' in config.reference_v:
+            nivel_estudios_config = config.reference_v['nivel_estudios']
             
             # Estructura para el resultado consolidado
             nivel_estudios_result = {
@@ -268,6 +256,144 @@ def get_main_answers_legacy(image_file, detector, evaluation_config, folio):
     except Exception as e:
         print(f"Error procesando {image_file}: {e}")
 
+def save_image_with_markers(image_path, folio, marker_positions=None, bubble_configs=None):
+    """
+    Genera y guarda una imagen con burbujas detectadas en colores diferentes según la sección.
+    
+    Para Referencia III:
+    - referencia_iii: RED (sin letra)
+    - conditional_customer_service: BLUE + letra "C" arriba
+    - customer_service_questions: BLUE + letra "C" arriba
+    - conditional_management: BLUE + letra "C" arriba
+    - management_questions: BLUE + letra "C" arriba
+    - citsats_s1: GREEN + letra "S" abajo
+    
+    Args:
+        image_path: Ruta a la imagen procesada
+        folio: Folio de la evaluación
+        marker_positions: No se usa (mantenido por compatibilidad)
+        bubble_configs: Lista de dicts con configuración de burbujas {pregunta: {opcion: (x,y,w,h)}}
+    """
+    import logging
+    try:
+        # Leer la imagen
+        img = cv2.imread(image_path)
+        if img is None:
+            logging.error(f"No se pudo leer la imagen: {image_path}")
+            return
+        
+        # Crear una copia para dibujar
+        img_marked = img.copy()
+        
+        # Definir colores y configuración para cada sección
+        # BGR format para OpenCV
+        section_config = {
+            'referencia_iii': {
+                'color': (0, 0, 255),      # RED
+                'letter': None,             # Sin letra
+                'letter_position': None
+            },
+            'conditional_customer_service': {
+                'color': (255, 0, 0),      # BLUE
+                'letter': 'C',
+                'letter_position': 'top'   # Arriba
+            },
+            'customer_service_questions': {
+                'color': (255, 0, 0),      # BLUE
+                'letter': 'C',
+                'letter_position': 'top'   # Arriba
+            },
+            'conditional_management': {
+                'color': (255, 0, 0),      # BLUE
+                'letter': 'C',
+                'letter_position': 'top'   # Arriba
+            },
+            'management_questions': {
+                'color': (255, 0, 0),      # BLUE
+                'letter': 'C',
+                'letter_position': 'top'   # Arriba
+            },
+            'citsats_s1': {
+                'color': (0, 255, 0),      # GREEN
+                'letter': 'S',
+                'letter_position': 'bottom' # Abajo
+            }
+        }
+        
+        # Ajuste vertical para bajar los círculos (en píxeles)
+        vertical_offset = 8
+        
+        # Procesar las configuraciones de burbujas
+        bubble_configs_list = []
+        if isinstance(bubble_configs, dict):
+            bubble_configs_list.append(bubble_configs)
+        elif isinstance(bubble_configs, list):
+            bubble_configs_list = bubble_configs
+        
+        # Mapear cada configuración a su sección correspondiente
+        # Orden esperado: referencia_iii, conditional_customer_service, customer_service_questions, 
+        #                 conditional_management, management_questions, citsats_s1
+        section_names = list(section_config.keys())
+        
+        for idx, config_dict in enumerate(bubble_configs_list):
+            if config_dict is None:
+                continue
+            
+            # Determinar el nombre de la sección basado en el orden
+            if idx < len(section_names):
+                section_name = section_names[idx]
+                color_info = section_config[section_name]
+                color = color_info['color']
+                letter = color_info['letter']
+                letter_position = color_info['letter_position']
+            else:
+                # Fallback si hay más configuraciones que esperadas
+                color = (100, 100, 100)  # Gray
+                letter = None
+                letter_position = None
+            
+            # Procesar cada burbuja en esta sección
+            for question, positions in config_dict.items():
+                if isinstance(positions, dict):
+                    for option, coords in positions.items():
+                        if isinstance(coords, tuple) and len(coords) == 4:
+                            x, y, w, h = coords
+                            # Dibujar círculo con color correspondiente
+                            center_x = x + w // 2
+                            center_y = y + h // 2 + vertical_offset
+                            radius = max(w, h) // 2
+                            cv2.circle(img_marked, (center_x, center_y), radius, color, 2)
+                            
+                            # Dibujar letra si corresponde
+                            if letter:
+                                # Calcular posición de la letra
+                                if letter_position == 'top':
+                                    # Arriba del círculo
+                                    letter_y = center_y - radius - 15
+                                elif letter_position == 'bottom':
+                                    # Abajo del círculo
+                                    letter_y = center_y + radius + 25
+                                else:
+                                    letter_y = center_y
+                                
+                                letter_x = center_x - 8  # Centrar horizontalmente aproximadamente
+                                
+                                # Dibujar la letra
+                                font = cv2.FONT_HERSHEY_SIMPLEX
+                                font_scale = 1.0
+                                font_thickness = 2
+                                cv2.putText(img_marked, letter, (letter_x, letter_y), font, font_scale, color, font_thickness)
+        
+        # Guardar la imagen con marcadores
+        output_path = os.path.join(output_with_markers_folder, f"{folio}.png")
+        cv2.imwrite(output_path, img_marked)
+        logging.info(f"Imagen con burbujas detectadas guardada: {output_path}")
+        
+    except Exception as e:
+        logging.error(f"Error guardando imagen con marcadores para folio {folio}: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+
 # Limpieza de las carpetas de salida (output, outputs_aligned, output_original)
 def limpiar_carpeta(path):
     import shutil, os
@@ -281,6 +407,7 @@ limpiar_carpeta(output_folder)
 limpiar_carpeta(output_json_folder)
 limpiar_carpeta("/app/outputs_aligned")
 limpiar_carpeta("/app/output_original")
+limpiar_carpeta("/app/output_with_markers")
 
 # Convertir PDF en imágenes
 print(f"La carpeta {output_folder} está vacía. Convirtiendo PDF en imágenes...")
@@ -427,26 +554,53 @@ for image_file in aligned_image_files:
 
     # Seleccionar la configuración de evaluación según el template type (primeros 2 dígitos)
     template_type = folio[:2]
+    bubble_configs_list = []
     
     if template_type == "01":
         # Referencia I - Acontecimientos traumáticos
-        evaluation_config = config.config_legacy.referencia_i if hasattr(config.config_legacy, 'referencia_i') else config.config_legacy.referencia_iii
+        evaluation_config = config.referencia_i if hasattr(config, 'referencia_i') else config.referencia_iii
+        bubble_configs_list.append(evaluation_config)
         logging.info(f"Folio {folio} → Referencia I (Acontecimientos Traumáticos)")
         get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
     elif template_type == "02":
         # Referencia III - Evaluación principal COMPLETA (6 secciones)
+        # Incluir TODAS las configuraciones de burbujas de las 6 secciones
+        bubble_configs_list.append(config.referencia_iii)
+        bubble_configs_list.append(config.conditional_customer_service)
+        bubble_configs_list.append(config.customer_service_questions)
+        bubble_configs_list.append(config.conditional_management)
+        bubble_configs_list.append(config.management_questions)
+        bubble_configs_list.append(config.citsats_s1)
+        
         logging.info(f"Folio {folio} → Referencia III COMPLETA (6 secciones)")
         get_referencia_iii_complete_answers(new_image_path, detector, folio)
     elif template_type == "03":
         # Referencia V - Datos del evaluado (20 subsecciones)
+        # Incluir todas las subsecciones demográficas
+        demographic_sections = ['sexo', 'edad', 'estado_civil', 'nivel_estudios', 'tiempo_puesto_actual', 
+                               'tipo_personal', 'tipo_puesto', 'tipo_contratacion', 'tipo_jornada', 
+                               'rotacion_turnos', 'experiencia_laboral', 'ocupacion', 'departamento',
+                               'numero_trabajadores', 'subordinados', 'horas_laborales', 'salario']
+        for section in demographic_sections:
+            if hasattr(config, section):
+                section_config = getattr(config, section)
+                if isinstance(section_config, dict):
+                    bubble_configs_list.append(section_config)
+        
         logging.info(f"Folio {folio} → Referencia V COMPLETA (20 subsecciones demográficas)")
         get_referencia_v_complete_answers(new_image_path, detector, folio)
     elif template_type == "04":
         # Escala Cisneros
-        evaluation_config = config.config_legacy.escala_cisneros if hasattr(config.config_legacy, 'escala_cisneros') else config.config_legacy.referencia_iii
+        evaluation_config = config.escala_cisneros if hasattr(config, 'escala_cisneros') else config.referencia_iii
+        bubble_configs_list.append(evaluation_config)
         logging.info(f"Folio {folio} → Escala Cisneros (Mobbing)")
         get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
     else:
         logging.warning(f"Template type '{template_type}' no reconocido, usando evaluación por defecto")
-        evaluation_config = config.config_legacy.referencia_iii
+        evaluation_config = config.referencia_iii
+        bubble_configs_list.append(evaluation_config)
         get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
+    
+    # Generar imagen con marcadores y burbujas
+    logging.info(f"Generando imagen con marcadores para folio {folio}... ({len(bubble_configs_list)} configuraciones)")
+    save_image_with_markers(new_image_path, folio, marker_positions=None, bubble_configs=bubble_configs_list)
