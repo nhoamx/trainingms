@@ -4,14 +4,18 @@ import os
 import shutil
 import config
 import json
+import cv2
+import numpy as np
 
 # Definir rutas absolutas dentro del contenedor
 output_folder = "/app/output_images"
 output_json_folder = "/app/output"
+output_with_markers_folder = "/app/output_with_markers"
 
 # Crear las carpetas de salida si no existen
 os.makedirs(output_folder, exist_ok=True)
 os.makedirs(output_json_folder, exist_ok=True)
+os.makedirs(output_with_markers_folder, exist_ok=True)
 
 def detect_folio(image_file, detector):
     """
@@ -268,6 +272,64 @@ def get_main_answers_legacy(image_file, detector, evaluation_config, folio):
     except Exception as e:
         print(f"Error procesando {image_file}: {e}")
 
+def save_image_with_markers(image_path, folio, marker_positions=None, bubble_configs=None):
+    """
+    Genera y guarda una imagen con marcadores de alineación y burbujas destacadas.
+    
+    Args:
+        image_path: Ruta a la imagen procesada
+        folio: Folio de la evaluación
+        marker_positions: Lista de tuplas (x, y) con las posiciones de los marcadores de alineación
+        bubble_configs: Dict con configuración de burbujas {pregunta: {opcion: (x,y,w,h)}}
+    """
+    import logging
+    try:
+        # Leer la imagen
+        img = cv2.imread(image_path)
+        if img is None:
+            logging.error(f"No se pudo leer la imagen: {image_path}")
+            return
+        
+        # Crear una copia para dibujar
+        img_marked = img.copy()
+        
+        # Dibujar marcadores de alineación (4 esquinas) en verde
+        if marker_positions is None:
+            # Usar posiciones estimadas de las 4 esquinas basadas en el tamaño de la imagen
+            h, w = img.shape[:2]
+            margin = 20  # Margen desde el borde
+            marker_size = 30
+            marker_positions = [
+                (margin, margin),  # Superior izquierda
+                (w - margin - marker_size, margin),  # Superior derecha
+                (margin, h - margin - marker_size),  # Inferior izquierda
+                (w - margin - marker_size, h - margin - marker_size)  # Inferior derecha
+            ]
+        
+        # Dibujar marcadores de alineación como rectángulos verdes
+        for (x, y) in marker_positions:
+            cv2.rectangle(img_marked, (x, y), (x + 30, y + 30), (0, 255, 0), 3)
+        
+        # Dibujar burbujas detectadas en azul
+        if bubble_configs:
+            for question, positions in bubble_configs.items():
+                for option, (x, y, w, h) in positions.items():
+                    # Dibujar círculo azul para cada burbuja
+                    center_x = x + w // 2
+                    center_y = y + h // 2
+                    radius = max(w, h) // 2
+                    cv2.circle(img_marked, (center_x, center_y), radius, (255, 0, 0), 2)
+        
+        # Guardar la imagen con marcadores
+        output_path = os.path.join(output_with_markers_folder, f"{folio}.png")
+        cv2.imwrite(output_path, img_marked)
+        logging.info(f"Imagen con marcadores guardada: {output_path}")
+        
+    except Exception as e:
+        logging.error(f"Error guardando imagen con marcadores para folio {folio}: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+
 # Limpieza de las carpetas de salida (output, outputs_aligned, output_original)
 def limpiar_carpeta(path):
     import shutil, os
@@ -427,14 +489,17 @@ for image_file in aligned_image_files:
 
     # Seleccionar la configuración de evaluación según el template type (primeros 2 dígitos)
     template_type = folio[:2]
+    bubble_config = None
     
     if template_type == "01":
         # Referencia I - Acontecimientos traumáticos
         evaluation_config = config.config_legacy.referencia_i if hasattr(config.config_legacy, 'referencia_i') else config.config_legacy.referencia_iii
+        bubble_config = evaluation_config
         logging.info(f"Folio {folio} → Referencia I (Acontecimientos Traumáticos)")
         get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
     elif template_type == "02":
         # Referencia III - Evaluación principal COMPLETA (6 secciones)
+        bubble_config = config.config_legacy.referencia_iii if hasattr(config.config_legacy, 'referencia_iii') else None
         logging.info(f"Folio {folio} → Referencia III COMPLETA (6 secciones)")
         get_referencia_iii_complete_answers(new_image_path, detector, folio)
     elif template_type == "03":
@@ -444,9 +509,15 @@ for image_file in aligned_image_files:
     elif template_type == "04":
         # Escala Cisneros
         evaluation_config = config.config_legacy.escala_cisneros if hasattr(config.config_legacy, 'escala_cisneros') else config.config_legacy.referencia_iii
+        bubble_config = evaluation_config
         logging.info(f"Folio {folio} → Escala Cisneros (Mobbing)")
         get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
     else:
         logging.warning(f"Template type '{template_type}' no reconocido, usando evaluación por defecto")
         evaluation_config = config.config_legacy.referencia_iii
+        bubble_config = evaluation_config
         get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
+    
+    # Generar imagen con marcadores y burbujas
+    logging.info(f"Generando imagen con marcadores para folio {folio}...")
+    save_image_with_markers(new_image_path, folio, marker_positions=None, bubble_configs=bubble_config)
