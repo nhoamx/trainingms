@@ -28,6 +28,16 @@ if os.path.exists(config_legacy_path):
         if hasattr(config_legacy, 'reference_v'):
             reference_v = config_legacy.reference_v
         
+        # Import Referencia V demographic sections
+        demographic_sections = ['sexo', 'edad', 'estado_civil', 'nivel_estudios', 'tiempo_puesto_actual',
+                               'tipo_personal', 'tipo_puesto', 'tipo_contratacion', 'tipo_jornada',
+                               'rotacion_turnos', 'experiencia_laboral', 'ocupacion', 'departamento',
+                               'numero_trabajadores', 'subordinados', 'horas_laborales', 'salario']
+        
+        for section in demographic_sections:
+            if hasattr(config_legacy, section):
+                globals()[section] = getattr(config_legacy, section)
+        
         # Keep reference to config_legacy for backward compatibility
         # This allows: config.config_legacy.variable_name (old style)
         # AND: config.variable_name (new clean style)
@@ -47,12 +57,30 @@ if os.path.exists(config_legacy_path):
 __all__ = [
     'folio_configuration',
     'referencia_iii',
+    'referencia_i',
+    'reference_v',
     'conditional_customer_service',
     'customer_service_questions',
     'conditional_management',
     'management_questions',
     'citsats_s1',
-    'referencia_i',
-    'reference_v',
+    # Referencia V demographic sections
+    'sexo',
+    'edad',
+    'estado_civil',
+    'nivel_estudios',
+    'tiempo_puesto_actual',
+    'tipo_personal',
+    'tipo_puesto',
+    'tipo_contratacion',
+    'tipo_jornada',
+    'rotacion_turnos',
+    'experiencia_laboral',
+    'ocupacion',
+    'departamento',
+    'numero_trabajadores',
+    'subordinados',
+    'horas_laborales',
+    'salario',
     'config_legacy',
 ]
