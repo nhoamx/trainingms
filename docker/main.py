@@ -67,6 +67,8 @@ def get_referencia_iii_complete_answers(image_file, detector, folio):
     4. conditional_management - pregunta condicional gestión SI|NO
     5. management_questions - preguntas 69-72 con opciones A-E
     6. citsats_s1 - 6 preguntas con SI|NO
+    
+    Si la respuesta condicional es NO, las preguntas relacionadas se ponen en null
     """
     import logging
     try:
@@ -85,7 +87,15 @@ def get_referencia_iii_complete_answers(image_file, detector, folio):
         # 3. Preguntas de servicio cliente 65-68 (segunda definición completa)
         logging.info("Detectando preguntas de servicio cliente...")
         cs_answers = detector.detect_bubbles(image_file, config.customer_service_questions)
-        complete_answers['customer_service_questions'] = cs_answers
+        
+        # Si la respuesta condicional es NO, poner null todas las preguntas de servicio cliente
+        if cs_conditional.get('condition') == 'NO':
+            logging.info("Pregunta condicional de servicio cliente es NO → poniendo preguntas en null")
+            # Crear un dict con todos los valores en null
+            cs_answers_null = {key: None for key in cs_answers.keys()}
+            complete_answers['customer_service_questions'] = cs_answers_null
+        else:
+            complete_answers['customer_service_questions'] = cs_answers
         
         # 4. Pregunta condicional gestión
         logging.info("Detectando pregunta condicional gestión...")
@@ -95,7 +105,15 @@ def get_referencia_iii_complete_answers(image_file, detector, folio):
         # 5. Preguntas de gestión 69-72
         logging.info("Detectando preguntas de gestión...")
         mg_answers = detector.detect_bubbles(image_file, config.management_questions)
-        complete_answers['management_questions'] = mg_answers
+        
+        # Si la respuesta condicional de gestión es NO, poner null todas las preguntas de gestión
+        if cm_answers.get('condition') == 'NO':
+            logging.info("Pregunta condicional de gestión es NO → poniendo preguntas en null")
+            # Crear un dict con todos los valores en null
+            mg_answers_null = {key: None for key in mg_answers.keys()}
+            complete_answers['management_questions'] = mg_answers_null
+        else:
+            complete_answers['management_questions'] = mg_answers
         
         # 6. CITSATS-s1
         logging.info("Detectando sección CITSATS-s1...")
@@ -256,7 +274,7 @@ def get_main_answers_legacy(image_file, detector, evaluation_config, folio):
     except Exception as e:
         print(f"Error procesando {image_file}: {e}")
 
-def save_image_with_markers(image_path, folio, marker_positions=None, bubble_configs=None):
+def save_image_with_markers(image_path, folio, marker_positions=None, bubble_configs=None, template_type=None):
     """
     Genera y guarda una imagen con burbujas detectadas en colores diferentes según la sección.
     
@@ -268,11 +286,14 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
     - management_questions: BLUE + letra "C" arriba
     - citsats_s1: GREEN + letra "S" abajo
     
+    Para Referencia I, V, Cisneros: BLUE (sin letra especial)
+    
     Args:
         image_path: Ruta a la imagen procesada
         folio: Folio de la evaluación
         marker_positions: No se usa (mantenido por compatibilidad)
         bubble_configs: Lista de dicts con configuración de burbujas {pregunta: {opcion: (x,y,w,h)}}
+        template_type: Tipo de template ('01', '02', '03', '04') para aplicar colores apropiados
     """
     import logging
     try:
@@ -287,7 +308,7 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
         
         # Definir colores y configuración para cada sección
         # BGR format para OpenCV
-        section_config = {
+        section_config_ref3 = {
             'referencia_iii': {
                 'color': (0, 0, 255),      # RED
                 'letter': None,             # Sin letra
@@ -320,6 +341,24 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
             }
         }
         
+        # Configuración genérica para otras referencias
+        section_config_generic = {
+            'default': {
+                'color': (255, 0, 0),      # BLUE
+                'letter': None,
+                'letter_position': None
+            }
+        }
+        
+        # Seleccionar configuración según el tipo de template
+        if template_type == '02':  # Referencia III
+            section_config = section_config_ref3
+            section_names = list(section_config.keys())
+        else:
+            # Para Referencia I, V, Cisneros: usar color azul simple
+            section_config = section_config_generic
+            section_names = ['default']
+        
         # Ajuste vertical para bajar los círculos (en píxeles)
         vertical_offset = 8
         
@@ -330,27 +369,27 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
         elif isinstance(bubble_configs, list):
             bubble_configs_list = bubble_configs
         
-        # Mapear cada configuración a su sección correspondiente
-        # Orden esperado: referencia_iii, conditional_customer_service, customer_service_questions, 
-        #                 conditional_management, management_questions, citsats_s1
-        section_names = list(section_config.keys())
+        logging.info(f"Dibujando burbujas - Template: {template_type}, Configs: {len(bubble_configs_list)}")
         
         for idx, config_dict in enumerate(bubble_configs_list):
             if config_dict is None:
                 continue
             
-            # Determinar el nombre de la sección basado en el orden
-            if idx < len(section_names):
-                section_name = section_names[idx]
-                color_info = section_config[section_name]
-                color = color_info['color']
-                letter = color_info['letter']
-                letter_position = color_info['letter_position']
+            # Determinar el nombre de la sección basado en el tipo de template
+            if template_type == '02':  # Referencia III - mapeo por índice
+                if idx < len(section_names):
+                    section_name = section_names[idx]
+                    color_info = section_config[section_name]
+                else:
+                    # Fallback
+                    color_info = {'color': (100, 100, 100), 'letter': None, 'letter_position': None}
             else:
-                # Fallback si hay más configuraciones que esperadas
-                color = (100, 100, 100)  # Gray
-                letter = None
-                letter_position = None
+                # Para otras referencias, usar la configuración genérica
+                color_info = section_config_generic['default']
+            
+            color = color_info['color']
+            letter = color_info.get('letter')
+            letter_position = color_info.get('letter_position')
             
             # Procesar cada burbuja en esta sección
             for question, positions in config_dict.items():
@@ -364,8 +403,8 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
                             radius = max(w, h) // 2
                             cv2.circle(img_marked, (center_x, center_y), radius, color, 2)
                             
-                            # Dibujar letra si corresponde
-                            if letter:
+                            # Dibujar letra si corresponde (solo para Referencia III)
+                            if letter and template_type == '02':
                                 # Calcular posición de la letra
                                 if letter_position == 'top':
                                     # Arriba del círculo
@@ -603,4 +642,4 @@ for image_file in aligned_image_files:
     
     # Generar imagen con marcadores y burbujas
     logging.info(f"Generando imagen con marcadores para folio {folio}... ({len(bubble_configs_list)} configuraciones)")
-    save_image_with_markers(new_image_path, folio, marker_positions=None, bubble_configs=bubble_configs_list)
+    save_image_with_markers(new_image_path, folio, marker_positions=None, bubble_configs=bubble_configs_list, template_type=template_type)
