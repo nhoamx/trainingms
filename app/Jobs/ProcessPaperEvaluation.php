@@ -311,6 +311,9 @@ class ProcessPaperEvaluation implements ShouldQueue
 
             Log::info("Paper evaluation processed successfully: {$folio}");
 
+            // Copy marked image to public storage
+            $this->copyMarkedImageToStorage($folio);
+
         } catch (\Exception $e) {
             Log::error("Error processing JSON file {$jsonFile}: ".$e->getMessage());
 
@@ -402,6 +405,33 @@ class ProcessPaperEvaluation implements ShouldQueue
         }
 
         return $organization;
+    }
+
+    /**
+     * Copy marked image from Docker to public storage
+     */
+    protected function copyMarkedImageToStorage(string $folio): void
+    {
+        try {
+            $containerOutputPath = "/var/lib/docker/volumes/training-and-ms_output-with-markers/_data/{$folio}.png";
+            $publicFoliosPath = storage_path("app/public/folios/{$folio}.png");
+
+            // Ensure the folios directory exists
+            $foliosDir = dirname($publicFoliosPath);
+            if (! File::exists($foliosDir)) {
+                File::makeDirectory($foliosDir, 0755, true);
+            }
+
+            // Copy file from Docker volume to public storage
+            if (File::exists($containerOutputPath)) {
+                File::copy($containerOutputPath, $publicFoliosPath);
+                Log::info("Marked image copied for folio: {$folio}");
+            } else {
+                Log::warning("Marked image not found in Docker output: {$containerOutputPath}");
+            }
+        } catch (\Exception $e) {
+            Log::error("Error copying marked image for folio {$folio}: ".$e->getMessage());
+        }
     }
 
     /**
