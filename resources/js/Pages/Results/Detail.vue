@@ -286,35 +286,97 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                     <div>
-                                        <h3 class="text-sm font-medium text-blue-900">Imagen Procesada con Marcadores</h3>
+                                        <h3 class="text-sm font-medium text-blue-900">Imágenes Procesadas - Respuestas Detectadas</h3>
                                         <p class="mt-1 text-sm text-blue-700">
-                                            Esta imagen muestra los marcadores de alineación (verde) y las burbujas detectadas (azul) durante el procesamiento OCR.
+                                            Las siguientes imágenes muestran los formularios procesados con los círculos azules indicando las respuestas detectadas por el sistema OCR.
+                                        </p>
+                                        <p class="mt-2 text-xs text-blue-600 font-medium">
+                                            ⏱️ Nota: Estas imágenes se eliminan automáticamente después de 7 días por razones de almacenamiento.
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="bg-white rounded-lg shadow-lg p-6">
+                            <!-- Referencia I Image -->
+                            <div v-if="evaluation.has_guide_i" class="bg-white rounded-lg shadow-lg p-6">
                                 <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                                    Formulario Procesado - Folio: {{ evaluation.folio }}
+                                    Guía de Referencia I - Acontecimientos Traumáticos
                                 </h3>
+                                <p class="text-sm text-gray-600 mb-4">
+                                    Folio: {{ getReferenceFolio('01') }}
+                                </p>
                                 
-                                <div class="flex justify-center">
+                                <div class="flex justify-center mb-4">
                                     <div class="max-w-full overflow-auto">
                                         <img 
-                                            :src="`/storage/folios/${evaluation.folio}.png`" 
-                                            :alt="`Imagen procesada folio ${evaluation.folio}`"
-                                            class="max-w-full h-auto rounded border border-gray-300 shadow-sm"
+                                            :src="`/storage/folios/${getReferenceFolio('01')}.png`"
+                                            :alt="`Formulario procesado - Referencia I - Folio ${getReferenceFolio('01')}`"
+                                            class="max-w-full h-auto border border-gray-300 rounded"
                                             @error="handleImageError"
                                         />
                                     </div>
                                 </div>
 
-                                <div class="mt-6 text-sm text-gray-600">
+                                <div class="text-sm text-gray-600 border-t pt-4">
                                     <p class="font-medium mb-2">Leyenda:</p>
                                     <ul class="list-disc list-inside space-y-1">
-                                        <li><span class="text-green-600 font-semibold">Verde</span>: Marcadores de alineación (4 esquinas)</li>
-                                        <li><span class="text-blue-600 font-semibold">Azul</span>: Burbujas detectadas por el sistema OCR</li>
+                                        <li><span class="text-blue-600 font-semibold">Círculos azules</span>: Respuestas detectadas y procesadas por el sistema OCR</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Referencia III Image -->
+                            <div v-if="evaluation.has_guide_iii" class="bg-white rounded-lg shadow-lg p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                    Guía de Referencia III - Cuestionario de Factores de Riesgo Psicosocial
+                                </h3>
+                                <p class="text-sm text-gray-600 mb-4">
+                                    Folio: {{ getReferenceFolio('02') }}
+                                </p>
+                                
+                                <div class="flex justify-center mb-4">
+                                    <div class="max-w-full overflow-auto">
+                                        <img 
+                                            :src="`/storage/folios/${getReferenceFolio('02')}.png`"
+                                            :alt="`Formulario procesado - Referencia III - Folio ${getReferenceFolio('02')}`"
+                                            class="max-w-full h-auto border border-gray-300 rounded"
+                                            @error="handleImageError"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="text-sm text-gray-600 border-t pt-4">
+                                    <p class="font-medium mb-2">Leyenda:</p>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li><span class="text-blue-600 font-semibold">Círculos azules</span>: Respuestas de las 6 secciones detectadas (preguntas 1-72, CITSATS)</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Referencia V Image -->
+                            <div v-if="evaluation.has_guide_v" class="bg-white rounded-lg shadow-lg p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                    Guía de Referencia V - Datos Demográficos del Evaluado
+                                </h3>
+                                <p class="text-sm text-gray-600 mb-4">
+                                    Folio: {{ getReferenceFolio('03') }}
+                                </p>
+                                
+                                <div class="flex justify-center mb-4">
+                                    <div class="max-w-full overflow-auto">
+                                        <img 
+                                            :src="`/storage/folios/${getReferenceFolio('03')}.png`"
+                                            :alt="`Formulario procesado - Referencia V - Folio ${getReferenceFolio('03')}`"
+                                            class="max-w-full h-auto border border-gray-300 rounded"
+                                            @error="handleImageError"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="text-sm text-gray-600 border-t pt-4">
+                                    <p class="font-medium mb-2">Leyenda:</p>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li><span class="text-blue-600 font-semibold">Círculos azules</span>: Respuestas de las 20 subsecciones demográficas detectadas</li>
                                     </ul>
                                 </div>
                             </div>
@@ -516,6 +578,27 @@ const handleImageError = (event: Event) => {
         `;
         parent.appendChild(errorMessage);
     }
+};
+
+// Generate folio for specific reference guide based on personal_folio
+const getReferenceFolio = (templateType: string): string => {
+    // templateType: '01' = Ref I, '02' = Ref III, '03' = Ref V
+    // Folio format: [template_type:2][rest_of_folio]
+    // We keep the rest of the folio intact and only change the first 2 digits
+    
+    if (!props.evaluation?.folio) {
+        return '';
+    }
+    
+    const currentFolio = props.evaluation.folio.toString();
+    
+    // If the folio is less than 2 characters, we can't change the template type
+    if (currentFolio.length < 3) {
+        return currentFolio;
+    }
+    
+    // Replace first 2 digits with the new template type
+    return templateType + currentFolio.substring(2);
 };
 
 // Preguntas CITSATS (73-78) - Solo para referencia visual

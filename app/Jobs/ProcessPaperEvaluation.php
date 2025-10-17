@@ -413,7 +413,7 @@ class ProcessPaperEvaluation implements ShouldQueue
     protected function copyMarkedImageToStorage(string $folio): void
     {
         try {
-            $containerOutputPath = "/var/lib/docker/volumes/training-and-ms_output-with-markers/_data/{$folio}.png";
+            $containerOutputPath = base_path("docker/output_with_markers/{$folio}.png");
             $publicFoliosPath = storage_path("app/public/folios/{$folio}.png");
 
             // Ensure the folios directory exists
