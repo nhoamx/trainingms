@@ -276,6 +276,50 @@
                             <p class="mt-2">En Desarrollo</p>
                         </div>
                     </div>
+
+                    <!-- Marked Image Tab (Admin Only) -->
+                    <div v-else-if="currentTab === 'markedImage' && isAdmin">
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div class="flex items-start">
+                                    <svg class="h-6 w-6 text-blue-600 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div>
+                                        <h3 class="text-sm font-medium text-blue-900">Imagen Procesada con Marcadores</h3>
+                                        <p class="mt-1 text-sm text-blue-700">
+                                            Esta imagen muestra los marcadores de alineación (verde) y las burbujas detectadas (azul) durante el procesamiento OCR.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                    Formulario Procesado - Folio: {{ evaluation.folio }}
+                                </h3>
+                                
+                                <div class="flex justify-center">
+                                    <div class="max-w-full overflow-auto">
+                                        <img 
+                                            :src="`/storage/folios/${evaluation.folio}.png`" 
+                                            :alt="`Imagen procesada folio ${evaluation.folio}`"
+                                            class="max-w-full h-auto rounded border border-gray-300 shadow-sm"
+                                            @error="handleImageError"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 text-sm text-gray-600">
+                                    <p class="font-medium mb-2">Leyenda:</p>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li><span class="text-green-600 font-semibold">Verde</span>: Marcadores de alineación (4 esquinas)</li>
+                                        <li><span class="text-blue-600 font-semibold">Azul</span>: Burbujas detectadas por el sistema OCR</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -310,6 +354,7 @@ interface Props {
     guideVResults: GuideVResults | null;
     guideIIIResults: GuideIIIResults | null;
     cisnerosResults: CisnerosResults | null;
+    isAdmin?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -318,7 +363,8 @@ const props = withDefaults(defineProps<Props>(), {
     guideIResults: null,
     guideVResults: null,
     guideIIIResults: null,
-    cisnerosResults: null
+    cisnerosResults: null,
+    isAdmin: false
 });
 
 // Agrupa los resultados para renderizar la tabla jerárquica con rowspan
@@ -399,6 +445,10 @@ const availableTabs = computed<Tab[]>(() => {
     if (props.evaluation?.has_cisneros) {
         tabs.push({ key: 'cisneros', label: 'CISNEROS' });
     }
+    // Admin-only tab for marked images
+    if (props.isAdmin && props.evaluation?.folio) {
+        tabs.push({ key: 'markedImage', label: 'Imagen Procesada' });
+    }
     return tabs;
 });
 
@@ -447,6 +497,25 @@ const getRiskLevelClass = (score: number): string => {
         'Muy Alto': 'text-red-800'
     };
     return classes[level] || 'text-gray-600';
+};
+
+// Handle image loading errors
+const handleImageError = (event: Event) => {
+    const target = event.target as HTMLImageElement;
+    target.style.display = 'none';
+    const parent = target.parentElement;
+    if (parent) {
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'text-center py-12 text-gray-500';
+        errorMessage.innerHTML = `
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p class="mt-2">Imagen no disponible para este folio</p>
+            <p class="text-sm text-gray-400 mt-1">La imagen procesada aún no está disponible o no se generó correctamente</p>
+        `;
+        parent.appendChild(errorMessage);
+    }
 };
 
 // Preguntas CITSATS (73-78) - Solo para referencia visual
