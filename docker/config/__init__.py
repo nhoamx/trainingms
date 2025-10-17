@@ -1,10 +1,3 @@
-# Config module for OMR templates
-
-from .folio import folio_configuration
-from .referencia_i import reference_i
-from .referencia_iii import referencia_iii
-from .referencia_v import referencia_v
-
 # Import from legacy config file for backward compatibility
 import sys
 import os
@@ -13,26 +6,39 @@ import os
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 config_legacy_path = os.path.join(parent_dir, 'config_legacy.py')
 
+# Import config_legacy module (contains all bubble coordinates and configurations)
 if os.path.exists(config_legacy_path):
     sys.path.insert(0, parent_dir)
     try:
         import config_legacy
-        # Import evaluation configs from legacy config
-        if hasattr(config_legacy, 'evaluation_01'):
-            evaluation_01 = config_legacy.evaluation_01
-        if hasattr(config_legacy, 'escala_cisneros'):
-            escala_cisneros = config_legacy.escala_cisneros
-        if hasattr(config_legacy, 'folio_configuration'):
-            # Use legacy folio_configuration if it exists (it's more complete)
-            folio_configuration = config_legacy.folio_configuration
-        if hasattr(config_legacy, 'reference_i'):
-            # Use legacy reference_i if it exists (it's more complete)
-            reference_i = config_legacy.reference_i
+        
+        # Expose all config_legacy attributes directly at module level
+        # This allows: config.customer_service_questions instead of config.config_legacy.customer_service_questions
+        folio_configuration = config_legacy.folio_configuration
+        referencia_iii = config_legacy.referencia_iii
+        conditional_customer_service = config_legacy.conditional_customer_service
+        customer_service_questions = config_legacy.customer_service_questions
+        conditional_management = config_legacy.conditional_management
+        management_questions = config_legacy.management_questions
+        citsats_s1 = config_legacy.citsats_s1
+        
+        # Import referencia_i and reference_v (use legacy versions if they exist)
+        if hasattr(config_legacy, 'referencia_i'):
+            referencia_i = config_legacy.referencia_i
         if hasattr(config_legacy, 'reference_v'):
-            # Use legacy reference_v if it exists (it's more complete)
             reference_v = config_legacy.reference_v
-    except ImportError as e:
-        print(f"Warning: Could not import config_legacy: {e}")
+        
+        # Keep reference to config_legacy for backward compatibility
+        # This allows: config.config_legacy.variable_name (old style)
+        # AND: config.variable_name (new clean style)
+        
+    except (ImportError, AttributeError) as e:
+        print(f"Warning: Could not fully import config_legacy: {e}")
+        # Fallback to local modules if config_legacy is incomplete
+        from .folio import folio_configuration
+        from .referencia_i import referencia_i
+        from .referencia_iii import referencia_iii
+        from .referencia_v import reference_v
     finally:
         # Clean up path
         if parent_dir in sys.path:
@@ -40,9 +46,13 @@ if os.path.exists(config_legacy_path):
 
 __all__ = [
     'folio_configuration',
-    'reference_i',
     'referencia_iii',
+    'conditional_customer_service',
+    'customer_service_questions',
+    'conditional_management',
+    'management_questions',
+    'citsats_s1',
+    'referencia_i',
     'reference_v',
-    'evaluation_01',
-    'escala_cisneros',
+    'config_legacy',
 ]

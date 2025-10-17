@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Organization;
+use App\Models\PaperEvaluation;
 
 class EvaluationService
 {
@@ -31,11 +32,10 @@ class EvaluationService
         // Traer organizaciones y contar PaperEvaluations (source=paper, status=completed)
         $orgs = Organization::all();
         $orgIds = $orgs->pluck('id');
-        $paperCounts = \App\Models\PaperEvaluation::whereIn('organization_id', $orgIds)
+        $paperCounts = PaperEvaluation::groupBy('organization_id')
             ->where('source', 'paper')
             ->where('processing_status', 'completed')
-            ->selectRaw('organization_id, personal_folio, COUNT(*) as count')
-            ->groupBy(['organization_id', 'personal_folio'])
+            ->selectRaw('organization_id, COUNT(*) as count')
             ->pluck('count', 'organization_id');
 
         return $orgs->map(function ($organization) use ($paperCounts) {
