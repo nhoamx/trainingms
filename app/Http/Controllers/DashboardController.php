@@ -58,7 +58,7 @@ class DashboardController extends Controller
             $data['isSuperAdmin'] = false;
 
             // Add online evaluation counts for each organization
-            $this->addOnlineEvaluationCounts($data['organizations']);
+            $data['organizations'] = $this->addOnlineEvaluationCounts($data['organizations']);
         } elseif ($user->hasRole('super-admin')) {
             $data['organizations'] = $this->evaluationService->getAllEvaluationsByOrganization();
             // Admins/SuperAdmins see global demographics
@@ -67,7 +67,7 @@ class DashboardController extends Controller
             $data['isSuperAdmin'] = true;
 
             // Add online evaluation counts for each organization
-            $this->addOnlineEvaluationCounts($data['organizations']);
+            $data['organizations'] = $this->addOnlineEvaluationCounts($data['organizations']);
         }
 
         return Inertia::render('Dashboard', $data);
@@ -176,9 +176,9 @@ class DashboardController extends Controller
     /**
      * Add online evaluation counts to organization data
      */
-    protected function addOnlineEvaluationCounts(&$organizations): void
+    protected function addOnlineEvaluationCounts($organizations)
     {
-        foreach ($organizations as &$org) {
+        return $organizations->map(function ($org) {
             // Count paper evaluations with source='online' grouped by personal_folio
             $onlineEvaluationsCount = \App\Models\PaperEvaluation::where('organization_id', $org['id'])
                 ->where('source', 'online')
@@ -187,6 +187,8 @@ class DashboardController extends Controller
                 ->count('personal_folio');
 
             $org['online_evaluations_count'] = $onlineEvaluationsCount;
-        }
+
+            return $org;
+        });
     }
 }
