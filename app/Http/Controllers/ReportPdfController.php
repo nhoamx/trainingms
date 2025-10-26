@@ -7,6 +7,7 @@ use App\Services\ReportPdfService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Spatie\Browsershot\Browsershot;
 
 class ReportPdfController extends Controller
 {
@@ -37,17 +38,35 @@ class ReportPdfController extends Controller
                 ], 404);
             }
 
-            $pdf = Pdf::loadView('pdfs.demographic-report', [
+            // Render HTML view with Vue + Chart.js
+            $html = view('pdfs.demographic-report-browsershot', [
                 'organization' => $organization,
                 'demographicData' => $demographicData,
                 'generatedDate' => now()->format('d/m/Y'),
-            ]);
+            ])->render();
 
-            $pdf->setPaper('letter', 'portrait');
-
+            // Generate PDF using Browsershot
             $filename = 'informe-demografico-'.$organization->name.'-'.now()->format('Y-m-d').'.pdf';
+            $tempPath = storage_path('app/temp/'.$filename);
 
-            return $pdf->download($filename);
+            // Ensure temp directory exists
+            if (! file_exists(storage_path('app/temp'))) {
+                mkdir(storage_path('app/temp'), 0755, true);
+            }
+
+            // Configure Browsershot for PDF generation
+            Browsershot::html($html)
+                ->paperSize(8.5, 11, 'in') // Letter size
+                ->margins(0, 0, 0, 0) // Margins handled by CSS @page
+                ->waitUntilNetworkIdle()
+                ->timeout(120)
+                ->showBackground()
+                ->save($tempPath);
+
+            // Return PDF for download
+            return response()->download($tempPath, $filename, [
+                'Content-Type' => 'application/pdf',
+            ])->deleteFileAfterSend(true);
         } catch (\Exception $e) {
             Log::error('Error generating demographic report PDF: '.$e->getMessage(), [
                 'organization_id' => $organizationId,
@@ -83,17 +102,35 @@ class ReportPdfController extends Controller
                 ], 404);
             }
 
-            $pdf = Pdf::loadView('pdfs.diagnostic-report', [
+            // Render HTML view with Vue + Chart.js
+            $html = view('pdfs.diagnostic-report-browsershot', [
                 'organization' => $organization,
                 'diagnosticData' => $diagnosticData,
                 'generatedDate' => now()->format('d/m/Y'),
-            ]);
+            ])->render();
 
-            $pdf->setPaper('letter', 'portrait');
-
+            // Generate PDF using Browsershot
             $filename = 'informe-diagnostico-'.$organization->name.'-'.now()->format('Y-m-d').'.pdf';
+            $tempPath = storage_path('app/temp/'.$filename);
 
-            return $pdf->download($filename);
+            // Ensure temp directory exists
+            if (! file_exists(storage_path('app/temp'))) {
+                mkdir(storage_path('app/temp'), 0755, true);
+            }
+
+            // Configure Browsershot for PDF generation
+            Browsershot::html($html)
+                ->paperSize(8.5, 11, 'in') // Letter size
+                ->margins(0, 0, 0, 0) // Margins handled by CSS @page
+                ->waitUntilNetworkIdle()
+                ->timeout(120)
+                ->showBackground()
+                ->save($tempPath);
+
+            // Return PDF for download
+            return response()->download($tempPath, $filename, [
+                'Content-Type' => 'application/pdf',
+            ])->deleteFileAfterSend(true);
         } catch (\Exception $e) {
             Log::error('Error generating diagnostic report PDF: '.$e->getMessage(), [
                 'organization_id' => $organizationId,

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\ProcessQuizSubmission;
 use App\Models\Quiz;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -334,7 +333,6 @@ class QuizController extends Controller
 
     public function submit(Request $request, Quiz $quiz)
     {
-
         try {
             // Custom validation to handle both test scenarios (arrays) and production (JSON strings)
             $validated = $request->validate([
@@ -398,51 +396,57 @@ class QuizController extends Controller
         }
 
         try {
-            // Generate folio and personal ID first
-            $folioCounter = $quiz->organization->folios()->count() + 1;
-            $folioNumber = 'FOLIO-'.str_pad($folioCounter, 6, '0', STR_PAD_LEFT);
-            $personalId = $this->generateNextPersonalId($quiz->organization_id);
+            // Generate unique folio for this evaluation
+            $personalFolioCounter = $this->getNextPersonalFolioNumber($quiz->organization_id);
+            $folio = $this->generatePaperEvaluationFolio($quiz, $personalFolioCounter);
 
-            // Create submission status record
-            $submissionStatus = \App\Models\SubmissionStatus::create([
-                'quiz_id' => $quiz->id,
-                'organization_id' => $quiz->organization_id,
-                'folio' => $folioNumber,
-                'personal_id' => $personalId,
-                'submission_data' => $decodedData,
-                'files_data' => [
-                    'ine_frente' => isset($validated['ine_frente']),
-                    'ine_reverso' => isset($validated['ine_reverso']),
-                ],
-                'status' => \App\Models\SubmissionStatus::STATUS_PENDING,
-                'submitted_at' => now(),
-            ]);
+            // Determine evaluation type based on quiz type
+            $evaluationType = $this->determineEvaluationType($quiz);
+
+            // Parse the folio to get its components
+            $folioData = \App\Models\PaperEvaluation::parseFolio($folio);
 
             // Store uploaded files if present
-            if (isset($validated['ine_frente']) || isset($validated['ine_reverso'])) {
-                $filesData = [];
-
-                if (isset($validated['ine_frente'])) {
-                    $path = $validated['ine_frente']->store(
-                        "quiz_submissions/{$quiz->organization_id}/{$folioNumber}",
-                        'public'
-                    );
-                    $filesData['ine_frente'] = $path;
-                }
-
-                if (isset($validated['ine_reverso'])) {
-                    $path = $validated['ine_reverso']->store(
-                        "quiz_submissions/{$quiz->organization_id}/{$folioNumber}",
-                        'public'
-                    );
-                    $filesData['ine_reverso'] = $path;
-                }
-
-                $submissionStatus->update(['files_data' => $filesData]);
+            $filesData = [];
+            if (isset($validated['ine_frente'])) {
+                $path = $validated['ine_frente']->store(
+                    "quiz_submissions/{$quiz->organization_id}/{$folio}",
+                    'public'
+                );
+                $filesData['ine_frente'] = $path;
             }
 
-            // Dispatch job to process submission asynchronously
-            ProcessQuizSubmission::dispatch($submissionStatus->id, true);
+            if (isset($validated['ine_reverso'])) {
+                $path = $validated['ine_reverso']->store(
+                    "quiz_submissions/{$quiz->organization_id}/{$folio}",
+                    'public'
+                );
+                $filesData['ine_reverso'] = $path;
+            }
+
+            // Create PaperEvaluation record
+            $paperEvaluation = \App\Models\PaperEvaluation::create([
+                'folio' => $folio,
+                'evaluation_type_code' => $folioData['evaluation_type_code'],
+                'organization_code' => $folioData['organization_code'],
+                'personal_folio' => $folioData['personal_folio'],
+                'organization_id' => $quiz->organization_id,
+                'evaluation_type' => $evaluationType,
+                'source' => 'online',
+                'processing_status' => 'completed',
+                'processed_at' => now(),
+                'demographic_data' => $this->extractDemographicData($validated, $filesData),
+                'referencia_i_answers' => $validated['referencia_i'] ?? null,
+                'referencia_iii_answers' => $this->extractReferenciaIIIAnswers($validated),
+                'referencia_iii_conditional' => $this->extractConditionalAnswers($validated),
+                'cisneros_answers' => $validated['escala_cisneros'] ?? null,
+                'raw_data' => [
+                    'custom_fields' => $validated['custom_fields'] ?? null,
+                    'quiz_id' => $quiz->id,
+                    'quiz_name' => $quiz->name,
+                    'submitted_at' => now()->toIso8601String(),
+                ],
+            ]);
 
             // Return immediate response to user
             return Inertia::render('Quiz/Completed', [
@@ -456,11 +460,11 @@ class QuizController extends Controller
                         'name' => $quiz->organization->name,
                     ],
                 ],
-                'folio' => $folioNumber,
-                'personalId' => $personalId,
+                'folio' => $folio,
+                'personalId' => $folioData['personal_folio'],
                 'message' => 'Examen completado exitosamente',
-                'processing' => true,
-                'submissionId' => $submissionStatus->id,
+                'processing' => false,
+                'evaluationId' => $paperEvaluation->id,
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
             \Illuminate\Support\Facades\Log::error('Error de base de datos al guardar examen', [
@@ -962,5 +966,147 @@ class QuizController extends Controller
 
             throw new \Exception('Error al crear el folio virtual: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Get the next personal folio number for the organization
+     */
+    private function getNextPersonalFolioNumber($organizationId): string
+    {
+        try {
+            // Get the last personal folio from paper evaluations for this organization
+            $lastEvaluation = \App\Models\PaperEvaluation::where('organization_id', $organizationId)
+                ->whereNotNull('personal_folio')
+                ->orderByRaw('CAST(personal_folio AS UNSIGNED) DESC')
+                ->first();
+
+            if (! $lastEvaluation) {
+                return '0001';
+            }
+
+            $nextNumber = intval($lastEvaluation->personal_folio) + 1;
+
+            return str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al generar personal folio', [
+                'organization_id' => $organizationId,
+                'error_message' => $e->getMessage(),
+            ]);
+
+            throw new \Exception('Error al generar el número de folio personal: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Generate a complete folio for PaperEvaluation
+     * Format: 2 digits (evaluation_type_code) + 3 digits (organization_code) + 4 digits (personal_folio)
+     */
+    private function generatePaperEvaluationFolio(Quiz $quiz, string $personalFolio): string
+    {
+        // Determine evaluation type code based on quiz type
+        $evaluationTypeCode = match (true) {
+            $quiz->is_cisneros => '04',  // Cisneros scale
+            $quiz->is_reduced => '02',   // Reduced evaluation (Referencia III)
+            default => '03',             // Full evaluation (Referencia V)
+        };
+
+        // Get organization code (using folio_organization or generating from ID)
+        $organizationCode = $this->getOrganizationCode($quiz->organization);
+
+        return $evaluationTypeCode.$organizationCode.$personalFolio;
+    }
+
+    /**
+     * Get organization code from organization model
+     */
+    private function getOrganizationCode($organization): string
+    {
+        if ($organization->folio_organization) {
+            // Use existing code, ensure it's 3 digits
+            return str_pad(substr($organization->folio_organization, 0, 3), 3, '0', STR_PAD_LEFT);
+        }
+
+        // Generate from ID as fallback
+        $orgId = is_numeric($organization->id) ? $organization->id : crc32($organization->id);
+
+        return str_pad(substr((string) $orgId, -3), 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Determine evaluation type from quiz configuration
+     */
+    private function determineEvaluationType(Quiz $quiz): string
+    {
+        return match (true) {
+            $quiz->is_cisneros => 'cisneros',
+            $quiz->is_reduced => 'referencia_iii',
+            default => 'referencia_v',
+        };
+    }
+
+    /**
+     * Extract demographic data from validated submission
+     */
+    private function extractDemographicData(array $validated, array $filesData): array
+    {
+        $demographicData = $validated['referencia_v'] ?? [];
+
+        // Add file paths to demographic data if they exist
+        if (! empty($filesData)) {
+            $demographicData = array_merge($demographicData, $filesData);
+        }
+
+        // Add custom fields if they exist
+        if (isset($validated['custom_fields']) && ! empty($validated['custom_fields'])) {
+            $demographicData['custom_fields'] = $validated['custom_fields'];
+        }
+
+        return $demographicData;
+    }
+
+    /**
+     * Extract Referencia III answers (excluding conditional sections)
+     */
+    private function extractReferenciaIIIAnswers(array $validated): ?array
+    {
+        if (! isset($validated['referencia_iii'])) {
+            return null;
+        }
+
+        $answers = $validated['referencia_iii'];
+
+        // Remove conditional sections to store them separately
+        unset($answers['conditional_sections']);
+        unset($answers['conditional_customer_service']);
+        unset($answers['conditional_management']);
+
+        return $answers;
+    }
+
+    /**
+     * Extract conditional answers from Referencia III
+     */
+    private function extractConditionalAnswers(array $validated): ?array
+    {
+        if (! isset($validated['referencia_iii'])) {
+            return null;
+        }
+
+        $conditionalAnswers = [];
+
+        // Extract conditional sections
+        if (isset($validated['referencia_iii']['conditional_sections'])) {
+            $conditionalAnswers['conditional_sections'] = $validated['referencia_iii']['conditional_sections'];
+        }
+
+        if (isset($validated['referencia_iii']['conditional_customer_service'])) {
+            $conditionalAnswers['conditional_customer_service'] = $validated['referencia_iii']['conditional_customer_service'];
+        }
+
+        if (isset($validated['referencia_iii']['conditional_management'])) {
+            $conditionalAnswers['conditional_management'] = $validated['referencia_iii']['conditional_management'];
+        }
+
+        return ! empty($conditionalAnswers) ? $conditionalAnswers : null;
     }
 }

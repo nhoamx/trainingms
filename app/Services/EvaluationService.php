@@ -29,8 +29,8 @@ class EvaluationService
 
     public function getAllEvaluationsByOrganization()
     {
-        // Traer organizaciones y contar PaperEvaluations (source=paper, status=completed)
-        $orgs = Organization::all();
+        // Traer organizaciones con conteo de quizzes
+        $orgs = Organization::withCount('quizzes')->get();
         $orgIds = $orgs->pluck('id');
         $paperCounts = PaperEvaluation::groupBy('organization_id')
             ->where('source', 'paper')
@@ -44,7 +44,7 @@ class EvaluationService
                 'name' => $organization->name,
                 'logo' => $organization->logo,
                 'evaluations_count' => $paperCounts[$organization->id] ?? 0,
-                'online_quizzes_count' => $organization->quizzes_count,
+                'online_quizzes_count' => $organization->quizzes_count ?? 0,
             ];
         });
     }

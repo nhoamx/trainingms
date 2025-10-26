@@ -50,7 +50,7 @@
         </div>
         <div class="bg-gray-50 px-5 py-3">
           <div class="space-y-2">
-            <!-- Botón para ver evaluaciones -->
+            <!-- Botón para ver evaluaciones en papel -->
             <a :href="route('organization.results.list', { organization: org.id })"
               class="w-full flex items-center justify-center text-green-600 hover:text-green-800 font-medium py-2 transition-colors border border-green-200 rounded-md hover:bg-green-50">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
@@ -59,6 +59,17 @@
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Ver Evaluaciones
+            </a>
+
+            <!-- Botón para ver evaluaciones online -->
+            <a v-if="org.online_evaluations_count > 0" :href="route('organization.results.list', { organization: org.id })"
+              class="w-full flex items-center justify-center text-emerald-600 hover:text-emerald-800 font-medium py-2 transition-colors border border-emerald-200 rounded-md hover:bg-emerald-50">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Ver Evaluaciones En Línea ({{ org.online_evaluations_count }})
             </a>
 
             <!-- Botón para reporte tradicional -->
@@ -72,15 +83,15 @@
               Ver Reporte Tradicional
             </a>
 
-            <!-- Botón para resultados en línea (solo si tiene quizzes online) -->
-            <a v-if="org.online_quizzes_count > 0" :href="route('organization.online-results', { id: org.id })"
-              class="w-full flex items-center justify-center text-green-600 hover:text-green-800 font-medium py-2 transition-colors border border-green-200 rounded-md hover:bg-green-50">
+            <!-- Botón para reporte online  -->
+            <a v-if="org.online_evaluations_count > 0" :href="route('organization.online-results', { id: org.id })"
+              class="w-full flex items-center justify-center text-indigo-600 hover:text-indigo-800 font-medium py-2 transition-colors border border-indigo-200 rounded-md hover:bg-indigo-50">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Ver Resultados En Línea ({{ org.online_quizzes_count }})
+              Ver Reporte En Línea
             </a>
           </div>
         </div>

@@ -46,6 +46,16 @@ class Quiz extends Model
     }
 
     /**
+     * Relación con las evaluaciones en papel (PaperEvaluation) creadas desde este quiz
+     * Se basa en el quiz_id almacenado en raw_data
+     */
+    public function paperEvaluations()
+    {
+        return $this->hasMany(\App\Models\PaperEvaluation::class, 'organization_id', 'organization_id')
+            ->whereRaw("JSON_EXTRACT(raw_data, '$.quiz_id') = ?", [$this->id]);
+    }
+
+    /**
      * Relación con la organización
      */
     public function organization()

@@ -58,6 +58,18 @@ class PaperEvaluation extends Model
     }
 
     /**
+     * Get the quiz associated with this evaluation (if from online source)
+     */
+    public function quiz(): ?BelongsTo
+    {
+        if ($this->source !== 'online' || ! isset($this->raw_data['quiz_id'])) {
+            return null;
+        }
+
+        return $this->belongsTo(Quiz::class, 'raw_data->quiz_id');
+    }
+
+    /**
      * Derive evaluation type from folio code
      */
     public static function getEvaluationTypeFromCode(string $code): string
