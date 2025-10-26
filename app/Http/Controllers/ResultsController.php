@@ -88,9 +88,9 @@ class ResultsController extends Controller
     {
         $this->authorize('view-organization-results', $organization);
 
-        // Group paper evaluations by personal_folio
+        // Group paper evaluations by personal_folio (include both paper and online sources)
         $evaluationGroups = PaperEvaluation::where('organization_id', $organization->id)
-            ->where('source', 'paper')
+            ->whereIn('source', ['paper', 'online'])
             ->where('processing_status', 'completed')
             ->orderBy('personal_folio')
             ->orderBy('created_at', 'desc')
@@ -98,6 +98,7 @@ class ResultsController extends Controller
             ->groupBy('personal_folio')
             ->map(function ($evaluations, $personalFolio) {
                 $evaluationTypes = $evaluations->pluck('evaluation_type')->unique()->values();
+                $source = $evaluations->first()->source; // Get source (paper or online)
 
                 // Get the Referencia III evaluation for score
                 $referenciaIII = $evaluations->firstWhere('evaluation_type', 'referencia_iii');
@@ -111,6 +112,7 @@ class ResultsController extends Controller
                 return [
                     'personal_folio' => $personalFolio,
                     'evaluation_types' => $evaluationTypes,
+                    'source' => $source,
                     'total_score' => $totalScore,
                     'created_at' => $evaluations->first()->created_at->format('Y-m-d H:i:s'),
                     'evaluations' => $evaluations->map(function ($eval) {
@@ -134,10 +136,10 @@ class ResultsController extends Controller
     {
         $this->authorize('view-organization-results', $organization);
 
-        // Get all evaluations for this personal folio
+        // Get all evaluations for this personal folio (include both paper and online sources)
         $evaluations = PaperEvaluation::where('organization_id', $organization->id)
             ->where('personal_folio', $personalFolio)
-            ->where('source', 'paper')
+            ->whereIn('source', ['paper', 'online'])
             ->where('processing_status', 'completed')
             ->get();
 

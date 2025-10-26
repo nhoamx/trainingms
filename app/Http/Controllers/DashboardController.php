@@ -56,12 +56,18 @@ class DashboardController extends Controller
             $data['demographic_distributions'] = $this->reportService->getDemographicDistributions();
             $data['isAdmin'] = true;
             $data['isSuperAdmin'] = false;
+
+            // Add online evaluation counts for each organization
+            $data['organizations'] = $this->addOnlineEvaluationCounts($data['organizations']);
         } elseif ($user->hasRole('super-admin')) {
             $data['organizations'] = $this->evaluationService->getAllEvaluationsByOrganization();
             // Admins/SuperAdmins see global demographics
             $data['demographic_distributions'] = $this->reportService->getDemographicDistributions();
             $data['isAdmin'] = false;
             $data['isSuperAdmin'] = true;
+
+            // Add online evaluation counts for each organization
+            $data['organizations'] = $this->addOnlineEvaluationCounts($data['organizations']);
         }
 
         return Inertia::render('Dashboard', $data);
@@ -165,5 +171,24 @@ class DashboardController extends Controller
 
         $data['evaluations'] = $this->evaluationService->getOrganizationEvaluations($orgaization);
 
+    }
+
+    /**
+     * Add online evaluation counts to organization data
+     */
+    protected function addOnlineEvaluationCounts($organizations)
+    {
+        return $organizations->map(function ($org) {
+            // Count paper evaluations with source='online' grouped by personal_folio
+            $onlineEvaluationsCount = \App\Models\PaperEvaluation::where('organization_id', $org['id'])
+                ->where('source', 'online')
+                ->where('processing_status', 'completed')
+                ->distinct('personal_folio')
+                ->count('personal_folio');
+
+            $org['online_evaluations_count'] = $onlineEvaluationsCount;
+
+            return $org;
+        });
     }
 }
