@@ -16,6 +16,30 @@ class ReportPdfController extends Controller
     ) {}
 
     /**
+     * Configure Browsershot instance with common settings
+     */
+    protected function configureBrowsershot(string $html): Browsershot
+    {
+        $browsershot = Browsershot::html($html)
+            ->paperSize(8.5, 11, 'in') // Letter size
+            ->margins(0, 0, 0, 0) // Margins handled by CSS @page
+            ->waitUntilNetworkIdle()
+            ->timeout(120)
+            ->showBackground();
+
+        // Add --no-sandbox flag for production Linux servers
+        // This is required for Ubuntu 23.10+ and other Linux distros with AppArmor restrictions
+        if (PHP_OS_FAMILY === 'Linux' && app()->isProduction()) {
+            $browsershot->addChromiumArguments([
+                'no-sandbox',
+                'disable-setuid-sandbox',
+            ]);
+        }
+
+        return $browsershot;
+    }
+
+    /**
      * Generate and download demographic report PDF
      */
     public function downloadDemographicReport(Request $request, string $organizationId)
@@ -54,14 +78,8 @@ class ReportPdfController extends Controller
                 mkdir(storage_path('app/temp'), 0755, true);
             }
 
-            // Configure Browsershot for PDF generation
-            Browsershot::html($html)
-                ->paperSize(8.5, 11, 'in') // Letter size
-                ->margins(0, 0, 0, 0) // Margins handled by CSS @page
-                ->waitUntilNetworkIdle()
-                ->timeout(120)
-                ->showBackground()
-                ->save($tempPath);
+            // Configure and generate PDF
+            $this->configureBrowsershot($html)->save($tempPath);
 
             // Return PDF for download
             return response()->download($tempPath, $filename, [
@@ -118,14 +136,8 @@ class ReportPdfController extends Controller
                 mkdir(storage_path('app/temp'), 0755, true);
             }
 
-            // Configure Browsershot for PDF generation
-            Browsershot::html($html)
-                ->paperSize(8.5, 11, 'in') // Letter size
-                ->margins(0, 0, 0, 0) // Margins handled by CSS @page
-                ->waitUntilNetworkIdle()
-                ->timeout(120)
-                ->showBackground()
-                ->save($tempPath);
+            // Configure and generate PDF
+            $this->configureBrowsershot($html)->save($tempPath);
 
             // Return PDF for download
             return response()->download($tempPath, $filename, [
