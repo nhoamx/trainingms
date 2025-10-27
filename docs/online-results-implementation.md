@@ -114,9 +114,9 @@ Incluye:
   - [ ] Gráficas de distribución de respuestas
   - [ ] Estadísticas por dimensión (si aplica)
   - [ ] Exportación a PDF/Excel (futuro)
-- [ ] **Tarea 2.4**: Actualizar `AdminDashboard.vue`
-  - [ ] Verificar que los enlaces apunten correctamente
-  - [ ] Agregar contador de evaluaciones online por organización
+- [x] **Tarea 2.4**: Actualizar `AdminDashboard.vue`
+  - [x] Verificar que los enlaces apunten correctamente
+  - [x] Agregar contador de evaluaciones online por organización
 
 ### Fase 3: Componentes Reutilizables
 
@@ -217,12 +217,13 @@ public function getQuizTypeAttribute(): string
 
 ## 📊 Progreso General
 
-**Completado:** 12/24 tareas (50%)
+**Completado:** 13/24 tareas (54%)
 
 - ✅ Análisis de estructura actual
 - ✅ Creación de rama y documentación inicial
 - ✅ Refactorización completa del backend
 - ✅ Vistas principales de frontend creadas
+- ✅ Enlaces del dashboard actualizados
 - ⏳ Testing y validación pendientes...
 
 ---
