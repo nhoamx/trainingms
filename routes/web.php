@@ -42,8 +42,10 @@ Route::middleware(['auth'])->group(function () {
         ]);
     })->name('organization.report');
 
+    // Online results routes
     Route::get('/organization/{id}/online-results', [App\Http\Controllers\OnlineResultsController::class, 'index'])->name('organization.online-results');
-    Route::get('/organization/{organizationId}/participant/{participantId}', [App\Http\Controllers\OnlineResultsController::class, 'showParticipant'])->name('organization.participant.show');
+    Route::get('/organization/{id}/online-results/report', [App\Http\Controllers\OnlineResultsController::class, 'report'])->name('organization.online-results.report');
+    Route::get('/organization/{organizationId}/online-results/{id}', [App\Http\Controllers\OnlineResultsController::class, 'show'])->name('organization.online-results.show');
 
     Route::post('/folio-batches', [App\Http\Controllers\FolioBatchController::class, 'store'])->name('folio-batches.store');
     Route::get('/folio-batches/{batchId}/folios', [App\Http\Controllers\FolioBatchController::class, 'getFolios'])->name('folio-batches.folios');
