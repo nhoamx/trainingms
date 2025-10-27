@@ -397,17 +397,42 @@ const formatQuizType = (type) => {
 const getQuestionText = (key, type) => {
     // Try to get question text from config
     if (type === 'referencia_i' && props.questions_config.referencia_i_questions) {
-        const question = props.questions_config.referencia_i_questions.find(q => q.key === key)
-        return question?.text || formatFieldName(key)
+        // referencia_i keys come as "Category_index" (e.g., "Afectación (durante el último mes)_0")
+        // Split by the last underscore to get category and index
+        const lastUnderscoreIndex = key.lastIndexOf('_')
+        if (lastUnderscoreIndex !== -1) {
+            const category = key.substring(0, lastUnderscoreIndex)
+            const index = parseInt(key.substring(lastUnderscoreIndex + 1))
+            
+            if (props.questions_config.referencia_i_questions[category] && 
+                Array.isArray(props.questions_config.referencia_i_questions[category])) {
+                const questions = props.questions_config.referencia_i_questions[category]
+                if (questions[index]) {
+                    return questions[index]
+                }
+            }
+        }
+        return formatFieldName(key)
     }
+    
     if (type === 'traumatic' && props.questions_config.traumatic_questions) {
-        const question = props.questions_config.traumatic_questions.find(q => q.key === key)
-        return question?.text || formatFieldName(key)
+        // traumatic_questions is an array
+        if (Array.isArray(props.questions_config.traumatic_questions)) {
+            const question = props.questions_config.traumatic_questions.find(q => q.key === key)
+            return question?.text || formatFieldName(key)
+        }
+        return formatFieldName(key)
     }
+    
     if (type === 'cisneros' && props.questions_config.escala_cisneros_questions) {
-        const question = props.questions_config.escala_cisneros_questions.find(q => q.key === key)
-        return question?.text || formatFieldName(key)
+        // escala_cisneros_questions might be an array or object
+        if (Array.isArray(props.questions_config.escala_cisneros_questions)) {
+            const question = props.questions_config.escala_cisneros_questions.find(q => q.key === key)
+            return question?.text || formatFieldName(key)
+        }
+        return formatFieldName(key)
     }
+    
     return formatFieldName(key)
 }
 

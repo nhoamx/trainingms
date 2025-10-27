@@ -5,13 +5,13 @@ namespace Tests\Feature\OnlineResults;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 class OnlineResultsControllerTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use DatabaseTransactions, WithFaker;
 
     private User $admin;
 
