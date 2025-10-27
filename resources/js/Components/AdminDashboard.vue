@@ -62,7 +62,7 @@
             </a>
 
             <!-- Botón para ver evaluaciones online -->
-            <a v-if="org.online_evaluations_count > 0" :href="route('organization.results.list', { organization: org.id })"
+            <a v-if="org.online_evaluations_count > 0" :href="route('organization.online-results', { id: org.id })"
               class="w-full flex items-center justify-center text-emerald-600 hover:text-emerald-800 font-medium py-2 transition-colors border border-emerald-200 rounded-md hover:bg-emerald-50">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
