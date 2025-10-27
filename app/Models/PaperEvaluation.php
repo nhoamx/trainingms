@@ -167,4 +167,108 @@ class PaperEvaluation extends Model
     {
         return $query->where('processing_status', 'failed');
     }
+
+    /**
+     * Scope to filter online evaluations only
+     */
+    public function scopeOnline($query)
+    {
+        return $query->where('source', 'online');
+    }
+
+    /**
+     * Scope to filter paper evaluations only
+     */
+    public function scopePaper($query)
+    {
+        return $query->where('source', 'paper');
+    }
+
+    /**
+     * Get the quiz type as a human-readable string
+     */
+    public function getQuizTypeAttribute(): string
+    {
+        $rawData = $this->raw_data ?? [];
+
+        // Check if quiz_type is stored in raw_data
+        if (isset($rawData['quiz_type'])) {
+            return $rawData['quiz_type'];
+        }
+
+        // Infer based on present data
+        if (! empty($this->cisneros_answers)) {
+            return 'cisneros';
+        }
+
+        if (empty($this->referencia_iii_answers) && ! empty($this->referencia_iii_conditional)) {
+            return 'reducido';
+        }
+
+        return 'completo';
+    }
+
+    /**
+     * Check if evaluation has Referencia V data
+     */
+    public function hasReferenciaV(): bool
+    {
+        return ! empty($this->demographic_data);
+    }
+
+    /**
+     * Check if evaluation has Referencia I data
+     */
+    public function hasReferenciaI(): bool
+    {
+        return ! empty($this->referencia_i_answers);
+    }
+
+    /**
+     * Check if evaluation has Referencia III data
+     */
+    public function hasReferenciaIII(): bool
+    {
+        return ! empty($this->referencia_iii_answers) || ! empty($this->referencia_iii_conditional);
+    }
+
+    /**
+     * Check if evaluation has Cisneros data
+     */
+    public function hasCisneros(): bool
+    {
+        return ! empty($this->cisneros_answers);
+    }
+
+    /**
+     * Get the quiz ID from raw_data if it's an online evaluation
+     */
+    public function getQuizIdAttribute(): ?string
+    {
+        if ($this->source !== 'online') {
+            return null;
+        }
+
+        return $this->raw_data['quiz_id'] ?? null;
+    }
+
+    /**
+     * Get the quiz name from raw_data if it's an online evaluation
+     */
+    public function getQuizNameAttribute(): ?string
+    {
+        if ($this->source !== 'online') {
+            return null;
+        }
+
+        return $this->raw_data['quiz_name'] ?? null;
+    }
+
+    /**
+     * Get custom fields data
+     */
+    public function getCustomFieldsAttribute(): ?array
+    {
+        return $this->raw_data['custom_fields'] ?? null;
+    }
 }
