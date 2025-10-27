@@ -143,6 +143,120 @@ class OnlineResultsController extends Controller
     }
 
     /**
+     * Mostrar reporte agregado de evaluaciones online por organización
+     */
+    public function report($organizationId)
+    {
+        $organization = Organization::findOrFail($organizationId);
+
+        // Obtener todas las evaluaciones online completadas
+        $evaluations = PaperEvaluation::query()
+            ->online()
+            ->completed()
+            ->where('organization_id', $organizationId)
+            ->get();
+
+        // Estadísticas generales
+        $stats = [
+            'total' => $evaluations->count(),
+            'por_tipo_quiz' => [
+                'completo' => $evaluations->where('quiz_type', 'completo')->count(),
+                'reducido' => $evaluations->where('quiz_type', 'reducido')->count(),
+                'cisneros' => $evaluations->where('quiz_type', 'cisneros')->count(),
+            ],
+            'por_genero' => [],
+            'por_edad' => [],
+            'por_puesto' => [],
+            'acontecimientos_traumaticos' => [
+                'total_con_eventos' => 0,
+                'porcentaje' => 0,
+                'tipos_eventos' => [],
+            ],
+        ];
+
+        // Análisis de datos demográficos y traumáticos
+        $eventosTraumaticos = [];
+
+        foreach ($evaluations as $evaluation) {
+            $demographic = $evaluation->demographic_data ?? [];
+
+            // Conteo por género
+            $sexo = $demographic['sexo'] ?? 'No especificado';
+            $stats['por_genero'][$sexo] = ($stats['por_genero'][$sexo] ?? 0) + 1;
+
+            // Conteo por edad
+            $edad = $demographic['edad'] ?? 'No especificado';
+            $stats['por_edad'][$edad] = ($stats['por_edad'][$edad] ?? 0) + 1;
+
+            // Conteo por puesto
+            $puesto = $demographic['datos_laborales']['tipo_puesto'] ?? 'No especificado';
+            $stats['por_puesto'][$puesto] = ($stats['por_puesto'][$puesto] ?? 0) + 1;
+
+            // Análisis de acontecimientos traumáticos
+            $traumaticos = null;
+            if (isset($evaluation->referencia_iii_answers['acontecimientos_traumaticos'])) {
+                $traumaticos = $evaluation->referencia_iii_answers['acontecimientos_traumaticos'];
+            } elseif ($evaluation->referencia_iii_conditional) {
+                $traumaticos = $evaluation->referencia_iii_conditional['acontecimientos_traumaticos'] ?? null;
+            }
+
+            if ($traumaticos && is_array($traumaticos)) {
+                $tieneEventos = false;
+                foreach ($traumaticos as $key => $value) {
+                    if ($value === true || $value === 'true' || $value === 1) {
+                        $tieneEventos = true;
+                        $eventosTraumaticos[$key] = ($eventosTraumaticos[$key] ?? 0) + 1;
+                    }
+                }
+                if ($tieneEventos) {
+                    $stats['acontecimientos_traumaticos']['total_con_eventos']++;
+                }
+            }
+        }
+
+        // Calcular porcentaje de personas con acontecimientos traumáticos
+        if ($stats['total'] > 0) {
+            $stats['acontecimientos_traumaticos']['porcentaje'] = round(
+                ($stats['acontecimientos_traumaticos']['total_con_eventos'] / $stats['total']) * 100,
+                1
+            );
+        }
+
+        // Obtener nombres de los eventos traumáticos
+        $traumaticQuestionsComplete = config('referencia_iii.acontecimientos_traumaticos.questions', []);
+        $traumaticQuestionsReduced = config('referencia_iii_reduced.acontecimientos_traumaticos.questions', []);
+
+        foreach ($eventosTraumaticos as $key => $count) {
+            $questionNum = (int) $key;
+
+            // Intentar mapear de 1-6 a 73-78
+            $mappedKey = $questionNum + 72;
+            $questionText = $traumaticQuestionsComplete[$mappedKey] ??
+                           $traumaticQuestionsReduced[$questionNum] ??
+                           "Evento $questionNum";
+
+            $stats['acontecimientos_traumaticos']['tipos_eventos'][] = [
+                'evento' => $questionText,
+                'cantidad' => $count,
+                'porcentaje' => $stats['total'] > 0 ? round(($count / $stats['total']) * 100, 1) : 0,
+            ];
+        }
+
+        // Ordenar eventos por cantidad (descendente)
+        usort($stats['acontecimientos_traumaticos']['tipos_eventos'], function ($a, $b) {
+            return $b['cantidad'] - $a['cantidad'];
+        });
+
+        return Inertia::render('OnlineResults/Report', [
+            'organization' => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+            ],
+            'stats' => $stats,
+        ]);
+    }
+
+    /**
      * Format quiz type for display
      */
     private function formatQuizType(string $type): string
