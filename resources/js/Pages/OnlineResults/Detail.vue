@@ -66,10 +66,37 @@
                             </svg>
                             Datos Demográficos (Guía V)
                         </h3>
+                        <!-- Basic Demographic Data -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div v-for="(value, key) in demographicDataFormatted" :key="key" class="border-b border-gray-200 pb-2">
                                 <div class="text-xs text-gray-500 uppercase">{{ formatFieldName(key) }}</div>
                                 <div class="text-sm font-medium text-gray-900 mt-1">{{ formatValue(value) }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Datos Laborales Section -->
+                        <div v-if="hasDatosLaborales" class="mt-6 border-t border-gray-200 pt-6">
+                            <h4 class="text-md font-semibold text-gray-700 mb-4">Datos Laborales</h4>
+                            
+                            <!-- Experiencia Laboral Subsection -->
+                            <div v-if="experienciaLaboral" class="mb-4">
+                                <h5 class="text-sm font-medium text-gray-600 mb-2">Experiencia</h5>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 ml-4">
+                                    <div v-for="(value, key) in experienciaLaboral" :key="key" class="border-l-2 border-blue-300 pl-3">
+                                        <div class="text-xs text-gray-500">{{ formatFieldName(key) }}</div>
+                                        <div class="text-sm font-medium text-gray-900 mt-1">{{ formatValue(value) }}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Other Labor Data -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <template v-for="(value, key) in datosLaborales" :key="key">
+                                    <div v-if="key !== 'experiencia'" class="border-b border-gray-200 pb-2">
+                                        <div class="text-xs text-gray-500 uppercase">{{ formatFieldName(key) }}</div>
+                                        <div class="text-sm font-medium text-gray-900 mt-1">{{ formatValue(value) }}</div>
+                                    </div>
+                                </template>
                             </div>
                         </div>
 
@@ -99,11 +126,22 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Custom Fields in Demographic Section -->
+                        <div v-if="hasCustomFields" class="mt-6 border-t border-gray-200 pt-6">
+                            <h4 class="text-md font-semibold text-gray-700 mb-4">Campos Personalizados</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div v-for="(value, key) in answers.custom_fields" :key="key" class="border-b border-gray-200 pb-2">
+                                    <div class="text-xs text-gray-500 uppercase">Campo {{ key }}</div>
+                                    <div class="text-sm font-medium text-gray-900 mt-1">{{ formatValue(value) }}</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Referencia I -->
-                <div v-if="evaluation.has_referencia_i" class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                <!-- Referencia I - Solo mostrar si tiene datos -->
+                <div v-if="hasReferenciaI" class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                     <div class="p-6">
                         <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -129,7 +167,7 @@
                     </div>
                 </div>
 
-                <!-- CITSAT (Referencia III Conditional) -->
+                <!-- CITSAT (Referencia III Conditional) - Acontecimientos Traumáticos -->
                 <div v-if="hasCitsat" class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                     <div class="p-6">
                         <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
@@ -138,20 +176,44 @@
                             </svg>
                             Acontecimientos Traumáticos (CITSAT)
                         </h3>
-                        <div class="space-y-3">
-                            <div v-for="(value, key) in answers.citsat" :key="key" class="flex items-start gap-3 p-3 bg-gray-50 rounded">
-                                <div class="flex-1">
-                                    <div class="text-sm text-gray-700">{{ getQuestionText(key, 'traumatic') }}</div>
+                        <div class="space-y-2">
+                            <template v-for="(section, sectionKey) in answers.citsat" :key="sectionKey">
+                                <!-- If section is an object (nested), iterate through it -->
+                                <template v-if="typeof section === 'object' && section !== null">
+                                    <div class="mt-4 mb-2">
+                                        <h4 class="text-sm font-semibold text-gray-700 mb-2">{{ formatFieldName(sectionKey) }}</h4>
+                                        <div class="space-y-2 ml-4">
+                                            <div v-for="(value, key) in section" :key="key" class="flex items-start gap-3 p-3 bg-gray-50 rounded border-l-2 border-indigo-300">
+                                                <div class="flex-1">
+                                                    <div class="text-sm text-gray-700">{{ getQuestionText(key, 'traumatic') }}</div>
+                                                </div>
+                                                <div class="flex-shrink-0">
+                                                    <span 
+                                                        :class="getBooleanBadgeClass(value)"
+                                                        class="px-3 py-1 text-xs font-semibold rounded-full"
+                                                    >
+                                                        {{ formatBooleanValue(value) }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <!-- If it's a simple value, display directly -->
+                                <div v-else class="flex items-start gap-3 p-3 bg-gray-50 rounded">
+                                    <div class="flex-1">
+                                        <div class="text-sm text-gray-700">{{ getQuestionText(sectionKey, 'traumatic') }}</div>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <span 
+                                            :class="getBooleanBadgeClass(section)"
+                                            class="px-3 py-1 text-xs font-semibold rounded-full"
+                                        >
+                                            {{ formatBooleanValue(section) }}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div class="flex-shrink-0">
-                                    <span 
-                                        :class="getBooleanBadgeClass(value)"
-                                        class="px-3 py-1 text-xs font-semibold rounded-full"
-                                    >
-                                        {{ formatBooleanValue(value) }}
-                                    </span>
-                                </div>
-                            </div>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -193,24 +255,6 @@
                                         {{ formatValue(value) }}
                                     </span>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Custom Fields -->
-                <div v-if="hasCustomFields" class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                    <div class="p-6">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Campos Personalizados
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div v-for="(value, key) in answers.custom_fields" :key="key" class="border-b border-gray-200 pb-2">
-                                <div class="text-xs text-gray-500 uppercase">{{ formatFieldName(key) }}</div>
-                                <div class="text-sm font-medium text-gray-900 mt-1">{{ formatValue(value) }}</div>
                             </div>
                         </div>
                     </div>
@@ -264,11 +308,20 @@ const props = defineProps({
 // Computed properties
 const demographicDataFormatted = computed(() => {
     const data = { ...props.answers.demographic_data }
-    // Remove INE images from display (shown separately)
+    // Remove INE images, custom_fields and datos_laborales from display (shown separately)
     delete data.ine_frente
     delete data.ine_reverso
     delete data.custom_fields
+    delete data.datos_laborales
     return data
+})
+
+const datosLaborales = computed(() => {
+    return props.answers.demographic_data?.datos_laborales || null
+})
+
+const experienciaLaboral = computed(() => {
+    return datosLaborales.value?.experiencia || null
 })
 
 const hasIneImages = computed(() => {
@@ -287,11 +340,26 @@ const hasCustomFields = computed(() => {
     return props.answers.custom_fields && Object.keys(props.answers.custom_fields).length > 0
 })
 
+const hasReferenciaI = computed(() => {
+    const answers = props.answers.referencia_i
+    // Check if it's not empty array or empty object
+    if (Array.isArray(answers)) {
+        return answers.length > 0
+    }
+    return answers && Object.keys(answers).length > 0
+})
+
+const hasDatosLaborales = computed(() => {
+    return datosLaborales.value && Object.keys(datosLaborales.value).length > 0
+})
+
 // Helper functions
 const formatFieldName = (key) => {
     return key
         .replace(/_/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase())
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
 }
 
 const formatValue = (value) => {
