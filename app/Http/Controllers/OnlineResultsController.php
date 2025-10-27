@@ -2,176 +2,284 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OnlineAnswer;
 use App\Models\Organization;
+use App\Models\PaperEvaluation;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class OnlineResultsController extends Controller
 {
     /**
-     * Mostrar la lista de participantes de una organización
+     * Mostrar la lista de evaluaciones online de una organización
      */
     public function index($organizationId)
     {
         $organization = Organization::findOrFail($organizationId);
 
-        // Obtener participantes únicos con sus datos básicos
-        $participants = OnlineAnswer::where('organization_id', $organizationId)
-            ->select('personal_id', 'folio', 'quiz_id', 'created_at')
-            ->with(['quiz:id,name,is_reduced,is_cisneros'])
-            ->groupBy('personal_id', 'folio', 'quiz_id', 'created_at')
+        // Obtener evaluaciones online completadas
+        $evaluations = PaperEvaluation::query()
+            ->online()
+            ->completed()
+            ->where('organization_id', $organizationId)
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function ($participant) {
-                // Obtener datos personales del participante
-                $personalData = OnlineAnswer::where('personal_id', $participant->personal_id)
-                    ->where('organization_id', $participant->organization_id)
-                    ->where('reference_guide', 'V')
-                    ->whereIn('question_key', ['sexo', 'edad', 'datos_laborales_ocupacion_puesto'])
-                    ->get()
-                    ->keyBy('question_key');
+            ->map(function ($evaluation) {
+                // Extraer datos demográficos básicos
+                $demographicData = $evaluation->demographic_data ?? [];
 
                 return [
-                    'personal_id' => $participant->personal_id,
-                    'folio' => $participant->folio,
-                    'quiz_name' => $participant->quiz->name ?? 'Quiz eliminado',
-                    'quiz_type' => $participant->quiz ?
-                        ($participant->quiz->is_cisneros ? 'Cisneros' :
-                         ($participant->quiz->is_reduced ? 'Reducido' : 'Completo')) : 'N/A',
-                    'completed_at' => $participant->created_at->format('d/m/Y H:i'),
-                    'sexo' => $personalData->get('sexo')?->answer_value ?? 'N/A',
-                    'edad' => $personalData->get('edad')?->answer_value ?? 'N/A',
-                    'puesto' => $personalData->get('datos_laborales_ocupacion_puesto')?->answer_value ?? 'N/A',
+                    'id' => $evaluation->id,
+                    'folio' => $evaluation->folio,
+                    'personal_folio' => $evaluation->personal_folio,
+                    'quiz_name' => $evaluation->quiz_name ?? 'N/A',
+                    'quiz_type' => $this->formatQuizType($evaluation->quiz_type),
+                    'evaluation_type' => $this->formatEvaluationType($evaluation->evaluation_type),
+                    'completed_at' => $evaluation->processed_at?->format('d/m/Y H:i') ?? $evaluation->created_at->format('d/m/Y H:i'),
+                    'sexo' => $demographicData['sexo'] ?? 'N/A',
+                    'edad' => $demographicData['edad'] ?? 'N/A',
+                    'puesto' => $demographicData['datos_laborales']['ocupacion_puesto'] ?? $demographicData['ocupacion_puesto'] ?? 'N/A',
                 ];
             });
 
-        return Inertia::render('OnlineResults/Index', [
+        return Inertia::render('OnlineResults/List', [
             'organization' => [
                 'id' => $organization->id,
                 'name' => $organization->name,
             ],
-            'participants' => $participants,
+            'evaluations' => $evaluations,
         ]);
     }
 
     /**
-     * Mostrar los detalles de un participante específico
+     * Mostrar los detalles de una evaluación online específica
      */
-    public function showParticipant($organizationId, $participantId)
+    public function show($organizationId, $id)
+    {
+        $organization = Organization::findOrFail($organizationId);
+        $evaluation = PaperEvaluation::query()
+            ->online()
+            ->where('organization_id', $organizationId)
+            ->findOrFail($id);
+
+        // Preparar datos demográficos (Referencia V)
+        $demographicData = $evaluation->demographic_data ?? [];
+
+        // Preparar respuestas de Referencia I
+        $referenciaIAnswers = $evaluation->referencia_i_answers ?? [];
+
+        // Preparar respuestas de Referencia III
+        $referenciaIIIAnswers = $evaluation->referencia_iii_answers ?? [];
+
+        // Preparar respuestas condicionales (CITSAT)
+        $citsatAnswers = $evaluation->referencia_iii_conditional ?? [];
+
+        // Preparar respuestas de Cisneros
+        $cisnerosAnswers = $evaluation->cisneros_answers ?? [];
+
+        // Preparar custom fields
+        $customFields = $evaluation->custom_fields ?? [];
+
+        // Preparar imágenes del INE
+        $ineImages = [];
+        if (isset($demographicData['ine_frente'])) {
+            $ineImages['ine_frente'] = [
+                'path' => $demographicData['ine_frente'],
+                'url' => Storage::url($demographicData['ine_frente']),
+                'exists' => Storage::disk('public')->exists($demographicData['ine_frente']),
+            ];
+        }
+        if (isset($demographicData['ine_reverso'])) {
+            $ineImages['ine_reverso'] = [
+                'path' => $demographicData['ine_reverso'],
+                'url' => Storage::url($demographicData['ine_reverso']),
+                'exists' => Storage::disk('public')->exists($demographicData['ine_reverso']),
+            ];
+        }
+
+        // Obtener configuraciones de preguntas
+        $traumaticQuestionsReduced = config('referencia_iii_reduced.acontecimientos_traumaticos', []);
+        $traumaticQuestionsComplete = config('referencia_iii.acontecimientos_traumaticos', []);
+        $referenciaIQuestions = config('referencia_i', []);
+        $referenciaIIIQuestions = config('referencia_iii', []);
+        $escalaCisnerosQuestions = config('escala_cisneros', []);
+        $referenciaVConfig = config('referencia_v', []);
+
+        return Inertia::render('OnlineResults/Detail', [
+            'organization' => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+            ],
+            'evaluation' => [
+                'id' => $evaluation->id,
+                'folio' => $evaluation->folio,
+                'personal_folio' => $evaluation->personal_folio,
+                'quiz_name' => $evaluation->quiz_name ?? 'N/A',
+                'quiz_type' => $evaluation->quiz_type,
+                'evaluation_type' => $evaluation->evaluation_type,
+                'completed_at' => $evaluation->processed_at?->format('d/m/Y H:i') ?? $evaluation->created_at->format('d/m/Y H:i'),
+                'has_referencia_i' => $evaluation->hasReferenciaI(),
+                'has_referencia_iii' => $evaluation->hasReferenciaIII(),
+                'has_referencia_v' => $evaluation->hasReferenciaV(),
+                'has_cisneros' => $evaluation->hasCisneros(),
+            ],
+            'answers' => [
+                'demographic_data' => $demographicData,
+                'referencia_i' => $referenciaIAnswers,
+                'referencia_iii' => $referenciaIIIAnswers,
+                'citsat' => $citsatAnswers,
+                'cisneros' => $cisnerosAnswers,
+                'custom_fields' => $customFields,
+            ],
+            'ine_images' => $ineImages,
+            'questions_config' => [
+                'traumatic_questions_reduced' => $traumaticQuestionsReduced,
+                'traumatic_questions_complete' => $traumaticQuestionsComplete,
+                'referencia_i_questions' => $referenciaIQuestions,
+                'referencia_iii_questions' => $referenciaIIIQuestions,
+                'escala_cisneros_questions' => $escalaCisnerosQuestions,
+                'referencia_v_config' => $referenciaVConfig,
+            ],
+        ]);
+    }
+
+    /**
+     * Mostrar reporte agregado de evaluaciones online por organización
+     */
+    public function report($organizationId)
     {
         $organization = Organization::findOrFail($organizationId);
 
-        // Obtener todas las respuestas del participante
-        $answers = OnlineAnswer::where('organization_id', $organizationId)
-            ->where('personal_id', $participantId)
-            ->with('quiz:id,name,is_reduced,is_cisneros')
-            ->orderBy('reference_guide')
-            ->orderBy('question_key')
+        // Obtener todas las evaluaciones online completadas
+        $evaluations = PaperEvaluation::query()
+            ->online()
+            ->completed()
+            ->where('organization_id', $organizationId)
             ->get();
 
-        if ($answers->isEmpty()) {
-            abort(404, 'Participante no encontrado');
-        }
-
-        // Obtener las preguntas de acontecimientos traumáticos desde la configuración
-        $traumaticQuestions = [];
-        $traumaticConfig = config('referencia_iii_reduced.acontecimientos_traumaticos');
-        if (isset($traumaticConfig['questions'])) {
-            $traumaticQuestions = $traumaticConfig['questions'];
-        }
-
-        // Obtener las preguntas de referencia I desde la configuración
-        $referenciaIQuestions = config('referencia_i', []);
-
-        // Obtener las preguntas de referencia III desde la configuración
-        $referenciaIIIQuestions = config('referencia_iii', []);
-
-        // Obtener las preguntas de la Escala Cisneros desde la configuración
-        $escalaCisnerosQuestions = config('escala_cisneros', []);
-
-        // Organizar respuestas por guía de referencia
-        $organizedAnswers = [
-            'V' => [], // Datos personales
-            'III' => [], // Cuestionario principal
-            'I' => [], // Preguntas adicionales
-            'Cisneros' => [], // Escala Cisneros
+        // Estadísticas generales
+        $stats = [
+            'total' => $evaluations->count(),
+            'por_tipo_quiz' => [
+                'completo' => $evaluations->where('quiz_type', 'completo')->count(),
+                'reducido' => $evaluations->where('quiz_type', 'reducido')->count(),
+                'cisneros' => $evaluations->where('quiz_type', 'cisneros')->count(),
+            ],
+            'por_genero' => [],
+            'por_edad' => [],
+            'por_puesto' => [],
+            'acontecimientos_traumaticos' => [
+                'total_con_eventos' => 0,
+                'porcentaje' => 0,
+                'tipos_eventos' => [],
+            ],
         ];
 
-        $participantInfo = [
-            'personal_id' => $participantId,
-            'folio' => $answers->first()->folio,
-            'quiz_name' => $answers->first()->quiz->name ?? 'Quiz eliminado',
-            'quiz_type' => $answers->first()->quiz ?
-                ($answers->first()->quiz->is_cisneros ? 'Cisneros' :
-                 ($answers->first()->quiz->is_reduced ? 'Reducido' : 'Completo')) : 'N/A',
-            'completed_at' => $answers->first()->created_at->format('d/m/Y H:i'),
-        ];
+        // Análisis de datos demográficos y traumáticos
+        $eventosTraumaticos = [];
 
-        // Separar imágenes del INE
-        $ineImages = [];
+        foreach ($evaluations as $evaluation) {
+            $demographic = $evaluation->demographic_data ?? [];
 
-        foreach ($answers as $answer) {
-            $guide = $answer->reference_guide;
+            // Conteo por género
+            $sexo = $demographic['sexo'] ?? 'No especificado';
+            $stats['por_genero'][$sexo] = ($stats['por_genero'][$sexo] ?? 0) + 1;
 
-            // Manejar imágenes del INE por separado
-            if (in_array($answer->question_key, ['ine_frente', 'ine_reverso'])) {
-                $ineImages[$answer->question_key] = [
-                    'path' => $answer->answer_value,
-                    'url' => Storage::url($answer->answer_value),
-                    'exists' => Storage::disk('public')->exists($answer->answer_value),
-                ];
+            // Conteo por edad
+            $edad = $demographic['edad'] ?? 'No especificado';
+            $stats['por_edad'][$edad] = ($stats['por_edad'][$edad] ?? 0) + 1;
 
-                continue;
+            // Conteo por puesto
+            $puesto = $demographic['datos_laborales']['tipo_puesto'] ?? 'No especificado';
+            $stats['por_puesto'][$puesto] = ($stats['por_puesto'][$puesto] ?? 0) + 1;
+
+            // Análisis de acontecimientos traumáticos
+            $traumaticos = null;
+            if (isset($evaluation->referencia_iii_answers['acontecimientos_traumaticos'])) {
+                $traumaticos = $evaluation->referencia_iii_answers['acontecimientos_traumaticos'];
+            } elseif ($evaluation->referencia_iii_conditional) {
+                $traumaticos = $evaluation->referencia_iii_conditional['acontecimientos_traumaticos'] ?? null;
             }
 
-            if (isset($organizedAnswers[$guide])) {
-                $organizedAnswers[$guide][] = [
-                    'question_key' => $answer->question_key,
-                    'answer_value' => $answer->answer_value,
-                    'formatted_value' => $this->formatAnswerValue($answer->answer_value, $answer->question_key),
-                ];
+            if ($traumaticos && is_array($traumaticos)) {
+                $tieneEventos = false;
+                foreach ($traumaticos as $key => $value) {
+                    if ($value === true || $value === 'true' || $value === 1) {
+                        $tieneEventos = true;
+                        $eventosTraumaticos[$key] = ($eventosTraumaticos[$key] ?? 0) + 1;
+                    }
+                }
+                if ($tieneEventos) {
+                    $stats['acontecimientos_traumaticos']['total_con_eventos']++;
+                }
             }
         }
 
-        return Inertia::render('OnlineResults/ParticipantDetail', [
+        // Calcular porcentaje de personas con acontecimientos traumáticos
+        if ($stats['total'] > 0) {
+            $stats['acontecimientos_traumaticos']['porcentaje'] = round(
+                ($stats['acontecimientos_traumaticos']['total_con_eventos'] / $stats['total']) * 100,
+                1
+            );
+        }
+
+        // Obtener nombres de los eventos traumáticos
+        $traumaticQuestionsComplete = config('referencia_iii.acontecimientos_traumaticos.questions', []);
+        $traumaticQuestionsReduced = config('referencia_iii_reduced.acontecimientos_traumaticos.questions', []);
+
+        foreach ($eventosTraumaticos as $key => $count) {
+            $questionNum = (int) $key;
+
+            // Intentar mapear de 1-6 a 73-78
+            $mappedKey = $questionNum + 72;
+            $questionText = $traumaticQuestionsComplete[$mappedKey] ??
+                           $traumaticQuestionsReduced[$questionNum] ??
+                           "Evento $questionNum";
+
+            $stats['acontecimientos_traumaticos']['tipos_eventos'][] = [
+                'evento' => $questionText,
+                'cantidad' => $count,
+                'porcentaje' => $stats['total'] > 0 ? round(($count / $stats['total']) * 100, 1) : 0,
+            ];
+        }
+
+        // Ordenar eventos por cantidad (descendente)
+        usort($stats['acontecimientos_traumaticos']['tipos_eventos'], function ($a, $b) {
+            return $b['cantidad'] - $a['cantidad'];
+        });
+
+        return Inertia::render('OnlineResults/Report', [
             'organization' => [
                 'id' => $organization->id,
                 'name' => $organization->name,
             ],
-            'participant' => $participantInfo,
-            'answers' => $organizedAnswers,
-            'ine_images' => $ineImages,
-            'traumatic_questions' => $traumaticQuestions,
-            'referencia_i_questions' => $referenciaIQuestions,
-            'referencia_iii_questions' => $referenciaIIIQuestions,
-            'escala_cisneros_questions' => $escalaCisnerosQuestions,
+            'stats' => $stats,
         ]);
     }
 
     /**
-     * Formatear valores de respuesta para mejor presentación
+     * Format quiz type for display
      */
-    private function formatAnswerValue($value, $questionKey)
+    private function formatQuizType(string $type): string
     {
-        // Si es JSON, intentar decodificar
-        $decoded = json_decode($value, true);
-        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-            return $decoded;
-        }
+        return match ($type) {
+            'completo' => 'Completo',
+            'reducido' => 'Reducido',
+            'cisneros' => 'Cisneros',
+            default => ucfirst($type),
+        };
+    }
 
-        // Formatear valores booleanos
-        if ($value === '1' || $value === 'true') {
-            return 'Sí';
-        }
-        if ($value === '0' || $value === 'false') {
-            return 'No';
-        }
-
-        // Formatear claves de preguntas para mejor legibilidad
-        $formattedKey = str_replace('_', ' ', $questionKey);
-        $formattedKey = ucwords($formattedKey);
-
-        return $value;
+    /**
+     * Format evaluation type for display
+     */
+    private function formatEvaluationType(string $type): string
+    {
+        return match ($type) {
+            'referencia_i' => 'Guía I',
+            'referencia_iii' => 'Guía III',
+            'referencia_v' => 'Guía V',
+            'cisneros' => 'Escala Cisneros',
+            default => ucfirst(str_replace('_', ' ', $type)),
+        };
     }
 }
