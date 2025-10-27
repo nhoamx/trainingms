@@ -49,66 +49,75 @@
           </div>
         </div>
         <div class="bg-gray-50 px-5 py-3">
-          <div class="space-y-3">
-            <!-- Sección: Evaluaciones -->
-            <div class="space-y-2">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">Evaluaciones</p>
-              
-              <!-- Botón para ver todas las evaluaciones (papel + online) -->
-              <a :href="route('organization.results.list', { organization: org.id })"
-                class="w-full flex items-center justify-center text-gray-700 hover:text-gray-900 font-medium py-2 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50 shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Ver Todas las Evaluaciones
-              </a>
+          <!-- Grid de 2 columnas consistente -->
+          <div class="grid grid-cols-2 gap-2">
+            
+            <!-- Botón: Ver Todas las Evaluaciones -->
+            <a :href="route('organization.results.list', { organization: org.id })"
+              class="flex items-center justify-center text-gray-700 hover:text-gray-900 font-medium py-2.5 px-3 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span class="text-sm">Ver Evaluaciones</span>
+            </a>
 
-              <!-- Botón para ver solo evaluaciones online -->
-              <a v-if="org.online_evaluations_count > 0" :href="route('organization.online-results', { id: org.id })"
-                class="w-full flex items-center justify-center text-emerald-700 hover:text-emerald-900 font-medium py-2 transition-colors bg-emerald-50 border border-emerald-300 rounded-md hover:bg-emerald-100">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Solo En Línea
-                <span class="ml-auto bg-emerald-600 text-white text-xs px-2 py-0.5 rounded-full">
-                  {{ org.online_evaluations_count }}
-                </span>
-              </a>
-            </div>
+            <!-- Botón: Reporte General -->
+            <a :href="route('organization.report', { id: org.id })"
+              class="flex items-center justify-center text-blue-700 hover:text-blue-900 font-medium py-2.5 px-3 transition-colors bg-blue-50 border border-blue-300 rounded-md hover:bg-blue-100 hover:shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span class="text-sm">Ver Reporte</span>
+            </a>
 
-            <!-- Divider -->
-            <div class="border-t border-gray-200"></div>
+            <!-- Botón: Evaluaciones En Línea -->
+            <button
+              @click="org.online_evaluations_count > 0 && $inertia.visit(route('organization.online-results', { id: org.id }))"
+              :disabled="org.online_evaluations_count === 0"
+              :class="[
+                'flex items-center justify-center font-medium py-2.5 px-3 transition-colors rounded-md',
+                org.online_evaluations_count > 0
+                  ? 'text-emerald-700 hover:text-emerald-900 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 hover:shadow-sm cursor-pointer'
+                  : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed opacity-60'
+              ]"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <span class="text-sm">En Línea</span>
+              <span 
+                v-if="org.online_evaluations_count > 0"
+                class="ml-1.5 bg-emerald-600 text-white text-xs px-2 py-0.5 rounded-full font-semibold"
+              >
+                {{ org.online_evaluations_count }}
+              </span>
+            </button>
 
-            <!-- Sección: Reportes -->
-            <div class="space-y-2">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">Reportes</p>
-              
-              <!-- Botón para reporte general -->
-              <a :href="route('organization.report', { id: org.id })"
-                class="w-full flex items-center justify-center text-blue-700 hover:text-blue-900 font-medium py-2 transition-colors bg-blue-50 border border-blue-300 rounded-md hover:bg-blue-100">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Reporte General
-              </a>
+            <!-- Botón: Reporte En Línea -->
+            <button
+              @click="org.online_evaluations_count > 0 && $inertia.visit(route('organization.online-results.report', { id: org.id }))"
+              :disabled="org.online_evaluations_count === 0"
+              :class="[
+                'flex items-center justify-center font-medium py-2.5 px-3 transition-colors rounded-md',
+                org.online_evaluations_count > 0
+                  ? 'text-indigo-700 hover:text-indigo-900 bg-indigo-50 border border-indigo-300 hover:bg-indigo-100 hover:shadow-sm cursor-pointer'
+                  : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed opacity-60'
+              ]"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span class="text-sm">Reporte En Línea</span>
+            </button>
 
-              <!-- Botón para reporte online -->
-              <a v-if="org.online_evaluations_count > 0" :href="route('organization.online-results.report', { id: org.id })"
-                class="w-full flex items-center justify-center text-indigo-700 hover:text-indigo-900 font-medium py-2 transition-colors bg-indigo-50 border border-indigo-300 rounded-md hover:bg-indigo-100">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Reporte En Línea
-              </a>
-            </div>
           </div>
         </div>
       </div>
