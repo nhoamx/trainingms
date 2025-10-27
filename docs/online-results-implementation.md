@@ -85,30 +85,30 @@ Incluye:
 ### Fase 1: Refactorización del Backend
 
 - [x] **Tarea 1.1**: Crear rama `feature/online-results-capture-and-visualization`
-- [ ] **Tarea 1.2**: Analizar y documentar estructura actual de `PaperEvaluation`
-- [ ] **Tarea 1.3**: Refactorizar `OnlineResultsController`
-  - [ ] Cambiar queries de `OnlineAnswer` a `PaperEvaluation`
-  - [ ] Filtrar por `source='online'`
-  - [ ] Mantener compatibilidad con rutas existentes
-- [ ] **Tarea 1.4**: Crear métodos helper en `PaperEvaluation` model
-  - [ ] `scopeOnline()` - scope para filtrar evaluaciones online
-  - [ ] `getQuizType()` - obtener tipo de quiz (completo/reducido/cisneros)
-  - [ ] `hasReferenciaV()` - verificar si tiene Referencia V
-- [ ] **Tarea 1.5**: Actualizar rutas en `routes/web.php` si es necesario
+- [x] **Tarea 1.2**: Analizar y documentar estructura actual de `PaperEvaluation`
+- [x] **Tarea 1.3**: Refactorizar `OnlineResultsController`
+  - [x] Cambiar queries de `OnlineAnswer` a `PaperEvaluation`
+  - [x] Filtrar por `source='online'`
+  - [x] Mantener compatibilidad con rutas existentes
+- [x] **Tarea 1.4**: Crear métodos helper en `PaperEvaluation` model
+  - [x] `scopeOnline()` - scope para filtrar evaluaciones online
+  - [x] `getQuizType()` - obtener tipo de quiz (completo/reducido/cisneros)
+  - [x] `hasReferenciaV()` - verificar si tiene Referencia V
+- [x] **Tarea 1.5**: Actualizar rutas en `routes/web.php` si es necesario
 - [ ] **Tarea 1.6**: Crear controlador `OnlineResultsReportController` para reportes agregados
 
 ### Fase 2: Desarrollo de Vistas Frontend
 
-- [ ] **Tarea 2.1**: Crear `resources/js/Pages/OnlineResults/List.vue`
-  - [ ] Tabla de resultados individuales
-  - [ ] Filtros por tipo de quiz, fecha, organización
-  - [ ] Paginación
-  - [ ] Búsqueda por folio
-- [ ] **Tarea 2.2**: Crear `resources/js/Pages/OnlineResults/Detail.vue`
-  - [ ] Vista detallada de una evaluación individual
-  - [ ] Mostrar todas las secciones según tipo de quiz
-  - [ ] Visualización de imágenes INE si existen
-  - [ ] Datos demográficos formateados
+- [x] **Tarea 2.1**: Crear `resources/js/Pages/OnlineResults/List.vue`
+  - [x] Tabla de resultados individuales
+  - [x] Filtros por tipo de quiz, fecha, organización
+  - [x] Paginación
+  - [x] Búsqueda por folio
+- [x] **Tarea 2.2**: Crear `resources/js/Pages/OnlineResults/Detail.vue`
+  - [x] Vista detallada de una evaluación individual
+  - [x] Mostrar todas las secciones según tipo de quiz
+  - [x] Visualización de imágenes INE si existen
+  - [x] Datos demográficos formateados
 - [ ] **Tarea 2.3**: Crear `resources/js/Pages/OnlineResults/Report.vue`
   - [ ] Reporte agregado por organización
   - [ ] Gráficas de distribución de respuestas
@@ -217,11 +217,13 @@ public function getQuizTypeAttribute(): string
 
 ## 📊 Progreso General
 
-**Completado:** 2/24 tareas (8%)
+**Completado:** 12/24 tareas (50%)
 
 - ✅ Análisis de estructura actual
 - ✅ Creación de rama y documentación inicial
-- ⏳ Desarrollo en curso...
+- ✅ Refactorización completa del backend
+- ✅ Vistas principales de frontend creadas
+- ⏳ Testing y validación pendientes...
 
 ---
 
