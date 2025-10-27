@@ -140,6 +140,36 @@
                     </div>
                 </div>
 
+                <!-- Acontecimientos Traumáticos (CITSAT) - ANTES de Guía I -->
+                <div v-if="hasAcontecimientosTraumaticos" class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                    <div class="p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Acontecimientos Traumáticos Severos (CITSAT)
+                        </h3>
+                        <p class="text-sm text-gray-600 mb-4">
+                            ¿Ha presenciado o sufrido alguna vez, durante o con motivo del trabajo, un acontecimiento como los siguientes?
+                        </p>
+                        <div class="space-y-2">
+                            <div v-for="(value, questionNum) in acontecimientosTraumaticos" :key="questionNum" class="flex items-start gap-3 p-3 bg-gray-50 rounded border-l-2" :class="value ? 'border-amber-400' : 'border-gray-300'">
+                                <div class="flex-1">
+                                    <div class="text-sm text-gray-700">{{ getQuestionText(questionNum, 'traumatic') }}</div>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <span 
+                                        :class="getBooleanBadgeClass(value)"
+                                        class="px-3 py-1 text-xs font-semibold rounded-full"
+                                    >
+                                        {{ formatBooleanValue(value) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Referencia I - Solo mostrar si tiene datos -->
                 <div v-if="hasReferenciaI" class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                     <div class="p-6">
@@ -147,8 +177,11 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            Guía I - Acontecimientos Traumáticos Severos
+                            Guía I - Cuestionario de Estrés Postraumático
                         </h3>
+                        <p class="text-sm text-gray-600 mb-4">
+                            Respuestas basadas en los acontecimientos traumáticos identificados
+                        </p>
                         <div class="space-y-3">
                             <div v-for="(value, key) in answers.referencia_i" :key="key" class="flex items-start gap-3 p-3 bg-gray-50 rounded">
                                 <div class="flex-1">
@@ -167,57 +200,6 @@
                     </div>
                 </div>
 
-                <!-- CITSAT (Referencia III Conditional) - Acontecimientos Traumáticos -->
-                <div v-if="hasCitsat" class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                    <div class="p-6">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            Acontecimientos Traumáticos (CITSAT)
-                        </h3>
-                        <div class="space-y-2">
-                            <template v-for="(section, sectionKey) in answers.citsat" :key="sectionKey">
-                                <!-- If section is an object (nested), iterate through it -->
-                                <template v-if="typeof section === 'object' && section !== null">
-                                    <div class="mt-4 mb-2">
-                                        <h4 class="text-sm font-semibold text-gray-700 mb-2">{{ formatFieldName(sectionKey) }}</h4>
-                                        <div class="space-y-2 ml-4">
-                                            <div v-for="(value, key) in section" :key="key" class="flex items-start gap-3 p-3 bg-gray-50 rounded border-l-2 border-indigo-300">
-                                                <div class="flex-1">
-                                                    <div class="text-sm text-gray-700">{{ getQuestionText(key, 'traumatic') }}</div>
-                                                </div>
-                                                <div class="flex-shrink-0">
-                                                    <span 
-                                                        :class="getBooleanBadgeClass(value)"
-                                                        class="px-3 py-1 text-xs font-semibold rounded-full"
-                                                    >
-                                                        {{ formatBooleanValue(value) }}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                                <!-- If it's a simple value, display directly -->
-                                <div v-else class="flex items-start gap-3 p-3 bg-gray-50 rounded">
-                                    <div class="flex-1">
-                                        <div class="text-sm text-gray-700">{{ getQuestionText(sectionKey, 'traumatic') }}</div>
-                                    </div>
-                                    <div class="flex-shrink-0">
-                                        <span 
-                                            :class="getBooleanBadgeClass(section)"
-                                            class="px-3 py-1 text-xs font-semibold rounded-full"
-                                        >
-                                            {{ formatBooleanValue(section) }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Referencia III -->
                 <div v-if="evaluation.has_referencia_iii && hasReferenciaIIIAnswers" class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                     <div class="p-6">
@@ -228,12 +210,12 @@
                             Guía III - Factores de Riesgo Psicosocial
                         </h3>
                         <div class="space-y-2">
-                            <div v-for="(value, key) in answers.referencia_iii" :key="key" class="flex items-start justify-between p-3 bg-gray-50 rounded">
+                            <div v-for="(value, key) in referenciaIIIGeneral" :key="key" class="flex items-start justify-between p-3 bg-gray-50 rounded">
                                 <div class="text-sm text-gray-700 flex-1 pr-4">{{ getQuestionText(key, 'referencia_iii') }}</div>
                                 <span 
                                     class="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
-                                    :class="value === 'Siempre' || value === true ? 'bg-red-100 text-red-800' : 
-                                            value === 'Nunca' || value === false ? 'bg-green-100 text-green-800' : 
+                                    :class="value === 'Siempre' || value === 'A' ? 'bg-red-100 text-red-800' : 
+                                            value === 'Nunca' || value === 'E' ? 'bg-green-100 text-green-800' : 
                                             'bg-yellow-100 text-yellow-800'"
                                 >
                                     {{ formatValue(value) }}
@@ -339,8 +321,34 @@ const hasCitsat = computed(() => {
     return props.answers.citsat && Object.keys(props.answers.citsat).length > 0
 })
 
+const acontecimientosTraumaticos = computed(() => {
+    // Check if acontecimientos_traumaticos is in referencia_iii (for reduced/cisneros quizzes)
+    if (props.answers.referencia_iii?.acontecimientos_traumaticos) {
+        return props.answers.referencia_iii.acontecimientos_traumaticos
+    }
+    // Check if it's in citsat
+    if (props.answers.citsat?.acontecimientos_traumaticos) {
+        return props.answers.citsat.acontecimientos_traumaticos
+    }
+    return null
+})
+
+const hasAcontecimientosTraumaticos = computed(() => {
+    return acontecimientosTraumaticos.value && Object.keys(acontecimientosTraumaticos.value).length > 0
+})
+
+const referenciaIIIGeneral = computed(() => {
+    // Filter out acontecimientos_traumaticos from referencia_iii to show only general questions
+    if (!props.answers.referencia_iii) return null
+    
+    const filtered = { ...props.answers.referencia_iii }
+    delete filtered.acontecimientos_traumaticos
+    
+    return Object.keys(filtered).length > 0 ? filtered : null
+})
+
 const hasReferenciaIIIAnswers = computed(() => {
-    return props.answers.referencia_iii && Object.keys(props.answers.referencia_iii).length > 0
+    return referenciaIIIGeneral.value && Object.keys(referenciaIIIGeneral.value).length > 0
 })
 
 const hasCustomFields = computed(() => {
@@ -438,13 +446,13 @@ const getQuestionText = (key, type) => {
     }
     
     if (type === 'traumatic' && props.questions_config.traumatic_questions) {
-        // traumatic_questions has 'questions' object with numeric keys (73-78)
+        // traumatic_questions has 'questions' object with numeric keys (1-6 for reduced, 73-78 for complete)
         const questionNumber = parseInt(key)
         
         if (!isNaN(questionNumber) && props.questions_config.traumatic_questions.questions) {
             const questionText = props.questions_config.traumatic_questions.questions[questionNumber]
             if (questionText) {
-                return `${questionNumber}. ${questionText}`
+                return questionText
             }
         }
         return formatFieldName(key)
