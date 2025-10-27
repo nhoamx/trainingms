@@ -228,9 +228,16 @@
                             Guía III - Factores de Riesgo Psicosocial
                         </h3>
                         <div class="space-y-2">
-                            <div v-for="(value, key) in answers.referencia_iii" :key="key" class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                                <span class="text-gray-700">{{ formatFieldName(key) }}</span>
-                                <span class="font-medium text-gray-900">{{ formatValue(value) }}</span>
+                            <div v-for="(value, key) in answers.referencia_iii" :key="key" class="flex items-start justify-between p-3 bg-gray-50 rounded">
+                                <div class="text-sm text-gray-700 flex-1 pr-4">{{ getQuestionText(key, 'referencia_iii') }}</div>
+                                <span 
+                                    class="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
+                                    :class="value === 'Siempre' || value === true ? 'bg-red-100 text-red-800' : 
+                                            value === 'Nunca' || value === false ? 'bg-green-100 text-green-800' : 
+                                            'bg-yellow-100 text-yellow-800'"
+                                >
+                                    {{ formatValue(value) }}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -415,20 +422,43 @@ const getQuestionText = (key, type) => {
         return formatFieldName(key)
     }
     
+    if (type === 'referencia_iii' && props.questions_config.referencia_iii_questions) {
+        // referencia_iii has 'general' object with numeric keys (1-72)
+        // Keys might be just numbers or strings like "1", "2", etc.
+        const questionNumber = parseInt(key)
+        
+        if (!isNaN(questionNumber) && props.questions_config.referencia_iii_questions.general) {
+            const questionText = props.questions_config.referencia_iii_questions.general[questionNumber]
+            if (questionText) {
+                return `${questionNumber}. ${questionText}`
+            }
+        }
+        
+        return formatFieldName(key)
+    }
+    
     if (type === 'traumatic' && props.questions_config.traumatic_questions) {
-        // traumatic_questions is an array
-        if (Array.isArray(props.questions_config.traumatic_questions)) {
-            const question = props.questions_config.traumatic_questions.find(q => q.key === key)
-            return question?.text || formatFieldName(key)
+        // traumatic_questions has 'questions' object with numeric keys (73-78)
+        const questionNumber = parseInt(key)
+        
+        if (!isNaN(questionNumber) && props.questions_config.traumatic_questions.questions) {
+            const questionText = props.questions_config.traumatic_questions.questions[questionNumber]
+            if (questionText) {
+                return `${questionNumber}. ${questionText}`
+            }
         }
         return formatFieldName(key)
     }
     
     if (type === 'cisneros' && props.questions_config.escala_cisneros_questions) {
-        // escala_cisneros_questions might be an array or object
-        if (Array.isArray(props.questions_config.escala_cisneros_questions)) {
-            const question = props.questions_config.escala_cisneros_questions.find(q => q.key === key)
-            return question?.text || formatFieldName(key)
+        // escala_cisneros_questions is an object with numeric keys (1-44)
+        const questionNumber = parseInt(key)
+        
+        if (!isNaN(questionNumber)) {
+            const questionText = props.questions_config.escala_cisneros_questions[questionNumber]
+            if (questionText) {
+                return `${questionNumber}. ${questionText}`
+            }
         }
         return formatFieldName(key)
     }
