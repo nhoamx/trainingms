@@ -97,7 +97,8 @@ class OnlineResultsController extends Controller
         }
 
         // Obtener configuraciones de preguntas
-        $traumaticQuestions = config('referencia_iii_reduced.acontecimientos_traumaticos.questions', []);
+        $traumaticQuestionsReduced = config('referencia_iii_reduced.acontecimientos_traumaticos', []);
+        $traumaticQuestionsComplete = config('referencia_iii.acontecimientos_traumaticos', []);
         $referenciaIQuestions = config('referencia_i', []);
         $referenciaIIIQuestions = config('referencia_iii', []);
         $escalaCisnerosQuestions = config('escala_cisneros', []);
@@ -131,7 +132,8 @@ class OnlineResultsController extends Controller
             ],
             'ine_images' => $ineImages,
             'questions_config' => [
-                'traumatic_questions' => $traumaticQuestions,
+                'traumatic_questions_reduced' => $traumaticQuestionsReduced,
+                'traumatic_questions_complete' => $traumaticQuestionsComplete,
                 'referencia_i_questions' => $referenciaIQuestions,
                 'referencia_iii_questions' => $referenciaIIIQuestions,
                 'escala_cisneros_questions' => $escalaCisnerosQuestions,

@@ -445,16 +445,41 @@ const getQuestionText = (key, type) => {
         return formatFieldName(key)
     }
     
-    if (type === 'traumatic' && props.questions_config.traumatic_questions) {
-        // traumatic_questions has 'questions' object with numeric keys (1-6 for reduced, 73-78 for complete)
+    if (type === 'traumatic') {
+        // Try complete config first (questions 73-78)
         const questionNumber = parseInt(key)
         
-        if (!isNaN(questionNumber) && props.questions_config.traumatic_questions.questions) {
-            const questionText = props.questions_config.traumatic_questions.questions[questionNumber]
-            if (questionText) {
-                return questionText
+        if (!isNaN(questionNumber)) {
+            // For reduced quizzes, keys are 1-6, need to map to complete questions 73-78
+            // For complete quizzes, keys should be 73-78 directly
+            
+            // Try complete config (73-78)
+            if (props.questions_config.traumatic_questions_complete?.questions) {
+                const completeQuestions = props.questions_config.traumatic_questions_complete.questions
+                
+                // If key is 1-6, try to map to 73-78
+                if (questionNumber >= 1 && questionNumber <= 6) {
+                    const mappedKey = questionNumber + 72 // 1->73, 2->74, ..., 6->78
+                    if (completeQuestions[mappedKey]) {
+                        return completeQuestions[mappedKey]
+                    }
+                }
+                
+                // If key is already 73-78, use directly
+                if (completeQuestions[questionNumber]) {
+                    return completeQuestions[questionNumber]
+                }
+            }
+            
+            // Fallback to reduced config (1-6)
+            if (props.questions_config.traumatic_questions_reduced?.questions) {
+                const reducedQuestions = props.questions_config.traumatic_questions_reduced.questions
+                if (reducedQuestions[questionNumber]) {
+                    return reducedQuestions[questionNumber]
+                }
             }
         }
+        
         return formatFieldName(key)
     }
     
