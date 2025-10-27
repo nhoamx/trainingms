@@ -5,6 +5,7 @@ import { useForm, router } from '@inertiajs/vue3'
 import { PhotoIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/solid'
 import Dashboard from '../../Layouts/Dashboard.vue'
 import Alert from '../../Components/Alert.vue'
+import FormInput from "../../Components/FormInput.vue"
 import Folios from './components/Folios.vue'
 import { defineProps } from 'vue'
 
@@ -19,8 +20,46 @@ const { organization } = defineProps({
 // Creamos el formulario con datos iniciales basados en la organización
 const form = useForm({
     _method: 'put', // Método PUT para actualizar
+    // Básicos
     name: organization.name || '',
+    folio_organization: organization.folio_organization || '',
     logo: null, // Si el usuario sube uno nuevo, se actualizará; de lo contrario, se mantiene el actual.
+    // Identificación
+    razon_social: organization.razon_social || '',
+    rfc: organization.rfc || '',
+    registro_patronal: organization.registro_patronal || '',
+    // Domicilio
+    calle_numero: organization.calle_numero || '',
+    colonia: organization.colonia || '',
+    codigo_postal: organization.codigo_postal || '',
+    municipio: organization.municipio || '',
+    estado: organization.estado || '',
+    // Contacto 1
+    contacto_nombre: organization.contacto_nombre || '',
+    contacto_puesto: organization.contacto_puesto || '',
+    contacto_email: organization.contacto_email || '',
+    contacto_movil: organization.contacto_movil || '',
+    // Responsable
+    responsable_nombre: organization.responsable_nombre || '',
+    responsable_puesto: organization.responsable_puesto || '',
+    responsable_email: organization.responsable_email || '',
+    responsable_movil: organization.responsable_movil || '',
+    // Actividad
+    actividad_principal: organization.actividad_principal || '',
+    // Totales y muestra
+    total_trabajadores: organization.total_trabajadores ?? '',
+    total_hombres: organization.total_hombres ?? '',
+    total_mujeres: organization.total_mujeres ?? '',
+    muestra_aplicada: organization.muestra_aplicada ?? '',
+    muestra_hombres: organization.muestra_hombres ?? '',
+    muestra_mujeres: organization.muestra_mujeres ?? '',
+    // Comité
+    comite_integrantes: organization.comite_integrantes ?? '',
+    comite_hombres: organization.comite_hombres ?? '',
+    comite_mujeres: organization.comite_mujeres ?? '',
+    // Fecha y justificación
+    fecha_aplicacion: organization.fecha_aplicacion || '',
+    justificacion_muestra: organization.justificacion_muestra || '',
 });
 
 // Manejo de errores de validación en el front
@@ -310,6 +349,127 @@ const confirmForceDelete = () => {
                                             {{ clientErrors.name || form.errors.name }}
                                         </p>
                                     </div>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput
+                                        label="Folio (opcional)"
+                                        hint="Si no se define, se mantiene o se genera automáticamente."
+                                        id="folio_organization"
+                                        name="folio_organization"
+                                        autocomplete="off"
+                                        v-model="form.folio_organization"
+                                        :error="form.errors.folio_organization"
+                                    />
+                                </div>
+                                <!-- Identificación -->
+                                <div class="sm:col-span-3">
+                                    <FormInput label="Razón Social" id="razon_social" name="razon_social" v-model="form.razon_social" :error="form.errors.razon_social" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput label="RFC" id="rfc" name="rfc" v-model="form.rfc" :error="form.errors.rfc" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput label="Registro Patronal" id="registro_patronal" name="registro_patronal" v-model="form.registro_patronal" :error="form.errors.registro_patronal" />
+                                </div>
+                                <!-- Domicilio -->
+                                <div class="sm:col-span-4">
+                                    <FormInput label="Calle y Número" id="calle_numero" name="calle_numero" v-model="form.calle_numero" :error="form.errors.calle_numero" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput label="Colonia" id="colonia" name="colonia" v-model="form.colonia" :error="form.errors.colonia" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput label="Código Postal" id="codigo_postal" name="codigo_postal" v-model="form.codigo_postal" :error="form.errors.codigo_postal" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput label="Municipio" id="municipio" name="municipio" v-model="form.municipio" :error="form.errors.municipio" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput label="Estado" id="estado" name="estado" v-model="form.estado" :error="form.errors.estado" />
+                                </div>
+                                <!-- Contacto principal -->
+                                <div class="col-span-full">
+                                    <h3 class="text-sm font-semibold text-gray-900">Contacto</h3>
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <FormInput label="Nombre" id="contacto_nombre" name="contacto_nombre" v-model="form.contacto_nombre" :error="form.errors.contacto_nombre" />
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <FormInput label="Puesto" id="contacto_puesto" name="contacto_puesto" v-model="form.contacto_puesto" :error="form.errors.contacto_puesto" />
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <FormInput type="email" label="Correo electrónico" id="contacto_email" name="contacto_email" v-model="form.contacto_email" :error="form.errors.contacto_email" />
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <FormInput label="Móvil" id="contacto_movil" name="contacto_movil" v-model="form.contacto_movil" :error="form.errors.contacto_movil" />
+                                </div>
+                                <!-- Responsable de la norma -->
+                                <div class="col-span-full">
+                                    <h3 class="text-sm font-semibold text-gray-900">Responsable de la norma</h3>
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <FormInput label="Nombre" id="responsable_nombre" name="responsable_nombre" v-model="form.responsable_nombre" :error="form.errors.responsable_nombre" />
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <FormInput label="Puesto" id="responsable_puesto" name="responsable_puesto" v-model="form.responsable_puesto" :error="form.errors.responsable_puesto" />
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <FormInput type="email" label="Correo electrónico" id="responsable_email" name="responsable_email" v-model="form.responsable_email" :error="form.errors.responsable_email" />
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <FormInput label="Móvil" id="responsable_movil" name="responsable_movil" v-model="form.responsable_movil" :error="form.errors.responsable_movil" />
+                                </div>
+                                <!-- Actividad principal -->
+                                <div class="sm:col-span-4">
+                                    <FormInput label="Actividad Principal" id="actividad_principal" name="actividad_principal" v-model="form.actividad_principal" :error="form.errors.actividad_principal" />
+                                </div>
+                                <!-- Totales colaboradores -->
+                                <div class="col-span-full">
+                                    <h3 class="text-sm font-semibold text-gray-900">Colaboradores</h3>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput type="number" label="Total trabajadores" id="total_trabajadores" name="total_trabajadores" v-model="form.total_trabajadores" :error="form.errors.total_trabajadores" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput type="number" label="Hombres" id="total_hombres" name="total_hombres" v-model="form.total_hombres" :error="form.errors.total_hombres" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput type="number" label="Mujeres" id="total_mujeres" name="total_mujeres" v-model="form.total_mujeres" :error="form.errors.total_mujeres" />
+                                </div>
+                                <!-- Muestra aplicada -->
+                                <div class="col-span-full">
+                                    <h3 class="text-sm font-semibold text-gray-900">Muestra aplicada</h3>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput type="number" label="Total muestra" id="muestra_aplicada" name="muestra_aplicada" v-model="form.muestra_aplicada" :error="form.errors.muestra_aplicada" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput type="number" label="Hombres" id="muestra_hombres" name="muestra_hombres" v-model="form.muestra_hombres" :error="form.errors.muestra_hombres" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput type="number" label="Mujeres" id="muestra_mujeres" name="muestra_mujeres" v-model="form.muestra_mujeres" :error="form.errors.muestra_mujeres" />
+                                </div>
+                                <div class="col-span-full">
+                                    <label for="justificacion_muestra" class="block text-sm font-medium text-gray-900">Justificación de la muestra (opcional)</label>
+                                    <textarea id="justificacion_muestra" name="justificacion_muestra" v-model="form.justificacion_muestra" rows="3" class="mt-2 block w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600"></textarea>
+                                    <p v-if="form.errors.justificacion_muestra" class="mt-1 text-xs text-red-500">{{ form.errors.justificacion_muestra }}</p>
+                                </div>
+                                <!-- Comité -->
+                                <div class="col-span-full">
+                                    <h3 class="text-sm font-semibold text-gray-900">Comité de atención y seguimiento</h3>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput type="number" label="Integrantes (Total)" id="comite_integrantes" name="comite_integrantes" v-model="form.comite_integrantes" :error="form.errors.comite_integrantes" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput type="number" label="Hombres" id="comite_hombres" name="comite_hombres" v-model="form.comite_hombres" :error="form.errors.comite_hombres" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <FormInput type="number" label="Mujeres" id="comite_mujeres" name="comite_mujeres" v-model="form.comite_mujeres" :error="form.errors.comite_mujeres" />
+                                </div>
+                                <!-- Fechas -->
+                                <div class="sm:col-span-3">
+                                    <FormInput type="date" label="Fecha de aplicación" id="fecha_aplicacion" name="fecha_aplicacion" v-model="form.fecha_aplicacion" :error="form.errors.fecha_aplicacion" />
                                 </div>
                                 <!-- Campo: Subir logotipo (opcional) -->
                                 <div class="col-span-full">

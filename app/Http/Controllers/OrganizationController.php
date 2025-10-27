@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreOrganizationRequest;
+use App\Http\Requests\UpdateOrganizationRequest;
 use App\Models\Organization;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -26,24 +27,24 @@ class OrganizationController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreOrganizationRequest $request)
     {
-        // Validaciones del request
-        $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,gif|max:10240', // 10MB
-            'folio_organization' => 'nullable|numeric',
-        ]);
+        $data = $request->validated();
 
-        // Creamos la nueva organización
+        // Generar folio si no se proporcionó
+        if (empty($data['folio_organization'])) {
+            $data['folio_organization'] = rand(100, 999);
+        }
+
+        // Manejar logo aparte del fill
+        $logoFile = $data['logo'] ?? null;
+        unset($data['logo']);
+
         $organization = new Organization;
-        $organization->name = $validatedData['name'];
-        $organization->folio_organization = $validatedData['folio_organization'] ?? rand(100, 999);
+        $organization->fill($data);
 
-        // Si se envía un archivo para el logo, lo almacenamos
-        // En este ejemplo, se da prioridad a "logo" y, en caso de que no se envíe, se usa "image"
-        if ($request->hasFile('logo')) {
-            $logoPath = $request->file('logo')->store('organizations', 'public');
+        if ($logoFile) {
+            $logoPath = $logoFile->store('organizations', 'public');
             $organization->logo = $logoPath;
         }
 
@@ -75,26 +76,20 @@ class OrganizationController extends Controller
         ]);
     }
 
-    public function update(Request $request, Organization $organization)
+    public function update(UpdateOrganizationRequest $request, Organization $organization)
     {
-        // Validaciones del request
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,gif|max:10240', // 10MB
-            'folio_organization' => 'nullable|numeric',
-        ]);
+        $data = $request->validated();
 
-        $organization->name = $request->name;
-        $organization->folio_organization = $request->folio_organization;
+        $logoFile = $data['logo'] ?? null;
+        unset($data['logo']);
 
-        if ($request->hasFile('logo')) {
-            // Si existe un logo anterior, lo eliminamos del disco
+        $organization->fill($data);
+
+        if ($logoFile) {
             if ($organization->logo && Storage::disk('public')->exists($organization->logo)) {
                 Storage::disk('public')->delete($organization->logo);
             }
-
-            // Almacenamos el nuevo logo
-            $logoPath = $request->file('logo')->store('organizations', 'public');
+            $logoPath = $logoFile->store('organizations', 'public');
             $organization->logo = $logoPath;
         }
 
