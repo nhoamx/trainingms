@@ -110,10 +110,10 @@ Incluye:
   - [x] Iteración de acontecimientos traumáticos
   - [x] Formato de campos personalizados
   - [x] Reemplazo de guiones bajos por espacios
-- [ ] **Tarea 2.3**: Crear vista `OnlineResults/Report.vue`
-  - [ ] Reporte agregado por organización
-  - [ ] Gráficas y estadísticas
-  - [ ] Análisis dimensional
+- [x] **Tarea 2.3**: Crear vista `OnlineResults/Report.vue`
+  - [x] Reporte agregado por organización
+  - [x] Gráficas y estadísticas
+  - [x] Análisis dimensional
 
 ### Fase 3: Testing y Validación
 
@@ -201,22 +201,25 @@ public function getQuizTypeAttribute(): string
 
 ## 🚀 Estado Actual del Proyecto
 
-**Progreso General: 70%** 🟩🟩🟩🟩🟩🟩🟩⬜⬜⬜
+**Progreso General: 85%** 🟩🟩🟩🟩🟩🟩🟩🟩⬜⬜
 
 ### ✅ Completado
 
 1. **Backend (100%)**
    - ✅ Modelo `PaperEvaluation` con 10 helpers nuevos
    - ✅ `OnlineResultsController` refactorizado
+   - ✅ Método `report()` para estadísticas agregadas
    - ✅ Rutas actualizadas en `web.php`
 
-2. **Frontend (85%)**
+2. **Frontend (100%)**
    - ✅ Vista de lista (`OnlineResults/List.vue`)
    - ✅ Vista de detalle (`OnlineResults/Detail.vue`)
+   - ✅ Vista de reportes (`OnlineResults/Report.vue`)
    - ✅ Manejo de datos anidados (datos_laborales, acontecimientos_traumáticos)
    - ✅ Formato de campos personalizados
    - ✅ Dashboard actualizado con enlaces correctos
-   - ⏳ Vista de reportes pendiente
+   - ✅ Gráficas de barras para eventos traumáticos
+   - ✅ Análisis dimensional según NOM-035
 
 3. **Testing (100%)**
    - ✅ 6 tests de feature creados
@@ -229,13 +232,13 @@ public function getQuizTypeAttribute(): string
 
 ### 🔜 Próximos Pasos
 
-1. **Crear vista de reportes** (`OnlineResults/Report.vue`)
-   - Estadísticas agregadas por organización
-   - Gráficas dimensionales
-   
-2. **Validación manual**
+1. **Validación manual**
    - Probar flujo completo en navegador
    - Verificar con datos reales
+   
+2. **Documentación final**
+   - Guía de usuario
+   - Preparar para merge a develop
 
 ---
 
