@@ -64,26 +64,31 @@ export interface ParticipantScore {
 export interface DetailedResultItem {
     nombre: string;
     puntaje: number;
+    promedio?: number; // Precise average (e.g., 2.38)
+    item_numero?: number | string;
 }
 
 export interface DetailedResultDimension {
     nombre: string;
     items: DetailedResultItem[];
     rowspan: number;
+    sumatoria?: number; // Sum of rounded item averages
 }
 
 export interface DetailedResultDomain {
     nombre: string;
-    puntaje: number;
     dimensiones: DetailedResultDimension[];
     rowspan: number;
+    sumatoria?: number; // Sum of dimension sumatorias
+    nivel_riesgo?: string; // NOM-035 risk level: Nulo, Bajo, Medio, Alto, Muy Alto
 }
 
 export interface DetailedResultCategory {
     nombre: string;
-    puntaje: number;
     dominios: DetailedResultDomain[];
     rowspan: number;
+    sumatoria?: number; // Sum of domain sumatorias
+    nivel_riesgo?: string; // NOM-035 risk level: Nulo, Bajo, Medio, Alto, Muy Alto
 }
 
 export interface ReportSummaryData {
