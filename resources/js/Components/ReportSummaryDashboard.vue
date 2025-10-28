@@ -260,6 +260,83 @@ const detailedResults = computed(() => {
     return rawSummaryData.value?.detailed_results || [];
 });
 
+/**
+ * Get color class based on frequency level (0-4) for ITEMS
+ * 0 = Nunca (Azul chillón)
+ * 1 = Casi nunca (Verde mayate)
+ * 2 = Algunas veces (Amarillo chillón)
+ * 3 = Casi siempre (Naranja)
+ * 4 = Siempre (Rojo)
+ */
+const getFrequencyColor = (value: number): string => {
+    const roundedValue = Math.round(value);
+    
+    switch (roundedValue) {
+        case 0:
+            return 'bg-cyan-500 text-white'; // Azul chillón (Nunca)
+        case 1:
+            return 'bg-green-500 text-white'; // Verde mayate (Casi nunca)
+        case 2:
+            return 'bg-yellow-400 text-black'; // Amarillo chillón (Algunas veces)
+        case 3:
+            return 'bg-orange-500 text-white'; // Naranja (Casi siempre)
+        case 4:
+            return 'bg-red-500 text-white'; // Rojo (Siempre)
+        default:
+            return 'bg-gray-400 text-white';
+    }
+};
+
+/**
+ * Get color class based on NOM-035 risk level for DIMENSIONS/DOMAINS/CATEGORIES
+ * Nulo = Verde claro/Turquesa
+ * Bajo = Verde
+ * Medio = Amarillo
+ * Alto = Naranja
+ * Muy Alto = Rojo
+ */
+const getRiskLevelColor = (nivelRiesgo: string | undefined): string => {
+    if (!nivelRiesgo) return 'bg-gray-200 text-gray-700';
+    
+    switch (nivelRiesgo) {
+        case 'Nulo':
+            return 'bg-cyan-500 text-white'; // Verde claro/Turquesa
+        case 'Bajo':
+            return 'bg-green-500 text-white'; // Verde
+        case 'Medio':
+            return 'bg-yellow-400 text-black'; // Amarillo
+        case 'Alto':
+            return 'bg-orange-500 text-white'; // Naranja
+        case 'Muy Alto':
+            return 'bg-red-500 text-white'; // Rojo
+        default:
+            return 'bg-gray-200 text-gray-700';
+    }
+};
+
+/**
+ * Get frequency label based on value (0-4)
+ */
+const getFrequencyLabel = (value: number): string => {
+    const roundedValue = Math.round(value);
+    
+    switch (roundedValue) {
+        case 0:
+            return 'Nunca';
+        case 1:
+            return 'Casi nunca';
+        case 2:
+            return 'Algunas veces';
+        case 3:
+            return 'Casi siempre';
+        case 4:
+            return 'Siempre';
+        default:
+            return 'N/A';
+    }
+};
+
+
 // Participant data
 const processedParticipantsData = computed(() => {
     return rawSummaryData.value?.personalCalification || null;
@@ -675,16 +752,17 @@ watch(() => props.currentOrganization, (newOrg) => {
                 </div>
 
                 <!-- Detailed Results Table -->
-                <div v-if="detailedResults && detailedResults.length > 0" class="overflow-x-auto mt-6 bg-white p-4 rounded-lg shadow">
+                <div v-if="detailedResults && detailedResults.length > 0" class="mt-6 bg-white p-4 rounded-lg shadow">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Detalle por Categoría, Dominio y Dimensión</h3>
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Categoría</th>
                                 <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Dominio</th>
-                                <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Dimensión</th>
-                                <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Ítem</th>
-                                <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Puntaje</th>
+                                <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Factores de Riesgo Psicosocial</th>
+                                <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Preguntas</th>
+                                <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Promedio</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -695,17 +773,72 @@ watch(() => props.currentOrganization, (newOrg) => {
                                             <tr>
                                                 <td v-if="domIdx === 0 && dimIdx === 0 && itemIdx === 0" :rowspan="cat.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle font-medium bg-gray-50">
                                                     {{ cat.nombre }}
-                                                    <div class="text-xs text-gray-500 font-normal">Puntaje: {{ cat.puntaje }}</div>
+                                                    <div v-if="cat.sumatoria !== undefined" class="mt-2">
+                                                        <span 
+                                                            class="relative group"
+                                                        >
+                                                            <span 
+                                                                :class="['inline-flex items-center px-3 py-1 rounded-full text-xs font-bold', getRiskLevelColor(cat.nivel_riesgo)]"
+                                                            >
+                                                                {{ cat.sumatoria }}
+                                                            </span>
+                                                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100]">
+                                                                Nivel de riesgo: {{ cat.nivel_riesgo || 'N/A' }}
+                                                                <span class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></span>
+                                                            </span>
+                                                        </span>
+                                                    </div>
                                                 </td>
                                                 <td v-if="dimIdx === 0 && itemIdx === 0" :rowspan="dom.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle font-medium">
                                                     {{ dom.nombre }}
-                                                    <div class="text-xs text-gray-500 font-normal">Puntaje: {{ dom.puntaje }}</div>
+                                                    <div v-if="dom.sumatoria !== undefined" class="mt-2">
+                                                        <span 
+                                                            class="relative group"
+                                                        >
+                                                            <span 
+                                                                :class="['inline-flex items-center px-3 py-1 rounded-full text-xs font-bold', getRiskLevelColor(dom.nivel_riesgo)]"
+                                                            >
+                                                                {{ dom.sumatoria }}
+                                                            </span>
+                                                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100]">
+                                                                Nivel de riesgo: {{ dom.nivel_riesgo || 'N/A' }}
+                                                                <span class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></span>
+                                                            </span>
+                                                        </span>
+                                                    </div>
                                                 </td>
                                                 <td v-if="itemIdx === 0" :rowspan="dim.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle text-sm">
                                                     {{ dim.nombre }}
+                                                    <div v-if="dim.sumatoria !== undefined" class="mt-2">
+                                                        <span 
+                                                            class="relative group"
+                                                        >
+                                                            <span 
+                                                                :class="['inline-flex items-center px-3 py-1 rounded-full text-xs font-bold', getFrequencyColor(dim.sumatoria)]"
+                                                            >
+                                                                {{ dim.sumatoria }}
+                                                            </span>
+                                                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100]">
+                                                                Sumatoria de frecuencias: {{ dim.sumatoria }}
+                                                                <span class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></span>
+                                                            </span>
+                                                        </span>
+                                                    </div>
                                                 </td>
                                                 <td class="px-6 py-4 border border-gray-200 text-center text-sm">{{ item.nombre }}</td>
-                                                <td class="px-6 py-4 border border-gray-200 text-center font-semibold">{{ item.puntaje }}</td>
+                                                <td class="px-6 py-4 border border-gray-200 text-center">
+                                                    <span class="relative group cursor-pointer">
+                                                        <span 
+                                                            :class="['inline-flex items-center px-3 py-1.5 rounded-md text-sm font-semibold', getFrequencyColor(item.promedio ?? item.puntaje)]"
+                                                        >
+                                                            {{ Math.round(item.promedio ?? item.puntaje) }}
+                                                        </span>
+                                                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100]">
+                                                            Promedio: <br></br>{{ item.promedio !== undefined ? item.promedio.toFixed(2) : item.puntaje }} <br></br> ({{ getFrequencyLabel(item.promedio ?? item.puntaje) }})
+                                                            <span class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></span>
+                                                        </span>
+                                                    </span>
+                                                </td>
                                             </tr>
                                         </template>
                                     </template>
@@ -713,6 +846,7 @@ watch(() => props.currentOrganization, (newOrg) => {
                             </template>
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         </div>

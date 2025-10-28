@@ -193,7 +193,7 @@ class PaperEvaluationReportService
 
     /**
      * Get detailed results for all evaluations in organization
-     * Returns a unified table structure like in Detail view
+     * Returns a unified table structure with AVERAGE scores across all evaluations
      */
     protected function getDetailedResultsForOrganization(Collection $evaluations): array
     {
@@ -206,53 +206,73 @@ class PaperEvaluationReportService
         $detailedResults = $this->scoreService->getDetailedResults($firstEvaluation);
 
         // Group by categoria -> dominio -> dimension -> item to get unique structure
+        // and accumulate scores from all evaluations
         $grouped = [];
+        $itemScores = []; // Track scores for averaging: [catNombre][domNombre][dimNombre][itemNumero] = [scores]
 
-        foreach ($detailedResults as $row) {
-            $catNombre = $row['categoria']['nombre'];
-            $catPuntaje = $row['categoria']['puntaje'];
-            $domNombre = $row['dominio']['nombre'];
-            $domPuntaje = $row['dominio']['puntaje'];
-            $dimNombre = $row['dimension'];
-            $itemNombre = $row['item'];
+        // Process all evaluations to accumulate scores
+        foreach ($evaluations as $evaluation) {
+            $evalResults = $this->scoreService->getDetailedResults($evaluation);
 
-            if (! isset($grouped[$catNombre])) {
-                $grouped[$catNombre] = [
-                    'nombre' => $catNombre,
-                    'puntaje' => $catPuntaje,
-                    'dominios' => [],
-                ];
-            }
+            foreach ($evalResults as $row) {
+                $catNombre = $row['categoria']['nombre'];
+                $domNombre = $row['dominio']['nombre'];
+                $dimNombre = $row['dimension'];
+                $itemNombre = $row['item'];
+                $itemNumero = $row['item_numero'] ?? $itemNombre;
 
-            if (! isset($grouped[$catNombre]['dominios'][$domNombre])) {
-                $grouped[$catNombre]['dominios'][$domNombre] = [
-                    'nombre' => $domNombre,
-                    'puntaje' => $domPuntaje,
-                    'dimensiones' => [],
-                ];
-            }
-
-            if (! isset($grouped[$catNombre]['dominios'][$domNombre]['dimensiones'][$dimNombre])) {
-                $grouped[$catNombre]['dominios'][$domNombre]['dimensiones'][$dimNombre] = [
-                    'nombre' => $dimNombre,
-                    'items' => [],
-                ];
-            }
-
-            // Check if item already exists
-            $itemExists = false;
-            foreach ($grouped[$catNombre]['dominios'][$domNombre]['dimensiones'][$dimNombre]['items'] as $existingItem) {
-                if ($existingItem['nombre'] === $itemNombre) {
-                    $itemExists = true;
-                    break;
+                // Initialize structure
+                if (! isset($grouped[$catNombre])) {
+                    $grouped[$catNombre] = [
+                        'nombre' => $catNombre,
+                        'dominios' => [],
+                    ];
                 }
-            }
 
-            if (! $itemExists) {
-                $grouped[$catNombre]['dominios'][$domNombre]['dimensiones'][$dimNombre]['items'][] = [
-                    'nombre' => $itemNombre,
-                    'puntaje' => $row['puntaje'],
-                ];
+                if (! isset($grouped[$catNombre]['dominios'][$domNombre])) {
+                    $grouped[$catNombre]['dominios'][$domNombre] = [
+                        'nombre' => $domNombre,
+                        'dimensiones' => [],
+                    ];
+                }
+
+                if (! isset($grouped[$catNombre]['dominios'][$domNombre]['dimensiones'][$dimNombre])) {
+                    $grouped[$catNombre]['dominios'][$domNombre]['dimensiones'][$dimNombre] = [
+                        'nombre' => $dimNombre,
+                        'items' => [],
+                    ];
+                }
+
+                // Accumulate scores for averaging
+                if (! isset($itemScores[$catNombre][$domNombre][$dimNombre][$itemNumero])) {
+                    $itemScores[$catNombre][$domNombre][$dimNombre][$itemNumero] = [
+                        'scores' => [],
+                        'nombre' => $itemNombre,
+                    ];
+                }
+
+                $itemScores[$catNombre][$domNombre][$dimNombre][$itemNumero]['scores'][] = $row['puntaje'];
+            }
+        }
+
+        // Calculate averages and build items structure
+        foreach ($itemScores as $catNombre => $dominios) {
+            foreach ($dominios as $domNombre => $dimensiones) {
+                foreach ($dimensiones as $dimNombre => $items) {
+                    foreach ($items as $itemNumero => $itemData) {
+                        $scores = $itemData['scores'];
+                        $promedio = count($scores) > 0 ? array_sum($scores) / count($scores) : 0;
+                        // Round to nearest integer (frequency level)
+                        $promedioRedondeado = round($promedio);
+
+                        $grouped[$catNombre]['dominios'][$domNombre]['dimensiones'][$dimNombre]['items'][] = [
+                            'nombre' => $itemData['nombre'],
+                            'item_numero' => $itemNumero,
+                            'puntaje' => $promedioRedondeado, // Rounded average for frequency
+                            'promedio' => round($promedio, 2), // Precise average for display
+                        ];
+                    }
+                }
             }
         }
 
@@ -260,15 +280,39 @@ class PaperEvaluationReportService
         $result = [];
         foreach ($grouped as $catData) {
             $dominios = [];
+            $catSumatoria = 0;
+
             foreach ($catData['dominios'] as $domData) {
                 $dimensiones = [];
+                $domSumatoria = 0;
+
                 foreach ($domData['dimensiones'] as $dimData) {
+                    // Calculate dimension sumatoria (sum of rounded item averages)
+                    $dimSumatoria = 0;
+                    foreach ($dimData['items'] as $item) {
+                        $dimSumatoria += $item['puntaje']; // Already rounded
+                    }
+
+                    $dimData['sumatoria'] = $dimSumatoria;
+                    // Dimensions don't have specific NOM-035 thresholds, so no nivel_riesgo
+                    $domSumatoria += $dimSumatoria;
+
                     $dimensiones[] = $dimData;
                 }
+
                 $domData['dimensiones'] = $dimensiones;
+                $domData['sumatoria'] = $domSumatoria;
+                // Calculate risk level for domain based on its sumatoria
+                $domData['nivel_riesgo'] = $this->getDomainRiskLevel($domData['nombre'], $domSumatoria);
+                $catSumatoria += $domSumatoria;
+
                 $dominios[] = $domData;
             }
+
             $catData['dominios'] = $dominios;
+            $catData['sumatoria'] = $catSumatoria;
+            // Calculate risk level for category based on its sumatoria
+            $catData['nivel_riesgo'] = $this->getCategoryRiskLevel($catData['nombre'], $catSumatoria);
 
             // Calculate rowspans
             $catData['rowspan'] = 0;
