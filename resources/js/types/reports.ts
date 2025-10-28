@@ -61,12 +61,38 @@ export interface ParticipantScore {
     created_at: string;
 }
 
+export interface DetailedResultItem {
+    nombre: string;
+    puntaje: number;
+}
+
+export interface DetailedResultDimension {
+    nombre: string;
+    items: DetailedResultItem[];
+    rowspan: number;
+}
+
+export interface DetailedResultDomain {
+    nombre: string;
+    puntaje: number;
+    dimensiones: DetailedResultDimension[];
+    rowspan: number;
+}
+
+export interface DetailedResultCategory {
+    nombre: string;
+    puntaje: number;
+    dominios: DetailedResultDomain[];
+    rowspan: number;
+}
+
 export interface ReportSummaryData {
     grouped_by_category: CategoryReportItem[];
     grouped_by_domain: DomainReportItem[];
     grouped_by_dimension: DimensionReportItem[];
     final_risk_levels: FinalRiskLevel[];
     personalCalification: ParticipantScore[];
+    detailed_results: DetailedResultCategory[];
 }
 
 export interface DemographicItem {
