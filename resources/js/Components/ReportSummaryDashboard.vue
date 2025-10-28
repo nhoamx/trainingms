@@ -18,6 +18,7 @@ import type {
     DimensionReportItem,
     RiskLevels,
     PersonalByRisk,
+    DetailedResultCategory,
 } from '../types/reports';
 
 const props = withDefaults(defineProps<ReportSummaryDashboardProps>(), {
@@ -29,14 +30,14 @@ const props = withDefaults(defineProps<ReportSummaryDashboardProps>(), {
 
 // Tab configuration
 const tabs: Tab[] = [
-    { key: 'domain', label: 'Dominios' },
-    { key: 'category', label: 'Categorías' },
-    { key: 'participants', label: 'Participantes' },
-    { key: 'demographics', label: 'Datos Demográficos' },
     { key: 'final', label: 'Calificación Final' },
+    { key: 'participants', label: 'Participantes' },
+    { key: 'category', label: 'Categorías' },
+    { key: 'domain', label: 'Dominios' },
+    { key: 'demographics', label: 'Datos Demográficos' },
 ];
 
-const activeTab = ref<string>('domain');
+const activeTab = ref<string>('final');
 const rawSummaryData = ref<ReportSummaryData | null>(null);
 const isLoading = ref<boolean>(false);
 const downloadingReport = ref<'demographic' | 'diagnostic' | 'executive' | null>(null);
@@ -252,6 +253,11 @@ const finalPersonalByRisk = computed<PersonalByRisk>(() => processedFinalRiskDat
     'Medio': [],
     'Alto': [],
     'Muy Alto': [],
+});
+
+// Detailed results for final tab table
+const detailedResults = computed(() => {
+    return rawSummaryData.value?.detailed_results || [];
 });
 
 // Participant data
@@ -642,7 +648,7 @@ watch(() => props.currentOrganization, (newOrg) => {
                 <div class="mb-4 bg-blue-50 p-3 rounded border border-blue-200">
                     <p class="text-sm">Mostrando distribución de personal según el nivel de riesgo final basado en la calificación total del cuestionario.</p>
                 </div>
-                <div class="bg-white p-4 rounded-lg shadow">
+                <div class="bg-white p-4 rounded-lg shadow mb-6">
                     <RiskSummaryCards
                         :itemData="{
                             name: 'Calificación Final',
@@ -666,6 +672,47 @@ watch(() => props.currentOrganization, (newOrg) => {
                         itemType="final"
                         :organizationId="selectedOrgId"
                     />
+                </div>
+
+                <!-- Detailed Results Table -->
+                <div v-if="detailedResults && detailedResults.length > 0" class="overflow-x-auto mt-6 bg-white p-4 rounded-lg shadow">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Detalle por Categoría, Dominio y Dimensión</h3>
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Categoría</th>
+                                <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Dominio</th>
+                                <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Dimensión</th>
+                                <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Ítem</th>
+                                <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Puntaje</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template v-for="(cat, catIdx) in detailedResults" :key="`cat-${catIdx}`">
+                                <template v-for="(dom, domIdx) in cat.dominios" :key="`dom-${catIdx}-${domIdx}`">
+                                    <template v-for="(dim, dimIdx) in dom.dimensiones" :key="`dim-${catIdx}-${domIdx}-${dimIdx}`">
+                                        <template v-for="(item, itemIdx) in dim.items" :key="`item-${catIdx}-${domIdx}-${dimIdx}-${itemIdx}`">
+                                            <tr>
+                                                <td v-if="domIdx === 0 && dimIdx === 0 && itemIdx === 0" :rowspan="cat.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle font-medium bg-gray-50">
+                                                    {{ cat.nombre }}
+                                                    <div class="text-xs text-gray-500 font-normal">Puntaje: {{ cat.puntaje }}</div>
+                                                </td>
+                                                <td v-if="dimIdx === 0 && itemIdx === 0" :rowspan="dom.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle font-medium">
+                                                    {{ dom.nombre }}
+                                                    <div class="text-xs text-gray-500 font-normal">Puntaje: {{ dom.puntaje }}</div>
+                                                </td>
+                                                <td v-if="itemIdx === 0" :rowspan="dim.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle text-sm">
+                                                    {{ dim.nombre }}
+                                                </td>
+                                                <td class="px-6 py-4 border border-gray-200 text-center text-sm">{{ item.nombre }}</td>
+                                                <td class="px-6 py-4 border border-gray-200 text-center font-semibold">{{ item.puntaje }}</td>
+                                            </tr>
+                                        </template>
+                                    </template>
+                                </template>
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

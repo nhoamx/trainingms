@@ -43,6 +43,7 @@ class PaperEvaluationReportService
         $dimensionData = $this->aggregateByDimension($evaluations);
         $finalRiskData = $this->aggregateFinalRiskLevels($evaluations);
         $participantData = $this->aggregateParticipantScores($evaluations);
+        $detailedResults = $this->getDetailedResultsForOrganization($evaluations);
 
         return [
             'grouped_by_category' => $categoryData,
@@ -50,6 +51,7 @@ class PaperEvaluationReportService
             'grouped_by_dimension' => $dimensionData,
             'final_risk_levels' => $finalRiskData,
             'personalCalification' => $participantData,
+            'detailed_results' => $detailedResults,
         ];
     }
 
@@ -187,6 +189,102 @@ class PaperEvaluationReportService
         usort($participantScores, fn ($a, $b) => $b['calificacion'] <=> $a['calificacion']);
 
         return $participantScores;
+    }
+
+    /**
+     * Get detailed results for all evaluations in organization
+     * Returns a unified table structure like in Detail view
+     */
+    protected function getDetailedResultsForOrganization(Collection $evaluations): array
+    {
+        if ($evaluations->isEmpty()) {
+            return [];
+        }
+
+        // Get the first evaluation to establish the structure
+        $firstEvaluation = $evaluations->first();
+        $detailedResults = $this->scoreService->getDetailedResults($firstEvaluation);
+
+        // Group by categoria -> dominio -> dimension -> item to get unique structure
+        $grouped = [];
+
+        foreach ($detailedResults as $row) {
+            $catNombre = $row['categoria']['nombre'];
+            $catPuntaje = $row['categoria']['puntaje'];
+            $domNombre = $row['dominio']['nombre'];
+            $domPuntaje = $row['dominio']['puntaje'];
+            $dimNombre = $row['dimension'];
+            $itemNombre = $row['item'];
+
+            if (! isset($grouped[$catNombre])) {
+                $grouped[$catNombre] = [
+                    'nombre' => $catNombre,
+                    'puntaje' => $catPuntaje,
+                    'dominios' => [],
+                ];
+            }
+
+            if (! isset($grouped[$catNombre]['dominios'][$domNombre])) {
+                $grouped[$catNombre]['dominios'][$domNombre] = [
+                    'nombre' => $domNombre,
+                    'puntaje' => $domPuntaje,
+                    'dimensiones' => [],
+                ];
+            }
+
+            if (! isset($grouped[$catNombre]['dominios'][$domNombre]['dimensiones'][$dimNombre])) {
+                $grouped[$catNombre]['dominios'][$domNombre]['dimensiones'][$dimNombre] = [
+                    'nombre' => $dimNombre,
+                    'items' => [],
+                ];
+            }
+
+            // Check if item already exists
+            $itemExists = false;
+            foreach ($grouped[$catNombre]['dominios'][$domNombre]['dimensiones'][$dimNombre]['items'] as $existingItem) {
+                if ($existingItem['nombre'] === $itemNombre) {
+                    $itemExists = true;
+                    break;
+                }
+            }
+
+            if (! $itemExists) {
+                $grouped[$catNombre]['dominios'][$domNombre]['dimensiones'][$dimNombre]['items'][] = [
+                    'nombre' => $itemNombre,
+                    'puntaje' => $row['puntaje'],
+                ];
+            }
+        }
+
+        // Convert to array structure for frontend
+        $result = [];
+        foreach ($grouped as $catData) {
+            $dominios = [];
+            foreach ($catData['dominios'] as $domData) {
+                $dimensiones = [];
+                foreach ($domData['dimensiones'] as $dimData) {
+                    $dimensiones[] = $dimData;
+                }
+                $domData['dimensiones'] = $dimensiones;
+                $dominios[] = $domData;
+            }
+            $catData['dominios'] = $dominios;
+
+            // Calculate rowspans
+            $catData['rowspan'] = 0;
+            foreach ($catData['dominios'] as &$dom) {
+                $dom['rowspan'] = 0;
+                foreach ($dom['dimensiones'] as &$dim) {
+                    $dim['rowspan'] = count($dim['items']);
+                    $dom['rowspan'] += $dim['rowspan'];
+                }
+                $catData['rowspan'] += $dom['rowspan'];
+            }
+
+            $result[] = $catData;
+        }
+
+        return $result;
     }
 
     /**
@@ -422,6 +520,7 @@ class PaperEvaluationReportService
             'grouped_by_dimension' => [],
             'final_risk_levels' => [],
             'personalCalification' => [],
+            'detailed_results' => [],
         ];
     }
 
