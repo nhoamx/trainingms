@@ -14,6 +14,7 @@ class PaperEvaluation extends Model
 
     protected $fillable = [
         'folio',
+        'evaluee_name',
         'evaluation_type_code',
         'organization_code',
         'personal_folio',
@@ -270,5 +271,113 @@ class PaperEvaluation extends Model
     public function getCustomFieldsAttribute(): ?array
     {
         return $this->raw_data['custom_fields'] ?? null;
+    }
+
+    /**
+     * Update evaluee name for ALL related evaluations
+     * This updates all evaluations (01, 02, 03 types) for the same person in the same organization
+     */
+    public function updateName(string $name): bool
+    {
+        // Get current organization_id and personal_folio to find all related evaluations
+        $currentOrganizationId = $this->organization_id;
+        $currentPersonalFolio = $this->personal_folio;
+
+        // Find all evaluations with the same organization_id and personal_folio
+        $relatedEvaluations = self::where('organization_id', $currentOrganizationId)
+            ->where('personal_folio', $currentPersonalFolio)
+            ->get();
+
+        // Update ALL related evaluations
+        $updated = 0;
+        foreach ($relatedEvaluations as $evaluation) {
+            $evaluation->update(['evaluee_name' => $name]);
+            $updated++;
+        }
+
+        // Refresh current model
+        $this->refresh();
+
+        return $updated > 0;
+    }
+
+    /**
+     * Update personal folio and recalculate complete folio for ALL related evaluations
+     * This updates all evaluations (01, 02, 03 types) for the same person in the same organization
+     */
+    public function updatePersonalFolio(string $personalFolio): bool
+    {
+        // Validate format (exactly 4 digits)
+        if (! preg_match('/^\d{4}$/', $personalFolio)) {
+            throw new \InvalidArgumentException('Personal folio must be exactly 4 digits');
+        }
+
+        // Get current organization_id and personal_folio to find all related evaluations
+        $currentOrganizationId = $this->organization_id;
+        $currentPersonalFolio = $this->personal_folio;
+
+        // Find all evaluations with the same organization_id and personal_folio
+        // These are all the guides (I, III, V) for the same person
+        $relatedEvaluations = self::where('organization_id', $currentOrganizationId)
+            ->where('personal_folio', $currentPersonalFolio)
+            ->get();
+
+        // Check if any of the new folios would conflict with existing records
+        foreach ($relatedEvaluations as $evaluation) {
+            $newFolio = $evaluation->evaluation_type_code.$evaluation->organization_code.$personalFolio;
+
+            // Check if folio exists for records outside this group
+            $conflict = self::where('folio', $newFolio)
+                ->where('organization_id', '!=', $currentOrganizationId)
+                ->orWhere(function ($query) use ($newFolio, $currentPersonalFolio) {
+                    $query->where('folio', $newFolio)
+                        ->where('personal_folio', '!=', $currentPersonalFolio);
+                })
+                ->exists();
+
+            if ($conflict) {
+                throw new \InvalidArgumentException("Folio {$newFolio} already exists for another person or organization");
+            }
+        }
+
+        // Update ALL related evaluations
+        $updated = 0;
+        foreach ($relatedEvaluations as $evaluation) {
+            $newFolio = $evaluation->evaluation_type_code.$evaluation->organization_code.$personalFolio;
+
+            $evaluation->update([
+                'personal_folio' => $personalFolio,
+                'folio' => $newFolio,
+            ]);
+
+            $updated++;
+        }
+
+        // Refresh current model
+        $this->refresh();
+
+        return $updated > 0;
+    }
+
+    /**
+     * Check if a folio is available (not used by other records)
+     */
+    public static function isFolioAvailable(string $folio, ?string $excludeId = null): bool
+    {
+        $query = self::where('folio', $folio);
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return ! $query->exists();
+    }
+
+    /**
+     * Generate complete folio from components
+     */
+    public static function generateFolio(string $evaluationTypeCode, string $organizationCode, string $personalFolio): string
+    {
+        return $evaluationTypeCode.$organizationCode.$personalFolio;
     }
 }

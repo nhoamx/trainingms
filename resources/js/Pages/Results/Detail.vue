@@ -17,10 +17,37 @@
                     </div>
                 </div>
 
-                <div class="mt-4 text-gray-600">
-                    <p class="text-lg font-semibold">{{ organization.name }}</p>
-                    <p>Folio Personal: {{ personalFolio }}</p>
-                    <p>Fecha: {{ evaluation.created_at }}</p>
+                <div class="mt-4">
+                    <div class="flex items-center justify-between">
+                        <div class="text-gray-600">
+                            <p class="text-lg font-semibold">{{ organization.name }}</p>
+                            <div class="flex items-center gap-2">
+                                <p>Folio Personal: {{ personalFolio }}</p>
+                                <button
+                                    @click="showEditFolioModal = true"
+                                    class="text-blue-600 hover:text-blue-800 p-1"
+                                    title="Editar folio"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <p>Nombre: {{ evaluation.evaluee_name || 'Sin nombre asignado' }}</p>
+                                <button
+                                    @click="showEditNameModal = true"
+                                    class="text-blue-600 hover:text-blue-800 p-1"
+                                    title="Editar nombre"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p>Fecha: {{ evaluation.created_at }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -397,13 +424,40 @@
                 </div>
             </div>
         </div>
+
+        <!-- Edit Modals -->
+        <EditNameModal
+            :show="showEditNameModal"
+            :evaluation="{
+                id: evaluation.id,
+                folio: evaluation.folio,
+                evaluee_name: evaluation.evaluee_name
+            }"
+            @close="showEditNameModal = false"
+            @updated="handleEvaluationUpdate"
+        />
+
+        <EditFolioModal
+            :show="showEditFolioModal"
+            :evaluation="{
+                id: evaluation.id,
+                folio: evaluation.folio,
+                evaluation_type_code: evaluation.evaluation_type_code || evaluation.folio.substring(0, 2),
+                organization_code: evaluation.organization_code || evaluation.folio.substring(2, 5),
+                personal_folio: personalFolio
+            }"
+            @close="showEditFolioModal = false"
+            @updated="handleEvaluationUpdate"
+        />
     </Dashboard>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import Dashboard from "../../Layouts/Dashboard.vue";
+import EditNameModal from '../../Components/PaperEvaluation/EditNameModal.vue';
+import EditFolioModal from '../../Components/PaperEvaluation/EditFolioModal.vue';
 import type {
     Organization,
     Evaluation,
@@ -440,6 +494,15 @@ const props = withDefaults(defineProps<Props>(), {
     cisnerosResults: null,
     isAdmin: false
 });
+
+// Modal states
+const showEditNameModal = ref(false);
+const showEditFolioModal = ref(false);
+
+// Handle evaluation updates - Inertia automatically reloads with new data
+const handleEvaluationUpdate = () => {
+    router.reload({ only: ['evaluation', 'personalFolio'] });
+};
 
 // Agrupa los resultados para renderizar la tabla jerárquica con rowspan
 const groupedResults = computed<GroupedCategory[]>(() => {

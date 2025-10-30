@@ -47,6 +47,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/organization/{id}/online-results/report', [App\Http\Controllers\OnlineResultsController::class, 'report'])->name('organization.online-results.report');
     Route::get('/organization/{organizationId}/online-results/{id}', [App\Http\Controllers\OnlineResultsController::class, 'show'])->name('organization.online-results.show');
 
+    // Paper evaluation editing routes
+    Route::prefix('paper-evaluations')->middleware(['auth'])->name('paper-evaluations.')->group(function () {
+        Route::patch('/{paperEvaluation}', [App\Http\Controllers\PaperEvaluationController::class, 'update'])->name('update');
+        Route::patch('/{paperEvaluation}/name', [App\Http\Controllers\PaperEvaluationController::class, 'updateName'])->name('update-name');
+        Route::patch('/{paperEvaluation}/folio', [App\Http\Controllers\PaperEvaluationController::class, 'updateFolio'])->name('update-folio');
+        Route::post('/{paperEvaluation}/check-folio', [App\Http\Controllers\PaperEvaluationController::class, 'checkFolioAvailability'])->name('check-folio');
+    });
+
     Route::post('/folio-batches', [App\Http\Controllers\FolioBatchController::class, 'store'])->name('folio-batches.store');
     Route::get('/folio-batches/{batchId}/folios', [App\Http\Controllers\FolioBatchController::class, 'getFolios'])->name('folio-batches.folios');
     Route::delete('/folio-batches/{batchId}', [App\Http\Controllers\FolioBatchController::class, 'destroy'])->name('folio-batches.destroy');
