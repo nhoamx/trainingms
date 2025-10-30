@@ -34,7 +34,20 @@ const answers = ref({
         estado_civil: '',
         nivel_estudios: '',
         ine_frente: null,
-        ine_reverso: null
+        ine_reverso: null,
+        datos_laborales: {
+            ocupacion_puesto: '',
+            departamento_seccion_area: '',
+            tipo_puesto: '',
+            tipo_contratacion: '',
+            tipo_personal: '',
+            tipo_jornada: '',
+            rotacion_turnos: '',
+            experiencia: {
+                tiempo_puesto_actual: '',
+                tiempo_experiencia_laboral: ''
+            }
+        }
     },
     custom_fields: {}
 });
