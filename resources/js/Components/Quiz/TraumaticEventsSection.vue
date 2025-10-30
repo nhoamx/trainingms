@@ -18,7 +18,7 @@
                             type="radio"
                             :name="`${namePrefix}_${index}`"
                             :value="option.value"
-                            :checked="modelValue[index] === option.value"
+                            :checked="modelValue?.[index] === option.value"
                             @change="updateAnswer(index, option.value)"
                             class="form-radio h-4 w-4 text-slate-800"
                         >
@@ -60,8 +60,14 @@ const emit = defineEmits(['update:modelValue']);
 
 // Inicializa todas las preguntas traumáticas como null si no existen
 onMounted(() => {
+    if (!props.modelValue) return;
+    
     const newValue = { ...props.modelValue };
-    Object.keys(props.questions).forEach(index => {
+    const questionKeys = Array.isArray(props.questions) 
+        ? props.questions.map((_, idx) => idx)
+        : Object.keys(props.questions);
+    
+    questionKeys.forEach(index => {
         if (!(index in newValue)) {
             newValue[index] = null;
         }
@@ -71,7 +77,7 @@ onMounted(() => {
 
 const updateAnswer = (index, value) => {
     emit('update:modelValue', {
-        ...props.modelValue,
+        ...(props.modelValue || {}),
         [index]: value
     });
 };
