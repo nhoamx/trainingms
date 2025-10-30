@@ -56,6 +56,44 @@ const checkTraumaticEvents = () => {
     showFollowUpQuestions.value = Object.values(traumaticAnswers).some(answer => answer === true);
 };
 
+// Validaciones
+const isReferenciaVComplete = computed(() => {
+    const rv = answers.value.referencia_v;
+    const dl = rv.datos_laborales;
+    
+    return rv.sexo && rv.edad && rv.estado_civil && rv.nivel_estudios &&
+           dl.ocupacion_puesto && dl.tipo_puesto && dl.tipo_contratacion &&
+           dl.tipo_personal && dl.tipo_jornada && dl.rotacion_turnos &&
+           dl.experiencia.tiempo_puesto_actual && dl.experiencia.tiempo_experiencia_laboral;
+});
+
+const isAcontecimientosComplete = computed(() => {
+    const traumaticQuestions = props.quiz?.questions?.acontecimientos_traumaticos?.questions || [];
+    const traumaticAnswers = answers.value.acontecimientos_traumaticos || {};
+    
+    if (!Array.isArray(traumaticQuestions) || traumaticQuestions.length === 0) return true;
+    
+    return traumaticQuestions.every((_, idx) => traumaticAnswers[idx] !== undefined);
+});
+
+const isReferenciaIComplete = computed(() => {
+    if (!showFollowUpQuestions.value) return true;
+    
+    const followUpQuestions = props.quiz?.reference_i || [];
+    const referenciaIAnswers = answers.value.referencia_i || {};
+    
+    if (!Array.isArray(followUpQuestions) || followUpQuestions.length === 0) return true;
+    
+    return followUpQuestions.every((_, idx) => referenciaIAnswers[idx] !== undefined);
+});
+
+const canAdvanceFromCurrentSection = computed(() => {
+    if (currentSection.value === 'referencia_v') return isReferenciaVComplete.value;
+    if (currentSection.value === 'acontecimientos_traumaticos') return isAcontecimientosComplete.value;
+    if (currentSection.value === 'referencia_i') return isReferenciaIComplete.value;
+    return true;
+});
+
 const nextSection = () => {
     if (currentSection.value === 'referencia_v') {
         currentSection.value = 'acontecimientos_traumaticos';
@@ -281,7 +319,9 @@ const submitEvaluation = () => {
                         <div class="flex items-center justify-center sm:justify-end space-x-4">
                             <button
                                 @click="nextSection"
+                                :disabled="!canAdvanceFromCurrentSection"
                                 class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-slate-800 rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                :title="!canAdvanceFromCurrentSection ? 'Por favor completa todas las preguntas requeridas antes de continuar' : ''"
                             >
                                 Siguiente sección
                             </button>
