@@ -102,19 +102,31 @@
                                             <template v-for="(dim, dimIdx) in dom.dimensiones" :key="dimIdx">
                                                 <template v-for="(item, itemIdx) in dim.items" :key="itemIdx">
                                                     <tr>
-                                                        <td v-if="domIdx === 0 && dimIdx === 0 && itemIdx === 0" :rowspan="cat.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle font-medium bg-gray-50">
-                                                            {{ cat.nombre }}
-                                                            <div class="text-xs text-gray-500 font-normal">Puntaje: {{ cat.puntaje }}</div>
+                                                        <td v-if="domIdx === 0 && dimIdx === 0 && itemIdx === 0" :rowspan="cat.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle bg-gray-50">
+                                                            <div class="font-medium">{{ cat.nombre }}</div>
+                                                            <div class="mt-1">
+                                                                <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskLevelColor(cat.nivel_riesgo)]">
+                                                                    {{ cat.nivel_riesgo }}: {{ cat.puntaje }}
+                                                                </span>
+                                                            </div>
                                                         </td>
                                                         <td v-if="dimIdx === 0 && itemIdx === 0" :rowspan="dom.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle font-medium">
-                                                            {{ dom.nombre }}
-                                                            <div class="text-xs text-gray-500 font-normal">Puntaje: {{ dom.puntaje }}</div>
+                                                            <div class="font-medium">{{ dom.nombre }}</div>
+                                                            <div class="mt-1">
+                                                                <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskLevelColor(dom.nivel_riesgo)]">
+                                                                    {{ dom.nivel_riesgo }}: {{ dom.puntaje }}
+                                                                </span>
+                                                            </div>
                                                         </td>
                                                         <td v-if="itemIdx === 0" :rowspan="dim.rowspan" class="px-6 py-4 border border-gray-200 text-center align-middle text-sm">
                                                             {{ dim.nombre }}
                                                         </td>
                                                         <td class="px-6 py-4 border border-gray-200 text-center text-sm">{{ item.nombre }}</td>
-                                                        <td class="px-6 py-4 border border-gray-200 text-center font-semibold">{{ item.puntaje }}</td>
+                                                        <td class="px-6 py-4 border border-gray-200 text-center">
+                                                            <span :class="['font-semibold px-2 py-1 rounded inline-block', getFrequencyColor(item.puntaje)]">
+                                                                {{ item.puntaje }}
+                                                            </span>
+                                                        </td>
                                                     </tr>
                                                 </template>
                                             </template>
@@ -435,12 +447,13 @@ const groupedResults = computed<GroupedCategory[]>(() => {
     const cats: GroupedCategory[] = [];
     const catMap: Record<string, GroupedCategory> = {};
     
-    props.results.forEach(row => {
+    props.results.forEach((row: DetailedResultRow) => {
         let cat = catMap[row.categoria.nombre];
         if (!cat) {
             cat = {
                 nombre: row.categoria.nombre,
                 puntaje: row.categoria.puntaje,
+                nivel_riesgo: (row.categoria as any).nivel_riesgo,
                 dominios: [],
                 rowspan: 0
             };
@@ -453,6 +466,7 @@ const groupedResults = computed<GroupedCategory[]>(() => {
             dom = {
                 nombre: row.dominio.nombre,
                 puntaje: row.dominio.puntaje,
+                nivel_riesgo: (row.dominio as any).nivel_riesgo,
                 dimensiones: [],
                 rowspan: 0
             };
@@ -516,7 +530,7 @@ const availableTabs = computed<Tab[]>(() => {
 
 const categoryScores = computed<CategorySummary[]>(() => {
     const categories: Record<string, CategorySummary> = {};
-    props.results.forEach(row => {
+    props.results.forEach((row: DetailedResultRow) => {
         if (!categories[row.categoria.nombre]) {
             categories[row.categoria.nombre] = {
                 name: row.categoria.nombre,
@@ -529,7 +543,7 @@ const categoryScores = computed<CategorySummary[]>(() => {
 
 const domainScores = computed<DomainSummary[]>(() => {
     const domains: Record<string, DomainSummary> = {};
-    props.results.forEach(row => {
+    props.results.forEach((row: DetailedResultRow) => {
         const key = `${row.categoria.nombre}|${row.dominio.nombre}`;
         if (!domains[key]) {
             domains[key] = {
@@ -560,6 +574,61 @@ const getRiskLevelClass = (score: number): string => {
     };
     return classes[level] || 'text-gray-600';
 };
+
+/**
+ * Get color class based on frequency level (0-4) for ITEMS
+ * 0 = Nunca (Azul chillón)
+ * 1 = Casi nunca (Verde mayate)
+ * 2 = Algunas veces (Amarillo chillón)
+ * 3 = Casi siempre (Naranja)
+ * 4 = Siempre (Rojo)
+ */
+const getFrequencyColor = (value: number): string => {
+    const roundedValue = Math.round(value);
+    
+    switch (roundedValue) {
+        case 0:
+            return 'bg-cyan-500 text-white'; // Azul chillón (Nunca)
+        case 1:
+            return 'bg-green-500 text-white'; // Verde mayate (Casi nunca)
+        case 2:
+            return 'bg-yellow-400 text-black'; // Amarillo chillón (Algunas veces)
+        case 3:
+            return 'bg-orange-500 text-white'; // Naranja (Casi siempre)
+        case 4:
+            return 'bg-red-500 text-white'; // Rojo (Siempre)
+        default:
+            return 'bg-gray-400 text-white';
+    }
+};
+
+/**
+ * Get color class based on NOM-035 risk level for DIMENSIONS/DOMAINS/CATEGORIES
+ * Nulo = Verde claro/Turquesa
+ * Bajo = Verde
+ * Medio = Amarillo
+ * Alto = Naranja
+ * Muy Alto = Rojo
+ */
+const getRiskLevelColor = (nivelRiesgo: string | undefined): string => {
+    if (!nivelRiesgo) return 'bg-gray-200 text-gray-700';
+    
+    switch (nivelRiesgo) {
+        case 'Nulo':
+            return 'bg-cyan-500 text-white'; // Verde claro/Turquesa
+        case 'Bajo':
+            return 'bg-green-500 text-white'; // Verde
+        case 'Medio':
+            return 'bg-yellow-400 text-black'; // Amarillo
+        case 'Alto':
+            return 'bg-orange-500 text-white'; // Naranja
+        case 'Muy Alto':
+            return 'bg-red-500 text-white'; // Rojo
+        default:
+            return 'bg-gray-200 text-gray-700';
+    }
+};
+
 
 // Handle image loading errors
 const handleImageError = (event: Event) => {
