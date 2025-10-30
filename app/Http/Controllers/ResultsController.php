@@ -342,6 +342,7 @@ class ResultsController extends Controller
             'evaluation' => [
                 'id' => $referenciaIII?->id ?? $evaluations->first()->id,
                 'folio' => $referenciaIII?->folio ?? $evaluations->first()->folio,
+                'evaluee_name' => $referenciaIII?->evaluee_name ?? $evaluations->first()->evaluee_name,
                 'created_at' => $referenciaIII?->created_at->format('Y-m-d H:i:s') ?? $evaluations->first()->created_at->format('Y-m-d H:i:s'),
                 'personal_folio' => $personalFolio,
                 'has_guide_i' => (bool) $referenciaI,
