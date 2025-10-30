@@ -34,6 +34,27 @@ defineEmits(['submit']);
                     Tus respuestas aún NO han sido guardadas
                 </p>
             </div>
+
+            <p class="text-sm text-slate-500 mb-6">
+                Una vez que hagas clic en "Guardar Respuestas", tus datos serán enviados y no podrás modificarlos.
+            </p>
+            
+            <button
+                @click="$emit('submit')"
+                :disabled="isSubmitting"
+                class="w-full sm:w-auto px-8 py-3 text-base font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm mb-8"
+            >
+                <span v-if="isSubmitting" class="flex items-center justify-center">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Guardando respuestas...
+                </span>
+                <span v-else>
+                    Guardar Respuestas
+                </span>
+            </button>
             
             <div class="bg-slate-50 rounded-lg p-6 mb-8">
                 <h3 class="text-lg font-medium text-slate-800 mb-3">
@@ -61,26 +82,6 @@ defineEmits(['submit']);
                 </ul>
             </div>
             
-            <p class="text-sm text-slate-500 mb-6">
-                Una vez que hagas clic en "Guardar Respuestas", tus datos serán enviados y no podrás modificarlos.
-            </p>
-            
-            <button
-                @click="$emit('submit')"
-                :disabled="isSubmitting"
-                class="w-full sm:w-auto px-8 py-3 text-base font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-            >
-                <span v-if="isSubmitting" class="flex items-center justify-center">
-                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Guardando respuestas...
-                </span>
-                <span v-else>
-                    Guardar Respuestas
-                </span>
-            </button>
         </div>
     </div>
 </template>
