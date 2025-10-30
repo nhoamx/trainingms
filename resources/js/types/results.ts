@@ -17,11 +17,13 @@ export interface Evaluation {
 export interface CategoryScore {
     nombre: string;
     puntaje: number;
+    nivel_riesgo?: string;
 }
 
 export interface DomainScore {
     nombre: string;
     puntaje: number;
+    nivel_riesgo?: string;
 }
 
 export interface DetailedResultRow {
@@ -78,6 +80,7 @@ export interface Tab {
 export interface GroupedCategory {
     nombre: string;
     puntaje: number;
+    nivel_riesgo?: string;
     dominios: GroupedDomain[];
     rowspan: number;
 }
@@ -85,6 +88,7 @@ export interface GroupedCategory {
 export interface GroupedDomain {
     nombre: string;
     puntaje: number;
+    nivel_riesgo?: string;
     dimensiones: GroupedDimension[];
     rowspan: number;
 }
