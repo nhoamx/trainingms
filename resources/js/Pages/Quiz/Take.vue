@@ -362,7 +362,7 @@ const submitEvaluation = () => {
                 <div class="p-4 sm:p-6">
                     <!-- Encabezado -->
                     <div class="mb-8">
-                        <h1 class="text-xl font-medium text-slate-900">{{ quiz.name }}</h1>
+                        <h1 class="text-xl font-medium text-slate-900">CUESTIONARIO PARA IDENTIFICAR LOS FACTORES DE RIESGO PSICOSOCIAL Y EVALUAR EL ENTORNO ORGANIZACIONAL EN LOS CENTROS DE TRABAJO</h1>
                         <div class="mt-4 flex flex-wrap gap-2">
                             <div
                                 v-for="(section, key) in {
