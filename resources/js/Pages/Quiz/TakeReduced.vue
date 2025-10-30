@@ -201,10 +201,10 @@ const submitEvaluation = () => {
                 <div class="p-4 sm:p-6">
                     <!-- Encabezado -->
                     <div class="mb-8">
-                        <h1 class="text-xl font-medium text-slate-900">{{ quiz.name }}</h1>
-                        <div class="mt-2 text-sm text-slate-600">
+                        <h1 class="text-xl font-medium text-slate-900">CUESTIONARIO PARA IDENTIFICAR A LOS TRABAJADORES QUE FUERON SUJETOS A ACONTECIMIENTOS TRAUMÁTICOS SEVEROS</h1>
+                        <!-- <div class="mt-2 text-sm text-slate-600">
                             Evaluación Reducida - Solo Acontecimientos Traumáticos
-                        </div>
+                        </div> -->
                     </div>
 
                     <!-- Sección Referencia V -->
