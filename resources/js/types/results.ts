@@ -63,6 +63,7 @@ export interface GuideVResults {
     folio: string;
     created_at: string;
     demographic_data: Record<string, string>;
+    raw_demographic_data?: Record<string, any>; // Datos raw para edición
 }
 
 export interface CisnerosResults {

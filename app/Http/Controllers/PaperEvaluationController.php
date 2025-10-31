@@ -95,6 +95,91 @@ class PaperEvaluationController extends Controller
     }
 
     /**
+     * Update demographic data (ocupacion and departamento).
+     */
+    public function updateDemographicData(Request $request, PaperEvaluation $paperEvaluation): RedirectResponse
+    {
+        $request->validate([
+            'ocupacion' => 'nullable|string|max:100',
+            'departamento' => 'nullable|string|max:100',
+        ]);
+
+        $demographicData = $paperEvaluation->demographic_data ?? [];
+
+        // Helper function to split text into two lines (max 50 chars each)
+        $splitText = function (?string $text): array {
+            if (empty($text)) {
+                return ['fila1' => null, 'fila2' => null];
+            }
+
+            $text = trim($text);
+
+            // Si el texto cabe en una línea (50 caracteres)
+            if (strlen($text) <= 50) {
+                return ['fila1' => $text, 'fila2' => null];
+            }
+
+            // Si es más largo, dividir en dos líneas
+            $words = explode(' ', $text);
+            $fila1 = '';
+            $fila2 = '';
+            $currentLine = 1;
+
+            foreach ($words as $word) {
+                if ($currentLine === 1) {
+                    if (strlen($fila1.' '.$word) <= 50) {
+                        $fila1 .= ($fila1 ? ' ' : '').$word;
+                    } else {
+                        $currentLine = 2;
+                        $fila2 = $word;
+                    }
+                } else {
+                    if (strlen($fila2.' '.$word) <= 50) {
+                        $fila2 .= ($fila2 ? ' ' : '').$word;
+                    } else {
+                        // Si no cabe, truncar
+                        break;
+                    }
+                }
+            }
+
+            return [
+                'fila1' => $fila1 ?: null,
+                'fila2' => $fila2 ?: null,
+            ];
+        };
+
+        // Update ocupacion
+        if ($request->has('ocupacion')) {
+            $demographicData['ocupacion'] = $splitText($request->input('ocupacion'));
+        }
+
+        // Update departamento
+        if ($request->has('departamento')) {
+            $demographicData['departamento'] = $splitText($request->input('departamento'));
+        }
+
+        // Get raw_data and update it as well (for Referencia V evaluations)
+        $rawData = $paperEvaluation->raw_data ?? [];
+
+        // Update both demographic_data and raw_data to keep them in sync
+        if ($request->has('ocupacion')) {
+            $rawData['ocupacion'] = $demographicData['ocupacion'];
+        }
+
+        if ($request->has('departamento')) {
+            $rawData['departamento'] = $demographicData['departamento'];
+        }
+
+        $paperEvaluation->update([
+            'demographic_data' => $demographicData,
+            'raw_data' => $rawData,
+        ]);
+
+        return back()->with('success', 'Datos laborales actualizados exitosamente');
+    }
+
+    /**
      * Update only the personal folio.
      */
     public function updateFolio(UpdatePaperEvaluationRequest $request, PaperEvaluation $paperEvaluation): RedirectResponse

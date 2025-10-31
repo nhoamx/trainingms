@@ -266,7 +266,19 @@
                     <!-- Guide V Tab -->
                     <div v-else-if="currentTab === 'guideV'">
                         <div v-if="guideVResults" class="space-y-4">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Guía de Referencia V - Datos Demográficos</h3>
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold text-gray-900">Guía de Referencia V - Datos Demográficos</h3>
+                                <button
+                                    @click="showEditDemographicModal = true"
+                                    class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                    title="Editar Ocupación y Departamento"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                    </svg>
+                                    Editar Ocupación y Departamento
+                                </button>
+                            </div>
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead class="bg-gray-50">
@@ -449,6 +461,19 @@
             @close="showEditFolioModal = false"
             @updated="handleEvaluationUpdate"
         />
+
+        <EditDemographicDataModal
+            :show="showEditDemographicModal"
+            :evaluation="{
+                id: guideVResults?.id || evaluation.id,
+                folio: guideVResults?.folio || evaluation.folio,
+                demographic_data: guideVResults?.raw_demographic_data
+            }"
+            :occupation-positions="occupationPositions"
+            :department-areas="departmentAreas"
+            @close="showEditDemographicModal = false"
+            @updated="handleEvaluationUpdate"
+        />
     </Dashboard>
 </template>
 
@@ -458,6 +483,7 @@ import { Link, router } from '@inertiajs/vue3';
 import Dashboard from "../../Layouts/Dashboard.vue";
 import EditNameModal from '../../Components/PaperEvaluation/EditNameModal.vue';
 import EditFolioModal from '../../Components/PaperEvaluation/EditFolioModal.vue';
+import EditDemographicDataModal from '../../Components/PaperEvaluation/EditDemographicDataModal.vue';
 import type {
     Organization,
     Evaluation,
@@ -472,6 +498,16 @@ import type {
     DomainSummary
 } from '../../types/results';
 
+interface OccupationPosition {
+    id: number;
+    name: string;
+}
+
+interface DepartmentArea {
+    id: number;
+    name: string;
+}
+
 interface Props {
     organization: Organization;
     personalFolio: string;
@@ -482,6 +518,8 @@ interface Props {
     guideVResults: GuideVResults | null;
     guideIIIResults: GuideIIIResults | null;
     cisnerosResults: CisnerosResults | null;
+    occupationPositions: OccupationPosition[];
+    departmentAreas: DepartmentArea[];
     isAdmin?: boolean;
 }
 
@@ -492,12 +530,15 @@ const props = withDefaults(defineProps<Props>(), {
     guideVResults: null,
     guideIIIResults: null,
     cisnerosResults: null,
+    occupationPositions: () => [],
+    departmentAreas: () => [],
     isAdmin: false
 });
 
 // Modal states
 const showEditNameModal = ref(false);
 const showEditFolioModal = ref(false);
+const showEditDemographicModal = ref(false);
 
 // Handle evaluation updates - Inertia automatically reloads with new data
 const handleEvaluationUpdate = () => {

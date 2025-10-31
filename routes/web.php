@@ -52,6 +52,7 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{paperEvaluation}', [App\Http\Controllers\PaperEvaluationController::class, 'update'])->name('update');
         Route::patch('/{paperEvaluation}/name', [App\Http\Controllers\PaperEvaluationController::class, 'updateName'])->name('update-name');
         Route::patch('/{paperEvaluation}/folio', [App\Http\Controllers\PaperEvaluationController::class, 'updateFolio'])->name('update-folio');
+        Route::patch('/{paperEvaluation}/demographic-data', [App\Http\Controllers\PaperEvaluationController::class, 'updateDemographicData'])->name('update-demographic-data');
         Route::post('/{paperEvaluation}/check-folio', [App\Http\Controllers\PaperEvaluationController::class, 'checkFolioAvailability'])->name('check-folio');
     });
 
