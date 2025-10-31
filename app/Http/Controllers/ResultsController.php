@@ -322,6 +322,7 @@ class ResultsController extends Controller
                 'folio' => $referenciaV->folio,
                 'created_at' => $referenciaV->created_at->format('Y-m-d H:i:s'),
                 'demographic_data' => $mappedDemographic,
+                'raw_demographic_data' => $demographic, // Para edición
             ];
         }
 
@@ -357,6 +358,8 @@ class ResultsController extends Controller
             'guideIIIResults' => $guideIIIResults,
             'cisnerosResults' => $cisnerosResults,
             'isAdmin' => auth()->user()->hasRole(['admin', 'super-admin']),
+            'occupationPositions' => $organization->occupationPositions()->get(['id', 'name'])->toArray(),
+            'departmentAreas' => $organization->departmentAreas()->get(['id', 'name'])->toArray(),
         ]);
     }
 
