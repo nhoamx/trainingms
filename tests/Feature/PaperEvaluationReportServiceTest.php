@@ -34,7 +34,7 @@ class PaperEvaluationReportServiceTest extends TestCase
         $this->assertArrayHasKey('grouped_by_dimension', $result);
         $this->assertArrayHasKey('final_risk_levels', $result);
         $this->assertArrayHasKey('personalCalification', $result);
-        
+
         $this->assertEmpty($result['grouped_by_category']);
         $this->assertEmpty($result['grouped_by_domain']);
         $this->assertEmpty($result['grouped_by_dimension']);
@@ -54,7 +54,7 @@ class PaperEvaluationReportServiceTest extends TestCase
 
         $this->assertNotEmpty($result['grouped_by_category']);
         $this->assertIsArray($result['grouped_by_category']);
-        
+
         $firstCategory = $result['grouped_by_category'][0];
         $this->assertArrayHasKey('categoria', $firstCategory);
         $this->assertArrayHasKey('nivel_riesgo', $firstCategory);
@@ -75,7 +75,7 @@ class PaperEvaluationReportServiceTest extends TestCase
 
         $this->assertNotEmpty($result['grouped_by_domain']);
         $this->assertIsArray($result['grouped_by_domain']);
-        
+
         $firstDomain = $result['grouped_by_domain'][0];
         $this->assertArrayHasKey('dominio', $firstDomain);
         $this->assertArrayHasKey('nivel_riesgo', $firstDomain);
@@ -95,7 +95,7 @@ class PaperEvaluationReportServiceTest extends TestCase
         $result = $this->service->getReportSummaryByOrganization($this->organization->id);
 
         $this->assertIsArray($result['final_risk_levels']);
-        
+
         $totalCount = array_sum(array_column($result['final_risk_levels'], 'conteo'));
         $this->assertEquals(1, $totalCount);
     }
@@ -113,7 +113,7 @@ class PaperEvaluationReportServiceTest extends TestCase
 
         $this->assertNotEmpty($result['personalCalification']);
         $this->assertCount(1, $result['personalCalification']);
-        
+
         $participant = $result['personalCalification'][0];
         $this->assertArrayHasKey('personal_folio', $participant);
         $this->assertArrayHasKey('calificacion', $participant);
@@ -155,10 +155,10 @@ class PaperEvaluationReportServiceTest extends TestCase
 
         $this->assertNotEmpty($result);
         $this->assertIsArray($result);
-        
+
         // Should have sections for each demographic category
         $this->assertGreaterThan(0, count($result));
-        
+
         // Check structure
         $firstSection = $result[0];
         $this->assertArrayHasKey('title', $firstSection);

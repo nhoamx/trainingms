@@ -118,6 +118,8 @@ class ReportPdfController extends Controller
 
             $organization = Organization::findOrFail($organizationId);
             $diagnosticData = $this->reportPdfService->getDiagnosticResultsData($organizationId);
+            $demographicData = $this->reportPdfService->getDemographicDistributionData($organizationId);
+            $traumaticEventsData = $this->reportPdfService->getTraumaticEventsData($organizationId);
 
             if (empty($diagnosticData['final_risk'])) {
                 return response()->json([
@@ -129,6 +131,8 @@ class ReportPdfController extends Controller
             $html = view('pdfs.diagnostic-report-browsershot', [
                 'organization' => $organization,
                 'diagnosticData' => $diagnosticData,
+                'demographicData' => $demographicData,
+                'traumaticEventsData' => $traumaticEventsData,
                 'generatedDate' => now()->format('d/m/Y'),
             ])->render();
 

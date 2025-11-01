@@ -273,108 +273,37 @@
         </div>
         @endif
 
-        <div class="introduction">
-            <h3>II.- Objetivo</h3>
-            <p>Identificar, analizar y prevenir los factores de riesgo psicosocial, así como promover un entorno organizacional favorable en el centro de trabajo, conforme a la NOM-035-STPS-2018.</p>
-        </div>
+        @include('pdfs.sections.objetivo')
 
-        <!-- Final Risk Section -->
-        <div class="section">
-            <h3 class="section-title">V.5.1.- Calificación Final</h3>
-            
-            <div class="section-description">
-                <strong>Importancia según NOM-035:</strong> La calificación final representa el nivel de riesgo psicosocial global del centro de trabajo, considerando todos los factores evaluados. Niveles Medio, Alto o Muy Alto requieren acciones preventivas y correctivas inmediatas según lo establece la norma.
-            </div>
+        @include('pdfs.sections.introduccion')
 
-            <div class="chart-container">
-                <canvas ref="finalRiskChart"></canvas>
-            </div>
+        @include('pdfs.sections.marco-juridico')
 
-            <p style="margin-bottom: 10px;">Distribución de participantes según nivel de riesgo final:</p>
-            
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 40%;">Nivel de Riesgo</th>
-                        <th style="width: 30%;">Cantidad</th>
-                        <th style="width: 30%;">Porcentaje</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="level in riskLevels" :key="level">
-                        <td :class="'risk-' + level.toLowerCase().replace(' ', '-')" style="text-align: left; font-weight: bold;">@{{ level }}</td>
-                        <td><strong>@{{ finalRisk[level] || 0 }}</strong></td>
-                        <td>@{{ getPercentage(finalRisk[level] || 0, totalParticipants) }}%</td>
-                    </tr>
-                    <tr style="background: #e5e7eb;">
-                        <td style="text-align: left; font-weight: bold;">TOTAL</td>
-                        <td><strong>@{{ totalParticipants }}</strong></td>
-                        <td><strong>100%</strong></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        @include('pdfs.sections.metodo-utilizado')
 
-        <div class="page-break"></div>
+        @include('pdfs.sections.resultados-header')
 
-        <!-- Categories Section -->
-        <div class="section">
-            <h3 class="section-title">V.5.2.- Cuantificación por Categoría</h3>
-            
-            <div class="section-description">
-                <strong>Importancia según NOM-035:</strong> Las categorías agrupan los factores de riesgo en cinco grandes áreas: Ambiente de Trabajo, Factores Propios de la Actividad, Organización del Tiempo, Liderazgo y Relaciones, y Entorno Organizacional. Permiten identificar áreas críticas para intervención prioritaria.
-            </div>
+        @include('pdfs.sections.participantes')
 
-            <div class="charts-grid" v-if="hasCategories">
-                <div class="chart-item" v-for="(levels, name) in categories" :key="'cat-' + name">
-                    <h4>@{{ name }}</h4>
-                    <div class="chart-item-canvas">
-                        <canvas :ref="'categoryChart_' + name"></canvas>
-                    </div>
-                </div>
-            </div>
-            <p v-else style="color: #666; font-style: italic;">No hay datos de categorías disponibles.</p>
-        </div>
+        @include('pdfs.sections.acontecimientos-traumaticos')
 
-        <!-- Domains Section -->
-        <div class="section">
-            <h3 class="section-title">V.5.3.- Cuantificación por Dominio</h3>
-            
-            <div class="section-description">
-                <strong>Importancia según NOM-035:</strong> Los dominios son conjuntos específicos de condiciones psicosociales evaluadas (condiciones ambientales, carga de trabajo, falta de control, jornada, interferencia trabajo-familia, liderazgo, relaciones, violencia, reconocimiento, sentido de pertenencia). Identifican factores concretos que requieren atención.
-            </div>
+        @include('pdfs.sections.violencia-laboral')
 
-            <div class="charts-grid" v-if="hasDomains">
-                <div class="chart-item" v-for="(levels, name) in domains" :key="'dom-' + name">
-                    <h4>@{{ name }}</h4>
-                    <div class="chart-item-canvas">
-                        <canvas :ref="'domainChart_' + name"></canvas>
-                    </div>
-                </div>
-            </div>
-            <p v-else style="color: #666; font-style: italic;">No hay datos de dominios disponibles.</p>
-        </div>
+        @include('pdfs.sections.entorno-organizacional')
 
-        <div class="page-break"></div>
+        @include('pdfs.sections.calificacion-final')
 
-        <!-- Dimensions Section -->
-        <div class="section">
-            <h3 class="section-title">V.5.4.- Cuantificación por Dimensión</h3>
-            
-            <div class="section-description">
-                <strong>Importancia según NOM-035:</strong> Las dimensiones representan los aspectos más específicos y detallados de cada dominio. Permiten un análisis granular de las condiciones de trabajo y orientan intervenciones puntuales y efectivas según el numeral 8.2 de la NOM-035.
-            </div>
+        @include('pdfs.sections.cuantificacion-categorias')
 
-            <div class="charts-grid" v-if="hasDimensions">
-                <div class="chart-item" v-for="(levels, name) in dimensions" :key="'dim-' + name">
-                    <h4>@{{ name }}</h4>
-                    <div class="chart-item-canvas">
-                        <canvas :ref="'dimensionChart_' + name"></canvas>
-                    </div>
-                </div>
-            </div>
-            <p v-else style="color: #666; font-style: italic;">No hay datos de dimensiones disponibles.</p>
-        </div>
+        @include('pdfs.sections.cuantificacion-dominios')
+
+        @include('pdfs.sections.cuantificacion-dimensiones')
+
+        @include('pdfs.sections.cuantificacion-respuestas')
+
+        @include('pdfs.sections.conclusiones')
+
+        @include('pdfs.sections.recomendaciones')
 
         <div class="footer">
             <p>Informe de Resultados Diagnóstico - {{ $organization->name }} | Generado el {{ $generatedDate }}</p>
@@ -420,7 +349,7 @@
                     return ((value / total) * 100).toFixed(1);
                 },
                 createFinalRiskChart() {
-                    const canvas = this.$refs.finalRiskChart;
+                    const canvas = document.getElementById('finalRiskChart');
                     if (!canvas) return;
 
                     const ctx = canvas.getContext('2d');
@@ -473,10 +402,8 @@
                     this.charts.push(chart);
                 },
                 createIndividualChart(name, levels, refPrefix) {
-                    const canvasArray = this.$refs[refPrefix + name];
-                    if (!canvasArray || canvasArray.length === 0) return;
-                    
-                    const canvas = canvasArray[0];
+                    const canvasId = refPrefix + name.replace(/ /g, '_');
+                    const canvas = document.getElementById(canvasId);
                     if (!canvas) return;
 
                     const ctx = canvas.getContext('2d');
@@ -530,12 +457,92 @@
                     });
 
                     this.charts.push(chart);
+                },
+                createViolencePieChart() {
+                    const canvas = document.getElementById('violencePieChart');
+                    if (!canvas) return;
+
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Extract violence domain data
+                    let violenceData = [0, 0, 0, 0, 0];
+                    if (this.domains && this.domains['Violencia']) {
+                        violenceData = this.riskLevels.map(level => this.domains['Violencia'][level] || 0);
+                    }
+
+                    const chart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: this.riskLevels,
+                            datasets: [{
+                                data: violenceData,
+                                backgroundColor: this.riskColors,
+                                borderColor: '#ffffff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'bottom',
+                                    labels: {
+                                        font: { size: 11 },
+                                        padding: 15,
+                                        generateLabels: (chart) => {
+                                            const data = chart.data;
+                                            if (data.labels.length && data.datasets.length) {
+                                                return data.labels.map((label, i) => {
+                                                    const value = data.datasets[0].data[i];
+                                                    const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                                    return {
+                                                        text: `${label}: ${value} (${percentage}%)`,
+                                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                                        hidden: false,
+                                                        index: i
+                                                    };
+                                                });
+                                            }
+                                            return [];
+                                        }
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Distribución de Riesgo - Dominio Violencia',
+                                    font: { size: 14, weight: 'bold' },
+                                    color: '#1e40af',
+                                    padding: { top: 10, bottom: 20 }
+                                },
+                                datalabels: {
+                                    display: true,
+                                    color: (context) => {
+                                        const bgColor = context.dataset.backgroundColor[context.dataIndex];
+                                        return bgColor === '#FFFF00' || bgColor === '#FFA500' ? '#000000' : '#FFFFFF';
+                                    },
+                                    font: { weight: 'bold', size: 12 },
+                                    formatter: (value, context) => {
+                                        if (value === 0) return '';
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${value}\n(${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    this.charts.push(chart);
                 }
             },
             mounted() {
                 this.$nextTick(() => {
                     setTimeout(() => {
                         this.createFinalRiskChart();
+                        this.createViolencePieChart();
                         
                         if (this.hasCategories) {
                             Object.entries(this.categories).forEach(([name, levels]) => {
