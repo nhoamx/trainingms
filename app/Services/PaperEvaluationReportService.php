@@ -605,12 +605,17 @@ class PaperEvaluationReportService
     protected function aggregateDemographicData(Collection $evaluations, Collection $referenciaIIIEvaluations): array
     {
         $demographicCategories = [
-            'sexo' => 'Sexo',
-            'estado_civil' => 'Estado Civil',
-            'nivel_estudios' => 'Nivel de Estudios',
-            'tipo_puesto' => 'Tipo de Puesto',
-            'tipo_contratacion' => 'Tipo de Contratación',
-            'tipo_jornada' => 'Tipo de Jornada',
+            'sexo' => 'Distribución Conforme a Género',
+            'estado_civil' => 'Distribución Conforme a Estado Civil',
+            'edad' => 'Distribución Conforme a Rango de Edad',
+            'nivel_estudios' => 'Distribución Conforme a Nivel de Estudios',
+            'ocupacion_puesto' => 'Distribución Conforme al Puesto',
+            'tipo_contratacion' => 'Distribución Conforme a Tipo de Contratación',
+            'tipo_personal' => 'Distribución Conforme a Tipo de Personal',
+            'tipo_jornada' => 'Distribución Conforme al Tipo de Jornada Laboral',
+            'rotacion_turnos' => 'Distribución Conforme a Rotación de Turnos',
+            'departamento_seccion_area' => 'Distribución Conforme al Área',
+            'tiempo_puesto_actual' => 'Distribución Conforme a Tiempo en el Puesto Actual (Antigüedad)',
         ];
 
         $result = [];
