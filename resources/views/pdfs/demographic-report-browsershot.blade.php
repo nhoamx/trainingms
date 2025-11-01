@@ -96,30 +96,15 @@
             color: #1e40af;
         }
 
-        .charts-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
         .chart-item {
             border: 1px solid #e5e7eb;
             border-radius: 5px;
-            padding: 10px;
+            padding: 15px;
             background: #f9fafb;
-        }
-
-        .chart-item-title {
-            font-size: 10pt;
-            font-weight: bold;
-            color: #1e40af;
-            text-align: center;
-            margin-bottom: 8px;
+            margin-bottom: 15px;
         }
 
         .chart-container {
-            height: 200px;
             position: relative;
         }
 
@@ -150,6 +135,13 @@
 
         table tbody tr:nth-child(even) {
             background: #f9fafb;
+        }
+
+        .table-note {
+            font-size: 8pt;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
         }
 
         .risk-nulo { background-color: #00CED1 !important; color: white; }
@@ -201,13 +193,10 @@
                 <span v-html="getSectionDescription(section.title)"></span>
             </div>
 
-            <!-- Individual charts grid - one chart per demographic value -->
-            <div class="charts-grid">
-                <div v-for="(item, itemIndex) in section.data" :key="itemIndex" class="chart-item">
-                    <div class="chart-item-title">@{{ item.name }}</div>
-                    <div class="chart-container">
-                        <canvas :ref="el => setChartRef(sectionIndex + '-' + itemIndex, el)"></canvas>
-                    </div>
+            <!-- Single chart showing distribution by category -->
+            <div class="chart-item" style="max-width: 800px; margin: 0 auto 20px;">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas :ref="el => setChartRef('section-' + sectionIndex, el)"></canvas>
                 </div>
             </div>
 
@@ -215,20 +204,21 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 25%;">@{{ section.title }}</th>
-                        <th style="width: 10%;">Total</th>
-                        <th class="risk-nulo" style="width: 11%;">Nulo</th>
-                        <th class="risk-bajo" style="width: 11%;">Bajo</th>
-                        <th class="risk-medio" style="width: 11%;">Medio</th>
-                        <th class="risk-alto" style="width: 11%;">Alto</th>
-                        <th class="risk-muy-alto" style="width: 11%;">Muy Alto</th>
-                        <th class="risk-bajo" style="width: 10%;">Nu+Ba</th>
-                        <th class="risk-muy-alto" style="width: 10%;">Me+Al+MA</th>
+                        <th style="width: 20%;">@{{ section.title }}</th>
+                        <th style="width: 8%;">Total</th>
+                        <th class="risk-nulo" style="width: 9%;">Nulo</th>
+                        <th class="risk-bajo" style="width: 9%;">Bajo</th>
+                        <th class="risk-medio" style="width: 9%;">Medio</th>
+                        <th class="risk-alto" style="width: 9%;">Alto</th>
+                        <th class="risk-muy-alto" style="width: 9%;">Muy Alto</th>
+                        <th class="risk-bajo" style="width: 9%;">Nu+Ba</th>
+                        <th class="risk-muy-alto" style="width: 9%;">Me+Al+MA</th>
+                        <th style="width: 9%;">CF*</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="item in section.data" :key="item.name">
-                        <td style="text-align: left; font-weight: bold;">@{{ item.name }}</td>
+                        <td style="text-align: left; font-weight: bold;">@{{ normalizeLabel(item.name) }}</td>
                         <td><strong>@{{ item.total }}</strong></td>
                         <td>@{{ item.risk_levels['Nulo'] || 0 }}</td>
                         <td>@{{ item.risk_levels['Bajo'] || 0 }}</td>
@@ -237,9 +227,14 @@
                         <td>@{{ item.risk_levels['Muy Alto'] || 0 }}</td>
                         <td>@{{ (item.risk_levels['Nulo'] || 0) + (item.risk_levels['Bajo'] || 0) }}</td>
                         <td>@{{ (item.risk_levels['Medio'] || 0) + (item.risk_levels['Alto'] || 0) + (item.risk_levels['Muy Alto'] || 0) }}</td>
+                        <td>@{{ calculateCF(item) }}</td>
                     </tr>
                 </tbody>
             </table>
+            
+            <div class="table-note">
+                <strong>CF*:</strong> Calificación Final - Porcentaje de trabajadores en niveles de riesgo Medio, Alto y Muy Alto (Me+Al+MA / Total × 100)
+            </div>
         </div>
 
         <div class="footer">
@@ -270,44 +265,93 @@
                         this.chartRefs[key] = el;
                     }
                 },
+                normalizeLabel(label) {
+                    if (!label) return '';
+                    
+                    // Convert to string if not already
+                    const text = String(label);
+                    
+                    // Replace underscores with spaces and capitalize each word
+                    return text
+                        .split('_')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                        .join(' ');
+                },
+                calculateCF(item) {
+                    const total = item.total || 0;
+                    if (total === 0) return 0;
+                    
+                    const meAlMa = (item.risk_levels['Medio'] || 0) + 
+                                   (item.risk_levels['Alto'] || 0) + 
+                                   (item.risk_levels['Muy Alto'] || 0);
+                    
+                    return Math.round((meAlMa / total) * 100);
+                },
                 getSectionDescription(title) {
                     const descriptions = {
-                        'Sexo': '<strong>Importancia según NOM-035:</strong> El análisis por sexo permite identificar si existen diferencias en la exposición a factores de riesgo psicosocial entre hombres y mujeres, lo cual es fundamental para diseñar intervenciones específicas y promover la igualdad de género en el ambiente laboral.',
+                        'Distribución Conforme a Género': '<strong>Importancia según NOM-035:</strong> El análisis por género permite identificar si existen diferencias en la exposición a factores de riesgo psicosocial entre hombres y mujeres, lo cual es fundamental para diseñar intervenciones específicas y promover la igualdad de género en el ambiente laboral.',
                         
-                        'Estado Civil': '<strong>Importancia según NOM-035:</strong> El estado civil puede influir en la percepción de factores como la interferencia trabajo-familia y el equilibrio de vida laboral. Identificar patrones ayuda a implementar políticas de conciliación que beneficien a todos los trabajadores.',
+                        'Distribución Conforme a Estado Civil': '<strong>Importancia según NOM-035:</strong> El estado civil puede influir en la percepción de factores como la interferencia trabajo-familia y el equilibrio de vida laboral. Identificar patrones ayuda a implementar políticas de conciliación que beneficien a todos los trabajadores.',
                         
-                        'Nivel de Estudios': '<strong>Importancia según NOM-035:</strong> El nivel educativo puede relacionarse con el tipo de actividades, autonomía y exigencias laborales. Este análisis permite ajustar programas de capacitación y desarrollo acorde a las necesidades y capacidades del personal.',
+                        'Distribución Conforme a Rango de Edad': '<strong>Importancia según NOM-035:</strong> La edad de los trabajadores puede relacionarse con diferentes niveles de experiencia, adaptabilidad y necesidades en el entorno laboral. Este análisis permite diseñar intervenciones apropiadas para cada grupo etario.',
                         
-                        'Tipo de Puesto': '<strong>Importancia según NOM-035:</strong> Los distintos tipos de puesto (operativo, técnico, supervisor, gerencial) tienen exposición diferenciada a factores de riesgo como carga de trabajo, autonomía y liderazgo. Identificar estos patrones es clave para intervenciones dirigidas por nivel jerárquico.',
+                        'Distribución Conforme a Nivel de Estudios': '<strong>Importancia según NOM-035:</strong> El nivel educativo puede relacionarse con el tipo de actividades, autonomía y exigencias laborales. Este análisis permite ajustar programas de capacitación y desarrollo acorde a las necesidades y capacidades del personal.',
                         
-                        'Tipo de Contratación': '<strong>Importancia según NOM-035:</strong> El tipo de contratación influye directamente en la percepción de inestabilidad laboral, sentido de pertenencia y factores del entorno organizacional. La NOM-035 reconoce la importancia de atender estas diferencias para garantizar condiciones laborales dignas.',
+                        'Distribución Conforme al Puesto': '<strong>Importancia según NOM-035:</strong> Los distintos puestos tienen responsabilidades y exigencias diferenciadas. Identificar patrones de riesgo por puesto es clave para intervenciones específicas y mejoras en las condiciones laborales.',
                         
-                        'Tipo de Jornada': '<strong>Importancia según NOM-035:</strong> Las diferentes jornadas laborales (diurna, nocturna, mixta) tienen impacto directo en la salud física y mental de los trabajadores. El análisis permite detectar riesgos asociados a turnos específicos y diseñar medidas preventivas adecuadas.'
+                        'Distribución Conforme a Tipo de Contratación': '<strong>Importancia según NOM-035:</strong> El tipo de contratación influye directamente en la percepción de inestabilidad laboral, sentido de pertenencia y factores del entorno organizacional. La NOM-035 reconoce la importancia de atender estas diferencias para garantizar condiciones laborales dignas.',
+                        
+                        'Distribución Conforme a Tipo de Personal': '<strong>Importancia según NOM-035:</strong> La diferenciación entre personal sindicalizado y de confianza puede revelar diferencias en las condiciones laborales y exposición a riesgos psicosociales, permitiendo intervenciones equitativas.',
+                        
+                        'Distribución Conforme al Tipo de Jornada Laboral': '<strong>Importancia según NOM-035:</strong> Las diferentes jornadas laborales (diurna, nocturna, mixta) tienen impacto directo en la salud física y mental de los trabajadores. El análisis permite detectar riesgos asociados a jornadas específicas y diseñar medidas preventivas adecuadas.',
+                        
+                        'Distribución Conforme a Rotación de Turnos': '<strong>Importancia según NOM-035:</strong> La rotación de turnos puede afectar significativamente el bienestar, descanso y vida familiar de los trabajadores. Identificar su impacto en los niveles de riesgo permite implementar esquemas de rotación más saludables.',
+                        
+                        'Distribución Conforme al Área': '<strong>Importancia según NOM-035:</strong> Las diferentes áreas o departamentos pueden tener exposiciones distintas a factores de riesgo psicosocial según sus funciones y dinámicas específicas. Este análisis permite intervenciones focalizadas por área.',
+                        
+                        'Distribución Conforme a Tiempo en el Puesto Actual (Antigüedad)': '<strong>Importancia según NOM-035:</strong> La antigüedad en el puesto puede relacionarse con el nivel de adaptación, dominio de funciones y satisfacción laboral. Identificar patrones ayuda a mejorar procesos de inducción y desarrollo profesional.'
                     };
                     
                     return descriptions[title] || '<strong>Importancia según NOM-035:</strong> Este factor demográfico permite identificar patrones de riesgo psicosocial específicos para diferentes grupos de trabajadores, facilitando intervenciones focalizadas y efectivas.';
                 },
-                createIndividualChart(key, itemName, itemData) {
+                createSectionChart(key, section) {
                     const canvas = this.chartRefs[key];
                     if (!canvas) return;
 
                     const ctx = canvas.getContext('2d');
                     
-                    // Prepare data for single item chart
-                    const riskLevels = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
-                    const colors = ['#00CED1', '#28A745', '#FFFF00', '#FFA500', '#FF0000'];
-                    const data = riskLevels.map(level => itemData.risk_levels[level] || 0);
+                    // Prepare data - labels are the demographic values, data is the total count
+                    const labels = section.data.map(item => this.normalizeLabel(item.name));
+                    const data = section.data.map(item => item.total);
+                    
+                    // Use different colors for each bar
+                    const colorPalette = [
+                        '#3b82f6', // Blue
+                        '#10b981', // Green
+                        '#f59e0b', // Amber
+                        '#ef4444', // Red
+                        '#8b5cf6', // Purple
+                        '#ec4899', // Pink
+                        '#14b8a6', // Teal
+                        '#f97316', // Orange
+                        '#06b6d4', // Cyan
+                        '#84cc16', // Lime
+                        '#6366f1', // Indigo
+                        '#a855f7', // Violet
+                    ];
+                    
+                    const colors = labels.map((_, index) => colorPalette[index % colorPalette.length]);
 
                     const chart = new Chart(ctx, {
                         type: 'bar',
                         data: {
-                            labels: riskLevels,
+                            labels: labels,
                             datasets: [{
-                                label: 'Cantidad',
+                                label: 'Total',
                                 data: data,
                                 backgroundColor: colors,
-                                borderColor: colors,
-                                borderWidth: 1
+                                borderColor: colors.map(c => c),
+                                borderWidth: 2
                             }]
                         },
                         options: {
@@ -319,26 +363,23 @@
                                 },
                                 tooltip: {
                                     callbacks: {
-                                        title: function(context) {
-                                            return itemName + ' - ' + context[0].label;
+                                        label: function(context) {
+                                            return 'Total: ' + context.parsed.y;
                                         }
                                     }
                                 },
                                 datalabels: {
                                     display: true,
-                                    color: function(context) {
-                                        const bgColor = context.dataset.backgroundColor[context.dataIndex];
-                                        return bgColor === '#FFFF00' || bgColor === '#FFA500' ? '#000000' : '#FFFFFF';
-                                    },
+                                    color: '#FFFFFF',
                                     font: {
                                         weight: 'bold',
-                                        size: 11
+                                        size: 14
                                     },
                                     formatter: function(value) {
-                                        return value > 0 ? value : '';
+                                        return value;
                                     },
-                                    anchor: 'end',
-                                    align: 'top'
+                                    anchor: 'center',
+                                    align: 'center'
                                 }
                             },
                             scales: {
@@ -346,7 +387,9 @@
                                     ticks: {
                                         font: {
                                             size: 9
-                                        }
+                                        },
+                                        maxRotation: 45,
+                                        minRotation: 45
                                     }
                                 },
                                 y: {
@@ -354,7 +397,15 @@
                                     ticks: {
                                         precision: 0,
                                         font: {
-                                            size: 9
+                                            size: 10
+                                        }
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Cantidad de Trabajadores',
+                                        font: {
+                                            size: 11,
+                                            weight: 'bold'
                                         }
                                     }
                                 }
@@ -371,10 +422,8 @@
                     // Small delay to ensure DOM is fully ready for Browsershot
                     setTimeout(() => {
                         this.sections.forEach((section, sectionIndex) => {
-                            section.data.forEach((item, itemIndex) => {
-                                const key = sectionIndex + '-' + itemIndex;
-                                this.createIndividualChart(key, item.name, item);
-                            });
+                            const key = 'section-' + sectionIndex;
+                            this.createSectionChart(key, section);
                         });
                     }, 500);
                 });
