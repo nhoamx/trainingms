@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe de Resultados Diagnóstico - {{ $organization->name }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        @page {
+            margin: 10mm 15mm;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 9pt;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #2563eb;
+        }
+
+        .header h1 {
+            font-size: 16pt;
+            color: #1e40af;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .header h2 {
+            font-size: 13pt;
+            color: #3b82f6;
+            margin-bottom: 8px;
+        }
+
+        .header .subtitle {
+            font-size: 9pt;
+            color: #666;
+        }
+
+        .organization-info {
+            background: #f8f9fa;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #2563eb;
+        }
+
+        .organization-info h3 {
+            font-size: 11pt;
+            color: #1e40af;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .organization-info p {
+            font-size: 9pt;
+            margin-bottom: 3px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            font-size: 12pt;
+            color: #1e40af;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #e5e7eb;
+            font-weight: bold;
+        }
+
+        .section-subtitle {
+            font-size: 10pt;
+            color: #2563eb;
+            margin-bottom: 8px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .section-content {
+            font-size: 9pt;
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+
+        .section-content p {
+            margin-bottom: 8px;
+        }
+
+        .section-content ul {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+
+        .section-content ul li {
+            margin-bottom: 5px;
+        }
+
+        .section-description {
+            font-size: 9pt;
+            color: #555;
+            background: #eff6ff;
+            padding: 10px;
+            border-left: 3px solid #3b82f6;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            border-radius: 3px;
+        }
+
+        .section-description strong {
+            color: #1e40af;
+        }
+
+        .chart-container {
+            height: 280px;
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .chart-item {
+            background: white;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+        }
+
+        .chart-item h4 {
+            font-size: 9pt;
+            color: #1e40af;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .chart-item-canvas {
+            height: 220px;
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 8pt;
+        }
+
+        table thead {
+            background: #2563eb;
+            color: white;
+        }
+
+        table thead th {
+            padding: 6px 4px;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid #1e40af;
+        }
+
+        table tbody td {
+            padding: 5px 4px;
+            text-align: center;
+            border: 1px solid #d1d5db;
+        }
+
+        table tbody td.text-left {
+            text-align: left;
+        }
+
+        table tbody tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        .risk-nulo { background-color: #00CED1 !important; color: white; }
+        .risk-bajo { background-color: #28A745 !important; color: white; }
+        .risk-medio { background-color: #FFFF00 !important; color: black; }
+        .risk-alto { background-color: #FFA500 !important; color: black; }
+        .risk-muy-alto { background-color: #FF0000 !important; color: white; }
+
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 7pt;
+            color: #666;
+            padding-top: 10px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .page-break {
+            page-break-after: always;
+        }
+
+        .highlight-box {
+            background: #fef3c7;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #f59e0b;
+            border-radius: 5px;
+        }
+
+        .highlight-box strong {
+            color: #92400e;
+        }
+
+        .objectives-list {
+            margin-left: 20px;
+        }
+
+        .objectives-list li {
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>INFORME DE RESULTADOS DIAGNÓSTICO</h1>
+            <h2>{{ $organization->name }}</h2>
+            <p class="subtitle">NOM-035-STPS-2018</p>
+            <p class="subtitle">Factores de Riesgo Psicosocial en el Trabajo - Identificación, Análisis y Prevención</p>
+        </div>
+
+        <!-- I.- DATOS DEL CENTRO DE TRABAJO -->
+        <div class="organization-info">
+            <h3>I.- Datos del Centro de Trabajo</h3>
+            <p><strong>Razón Social:</strong> {{ $organization->razon_social ?? $organization->name }}</p>
+            @if($organization->nombre)
+            <p><strong>Nombre:</strong> {{ $organization->nombre }}</p>
+            @endif
+            @if($organization->rfc)
+            <p><strong>RFC:</strong> {{ $organization->rfc }}</p>
+            @endif
+            @if($organization->registro_patronal)
+            <p><strong>Registro Patronal:</strong> {{ $organization->registro_patronal }}</p>
+            @endif
+            @if($organization->calle_numero)
+            <p><strong>Domicilio:</strong> {{ $organization->calle_numero }}</p>
+            @endif
+            @if($organization->colonia)
+            <p><strong>Colonia:</strong> {{ $organization->colonia }} 
+            @if($organization->codigo_postal)
+            C.P. {{ $organization->codigo_postal }}
+            @endif
+            </p>
+            @endif
+            @if($organization->municipio && $organization->estado)
+            <p><strong>Municipio:</strong> {{ $organization->municipio }} <strong>Estado:</strong> {{ $organization->estado }}</p>
+            @endif
+            @if($organization->actividad_principal)
+            <p><strong>Actividad Principal:</strong> {{ $organization->actividad_principal }}</p>
+            @endif
+            <p><strong>Fecha de Generación:</strong> {{ $generatedDate }}</p>
+        </div>
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 9pt;
+        }
+
+        table thead {
+            background: #2563eb;
+            color: white;
+        }
+
+        table thead th {
+            padding: 8px 5px;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid #1e40af;
+        }
+
+        table tbody td {
+            padding: 6px 5px;
+            text-align: center;
+            border: 1px solid #d1d5db;
+        }
+
+        table tbody tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        .risk-nulo { background-color: #00CED1 !important; color: white; }
+        .risk-bajo { background-color: #28A745 !important; color: white; }
+        .risk-medio { background-color: #FFFF00 !important; color: black; }
+        .risk-alto { background-color: #FFA500 !important; color: black; }
+        .risk-muy-alto { background-color: #FF0000 !important; color: white; }
+
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+            padding-top: 10px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .page-break {
+            page-break-after: always;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <h1>INFORME DE RESULTADOS DIAGNÓSTICO</h1>
+            <h2>{{ $organization->name }}</h2>
+            <p class="subtitle">NOM-035-STPS-2018</p>
+            <p class="subtitle">Factores de Riesgo Psicosocial en el Trabajo</p>
+        </div>
+
+        <div class="organization-info">
+            <h3>I.- Datos del Centro de Trabajo</h3>
+            <p><strong>Razón Social:</strong> {{ $organization->razon_social ?? $organization->name }}</p>
+            @if($organization->nombre)
+            <p><strong>Nombre:</strong> {{ $organization->nombre }}</p>
+            @endif
+            @if($organization->rfc)
+            <p><strong>RFC:</strong> {{ $organization->rfc }}</p>
+            @endif
+            @if($organization->registro_patronal)
+            <p><strong>Registro Patronal:</strong> {{ $organization->registro_patronal }}</p>
+            @endif
+            @if($organization->calle_numero)
+            <p><strong>Domicilio:</strong> {{ $organization->calle_numero }}</p>
+            @endif
+            @if($organization->colonia)
+            <p><strong>Colonia:</strong> {{ $organization->colonia }} C.P. {{ $organization->codigo_postal ?? '' }}</p>
+            @endif
+            @if($organization->municipio && $organization->estado)
+            <p><strong>Municipio:</strong> {{ $organization->municipio }} <strong>Estado:</strong> {{ $organization->estado }}</p>
+            @endif
+            @if($organization->actividad_principal)
+            <p><strong>Actividad Principal:</strong> {{ $organization->actividad_principal }}</p>
+            @endif
+            <p><strong>Fecha de Generación:</strong> {{ $generatedDate }}</p>
+        </div>
+
+        <!-- II.- OBJETIVO -->
+        <div class="section">
+            <h3 class="section-title">II.- Objetivo</h3>
+            <div class="section-content">
+                <p><strong>Objetivo General:</strong> Identificar, analizar y prevenir los factores de riesgo psicosocial, así como promover un entorno organizacional favorable en los centros de trabajo.</p>
+                
+                <p style="margin-top: 10px;"><strong>Objetivos Específicos:</strong></p>
+                <ul class="objectives-list">
+                    <li>Identificar a los trabajadores que fueron sujetos a acontecimientos traumáticos severos o a actos de violencia laboral.</li>
+                    <li>Identificar y analizar los puestos de trabajo con factores de riesgo psicosocial por la naturaleza de sus funciones.</li>
+                    <li>Realizar evaluaciones del Entorno Organizacional Favorable, tratándose de Centros de Trabajo que tengan más de 50 trabajadores.</li>
+                    <li>La identificación y análisis de los factores de riesgo psicosocial:
+                        <ul style="margin-left: 15px; margin-top: 5px;">
+                            <li>Condiciones en el ambiente de trabajo</li>
+                            <li>Cargas de trabajo</li>
+                            <li>Falta de control sobre el trabajo</li>
+                            <li>Jornadas de trabajo y rotación de turnos</li>
+                            <li>Interferencia en la relación trabajo-familia</li>
+                            <li>Liderazgo y relaciones negativas en el trabajo</li>
+                            <li>Violencia laboral</li>
+                        </ul>
+                    </li>
+                    <li>Mediante el análisis cuantitativo, proponer medidas preventivas que se consideran pertinentes para mitigar los factores de riesgo psicosocial.</li>
+                    <li>Identificar al personal que requerirá de exámenes o evaluaciones clínicas, que fueron, ocupacionalmente expuesto, a factores de riesgo psicosocial.</li>
+                    <li>Generar Informe, para hacer del conocimiento de los trabajadores, sobre las posibles alteraciones a la salud por la exposición a los factores de riesgo psicosocial.</li>
+                    <li>Definir política para la promoción de un Entorno Organizacional Favorable y la Prevención de la Violencia Laboral.</li>
+                    <li>Determinar la necesidad de disponer de mecanismos seguros y confidenciales para la recepción de quejas por prácticas opuestas al Entorno Organizacional Favorable y para denunciar actos de Violencia Laboral.</li>
+                    <li>Determinar las medidas preventivas necesarias para combatir las prácticas opuestas al Entorno Organizacional Favorable y/o actos de Violencia Laboral.</li>
+                    <li>Proponer mecanismos para llevar los registros sobre las medidas preventivas adoptadas y los resultados de las evaluaciones del Entorno Organizacional Favorable.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- III.- INTRODUCCIÓN -->
+        <div class="section">
+            <h3 class="section-title">III.- Introducción</h3>
+            <div class="section-content">
+                <p>Los factores de riesgo psicosocial son todas las condiciones que se encuentran dentro del centro de trabajo, que tienen la capacidad de afectar el desarrollo y la salud de los trabajadores, tienen una relación directa con la organización, contenido de puesto, realización de tareas y entorno, si la condición no es la adecuada directamente relacionada con el proceso en los centros de trabajo, pueden conducir al estrés en el trabajador.</p>
+                
+                <p>La Organización Internacional del Trabajo (OIT) hizo mención de la importancia que tiene poner atención a los factores de riesgo psicosocial, ya que son un problema que afecta a todas las profesiones y trabajos del mundo, tanto en países desarrollados como aquellos en vías de desarrollo, ya que a pesar de la disminución de algunos riesgos "tradicionales" se ha encontrado con el aumento de nuevas enfermedades profesionales dentro de las cuales se encuentran los trastornos mentales derivados de factores de origen laboral psicosocial, sin que las organizaciones apliquen medidas preventivas, de protección o control.</p>
+                
+                <p>En función de la información emitida por la OIT, el gobierno de México a través de la Secretaría del Trabajo y Previsión Social, publicó el 23 de octubre del 2018, en el Diario Oficial de la Federación la Norma Oficial Mexicana NOM-035-STPS-2018, en el cual establece las disposiciones que deberán adoptar los centros de trabajo, así como los mecanismos para identificar y prevenir los factores de riesgo psicosocial, así como para promover un entorno organizacional favorable en los centros de trabajo.</p>
+                
+                <p>La NOM regula procesos, violencia laboral, liderazgo, normas relacionadas a la seguridad y salud en el trabajador, así como la ley Federal del Trabajo, este último establece que toda persona tiene derecho al trabajo digno y socialmente útil al efecto, se promoverán la creación de empleos y la organización social del trabajo, conforme a la ley.</p>
+                
+                <div class="highlight-box" style="margin-top: 15px;">
+                    <p style="margin-bottom: 5px;"><strong>Trabajo Digno - Ley Federal del Trabajo (Artículo 2°):</strong></p>
+                    <ul style="margin-left: 15px;">
+                        <li>Se respeta tu dignidad humana</li>
+                        <li>No existe discriminación</li>
+                        <li>Prestaciones de ley</li>
+                        <li>Seguridad social</li>
+                        <li>Salario remunerador</li>
+                        <li>Se recibe capacitación</li>
+                        <li>Condiciones de seguridad e higiene</li>
+                        <li>Libertad de asociación</li>
+                        <li>Igualdad entre mujeres y hombres</li>
+                        <li>Jornadas de trabajo</li>
+                    </ul>
+                </div>
+                
+                <p>Se puede considerar que los factores psicosociales de riesgo, presentan ciertas características que los identifican se basan en la apreciación de la experiencia colectiva, afectando a los otros riesgos, que se encuentran relacionados entre si (físicos, químicos, biológicos, ergonómicos y psicosociales); ya que el sujeto es una totalidad o un sistema bio-psico-social.</p>
+                
+                <p>La publicación de la NOM-035 ha representado una importante vertiente en el fomento de la seguridad y la salud laboral; el estrés es una condición que afecta el 43% de los trabajadores en todo el mundo. En México, esta condición daña al 75% de los trabajadores mexicanos, de acuerdo Organización Mundial de la Salud (OMS). Por esta razón, la Secretaría de Trabajo y Previsión Social (STPS) desarrolló una estrategia en conjunto con Organización Internacional del Trabajo (OIT), consiste en implementar la metodología, esta herramienta integra la promoción de la salud a la política de seguridad y salud en el trabajo.</p>
+            </div>
+            
+            <!-- 3.1 MARCO JURÍDICO -->
+            <h4 class="section-subtitle">3.1 Marco Jurídico</h4>
+            <div class="section-content">
+                <p><strong>Reglamento Federal de Seguridad y Salud en el Trabajo</strong>, publicado en el Diario Oficial de la Federación de 13 de noviembre de 2014:</p>
+                
+                <p style="margin-top: 10px;"><strong>Artículo 43°:</strong> Indica que son aspectos a considerar dentro de los factores de riesgo psicosocial, aquellos que derivan de la naturaleza de las funciones del puesto de trabajo: las condiciones peligrosas inherentes al mismo; cuando se realiza bajo condiciones inseguras; que demanda alta responsabilidad, o requiere de una intensa concentración y atención por períodos prolongados.</p>
+                
+                <p style="margin-top: 8px;"><strong>Artículo 55°:</strong> Indica la promoción de un entorno organizacional favorable y la prevención de la violencia laboral, mediante la definición de políticas, disponiendo de mecanismos seguros y confidenciales para la recepción de quejas por prácticas opuestas, realizando evaluaciones del entorno organizacional favorable, tratándose de centros de trabajo que tengan más de 50 trabajadores, adoptando medidas preventivas pertinentes, registrando las medidas preventivas adoptadas y los resultados de las evaluaciones.</p>
+                
+                <p style="margin-top: 8px;"><strong>Artículo 513°:</strong> La Secretaría del Trabajo y Previsión Social, previa opinión de la Comisión Consultiva Nacional de Seguridad y Salud en el Trabajo, actualizará las tablas de enfermedades de trabajo y de evaluación de las incapacidades permanentes resultante de los riesgos de trabajo, mismas que se publicarán en el Diario Oficial de la Federación y serán de observancia general en todo el territorio nacional.</p>
+                
+                <p style="margin-top: 10px;">El 15 de diciembre 2017, la Cámara de Diputados aprobó actualización de la tabla enfermedades laborales. La intención es armonizar norma de acuerdo con las condiciones ambientales que afectan a los trabajadores.</p>
+                
+                <p style="margin-top: 10px;">El IMSS en apego a lo establecido por la Organización Mundial de la Salud que refiere que: los riesgos para la salud en el lugar de trabajo, incluidos el calor, el ruido, el polvo, los productos químicos peligrosos, las máquinas inseguras y el estrés psicosocial provocan enfermedades ocupacionales y pueden agravar otros problemas de salud. Las condiciones de empleo, la ocupación y la posición en la jerarquía del lugar de trabajo también afectan a la salud. Las personas que trabajan bajo presión o en condiciones de empleo precarias son propensas a fumar más, realizar menos actividad física y tener una dieta poco saludable.</p>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- IV.- MÉTODO UTILIZADO -->
+        <div class="section">
+            <h3 class="section-title">IV.- Método Utilizado</h3>
+            <div class="highlight-box">
+                <strong>Estudio cuantitativo, cualitativo, descriptivo y transversal</strong>
+            </div>
+            
+            <div class="section-content">
+                <p><strong>Objetivo:</strong> Definir los criterios de la toma de decisiones encaminadas a corregir y/o prevenir consecuencias que puedan desencadenarse por los factores de riesgo, mediante la cuantificación para la Identificación, Análisis y Prevención de los Factores de Riesgo Psicosocial y Evaluación del Entorno Organizacional en los Centros de Trabajo, estipulados en la Norma Oficial Mexicana NOM-035-STPS-2018, (DOF martes 23 de octubre de 2018).</p>
+                
+                <p>La validación se realiza en trabajadores cuyos centros de trabajo se ubican en el territorio nacional.</p>
+                
+                <p>Para el estudio de los objetivos propuestos el centro de trabajo utilizó el método conforme al numeral 7.4 de la Norma Oficial Mexicana NOM-035-STPS-2018, Factores de riesgo psicosocial en el trabajo Identificación, análisis y prevención. Publicada en el Diario Oficial el 23 de octubre del 2018, para identificar y analizar los factores de riesgo psicosocial y evaluar el entorno organizacional.</p>
+                
+                <p style="margin-top: 10px;"><strong>El método incluye:</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>La aplicación de cuestionarios que cumplan con lo dispuesto por los numerales 7.2 y/o 7.3, según corresponda, y 7.5 de la presente Norma</li>
+                    <li>La forma como se deberá realizar la aplicación de los cuestionarios</li>
+                    <li>La manera de evaluar los cuestionarios</li>
+                    <li>Los niveles de riesgo y la forma de determinarlos conforme a los resultados de los cuestionarios</li>
+                </ul>
+                
+                <p style="margin-top: 10px;"><strong>Guías de Referencia utilizadas:</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Guía I:</strong> Cuestionario para identificar a los trabajadores que fueron sujetos a Acontecimientos Traumáticos Severos</li>
+                    <li><strong>Guía II:</strong> Identificación y análisis de los Factores de Riesgo Psicosocial</li>
+                    <li><strong>Guía III:</strong> Identificación y análisis de los Factores de Riesgo Psicosocial y evaluación del Entorno Organizacional en los centros de trabajo</li>
+                    <li><strong>Guía V:</strong> Datos del trabajador</li>
+                </ul>
+                
+                <p style="margin-top: 10px;"><strong>Procedimiento de Aplicación:</strong></p>
+                <p>Se realizó de acuerdo con lo indicado en el numeral III.2 de la NOM-035-STPS-2018.</p>
+                
+                <p><strong>Instrumentos utilizados:</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>C72 y CITSATS-S1: Cuestionario para identificar los factores de riesgo psicosocial y evaluar el entorno organizacional en los centros de trabajo (NOM-035-STPS-2018 Guía de Referencia III, referencia a numeral 7.4) y cuestionario para identificar a trabajadores que fueron sujetos a acontecimientos traumáticos severos. Sección 1 (NOM-035-STPS-2018 Guía de Referencia I, referencia a numeral 7.4)</li>
+                    <li>FDGT: Ficha de datos generales del trabajador (NOM-035-STPS-2018 Guía de Referencia V)</li>
+                </ul>
+                
+                <p style="margin-top: 10px;"><strong>Procesamiento digital:</strong></p>
+                <p>Las respuestas obtenidas en los cuestionarios aplicados en forma física del encuestado se transfieren al plano digital para su procesamiento y obtención de resultados, quedando éstos como evidencia del cumplimiento de la aplicación de los cuestionarios contenidos en la NOM-035-STPS-2018. La evaluación y cuantificación se realiza mediante procedimientos informáticos.</p>
+                
+                <p style="margin-top: 10px;"><strong>Evaluación y análisis de resultados:</strong></p>
+                <p>En función de la información obtenida, se generan las cuantificaciones correspondientes por calificación final, categoría y dominio, de acuerdo con la NOM 035, y se profundiza en una evaluación por dimensión y pregunta, y en base a ello, se obtienen las conclusiones que determinen las decisiones necesarias para corregir y/o prevenir, consecuencias que pueden desencadenarse por los riesgos identificados.</p>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- V.- RESULTADOS -->
+        <div class="section">
+            <h3 class="section-title">V.- Resultados</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50%;">Concepto</th>
+                        <th style="width: 16.66%;">Total</th>
+                        <th style="width: 16.66%;">Hombres</th>
+                        <th style="width: 16.66%;">Mujeres</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="text-align: left; font-weight: bold;">Número total de trabajadores</td>
+                        <td><strong>{{ $organization->total_trabajadores ?? 0 }}</strong></td>
+                        <td>{{ $organization->total_hombres ?? 0 }}</td>
+                        <td>{{ $organization->total_mujeres ?? 0 }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; font-weight: bold;">Número de trabajadores evaluados / Muestra</td>
+                        <td><strong>{{ $organization->muestra_aplicada ?? $diagnosticData['total_participants'] ?? 0 }}</strong></td>
+                        <td>{{ $organization->muestra_hombres ?? 0 }}</td>
+                        <td>{{ $organization->muestra_mujeres ?? 0 }}</td>
+                    </tr>
+                    @if($organization->comite_integrantes)
+                    <tr>
+                        <td style="text-align: left; font-weight: bold;">Integrantes del comité de atención y seguimiento</td>
+                        <td><strong>{{ $organization->comite_integrantes }}</strong></td>
+                        <td>{{ $organization->comite_hombres ?? 0 }}</td>
+                        <td>{{ $organization->comite_mujeres ?? 0 }}</td>
+                    </tr>
+                    @endif
+                </tbody>
+            </table>
+            @if($organization->fecha_aplicacion)
+            <p style="margin-top: 10px;"><strong>Fecha de aplicación:</strong> {{ $organization->fecha_aplicacion->format('F Y') }}</p>
+            @endif
+        </div>
+        @endif
+
+        <div class="introduction">
+            <h3>II.- Objetivo</h3>
+            <p>Identificar, analizar y prevenir los factores de riesgo psicosocial, así como promover un entorno organizacional favorable en el centro de trabajo, conforme a la NOM-035-STPS-2018.</p>
+        </div>
+
+        <!-- Final Risk Section -->
+        <div class="section">
+            <h3 class="section-title">V.5.1.- Calificación Final</h3>
+            
+            <div class="section-description">
+                <strong>Importancia según NOM-035:</strong> La calificación final representa el nivel de riesgo psicosocial global del centro de trabajo, considerando todos los factores evaluados. Niveles Medio, Alto o Muy Alto requieren acciones preventivas y correctivas inmediatas según lo establece la norma.
+            </div>
+
+            <div class="chart-container">
+                <canvas ref="finalRiskChart"></canvas>
+            </div>
+
+            <p style="margin-bottom: 10px;">Distribución de participantes según nivel de riesgo final:</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">Nivel de Riesgo</th>
+                        <th style="width: 30%;">Cantidad</th>
+                        <th style="width: 30%;">Porcentaje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="level in riskLevels" :key="level">
+                        <td :class="'risk-' + level.toLowerCase().replace(' ', '-')" style="text-align: left; font-weight: bold;">@{{ level }}</td>
+                        <td><strong>@{{ finalRisk[level] || 0 }}</strong></td>
+                        <td>@{{ getPercentage(finalRisk[level] || 0, totalParticipants) }}%</td>
+                    </tr>
+                    <tr style="background: #e5e7eb;">
+                        <td style="text-align: left; font-weight: bold;">TOTAL</td>
+                        <td><strong>@{{ totalParticipants }}</strong></td>
+                        <td><strong>100%</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- Categories Section -->
+        <div class="section">
+            <h3 class="section-title">V.5.2.- Cuantificación por Categoría</h3>
+            
+            <div class="section-description">
+                <strong>Importancia según NOM-035:</strong> Las categorías agrupan los factores de riesgo en cinco grandes áreas: Ambiente de Trabajo, Factores Propios de la Actividad, Organización del Tiempo, Liderazgo y Relaciones, y Entorno Organizacional. Permiten identificar áreas críticas para intervención prioritaria.
+            </div>
+
+            <div class="charts-grid" v-if="hasCategories">
+                <div class="chart-item" v-for="(levels, name) in categories" :key="'cat-' + name">
+                    <h4>@{{ name }}</h4>
+                    <div class="chart-item-canvas">
+                        <canvas :ref="'categoryChart_' + name"></canvas>
+                    </div>
+                </div>
+            </div>
+            <p v-else style="color: #666; font-style: italic;">No hay datos de categorías disponibles.</p>
+        </div>
+
+        <!-- Domains Section -->
+        <div class="section">
+            <h3 class="section-title">V.5.3.- Cuantificación por Dominio</h3>
+            
+            <div class="section-description">
+                <strong>Importancia según NOM-035:</strong> Los dominios son conjuntos específicos de condiciones psicosociales evaluadas (condiciones ambientales, carga de trabajo, falta de control, jornada, interferencia trabajo-familia, liderazgo, relaciones, violencia, reconocimiento, sentido de pertenencia). Identifican factores concretos que requieren atención.
+            </div>
+
+            <div class="charts-grid" v-if="hasDomains">
+                <div class="chart-item" v-for="(levels, name) in domains" :key="'dom-' + name">
+                    <h4>@{{ name }}</h4>
+                    <div class="chart-item-canvas">
+                        <canvas :ref="'domainChart_' + name"></canvas>
+                    </div>
+                </div>
+            </div>
+            <p v-else style="color: #666; font-style: italic;">No hay datos de dominios disponibles.</p>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- Dimensions Section -->
+        <div class="section">
+            <h3 class="section-title">V.5.4.- Cuantificación por Dimensión</h3>
+            
+            <div class="section-description">
+                <strong>Importancia según NOM-035:</strong> Las dimensiones representan los aspectos más específicos y detallados de cada dominio. Permiten un análisis granular de las condiciones de trabajo y orientan intervenciones puntuales y efectivas según el numeral 8.2 de la NOM-035.
+            </div>
+
+            <div class="charts-grid" v-if="hasDimensions">
+                <div class="chart-item" v-for="(levels, name) in dimensions" :key="'dim-' + name">
+                    <h4>@{{ name }}</h4>
+                    <div class="chart-item-canvas">
+                        <canvas :ref="'dimensionChart_' + name"></canvas>
+                    </div>
+                </div>
+            </div>
+            <p v-else style="color: #666; font-style: italic;">No hay datos de dimensiones disponibles.</p>
+        </div>
+
+        <div class="footer">
+            <p>Informe de Resultados Diagnóstico - {{ $organization->name }} | Generado el {{ $generatedDate }}</p>
+            <p>Este documento es confidencial y de uso exclusivo para fines de la NOM-035-STPS-2018</p>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        // Register ChartDataLabels plugin globally
+        Chart.register(ChartDataLabels);
+
+        const diagnosticData = @json($diagnosticData);
+
+        createApp({
+            data() {
+                return {
+                    riskLevels: ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'],
+                    riskColors: ['#00CED1', '#28A745', '#FFFF00', '#FFA500', '#FF0000'],
+                    finalRisk: diagnosticData.final_risk || {},
+                    categories: diagnosticData.categories || {},
+                    domains: diagnosticData.domains || {},
+                    dimensions: diagnosticData.dimensions || {},
+                    totalParticipants: diagnosticData.total_participants || 0,
+                    charts: []
+                }
+            },
+            computed: {
+                hasCategories() {
+                    return Object.keys(this.categories).length > 0;
+                },
+                hasDomains() {
+                    return Object.keys(this.domains).length > 0;
+                },
+                hasDimensions() {
+                    return Object.keys(this.dimensions).length > 0;
+                }
+            },
+            methods: {
+                getPercentage(value, total) {
+                    if (!total || total === 0) return '0.0';
+                    return ((value / total) * 100).toFixed(1);
+                },
+                createFinalRiskChart() {
+                    const canvas = this.$refs.finalRiskChart;
+                    if (!canvas) return;
+
+                    const ctx = canvas.getContext('2d');
+                    const data = this.riskLevels.map(level => this.finalRisk[level] || 0);
+
+                    const chart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: this.riskLevels,
+                            datasets: [{
+                                label: 'Participantes',
+                                data: data,
+                                backgroundColor: this.riskColors,
+                                borderColor: this.riskColors,
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                title: {
+                                    display: true,
+                                    text: 'Distribución de Riesgo Final',
+                                    font: { size: 14, weight: 'bold' },
+                                    color: '#1e40af'
+                                },
+                                datalabels: {
+                                    display: true,
+                                    color: (context) => {
+                                        const bgColor = context.dataset.backgroundColor[context.dataIndex];
+                                        return bgColor === '#FFFF00' || bgColor === '#FFA500' ? '#000000' : '#FFFFFF';
+                                    },
+                                    font: { weight: 'bold', size: 12 },
+                                    formatter: (value) => value > 0 ? value : '',
+                                    anchor: 'end',
+                                    align: 'top'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { precision: 0 }
+                                }
+                            }
+                        }
+                    });
+
+                    this.charts.push(chart);
+                },
+                createIndividualChart(name, levels, refPrefix) {
+                    const canvasArray = this.$refs[refPrefix + name];
+                    if (!canvasArray || canvasArray.length === 0) return;
+                    
+                    const canvas = canvasArray[0];
+                    if (!canvas) return;
+
+                    const ctx = canvas.getContext('2d');
+                    const data = this.riskLevels.map(level => levels[level] || 0);
+
+                    const chart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: this.riskLevels,
+                            datasets: [{
+                                label: 'Participantes',
+                                data: data,
+                                backgroundColor: this.riskColors,
+                                borderColor: this.riskColors,
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                title: { display: false },
+                                datalabels: {
+                                    display: true,
+                                    color: (context) => {
+                                        const bgColor = context.dataset.backgroundColor[context.dataIndex];
+                                        return bgColor === '#FFFF00' || bgColor === '#FFA500' ? '#000000' : '#FFFFFF';
+                                    },
+                                    font: { weight: 'bold', size: 11 },
+                                    formatter: (value) => value > 0 ? value : '',
+                                    anchor: 'end',
+                                    align: 'top'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { 
+                                        precision: 0,
+                                        font: { size: 9 }
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        font: { size: 9 }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    this.charts.push(chart);
+                }
+            },
+            mounted() {
+                this.$nextTick(() => {
+                    setTimeout(() => {
+                        this.createFinalRiskChart();
+                        
+                        if (this.hasCategories) {
+                            Object.entries(this.categories).forEach(([name, levels]) => {
+                                this.createIndividualChart(name, levels, 'categoryChart_');
+                            });
+                        }
+                        
+                        if (this.hasDomains) {
+                            Object.entries(this.domains).forEach(([name, levels]) => {
+                                this.createIndividualChart(name, levels, 'domainChart_');
+                            });
+                        }
+                        
+                        if (this.hasDimensions) {
+                            Object.entries(this.dimensions).forEach(([name, levels]) => {
+                                this.createIndividualChart(name, levels, 'dimensionChart_');
+                            });
+                        }
+                    }, 500);
+                });
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

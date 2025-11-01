@@ -69,6 +69,11 @@ class ReportPdfController extends Controller
                 'generatedDate' => now()->format('d/m/Y'),
             ])->render();
 
+            // If preview parameter is present, return HTML view instead of PDF
+            if ($request->has('preview')) {
+                return response($html)->header('Content-Type', 'text/html');
+            }
+
             // Generate PDF using Browsershot
             $filename = 'informe-demografico-'.$organization->name.'-'.now()->format('Y-m-d').'.pdf';
             $tempPath = storage_path('app/temp/'.$filename);
@@ -113,6 +118,8 @@ class ReportPdfController extends Controller
 
             $organization = Organization::findOrFail($organizationId);
             $diagnosticData = $this->reportPdfService->getDiagnosticResultsData($organizationId);
+            $demographicData = $this->reportPdfService->getDemographicDistributionData($organizationId);
+            $traumaticEventsData = $this->reportPdfService->getTraumaticEventsData($organizationId);
 
             if (empty($diagnosticData['final_risk'])) {
                 return response()->json([
@@ -124,8 +131,15 @@ class ReportPdfController extends Controller
             $html = view('pdfs.diagnostic-report-browsershot', [
                 'organization' => $organization,
                 'diagnosticData' => $diagnosticData,
+                'demographicData' => $demographicData,
+                'traumaticEventsData' => $traumaticEventsData,
                 'generatedDate' => now()->format('d/m/Y'),
             ])->render();
+
+            // If preview parameter is present, return HTML view instead of PDF
+            if ($request->has('preview')) {
+                return response($html)->header('Content-Type', 'text/html');
+            }
 
             // Generate PDF using Browsershot
             $filename = 'informe-diagnostico-'.$organization->name.'-'.now()->format('Y-m-d').'.pdf';
@@ -156,7 +170,7 @@ class ReportPdfController extends Controller
     }
 
     /**
-     * Generate and download executive report PDF (placeholder)
+     * Generate and download executive report PDF
      */
     public function downloadExecutiveReport(Request $request, string $organizationId)
     {
@@ -169,9 +183,43 @@ class ReportPdfController extends Controller
                 ], 403);
             }
 
-            return response()->json([
-                'message' => 'El informe ejecutivo estará disponible próximamente',
-            ], 501);
+            $organization = Organization::findOrFail($organizationId);
+            $executiveData = $this->reportPdfService->getExecutiveReportData($organizationId);
+
+            if (empty($executiveData['analisis_cuantitativo_final']['total'])) {
+                return response()->json([
+                    'error' => 'No hay datos disponibles para generar el reporte ejecutivo',
+                ], 404);
+            }
+
+            // Render HTML view
+            $html = view('pdfs.executive-report', [
+                'organization' => $organization,
+                'executiveData' => $executiveData,
+                'generatedDate' => now()->format('d/m/Y'),
+            ])->render();
+
+            // If preview parameter is present, return HTML view instead of PDF
+            if ($request->has('preview')) {
+                return response($html)->header('Content-Type', 'text/html');
+            }
+
+            // Generate PDF using Browsershot
+            $filename = 'informe-ejecutivo-'.$organization->name.'-'.now()->format('Y-m-d').'.pdf';
+            $tempPath = storage_path('app/temp/'.$filename);
+
+            // Ensure temp directory exists
+            if (! file_exists(storage_path('app/temp'))) {
+                mkdir(storage_path('app/temp'), 0755, true);
+            }
+
+            // Configure and generate PDF
+            $this->configureBrowsershot($html)->save($tempPath);
+
+            // Return PDF for download
+            return response()->download($tempPath, $filename, [
+                'Content-Type' => 'application/pdf',
+            ])->deleteFileAfterSend(true);
         } catch (\Exception $e) {
             Log::error('Error generating executive report PDF: '.$e->getMessage(), [
                 'organization_id' => $organizationId,

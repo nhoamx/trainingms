@@ -28,7 +28,7 @@ class OMRController extends Controller
     {
         $typeCode = self::TEMPLATE_TYPES[$templateType] ?? '00';
         $orgCode = str_pad((string) $organizationFolio, 3, '0', STR_PAD_LEFT);
-        
+
         // For Referencia I, leave person code empty (to be filled manually)
         if ($templateType === 'referencia-i') {
             $personCode = ''; // 4 spaces - no bubbles filled
