@@ -548,9 +548,196 @@ class PaperEvaluationReportService
      */
     protected function getDimensionRiskThresholds(): array
     {
-        // Dimensions don't have specific thresholds in NOM-035
-        // Use domain thresholds as reference
-        return [];
+        // Dimensions use proportional thresholds based on their parent domain
+        // These are approximations based on the typical score ranges for each dimension
+        return [
+            // Categoría 1: Ambiente de trabajo -> Dominio: Condiciones en el ambiente de trabajo
+            'Condiciones peligrosas e inseguras' => [ // 2 items, max ~8
+                ['max' => 1, 'level' => 'Nulo'],
+                ['min' => 2, 'max' => 3, 'level' => 'Bajo'],
+                ['min' => 4, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+            'Condiciones deficientes e insalubres' => [ // 2 items, max ~8
+                ['max' => 1, 'level' => 'Nulo'],
+                ['min' => 2, 'max' => 3, 'level' => 'Bajo'],
+                ['min' => 4, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+            'Trabajos peligrosos' => [ // 1 item, max ~4
+                ['max' => 0, 'level' => 'Nulo'],
+                ['min' => 1, 'max' => 1, 'level' => 'Bajo'],
+                ['min' => 2, 'max' => 2, 'level' => 'Medio'],
+                ['min' => 3, 'max' => 3, 'level' => 'Alto'],
+                ['min' => 4, 'level' => 'Muy Alto'],
+            ],
+
+            // Categoría 2: Factores propios de la actividad -> Dominio: Carga de trabajo
+            'Cargas cuantitativas' => [ // 3 items, max ~12
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 6, 'level' => 'Bajo'],
+                ['min' => 7, 'max' => 8, 'level' => 'Medio'],
+                ['min' => 9, 'max' => 11, 'level' => 'Alto'],
+                ['min' => 12, 'level' => 'Muy Alto'],
+            ],
+            'Ritmos de trabajo acelerado' => [ // 2 items, max ~8
+                ['max' => 2, 'level' => 'Nulo'],
+                ['min' => 3, 'max' => 4, 'level' => 'Bajo'],
+                ['min' => 5, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+            'Carga mental' => [ // 4 items, max ~16
+                ['max' => 5, 'level' => 'Nulo'],
+                ['min' => 6, 'max' => 8, 'level' => 'Bajo'],
+                ['min' => 9, 'max' => 11, 'level' => 'Medio'],
+                ['min' => 12, 'max' => 14, 'level' => 'Alto'],
+                ['min' => 15, 'level' => 'Muy Alto'],
+            ],
+            'Cargas psicológicas emocionales' => [ // 1 item, max ~4
+                ['max' => 1, 'level' => 'Nulo'],
+                ['min' => 2, 'max' => 2, 'level' => 'Bajo'],
+                ['min' => 3, 'max' => 3, 'level' => 'Medio'],
+                ['min' => 4, 'max' => 4, 'level' => 'Alto'],
+                ['min' => 5, 'level' => 'Muy Alto'],
+            ],
+            'Cargas de alta responsabilidad' => [ // 2 items, max ~8
+                ['max' => 2, 'level' => 'Nulo'],
+                ['min' => 3, 'max' => 4, 'level' => 'Bajo'],
+                ['min' => 5, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+            'Cargas contradictorias o inconsistentes' => [ // 3 items, max ~12
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 6, 'level' => 'Bajo'],
+                ['min' => 7, 'max' => 8, 'level' => 'Medio'],
+                ['min' => 9, 'max' => 11, 'level' => 'Alto'],
+                ['min' => 12, 'level' => 'Muy Alto'],
+            ],
+
+            // Dominio: Falta de control sobre el trabajo
+            'Falta de control y autonomía sobre el trabajo' => [ // 5 items, max ~20
+                ['max' => 5, 'level' => 'Nulo'],
+                ['min' => 6, 'max' => 9, 'level' => 'Bajo'],
+                ['min' => 10, 'max' => 13, 'level' => 'Medio'],
+                ['min' => 14, 'max' => 17, 'level' => 'Alto'],
+                ['min' => 18, 'level' => 'Muy Alto'],
+            ],
+            'Limitada o nula posibilidad de desarrollo' => [ // 1 item, max ~4
+                ['max' => 1, 'level' => 'Nulo'],
+                ['min' => 2, 'max' => 2, 'level' => 'Bajo'],
+                ['min' => 3, 'max' => 3, 'level' => 'Medio'],
+                ['min' => 4, 'max' => 4, 'level' => 'Alto'],
+                ['min' => 5, 'level' => 'Muy Alto'],
+            ],
+            'Insuficiente participación y manejo del cambio' => [ // 3 items, max ~12
+                ['max' => 3, 'level' => 'Nulo'],
+                ['min' => 4, 'max' => 6, 'level' => 'Bajo'],
+                ['min' => 7, 'max' => 8, 'level' => 'Medio'],
+                ['min' => 9, 'max' => 11, 'level' => 'Alto'],
+                ['min' => 12, 'level' => 'Muy Alto'],
+            ],
+            'Limitada o inexistente capacitación' => [ // 2 items, max ~8
+                ['max' => 2, 'level' => 'Nulo'],
+                ['min' => 3, 'max' => 4, 'level' => 'Bajo'],
+                ['min' => 5, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+
+            // Categoría 3: Organización del tiempo de trabajo
+            'Jornadas de trabajo extensas' => [ // 1 item, max ~4
+                ['max' => 0, 'level' => 'Nulo'],
+                ['min' => 1, 'max' => 1, 'level' => 'Bajo'],
+                ['min' => 2, 'max' => 3, 'level' => 'Medio'],
+                ['min' => 4, 'max' => 4, 'level' => 'Alto'],
+                ['min' => 5, 'level' => 'Muy Alto'],
+            ],
+            'Influencia del trabajo fuera del centro de trabajo' => [ // 4 items, max ~16
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 7, 'level' => 'Bajo'],
+                ['min' => 8, 'max' => 10, 'level' => 'Medio'],
+                ['min' => 11, 'max' => 13, 'level' => 'Alto'],
+                ['min' => 14, 'level' => 'Muy Alto'],
+            ],
+            'Influencia de las responsabilidades familiares' => [ // 1 item, max ~4
+                ['max' => 1, 'level' => 'Nulo'],
+                ['min' => 2, 'max' => 2, 'level' => 'Bajo'],
+                ['min' => 3, 'max' => 3, 'level' => 'Medio'],
+                ['min' => 4, 'max' => 4, 'level' => 'Alto'],
+                ['min' => 5, 'level' => 'Muy Alto'],
+            ],
+
+            // Categoría 4: Liderazgo y relaciones en el trabajo
+            'Escasa claridad de funciones' => [ // 4 items, max ~16
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 7, 'level' => 'Bajo'],
+                ['min' => 8, 'max' => 10, 'level' => 'Medio'],
+                ['min' => 11, 'max' => 13, 'level' => 'Alto'],
+                ['min' => 14, 'level' => 'Muy Alto'],
+            ],
+            'Características del liderazgo' => [ // 8 items, max ~32
+                ['max' => 9, 'level' => 'Nulo'],
+                ['min' => 10, 'max' => 14, 'level' => 'Bajo'],
+                ['min' => 15, 'max' => 20, 'level' => 'Medio'],
+                ['min' => 21, 'max' => 27, 'level' => 'Alto'],
+                ['min' => 28, 'level' => 'Muy Alto'],
+            ],
+            'Relaciones sociales en el trabajo' => [ // 4 items, max ~16
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 7, 'level' => 'Bajo'],
+                ['min' => 8, 'max' => 10, 'level' => 'Medio'],
+                ['min' => 11, 'max' => 13, 'level' => 'Alto'],
+                ['min' => 14, 'level' => 'Muy Alto'],
+            ],
+            'Deficiente relación con los colaboradores' => [ // 3 items, max ~12
+                ['max' => 3, 'level' => 'Nulo'],
+                ['min' => 4, 'max' => 5, 'level' => 'Bajo'],
+                ['min' => 6, 'max' => 8, 'level' => 'Medio'],
+                ['min' => 9, 'max' => 10, 'level' => 'Alto'],
+                ['min' => 11, 'level' => 'Muy Alto'],
+            ],
+            'Violencia laboral' => [ // 7 items, max ~28
+                ['max' => 7, 'level' => 'Nulo'],
+                ['min' => 8, 'max' => 12, 'level' => 'Bajo'],
+                ['min' => 13, 'max' => 17, 'level' => 'Medio'],
+                ['min' => 18, 'max' => 23, 'level' => 'Alto'],
+                ['min' => 24, 'level' => 'Muy Alto'],
+            ],
+
+            // Categoría 5: Entorno organizacional
+            'Escasa o nula retroalimentación del desempeño' => [ // 3 items, max ~12
+                ['max' => 3, 'level' => 'Nulo'],
+                ['min' => 4, 'max' => 5, 'level' => 'Bajo'],
+                ['min' => 6, 'max' => 8, 'level' => 'Medio'],
+                ['min' => 9, 'max' => 10, 'level' => 'Alto'],
+                ['min' => 11, 'level' => 'Muy Alto'],
+            ],
+            'Escaso o nulo reconocimiento y compensación' => [ // 4 items, max ~16
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 7, 'level' => 'Bajo'],
+                ['min' => 8, 'max' => 10, 'level' => 'Medio'],
+                ['min' => 11, 'max' => 13, 'level' => 'Alto'],
+                ['min' => 14, 'level' => 'Muy Alto'],
+            ],
+            'Limitado sentido de pertenencia' => [ // 2 items, max ~8
+                ['max' => 2, 'level' => 'Nulo'],
+                ['min' => 3, 'max' => 4, 'level' => 'Bajo'],
+                ['min' => 5, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+            'Inestabilidad laboral' => [ // 2 items, max ~8
+                ['max' => 2, 'level' => 'Nulo'],
+                ['min' => 3, 'max' => 4, 'level' => 'Bajo'],
+                ['min' => 5, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+        ];
     }
 
     /**

@@ -270,7 +270,8 @@ class ReportPdfService
 
         foreach ($evaluations as $evaluation) {
             $scores = $this->scoreService->calculateReferenciaIIIScores($evaluation);
-            $finalRiskLevel = $scores['final_risk']['level'] ?? 'Nulo';
+            $totalScore = $scores['total_score'] ?? 0;
+            $finalRiskLevel = $this->scoreService->calculateRiskLevel($totalScore);
 
             // Extract area from demographic data
             $area = $this->extractAreaFromEvaluation($evaluation);
@@ -306,7 +307,8 @@ class ReportPdfService
 
         foreach ($evaluations as $evaluation) {
             $scores = $this->scoreService->calculateReferenciaIIIScores($evaluation);
-            $finalRiskLevel = $scores['final_risk']['level'] ?? 'Nulo';
+            $totalScore = $scores['total_score'] ?? 0;
+            $finalRiskLevel = $this->scoreService->calculateRiskLevel($totalScore);
 
             // Extract puesto from demographic data
             $puesto = $this->extractPuestoFromEvaluation($evaluation);
