@@ -648,12 +648,19 @@ class PaperEvaluationReportService
             $demographicData = $evaluation->demographic_data ?? [];
             $value = $demographicData[$categoryKey] ?? null;
 
-            if (! $value) {
-                continue;
-            }
-
             // Handle nested demographic data
-            $valueLabel = is_array($value) ? ($value['label'] ?? $value['value'] ?? 'Desconocido') : $value;
+            $valueLabel = is_array($value) ? ($value['label'] ?? $value['value'] ?? null) : $value;
+
+            // For specific categories, handle missing/null values
+            if (! $valueLabel || $valueLabel === 'NULL' || trim($valueLabel) === '') {
+                // For gender category, explicitly mark as "Sin género"
+                if ($categoryKey === 'sexo') {
+                    $valueLabel = 'Sin género';
+                } else {
+                    // For other categories, skip if no value
+                    continue;
+                }
+            }
 
             if (! isset($categoryData[$valueLabel])) {
                 $categoryData[$valueLabel] = [
