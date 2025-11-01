@@ -6,7 +6,8 @@ class ReportPdfService
 {
     public function __construct(
         protected PaperEvaluationReportService $paperReportService,
-        protected PaperEvaluationScoreService $scoreService
+        protected PaperEvaluationScoreService $scoreService,
+        protected ExecutiveReportService $executiveReportService
     ) {}
 
     /**
@@ -504,5 +505,13 @@ class ReportPdfService
         }
 
         return 'Sin puesto';
+    }
+
+    /**
+     * Get executive report data for PDF report
+     */
+    public function getExecutiveReportData(string $organizationId): array
+    {
+        return $this->executiveReportService->getExecutiveReportData($organizationId);
     }
 }

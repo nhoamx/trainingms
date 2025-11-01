@@ -423,7 +423,7 @@ class PaperEvaluationReportService
     /**
      * Get domain risk thresholds based on NOM-035
      */
-    protected function getDomainRiskThresholds(): array
+    public function getDomainRiskThresholds(): array
     {
         return [
             'Condiciones en el ambiente de trabajo' => [
@@ -502,7 +502,7 @@ class PaperEvaluationReportService
     /**
      * Get category risk thresholds based on NOM-035
      */
-    protected function getCategoryRiskThresholds(): array
+    public function getCategoryRiskThresholds(): array
     {
         return [
             'Ambiente de trabajo' => [

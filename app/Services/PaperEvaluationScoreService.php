@@ -187,7 +187,7 @@ class PaperEvaluationScoreService
     /**
      * Calculate risk level for a category based on its score
      */
-    protected function calculateCategoryRiskLevel(string $categoryName, int $score): string
+    public function calculateCategoryRiskLevel(string $categoryName, int $score): string
     {
         $categoryThresholds = $this->getCategoryRiskThresholds();
 
@@ -209,7 +209,7 @@ class PaperEvaluationScoreService
     /**
      * Calculate risk level for a domain based on its score
      */
-    protected function calculateDomainRiskLevel(string $domainName, int $score): string
+    public function calculateDomainRiskLevel(string $domainName, int $score): string
     {
         $domainThresholds = $this->getDomainRiskThresholds();
 
