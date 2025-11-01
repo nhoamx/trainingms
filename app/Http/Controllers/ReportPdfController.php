@@ -69,6 +69,11 @@ class ReportPdfController extends Controller
                 'generatedDate' => now()->format('d/m/Y'),
             ])->render();
 
+            // If preview parameter is present, return HTML view instead of PDF
+            if ($request->has('preview')) {
+                return response($html)->header('Content-Type', 'text/html');
+            }
+
             // Generate PDF using Browsershot
             $filename = 'informe-demografico-'.$organization->name.'-'.now()->format('Y-m-d').'.pdf';
             $tempPath = storage_path('app/temp/'.$filename);
@@ -127,6 +132,11 @@ class ReportPdfController extends Controller
                 'generatedDate' => now()->format('d/m/Y'),
             ])->render();
 
+            // If preview parameter is present, return HTML view instead of PDF
+            if ($request->has('preview')) {
+                return response($html)->header('Content-Type', 'text/html');
+            }
+
             // Generate PDF using Browsershot
             $filename = 'informe-diagnostico-'.$organization->name.'-'.now()->format('Y-m-d').'.pdf';
             $tempPath = storage_path('app/temp/'.$filename);
@@ -167,6 +177,12 @@ class ReportPdfController extends Controller
                 return response()->json([
                     'error' => 'No autorizado para generar reportes',
                 ], 403);
+            }
+
+            // If preview parameter is present, return a preview message
+            if ($request->has('preview')) {
+                return response('<h1>Informe Ejecutivo (Próximamente)</h1><p>El informe ejecutivo estará disponible próximamente.</p>')
+                    ->header('Content-Type', 'text/html');
             }
 
             return response()->json([
