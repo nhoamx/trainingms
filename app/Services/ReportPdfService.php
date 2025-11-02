@@ -270,7 +270,8 @@ class ReportPdfService
 
         foreach ($evaluations as $evaluation) {
             $scores = $this->scoreService->calculateReferenciaIIIScores($evaluation);
-            $finalRiskLevel = $scores['final_risk']['level'] ?? 'Nulo';
+            $totalScore = $scores['total_score'] ?? 0;
+            $finalRiskLevel = $this->scoreService->calculateRiskLevel($totalScore);
 
             // Extract area from demographic data
             $area = $this->extractAreaFromEvaluation($evaluation);
@@ -306,7 +307,8 @@ class ReportPdfService
 
         foreach ($evaluations as $evaluation) {
             $scores = $this->scoreService->calculateReferenciaIIIScores($evaluation);
-            $finalRiskLevel = $scores['final_risk']['level'] ?? 'Nulo';
+            $totalScore = $scores['total_score'] ?? 0;
+            $finalRiskLevel = $this->scoreService->calculateRiskLevel($totalScore);
 
             // Extract puesto from demographic data
             $puesto = $this->extractPuestoFromEvaluation($evaluation);
@@ -436,7 +438,10 @@ class ReportPdfService
     {
         // First try to get from Referencia V demographic data
         $referenciaV = \App\Models\PaperEvaluation::where('personal_folio', $evaluation->personal_folio)
+            ->where('organization_id', $evaluation->organization_id)
             ->where('evaluation_type', 'referencia_v')
+            ->where('source', 'paper')
+            ->where('processing_status', 'completed')
             ->first();
 
         if ($referenciaV && isset($referenciaV->demographic_data['departamento'])) {
@@ -452,7 +457,7 @@ class ReportPdfService
             return $departamento ?: 'Sin área';
         }
 
-        // Fallback to evaluation's own demographic data
+        // Fallback to evaluation's own demographic data (aunque no debería tener)
         if (isset($evaluation->demographic_data['departamento'])) {
             $departamento = $evaluation->demographic_data['departamento'];
 
@@ -475,7 +480,10 @@ class ReportPdfService
     {
         // First try to get from Referencia V demographic data
         $referenciaV = \App\Models\PaperEvaluation::where('personal_folio', $evaluation->personal_folio)
+            ->where('organization_id', $evaluation->organization_id)
             ->where('evaluation_type', 'referencia_v')
+            ->where('source', 'paper')
+            ->where('processing_status', 'completed')
             ->first();
 
         if ($referenciaV && isset($referenciaV->demographic_data['ocupacion'])) {
@@ -491,7 +499,7 @@ class ReportPdfService
             return $ocupacion ?: 'Sin puesto';
         }
 
-        // Fallback to evaluation's own demographic data
+        // Fallback to evaluation's own demographic data (aunque no debería tener)
         if (isset($evaluation->demographic_data['ocupacion'])) {
             $ocupacion = $evaluation->demographic_data['ocupacion'];
 

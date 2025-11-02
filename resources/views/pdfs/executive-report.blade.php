@@ -120,11 +120,11 @@
             font-size: 8pt;
         }
 
-        .risk-nulo { background: #d1fae5; color: #065f46; }
-        .risk-bajo { background: #dbeafe; color: #1e40af; }
-        .risk-medio { background: #fef3c7; color: #92400e; }
-        .risk-alto { background: #fed7aa; color: #9a3412; }
-        .risk-muy-alto { background: #fee2e2; color: #991b1b; }
+        .risk-nulo { background: #06b6d4; color: white; }
+        .risk-bajo { background: #22c55e; color: white; }
+        .risk-medio { background: #facc15; color: black; }
+        .risk-alto { background: #f97316; color: white; }
+        .risk-muy-alto { background: #ef4444; color: white; }
 
         .summary-box {
             background: #eff6ff;
@@ -147,23 +147,219 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <h1>Informe Ejecutivo</h1>
-        <h2>Factores de Riesgo Psicosocial NOM-035-STPS-2018</h2>
+        <h1>INFORME EJECUTIVO</h1>
+        <h2>{{ strtoupper($organization->razon_social ?? $organization->nombre ?? $organization->name) }}</h2>
         <div class="subtitle">
-            Identificación, Análisis y Prevención de Factores de Riesgo Psicosocial
+            NOM-035-STPS-2018<br>
+            Factores de Riesgo Psicosocial en el Trabajo
         </div>
     </div>
 
-    <!-- Organization Info -->
-    <div class="organization-info">
-        <h3>{{ $organization->name }}</h3>
-        <p><strong>Fecha de generación:</strong> {{ $generatedDate }}</p>
-        <p><strong>Total de evaluaciones:</strong> {{ $executiveData['analisis_cuantitativo_final']['total'] }}</p>
+    <!-- I.- Datos del Centro de Trabajo -->
+    <div class="section">
+        <h3 class="section-title">I.- Datos del Centro de Trabajo</h3>
+        
+        <div class="organization-info">
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                @if($organization->razon_social)
+                <tr>
+                    <td style="width: 30%; padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Razón Social</strong></td>
+                    <td style="width: 70%; padding: 8px; border: 1px solid #ddd;">{{ $organization->razon_social }}</td>
+                </tr>
+                @endif
+                
+                @if($organization->rfc)
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>RFC</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $organization->rfc }}</td>
+                </tr>
+                @endif
+                
+                @if($organization->registro_patronal)
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Registro Patronal</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $organization->registro_patronal }}</td>
+                </tr>
+                @endif
+            </table>
+
+            @if($organization->calle_numero || $organization->colonia || $organization->municipio || $organization->estado)
+            <h4 style="font-size: 11pt; color: #1e40af; margin: 12px 0 8px 0;">Domicilio</h4>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                @if($organization->calle_numero)
+                <tr>
+                    <td style="width: 30%; padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Calle y No.</strong></td>
+                    <td style="width: 70%; padding: 8px; border: 1px solid #ddd;">
+                        {{ $organization->calle_numero }}
+                        @if($organization->codigo_postal) C.P. {{ $organization->codigo_postal }}@endif
+                    </td>
+                </tr>
+                @endif
+                
+                @if($organization->colonia)
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Colonia</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $organization->colonia }}</td>
+                </tr>
+                @endif
+                
+                @if($organization->municipio)
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Municipio</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $organization->municipio }}</td>
+                </tr>
+                @endif
+                
+                @if($organization->estado)
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Estado</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $organization->estado }}</td>
+                </tr>
+                @endif
+            </table>
+            @endif
+
+            @if($organization->contacto_nombre || $organization->contacto_puesto || $organization->contacto_email || $organization->contacto_telefono)
+            <h4 style="font-size: 11pt; color: #1e40af; margin: 12px 0 8px 0;">Contacto</h4>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                @if($organization->contacto_nombre)
+                <tr>
+                    <td style="width: 30%; padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Nombre</strong></td>
+                    <td style="width: 70%; padding: 8px; border: 1px solid #ddd;">{{ $organization->contacto_nombre }}</td>
+                </tr>
+                @endif
+                
+                @if($organization->contacto_puesto)
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Puesto</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $organization->contacto_puesto }}</td>
+                </tr>
+                @endif
+                
+                @if($organization->contacto_email)
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Correo Electrónico</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $organization->contacto_email }}</td>
+                </tr>
+                @endif
+                
+                @if($organization->contacto_telefono)
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Teléfono</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $organization->contacto_telefono }}</td>
+                </tr>
+                @endif
+            </table>
+            @endif
+
+            @if($organization->contacto_nombre_2 || $organization->contacto_puesto_2 || $organization->contacto_email_2 || $organization->contacto_telefono_2)
+            <h4 style="font-size: 11pt; color: #1e40af; margin: 12px 0 8px 0;">Contacto</h4>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                @if($organization->contacto_nombre_2)
+                <tr>
+                    <td style="width: 30%; padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Nombre</strong></td>
+                    <td style="width: 70%; padding: 8px; border: 1px solid #ddd;">{{ $organization->contacto_nombre_2 }}</td>
+                </tr>
+                @endif
+                
+                @if($organization->contacto_puesto_2)
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Puesto</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $organization->contacto_puesto_2 }}</td>
+                </tr>
+                @endif
+                
+                @if($organization->contacto_email_2)
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Correo Electrónico</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $organization->contacto_email_2 }}</td>
+                </tr>
+                @endif
+                
+                @if($organization->contacto_telefono_2)
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa;"><strong>Teléfono</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $organization->contacto_telefono_2 }}</td>
+                </tr>
+                @endif
+            </table>
+            @endif
+
+            @if($organization->actividad_principal)
+            <h4 style="font-size: 11pt; color: #1e40af; margin: 12px 0 8px 0;">Actividad Principal</h4>
+            <p style="margin-bottom: 15px;">{{ $organization->actividad_principal }}</p>
+            @endif
+        </div>
+
+        @php
+            // Calculate gender distribution from demographic data (Referencia V)
+            $totalParticipants = $executiveData['analisis_cuantitativo_final']['total'] ?? 0;
+            $genderData = collect($demographicData ?? [])->firstWhere('title', 'Distribución Conforme a Género');
+            
+            $hombres = 0;
+            $mujeres = 0;
+            $gne = 0;
+            
+            if ($genderData && isset($genderData['data'])) {
+                foreach ($genderData['data'] as $item) {
+                    $gender = $item['name'] ?? '';
+                    $count = $item['total'] ?? 0;
+                    
+                    if (stripos($gender, 'Hombre') !== false || stripos($gender, 'Masculino') !== false) {
+                        $hombres += $count;
+                    } elseif (stripos($gender, 'Mujer') !== false || stripos($gender, 'Femenino') !== false) {
+                        $mujeres += $count;
+                    } else {
+                        $gne += $count;
+                    }
+                }
+            }
+        @endphp
+
+        @if($totalParticipants > 0)
+        <div class="section">
+            <h3 class="section-title">Colaboradores</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50%; background-color: #dbeafe;">Concepto</th>
+                        <th style="width: 16.66%; background-color: #dbeafe;">Total</th>
+                        <th style="width: 16.66%; background-color: #dbeafe;">Hombres</th>
+                        <th style="width: 16.66%; background-color: #dbeafe;">Mujeres</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="text-align: left;">Número de trabajadores que se les aplicó el cuestionario / Muestra</td>
+                        <td><strong>{{ $totalParticipants }}</strong></td>
+                        <td>{{ $hombres }}</td>
+                        <td>{{ $mujeres }}</td>
+                    </tr>
+                    @if($organization->comite_integrantes)
+                    <tr>
+                        <td style="text-align: left;">Integrantes del comité de atención y seguimiento a factores de riesgos psicosociales</td>
+                        <td><strong>{{ $organization->comite_integrantes }}</strong></td>
+                        <td>{{ $organization->comite_hombres ?? 0 }}</td>
+                        <td>{{ $organization->comite_mujeres ?? 0 }}</td>
+                    </tr>
+                    @endif
+                    @if($organization->fecha_aplicacion)
+                    <tr>
+                        <td colspan="4" style="text-align: left; padding-top: 10px;">
+                            <strong>Fecha de aplicación de las guías de referencia I / III / V</strong>
+                            <span style="float: right; padding-right: 20px;">{{ \Carbon\Carbon::parse($organization->fecha_aplicacion)->locale('es')->isoFormat('MMMM YYYY') }}</span>
+                        </td>
+                    </tr>
+                    @endif
+                </tbody>
+            </table>
+        </div>
+        @endif
     </div>
 
-    <!-- 1. Análisis Cuantitativo de los Factores de Riesgo Psicosocial - Calificación Final -->
+    <!-- II. Análisis Cuantitativo de los Factores de Riesgo Psicosocial - Calificación Final -->
     <div class="section">
-        <h3 class="section-title">1. Análisis Cuantitativo de los Factores de Riesgo Psicosocial - Calificación Final</h3>
+        <h3 class="section-title">II. Análisis Cuantitativo de los Factores de Riesgo Psicosocial - Calificación Final</h3>
         
         <div class="summary-box">
             <strong>Resumen:</strong> Distribución general de niveles de riesgo psicosocial según NOM-035-STPS-2018
@@ -193,9 +389,9 @@
         </table>
     </div>
 
-    <!-- 2. Análisis Cuantitativo de Actos de Violencia Laboral -->
+    <!-- III. Análisis Cuantitativo de Actos de Violencia Laboral -->
     <div class="section">
-        <h3 class="section-title">2. Análisis Cuantitativo de Actos de Violencia Laboral</h3>
+        <h3 class="section-title">III. Análisis Cuantitativo de Actos de Violencia Laboral</h3>
         
         <table>
             <thead>
@@ -220,9 +416,9 @@
         </table>
     </div>
 
-    <!-- 3. Evaluación del Entorno Organizacional -->
+    <!-- IV. Evaluación del Entorno Organizacional -->
     <div class="section">
-        <h3 class="section-title">3. Evaluación del Entorno Organizacional</h3>
+        <h3 class="section-title">IV. Evaluación del Entorno Organizacional</h3>
         
         <table>
             <thead>
@@ -245,8 +441,9 @@
     </div>
 
     <!-- 4. Análisis Cuantitativo por Dimensión (Promedio por Pregunta) -->
+        <!-- V. Análisis Cuantitativo de los Factores de Riesgo Psicosocial por Dimensión -->
     <div class="section" style="page-break-before: always;">
-        <h3 class="section-title">4. Análisis Cuantitativo de los Factores de Riesgo Psicosocial por Dimensión</h3>
+        <h3 class="section-title">V. Análisis Cuantitativo de los Factores de Riesgo Psicosocial por Dimensión</h3>
         
         @foreach($executiveData['analisis_dimensiones'] as $dimensionName => $items)
         <h4 class="section-subtitle">{{ $dimensionName }}</h4>
@@ -272,8 +469,9 @@
     </div>
 
     <!-- 5. Análisis Cualitativo -->
+        <!-- VI. Análisis Cualitativo de los Factores de Riesgo Psicosocial -->
     <div class="section" style="page-break-before: always;">
-        <h3 class="section-title">5. Análisis Cualitativo de los Factores de Riesgo Psicosocial</h3>
+        <h3 class="section-title">VI. Análisis Cualitativo de los Factores de Riesgo Psicosocial</h3>
         
         <!-- Por Género -->
         <h4 class="section-subtitle">a) Por Género</h4>
@@ -402,8 +600,9 @@
     </div>
 
     <!-- 6. Identificación de Trabajadores con Factores de Riesgo -->
+        <!-- VII. Identificación de los Trabajadores con Factores de Riesgo Psicosocial -->
     <div class="section" style="page-break-before: always;">
-        <h3 class="section-title">6. Identificación de los Trabajadores con Factores de Riesgo Psicosocial</h3>
+        <h3 class="section-title">VII. Identificación de los Trabajadores con Factores de Riesgo Psicosocial</h3>
         
         <div class="summary-box">
             <p><strong>Total de trabajadores en riesgo:</strong> {{ $executiveData['identificacion_trabajadores_riesgo']['total_riesgo'] }}</p>
@@ -437,9 +636,9 @@
         @endforeach
     </div>
 
-    <!-- 7. Acontecimientos Traumáticos Severos -->
+    <!-- VIII. Acontecimientos Traumáticos Severos -->
     <div class="section">
-        <h3 class="section-title">7. Identificación de Trabajadores Sujetos a Acontecimientos Traumáticos Severos</h3>
+        <h3 class="section-title">VIII. Identificación de Trabajadores Sujetos a Acontecimientos Traumáticos Severos</h3>
         
         <div class="summary-box">
             <p><strong>Total de trabajadores afectados:</strong> {{ $executiveData['identificacion_trabajadores_trauma']['total_affected'] }}</p>
@@ -469,7 +668,9 @@
 
     <!-- 8. Violencia Laboral -->
     <div class="section">
-        <h3 class="section-title">8. Identificación de Trabajadores Sujetos a Actos de Violencia Laboral</h3>
+            <!-- IX. Identificación de Trabajadores Sujetos a Actos de Violencia Laboral -->
+    <div class="section" style="page-break-before: always;">
+        <h3 class="section-title">IX. Identificación de Trabajadores Sujetos a Actos de Violencia Laboral</h3>
         
         <div class="summary-box">
             <p><strong>Total de trabajadores afectados:</strong> {{ $executiveData['identificacion_trabajadores_violencia']['total_affected'] }}</p>
@@ -497,9 +698,9 @@
         @endif
     </div>
 
-    <!-- 9. Identificación por Calificación Final -->
+    <!-- X. Identificación por Calificación Final -->
     <div class="section" style="page-break-before: always;">
-        <h3 class="section-title">9. Identificación de Trabajadores por Calificación Final y Factor de Riesgo</h3>
+        <h3 class="section-title">X. Identificación de Trabajadores por Calificación Final y Factor de Riesgo</h3>
         
         <table>
             <thead>
@@ -519,9 +720,9 @@
         </table>
     </div>
 
-    <!-- 10. Análisis de Dominios -->
+    <!-- XI. Análisis de Dominios -->
     <div class="section">
-        <h3 class="section-title">10. Análisis Cuantitativo de los Dominios - Calificación Final</h3>
+        <h3 class="section-title">XI. Análisis Cuantitativo de los Dominios - Calificación Final</h3>
         
         @foreach($executiveData['analisis_dominios'] as $domainName => $domainData)
         <h4 class="section-subtitle">{{ $domainName }}</h4>
@@ -547,8 +748,9 @@
     </div>
 
     <!-- 11. Identificación por Categoría -->
+        <!-- XII. Identificación de Trabajadores por Categoría de Riesgo -->
     <div class="section" style="page-break-before: always;">
-        <h3 class="section-title">11. Identificación de Trabajadores por Categoría de Riesgo</h3>
+        <h3 class="section-title">XII. Identificación de Trabajadores por Categoría de Riesgo</h3>
         
         @foreach($executiveData['identificacion_por_categoria'] as $categoryName => $categoryData)
         <h4 class="section-subtitle">{{ $categoryName }}</h4>
@@ -609,18 +811,18 @@
                                     distribution['Muy Alto']
                                 ],
                                 backgroundColor: [
-                                    '#d1fae5',
-                                    '#dbeafe',
-                                    '#fef3c7',
-                                    '#fed7aa',
-                                    '#fee2e2'
+                                    '#06b6d4',
+                                    '#22c55e',
+                                    '#facc15',
+                                    '#f97316',
+                                    '#ef4444'
                                 ],
                                 borderColor: [
-                                    '#065f46',
-                                    '#1e40af',
-                                    '#92400e',
-                                    '#9a3412',
-                                    '#991b1b'
+                                    '#06b6d4',
+                                    '#22c55e',
+                                    '#facc15',
+                                    '#f97316',
+                                    '#ef4444'
                                 ],
                                 borderWidth: 2
                             }]

@@ -691,8 +691,18 @@ watch(() => props.currentOrganization, (newOrg) => {
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
-                                            <tr v-for="(item, index) in section.data" :key="index" class="hover:bg-gray-50">
-                                                <td class="px-4 py-3 text-sm text-gray-900 border-r border-gray-300 font-medium">{{ item.name }}</td>
+                                            <tr v-for="(item, index) in section.data" :key="index" 
+                                                :class="[
+                                                    'hover:bg-gray-50',
+                                                    item.name === 'Sin género' ? 'bg-yellow-50 border-l-4 border-l-yellow-500' : ''
+                                                ]"
+                                            >
+                                                <td class="px-4 py-3 text-sm text-gray-900 border-r border-gray-300 font-medium">
+                                                    {{ item.name }}
+                                                    <span v-if="item.name === 'Sin género'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                        ⚠️ Requiere revisión
+                                                    </span>
+                                                </td>
                                                 <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-semibold">{{ item.total || 0 }}</td>
                                                 <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Nulo'] || 0 }}</td>
                                                 <td class="px-4 py-3 text-sm text-center text-gray-900 border-r border-gray-300 font-medium">{{ item.risk_levels?.['Bajo'] || 0 }}</td>

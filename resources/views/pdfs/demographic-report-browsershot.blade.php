@@ -144,11 +144,11 @@
             font-style: italic;
         }
 
-        .risk-nulo { background-color: #00CED1 !important; color: white; }
-        .risk-bajo { background-color: #28A745 !important; color: white; }
-        .risk-medio { background-color: #FFFF00 !important; color: black; }
-        .risk-alto { background-color: #FFA500 !important; color: black; }
-        .risk-muy-alto { background-color: #FF0000 !important; color: white; }
+        .risk-nulo { background-color: #06b6d4 !important; color: white; }
+        .risk-bajo { background-color: #22c55e !important; color: white; }
+        .risk-medio { background-color: #facc15 !important; color: black; }
+        .risk-alto { background-color: #f97316 !important; color: white; }
+        .risk-muy-alto { background-color: #ef4444 !important; color: white; }
 
         .footer {
             margin-top: 20px;

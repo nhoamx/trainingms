@@ -548,9 +548,196 @@ class PaperEvaluationReportService
      */
     protected function getDimensionRiskThresholds(): array
     {
-        // Dimensions don't have specific thresholds in NOM-035
-        // Use domain thresholds as reference
-        return [];
+        // Dimensions use proportional thresholds based on their parent domain
+        // These are approximations based on the typical score ranges for each dimension
+        return [
+            // Categoría 1: Ambiente de trabajo -> Dominio: Condiciones en el ambiente de trabajo
+            'Condiciones peligrosas e inseguras' => [ // 2 items, max ~8
+                ['max' => 1, 'level' => 'Nulo'],
+                ['min' => 2, 'max' => 3, 'level' => 'Bajo'],
+                ['min' => 4, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+            'Condiciones deficientes e insalubres' => [ // 2 items, max ~8
+                ['max' => 1, 'level' => 'Nulo'],
+                ['min' => 2, 'max' => 3, 'level' => 'Bajo'],
+                ['min' => 4, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+            'Trabajos peligrosos' => [ // 1 item, max ~4
+                ['max' => 0, 'level' => 'Nulo'],
+                ['min' => 1, 'max' => 1, 'level' => 'Bajo'],
+                ['min' => 2, 'max' => 2, 'level' => 'Medio'],
+                ['min' => 3, 'max' => 3, 'level' => 'Alto'],
+                ['min' => 4, 'level' => 'Muy Alto'],
+            ],
+
+            // Categoría 2: Factores propios de la actividad -> Dominio: Carga de trabajo
+            'Cargas cuantitativas' => [ // 3 items, max ~12
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 6, 'level' => 'Bajo'],
+                ['min' => 7, 'max' => 8, 'level' => 'Medio'],
+                ['min' => 9, 'max' => 11, 'level' => 'Alto'],
+                ['min' => 12, 'level' => 'Muy Alto'],
+            ],
+            'Ritmos de trabajo acelerado' => [ // 2 items, max ~8
+                ['max' => 2, 'level' => 'Nulo'],
+                ['min' => 3, 'max' => 4, 'level' => 'Bajo'],
+                ['min' => 5, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+            'Carga mental' => [ // 4 items, max ~16
+                ['max' => 5, 'level' => 'Nulo'],
+                ['min' => 6, 'max' => 8, 'level' => 'Bajo'],
+                ['min' => 9, 'max' => 11, 'level' => 'Medio'],
+                ['min' => 12, 'max' => 14, 'level' => 'Alto'],
+                ['min' => 15, 'level' => 'Muy Alto'],
+            ],
+            'Cargas psicológicas emocionales' => [ // 1 item, max ~4
+                ['max' => 1, 'level' => 'Nulo'],
+                ['min' => 2, 'max' => 2, 'level' => 'Bajo'],
+                ['min' => 3, 'max' => 3, 'level' => 'Medio'],
+                ['min' => 4, 'max' => 4, 'level' => 'Alto'],
+                ['min' => 5, 'level' => 'Muy Alto'],
+            ],
+            'Cargas de alta responsabilidad' => [ // 2 items, max ~8
+                ['max' => 2, 'level' => 'Nulo'],
+                ['min' => 3, 'max' => 4, 'level' => 'Bajo'],
+                ['min' => 5, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+            'Cargas contradictorias o inconsistentes' => [ // 3 items, max ~12
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 6, 'level' => 'Bajo'],
+                ['min' => 7, 'max' => 8, 'level' => 'Medio'],
+                ['min' => 9, 'max' => 11, 'level' => 'Alto'],
+                ['min' => 12, 'level' => 'Muy Alto'],
+            ],
+
+            // Dominio: Falta de control sobre el trabajo
+            'Falta de control y autonomía sobre el trabajo' => [ // 5 items, max ~20
+                ['max' => 5, 'level' => 'Nulo'],
+                ['min' => 6, 'max' => 9, 'level' => 'Bajo'],
+                ['min' => 10, 'max' => 13, 'level' => 'Medio'],
+                ['min' => 14, 'max' => 17, 'level' => 'Alto'],
+                ['min' => 18, 'level' => 'Muy Alto'],
+            ],
+            'Limitada o nula posibilidad de desarrollo' => [ // 1 item, max ~4
+                ['max' => 1, 'level' => 'Nulo'],
+                ['min' => 2, 'max' => 2, 'level' => 'Bajo'],
+                ['min' => 3, 'max' => 3, 'level' => 'Medio'],
+                ['min' => 4, 'max' => 4, 'level' => 'Alto'],
+                ['min' => 5, 'level' => 'Muy Alto'],
+            ],
+            'Insuficiente participación y manejo del cambio' => [ // 3 items, max ~12
+                ['max' => 3, 'level' => 'Nulo'],
+                ['min' => 4, 'max' => 6, 'level' => 'Bajo'],
+                ['min' => 7, 'max' => 8, 'level' => 'Medio'],
+                ['min' => 9, 'max' => 11, 'level' => 'Alto'],
+                ['min' => 12, 'level' => 'Muy Alto'],
+            ],
+            'Limitada o inexistente capacitación' => [ // 2 items, max ~8
+                ['max' => 2, 'level' => 'Nulo'],
+                ['min' => 3, 'max' => 4, 'level' => 'Bajo'],
+                ['min' => 5, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+
+            // Categoría 3: Organización del tiempo de trabajo
+            'Jornadas de trabajo extensas' => [ // 1 item, max ~4
+                ['max' => 0, 'level' => 'Nulo'],
+                ['min' => 1, 'max' => 1, 'level' => 'Bajo'],
+                ['min' => 2, 'max' => 3, 'level' => 'Medio'],
+                ['min' => 4, 'max' => 4, 'level' => 'Alto'],
+                ['min' => 5, 'level' => 'Muy Alto'],
+            ],
+            'Influencia del trabajo fuera del centro laboral' => [ // 4 items, max ~16
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 7, 'level' => 'Bajo'],
+                ['min' => 8, 'max' => 10, 'level' => 'Medio'],
+                ['min' => 11, 'max' => 13, 'level' => 'Alto'],
+                ['min' => 14, 'level' => 'Muy Alto'],
+            ],
+            'Influencia de las responsabilidades familiares' => [ // 1 item, max ~4
+                ['max' => 1, 'level' => 'Nulo'],
+                ['min' => 2, 'max' => 2, 'level' => 'Bajo'],
+                ['min' => 3, 'max' => 3, 'level' => 'Medio'],
+                ['min' => 4, 'max' => 4, 'level' => 'Alto'],
+                ['min' => 5, 'level' => 'Muy Alto'],
+            ],
+
+            // Categoría 4: Liderazgo y relaciones en el trabajo
+            'Escasa claridad de funciones' => [ // 4 items, max ~16
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 7, 'level' => 'Bajo'],
+                ['min' => 8, 'max' => 10, 'level' => 'Medio'],
+                ['min' => 11, 'max' => 13, 'level' => 'Alto'],
+                ['min' => 14, 'level' => 'Muy Alto'],
+            ],
+            'Características del liderazgo' => [ // 8 items, max ~32
+                ['max' => 9, 'level' => 'Nulo'],
+                ['min' => 10, 'max' => 14, 'level' => 'Bajo'],
+                ['min' => 15, 'max' => 20, 'level' => 'Medio'],
+                ['min' => 21, 'max' => 27, 'level' => 'Alto'],
+                ['min' => 28, 'level' => 'Muy Alto'],
+            ],
+            'Relaciones sociales en el trabajo' => [ // 4 items, max ~16
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 7, 'level' => 'Bajo'],
+                ['min' => 8, 'max' => 10, 'level' => 'Medio'],
+                ['min' => 11, 'max' => 13, 'level' => 'Alto'],
+                ['min' => 14, 'level' => 'Muy Alto'],
+            ],
+            'Deficiente relación con los colaboradores que supervisa' => [ // 3 items, max ~12
+                ['max' => 0, 'level' => 'Nulo'],
+                ['min' => 1, 'max' => 2, 'level' => 'Bajo'],
+                ['min' => 3, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 8, 'level' => 'Alto'],
+                ['min' => 9, 'level' => 'Muy Alto'],
+            ],
+            'Violencia laboral' => [ // 7 items, max ~28
+                ['max' => 7, 'level' => 'Nulo'],
+                ['min' => 8, 'max' => 12, 'level' => 'Bajo'],
+                ['min' => 13, 'max' => 17, 'level' => 'Medio'],
+                ['min' => 18, 'max' => 23, 'level' => 'Alto'],
+                ['min' => 24, 'level' => 'Muy Alto'],
+            ],
+
+            // Categoría 5: Entorno organizacional
+            'Escasa o nula retroalimentación del desempeño' => [ // 3 items, max ~12
+                ['max' => 3, 'level' => 'Nulo'],
+                ['min' => 4, 'max' => 5, 'level' => 'Bajo'],
+                ['min' => 6, 'max' => 8, 'level' => 'Medio'],
+                ['min' => 9, 'max' => 10, 'level' => 'Alto'],
+                ['min' => 11, 'level' => 'Muy Alto'],
+            ],
+            'Escaso o nulo reconocimiento y compensación' => [ // 4 items, max ~16
+                ['max' => 4, 'level' => 'Nulo'],
+                ['min' => 5, 'max' => 7, 'level' => 'Bajo'],
+                ['min' => 8, 'max' => 10, 'level' => 'Medio'],
+                ['min' => 11, 'max' => 13, 'level' => 'Alto'],
+                ['min' => 14, 'level' => 'Muy Alto'],
+            ],
+            'Limitado sentido de pertenencia' => [ // 2 items, max ~8
+                ['max' => 2, 'level' => 'Nulo'],
+                ['min' => 3, 'max' => 4, 'level' => 'Bajo'],
+                ['min' => 5, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+            'Inestabilidad laboral' => [ // 2 items, max ~8
+                ['max' => 2, 'level' => 'Nulo'],
+                ['min' => 3, 'max' => 4, 'level' => 'Bajo'],
+                ['min' => 5, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 7, 'level' => 'Alto'],
+                ['min' => 8, 'level' => 'Muy Alto'],
+            ],
+        ];
     }
 
     /**
@@ -608,13 +795,13 @@ class PaperEvaluationReportService
             'sexo' => 'Distribución Conforme a Género',
             'estado_civil' => 'Distribución Conforme a Estado Civil',
             'edad' => 'Distribución Conforme a Rango de Edad',
-            'nivel_estudios' => 'Distribución Conforme a Nivel de Estudios',
-            'ocupacion_puesto' => 'Distribución Conforme al Puesto',
+            'tipo_puesto' => 'Distribución Conforme a Nivel de Puesto',
+            'ocupacion' => 'Distribución Conforme al Puesto',
             'tipo_contratacion' => 'Distribución Conforme a Tipo de Contratación',
             'tipo_personal' => 'Distribución Conforme a Tipo de Personal',
             'tipo_jornada' => 'Distribución Conforme al Tipo de Jornada Laboral',
             'rotacion_turnos' => 'Distribución Conforme a Rotación de Turnos',
-            'departamento_seccion_area' => 'Distribución Conforme al Área',
+            'departamento' => 'Distribución Conforme al Área',
             'tiempo_puesto_actual' => 'Distribución Conforme a Tiempo en el Puesto Actual (Antigüedad)',
         ];
 
@@ -648,12 +835,38 @@ class PaperEvaluationReportService
             $demographicData = $evaluation->demographic_data ?? [];
             $value = $demographicData[$categoryKey] ?? null;
 
-            if (! $value) {
-                continue;
+            // Special handling for specific categories
+            if ($categoryKey === 'edad' && is_array($value) && isset($value['decenas'], $value['unidades'])) {
+                // Convert edad object to age range
+                $age = intval($value['decenas'].$value['unidades']);
+                $valueLabel = $this->getAgeRange($age);
+            } elseif ($categoryKey === 'ocupacion' && is_array($value)) {
+                // Handle ocupacion object - use fila1 or concatenate with fila2
+                $valueLabel = $value['fila1'] ?? null;
+                if ($valueLabel && ! empty($value['fila2'])) {
+                    $valueLabel .= ' '.$value['fila2'];
+                }
+            } elseif ($categoryKey === 'departamento' && is_array($value)) {
+                // Handle departamento object - use fila1 or concatenate with fila2
+                $valueLabel = $value['fila1'] ?? null;
+                if ($valueLabel && ! empty($value['fila2'])) {
+                    $valueLabel .= ' '.$value['fila2'];
+                }
+            } else {
+                // Handle nested demographic data
+                $valueLabel = is_array($value) ? ($value['label'] ?? $value['value'] ?? null) : $value;
             }
 
-            // Handle nested demographic data
-            $valueLabel = is_array($value) ? ($value['label'] ?? $value['value'] ?? 'Desconocido') : $value;
+            // For specific categories, handle missing/null values
+            if (! $valueLabel || $valueLabel === 'NULL' || trim($valueLabel) === '') {
+                // For gender category, explicitly mark as "Sin género"
+                if ($categoryKey === 'sexo') {
+                    $valueLabel = 'Sin género';
+                } else {
+                    // For other categories, skip if no value
+                    continue;
+                }
+            }
 
             if (! isset($categoryData[$valueLabel])) {
                 $categoryData[$valueLabel] = [
@@ -697,5 +910,50 @@ class PaperEvaluationReportService
         }
 
         return $result;
+    }
+
+    /**
+     * Convert numeric age to age range category
+     */
+    protected function getAgeRange(int $age): string
+    {
+        if ($age >= 15 && $age <= 19) {
+            return '15 - 19';
+        }
+        if ($age >= 20 && $age <= 24) {
+            return '20 - 24';
+        }
+        if ($age >= 25 && $age <= 29) {
+            return '25 - 29';
+        }
+        if ($age >= 30 && $age <= 34) {
+            return '30 - 34';
+        }
+        if ($age >= 35 && $age <= 39) {
+            return '35 - 39';
+        }
+        if ($age >= 40 && $age <= 44) {
+            return '40 - 44';
+        }
+        if ($age >= 45 && $age <= 49) {
+            return '45 - 49';
+        }
+        if ($age >= 50 && $age <= 54) {
+            return '50 - 54';
+        }
+        if ($age >= 55 && $age <= 59) {
+            return '55 - 59';
+        }
+        if ($age >= 60 && $age <= 64) {
+            return '60 - 64';
+        }
+        if ($age >= 65 && $age <= 69) {
+            return '65 - 69';
+        }
+        if ($age >= 70) {
+            return '70 o más';
+        }
+
+        return 'Sin especificar';
     }
 }
