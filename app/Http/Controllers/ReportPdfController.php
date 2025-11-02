@@ -185,6 +185,7 @@ class ReportPdfController extends Controller
 
             $organization = Organization::findOrFail($organizationId);
             $executiveData = $this->reportPdfService->getExecutiveReportData($organizationId);
+            $demographicData = $this->reportPdfService->getDemographicDistributionData($organizationId);
 
             if (empty($executiveData['analisis_cuantitativo_final']['total'])) {
                 return response()->json([
@@ -196,6 +197,7 @@ class ReportPdfController extends Controller
             $html = view('pdfs.executive-report', [
                 'organization' => $organization,
                 'executiveData' => $executiveData,
+                'demographicData' => $demographicData,
                 'generatedDate' => now()->format('d/m/Y'),
             ])->render();
 

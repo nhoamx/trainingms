@@ -656,7 +656,7 @@ class PaperEvaluationReportService
                 ['min' => 4, 'max' => 4, 'level' => 'Alto'],
                 ['min' => 5, 'level' => 'Muy Alto'],
             ],
-            'Influencia del trabajo fuera del centro de trabajo' => [ // 4 items, max ~16
+            'Influencia del trabajo fuera del centro laboral' => [ // 4 items, max ~16
                 ['max' => 4, 'level' => 'Nulo'],
                 ['min' => 5, 'max' => 7, 'level' => 'Bajo'],
                 ['min' => 8, 'max' => 10, 'level' => 'Medio'],
@@ -693,12 +693,12 @@ class PaperEvaluationReportService
                 ['min' => 11, 'max' => 13, 'level' => 'Alto'],
                 ['min' => 14, 'level' => 'Muy Alto'],
             ],
-            'Deficiente relación con los colaboradores' => [ // 3 items, max ~12
-                ['max' => 3, 'level' => 'Nulo'],
-                ['min' => 4, 'max' => 5, 'level' => 'Bajo'],
-                ['min' => 6, 'max' => 8, 'level' => 'Medio'],
-                ['min' => 9, 'max' => 10, 'level' => 'Alto'],
-                ['min' => 11, 'level' => 'Muy Alto'],
+            'Deficiente relación con los colaboradores que supervisa' => [ // 3 items, max ~12
+                ['max' => 0, 'level' => 'Nulo'],
+                ['min' => 1, 'max' => 2, 'level' => 'Bajo'],
+                ['min' => 3, 'max' => 5, 'level' => 'Medio'],
+                ['min' => 6, 'max' => 8, 'level' => 'Alto'],
+                ['min' => 9, 'level' => 'Muy Alto'],
             ],
             'Violencia laboral' => [ // 7 items, max ~28
                 ['max' => 7, 'level' => 'Nulo'],
@@ -795,13 +795,13 @@ class PaperEvaluationReportService
             'sexo' => 'Distribución Conforme a Género',
             'estado_civil' => 'Distribución Conforme a Estado Civil',
             'edad' => 'Distribución Conforme a Rango de Edad',
-            'nivel_estudios' => 'Distribución Conforme a Nivel de Estudios',
-            'ocupacion_puesto' => 'Distribución Conforme al Puesto',
+            'tipo_puesto' => 'Distribución Conforme a Nivel de Puesto',
+            'ocupacion' => 'Distribución Conforme al Puesto',
             'tipo_contratacion' => 'Distribución Conforme a Tipo de Contratación',
             'tipo_personal' => 'Distribución Conforme a Tipo de Personal',
             'tipo_jornada' => 'Distribución Conforme al Tipo de Jornada Laboral',
             'rotacion_turnos' => 'Distribución Conforme a Rotación de Turnos',
-            'departamento_seccion_area' => 'Distribución Conforme al Área',
+            'departamento' => 'Distribución Conforme al Área',
             'tiempo_puesto_actual' => 'Distribución Conforme a Tiempo en el Puesto Actual (Antigüedad)',
         ];
 
@@ -835,8 +835,27 @@ class PaperEvaluationReportService
             $demographicData = $evaluation->demographic_data ?? [];
             $value = $demographicData[$categoryKey] ?? null;
 
-            // Handle nested demographic data
-            $valueLabel = is_array($value) ? ($value['label'] ?? $value['value'] ?? null) : $value;
+            // Special handling for specific categories
+            if ($categoryKey === 'edad' && is_array($value) && isset($value['decenas'], $value['unidades'])) {
+                // Convert edad object to age range
+                $age = intval($value['decenas'].$value['unidades']);
+                $valueLabel = $this->getAgeRange($age);
+            } elseif ($categoryKey === 'ocupacion' && is_array($value)) {
+                // Handle ocupacion object - use fila1 or concatenate with fila2
+                $valueLabel = $value['fila1'] ?? null;
+                if ($valueLabel && ! empty($value['fila2'])) {
+                    $valueLabel .= ' '.$value['fila2'];
+                }
+            } elseif ($categoryKey === 'departamento' && is_array($value)) {
+                // Handle departamento object - use fila1 or concatenate with fila2
+                $valueLabel = $value['fila1'] ?? null;
+                if ($valueLabel && ! empty($value['fila2'])) {
+                    $valueLabel .= ' '.$value['fila2'];
+                }
+            } else {
+                // Handle nested demographic data
+                $valueLabel = is_array($value) ? ($value['label'] ?? $value['value'] ?? null) : $value;
+            }
 
             // For specific categories, handle missing/null values
             if (! $valueLabel || $valueLabel === 'NULL' || trim($valueLabel) === '') {
@@ -891,5 +910,50 @@ class PaperEvaluationReportService
         }
 
         return $result;
+    }
+
+    /**
+     * Convert numeric age to age range category
+     */
+    protected function getAgeRange(int $age): string
+    {
+        if ($age >= 15 && $age <= 19) {
+            return '15 - 19';
+        }
+        if ($age >= 20 && $age <= 24) {
+            return '20 - 24';
+        }
+        if ($age >= 25 && $age <= 29) {
+            return '25 - 29';
+        }
+        if ($age >= 30 && $age <= 34) {
+            return '30 - 34';
+        }
+        if ($age >= 35 && $age <= 39) {
+            return '35 - 39';
+        }
+        if ($age >= 40 && $age <= 44) {
+            return '40 - 44';
+        }
+        if ($age >= 45 && $age <= 49) {
+            return '45 - 49';
+        }
+        if ($age >= 50 && $age <= 54) {
+            return '50 - 54';
+        }
+        if ($age >= 55 && $age <= 59) {
+            return '55 - 59';
+        }
+        if ($age >= 60 && $age <= 64) {
+            return '60 - 64';
+        }
+        if ($age >= 65 && $age <= 69) {
+            return '65 - 69';
+        }
+        if ($age >= 70) {
+            return '70 o más';
+        }
+
+        return 'Sin especificar';
     }
 }

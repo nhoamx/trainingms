@@ -176,11 +176,11 @@
             background: #f9fafb;
         }
 
-        .risk-nulo { background-color: #00CED1 !important; color: white; }
-        .risk-bajo { background-color: #28A745 !important; color: white; }
-        .risk-medio { background-color: #FFFF00 !important; color: black; }
-        .risk-alto { background-color: #FFA500 !important; color: black; }
-        .risk-muy-alto { background-color: #FF0000 !important; color: white; }
+        .risk-nulo { background-color: #06b6d4 !important; color: white; }
+        .risk-bajo { background-color: #22c55e !important; color: white; }
+        .risk-medio { background-color: #facc15 !important; color: black; }
+        .risk-alto { background-color: #f97316 !important; color: white; }
+        .risk-muy-alto { background-color: #ef4444 !important; color: white; }
 
         .footer {
             margin-top: 20px;
@@ -207,69 +207,188 @@
 
         <div class="organization-info">
             <h3>I.- Datos del Centro de Trabajo</h3>
-            <p><strong>Razón Social:</strong> {{ $organization->razon_social ?? $organization->name }}</p>
-            @if($organization->nombre)
-            <p><strong>Nombre:</strong> {{ $organization->nombre }}</p>
+            
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                <tr>
+                    <td style="width: 30%; padding: 4px 0; vertical-align: top;"><strong>Razón Social</strong></td>
+                    <td style="width: 70%; padding: 4px 0; vertical-align: top;">{{ $organization->razon_social ?? $organization->name }}</td>
+                </tr>
+                @if($organization->nombre)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>Nombre</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->nombre }}</td>
+                </tr>
+                @endif
+                @if($organization->rfc)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>RFC</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->rfc }}</td>
+                </tr>
+                @endif
+                @if($organization->registro_patronal)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>Registro Patronal</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->registro_patronal }}</td>
+                </tr>
+                @endif
+            </table>
+
+            @if($organization->calle_numero || $organization->colonia || $organization->municipio || $organization->estado)
+            <h4 style="font-size: 11pt; color: #1e40af; margin: 12px 0 8px 0;">Domicilio</h4>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                @if($organization->calle_numero)
+                <tr>
+                    <td style="width: 30%; padding: 4px 0; vertical-align: top;"><strong>Calle y No.</strong></td>
+                    <td style="width: 70%; padding: 4px 0; vertical-align: top;">{{ $organization->calle_numero }}@if($organization->codigo_postal) C.P. {{ $organization->codigo_postal }}@endif</td>
+                </tr>
+                @endif
+                @if($organization->colonia)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>Colonia</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->colonia }}</td>
+                </tr>
+                @endif
+                @if($organization->municipio)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>Municipio</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->municipio }}</td>
+                </tr>
+                @endif
+                @if($organization->estado)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>Estado</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->estado }}</td>
+                </tr>
+                @endif
+            </table>
             @endif
-            @if($organization->rfc)
-            <p><strong>RFC:</strong> {{ $organization->rfc }}</p>
+
+            @if($organization->contacto_nombre || $organization->contacto_nombre_2)
+            <h4 style="font-size: 11pt; color: #1e40af; margin: 12px 0 8px 0;">Contacto</h4>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                @if($organization->contacto_nombre)
+                <tr>
+                    <td style="width: 30%; padding: 4px 0; vertical-align: top;"><strong>Nombre</strong></td>
+                    <td style="width: 70%; padding: 4px 0; vertical-align: top;">{{ $organization->contacto_nombre }}</td>
+                </tr>
+                @endif
+                @if($organization->contacto_puesto)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>Puesto</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->contacto_puesto }}</td>
+                </tr>
+                @endif
+                @if($organization->contacto_email)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>Correo electrónico</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->contacto_email }}</td>
+                </tr>
+                @endif
+                @if($organization->contacto_telefono)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>Móvil</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->contacto_telefono }}</td>
+                </tr>
+                @endif
+            </table>
             @endif
-            @if($organization->registro_patronal)
-            <p><strong>Registro Patronal:</strong> {{ $organization->registro_patronal }}</p>
+
+            @if($organization->contacto_nombre_2)
+            <h4 style="font-size: 11pt; color: #1e40af; margin: 12px 0 8px 0;">Contacto</h4>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                <tr>
+                    <td style="width: 30%; padding: 4px 0; vertical-align: top;"><strong>Nombre</strong></td>
+                    <td style="width: 70%; padding: 4px 0; vertical-align: top;">{{ $organization->contacto_nombre_2 }}</td>
+                </tr>
+                @if($organization->contacto_puesto_2)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>Puesto</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->contacto_puesto_2 }}</td>
+                </tr>
+                @endif
+                @if($organization->contacto_email_2)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>Correo electrónico</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->contacto_email_2 }}</td>
+                </tr>
+                @endif
+                @if($organization->contacto_telefono_2)
+                <tr>
+                    <td style="padding: 4px 0; vertical-align: top;"><strong>Móvil</strong></td>
+                    <td style="padding: 4px 0; vertical-align: top;">{{ $organization->contacto_telefono_2 }}</td>
+                </tr>
+                @endif
+            </table>
             @endif
-            @if($organization->calle_numero)
-            <p><strong>Domicilio:</strong> {{ $organization->calle_numero }}</p>
-            @endif
-            @if($organization->colonia)
-            <p><strong>Colonia:</strong> {{ $organization->colonia }} C.P. {{ $organization->codigo_postal ?? '' }}</p>
-            @endif
-            @if($organization->municipio && $organization->estado)
-            <p><strong>Municipio:</strong> {{ $organization->municipio }} <strong>Estado:</strong> {{ $organization->estado }}</p>
-            @endif
+
             @if($organization->actividad_principal)
-            <p><strong>Actividad Principal:</strong> {{ $organization->actividad_principal }}</p>
+            <h4 style="font-size: 11pt; color: #1e40af; margin: 12px 0 8px 0;">Actividad Principal</h4>
+            <p style="margin-bottom: 15px;">{{ $organization->actividad_principal }}</p>
             @endif
-            <p><strong>Fecha de Generación:</strong> {{ $generatedDate }}</p>
         </div>
 
-        @if($organization->total_trabajadores)
+        @php
+            // Calculate gender distribution from demographic data (Referencia V)
+            $totalParticipants = $diagnosticData['total_participants'] ?? 0;
+            $genderData = collect($demographicData ?? [])->firstWhere('title', 'Distribución Conforme a Género');
+            
+            $hombres = 0;
+            $mujeres = 0;
+            $gne = 0;
+            
+            if ($genderData && isset($genderData['data'])) {
+                foreach ($genderData['data'] as $item) {
+                    $gender = $item['name'] ?? '';
+                    $count = $item['total'] ?? 0;
+                    
+                    if (stripos($gender, 'Hombre') !== false || stripos($gender, 'Masculino') !== false) {
+                        $hombres += $count;
+                    } elseif (stripos($gender, 'Mujer') !== false || stripos($gender, 'Femenino') !== false) {
+                        $mujeres += $count;
+                    } else {
+                        $gne += $count;
+                    }
+                }
+            }
+        @endphp
+
+        @if($totalParticipants > 0)
         <div class="section">
             <h3 class="section-title">Colaboradores</h3>
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 50%;">Concepto</th>
-                        <th style="width: 16.66%;">Total</th>
-                        <th style="width: 16.66%;">Hombres</th>
-                        <th style="width: 16.66%;">Mujeres</th>
+                        <th style="width: 50%; background-color: #dbeafe;">Concepto</th>
+                        <th style="width: 16.66%; background-color: #dbeafe;">Total</th>
+                        <th style="width: 16.66%; background-color: #dbeafe;">Hombres</th>
+                        <th style="width: 16.66%; background-color: #dbeafe;">Mujeres</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="text-align: left; font-weight: bold;">Número total de trabajadores</td>
-                        <td><strong>{{ $organization->total_trabajadores ?? 0 }}</strong></td>
-                        <td>{{ $organization->total_hombres ?? 0 }}</td>
-                        <td>{{ $organization->total_mujeres ?? 0 }}</td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: left; font-weight: bold;">Número de trabajadores evaluados / Muestra</td>
-                        <td><strong>{{ $organization->muestra_aplicada ?? $diagnosticData['total_participants'] ?? 0 }}</strong></td>
-                        <td>{{ $organization->muestra_hombres ?? 0 }}</td>
-                        <td>{{ $organization->muestra_mujeres ?? 0 }}</td>
+                        <td style="text-align: left;">Número de trabajadores que se les aplicó el cuestionario / Muestra</td>
+                        <td><strong>{{ $totalParticipants }}</strong></td>
+                        <td>{{ $hombres }}</td>
+                        <td>{{ $mujeres }}</td>
                     </tr>
                     @if($organization->comite_integrantes)
                     <tr>
-                        <td style="text-align: left; font-weight: bold;">Integrantes del comité de atención y seguimiento</td>
+                        <td style="text-align: left;">Integrantes del comité de atención y seguimiento a factores de riesgos psicosociales</td>
                         <td><strong>{{ $organization->comite_integrantes }}</strong></td>
                         <td>{{ $organization->comite_hombres ?? 0 }}</td>
                         <td>{{ $organization->comite_mujeres ?? 0 }}</td>
                     </tr>
                     @endif
+                    @if($organization->fecha_aplicacion)
+                    <tr>
+                        <td colspan="4" style="text-align: left; padding-top: 10px;">
+                            <strong>Fecha de aplicación de las guías de referencia I / III / V</strong>
+                            <span style="float: right; padding-right: 20px;">{{ \Carbon\Carbon::parse($organization->fecha_aplicacion)->locale('es')->isoFormat('MMMM YYYY') }}</span>
+                        </td>
+                    </tr>
+                    @endif
                 </tbody>
             </table>
-            @if($organization->fecha_aplicacion)
-            <p style="margin-top: 10px;"><strong>Fecha de aplicación:</strong> {{ $organization->fecha_aplicacion->format('F Y') }}</p>
-            @endif
         </div>
         @endif
 
@@ -323,7 +442,7 @@
             data() {
                 return {
                     riskLevels: ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'],
-                    riskColors: ['#00CED1', '#28A745', '#FFFF00', '#FFA500', '#FF0000'],
+                    riskColors: ['#06b6d4', '#22c55e', '#facc15', '#f97316', '#ef4444'],
                     finalRisk: diagnosticData.final_risk || {},
                     categories: diagnosticData.categories || {},
                     domains: diagnosticData.domains || {},

@@ -59,14 +59,14 @@
                 
                 // Categoría 3: Organización del tiempo de trabajo
                 'Jornadas de trabajo extensas' => ['cat' => 3, 'cat_name' => 'Organización del tiempo de trabajo', 'dom' => 4, 'dom_name' => 'Jornada de trabajo'],
-                'Influencia del trabajo fuera del centro de trabajo' => ['cat' => 3, 'cat_name' => 'Organización del tiempo de trabajo', 'dom' => 5, 'dom_name' => 'Interferencia en la relación trabajo-familia'],
+                'Influencia del trabajo fuera del centro laboral' => ['cat' => 3, 'cat_name' => 'Organización del tiempo de trabajo', 'dom' => 5, 'dom_name' => 'Interferencia en la relación trabajo-familia'],
                 'Influencia de las responsabilidades familiares' => ['cat' => 3, 'cat_name' => 'Organización del tiempo de trabajo', 'dom' => 5, 'dom_name' => 'Interferencia en la relación trabajo-familia'],
                 
                 // Categoría 4: Liderazgo y relaciones en el trabajo
                 'Escasa claridad de funciones' => ['cat' => 4, 'cat_name' => 'Liderazgo y relaciones en el trabajo', 'dom' => 6, 'dom_name' => 'Liderazgo'],
                 'Características del liderazgo' => ['cat' => 4, 'cat_name' => 'Liderazgo y relaciones en el trabajo', 'dom' => 6, 'dom_name' => 'Liderazgo'],
                 'Relaciones sociales en el trabajo' => ['cat' => 4, 'cat_name' => 'Liderazgo y relaciones en el trabajo', 'dom' => 7, 'dom_name' => 'Relaciones en el trabajo'],
-                'Deficiente relación con los colaboradores' => ['cat' => 4, 'cat_name' => 'Liderazgo y relaciones en el trabajo', 'dom' => 7, 'dom_name' => 'Relaciones en el trabajo'],
+                'Deficiente relación con los colaboradores que supervisa' => ['cat' => 4, 'cat_name' => 'Liderazgo y relaciones en el trabajo', 'dom' => 7, 'dom_name' => 'Relaciones en el trabajo'],
                 'Violencia laboral' => ['cat' => 4, 'cat_name' => 'Liderazgo y relaciones en el trabajo', 'dom' => 8, 'dom_name' => 'Violencia'],
                 
                 // Categoría 5: Entorno organizacional
