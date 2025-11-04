@@ -100,13 +100,15 @@ class ResultsController extends Controller
                 $evaluationTypes = $evaluations->pluck('evaluation_type')->unique()->values();
                 $source = $evaluations->first()->source; // Get source (paper or online)
 
-                // Get the Referencia III evaluation for score
+                // Get the Referencia III evaluation for score and evaluee_name
                 $referenciaIII = $evaluations->firstWhere('evaluation_type', 'referencia_iii');
                 $totalScore = 0;
+                $evalueeNameFromRef3 = null;
 
                 if ($referenciaIII) {
                     $scores = $this->scoreService->calculateReferenciaIIIScores($referenciaIII);
                     $totalScore = $scores['total_score'];
+                    $evalueeNameFromRef3 = $referenciaIII->evaluee_name;
                 }
 
                 // Check for missing evaluations (only III and V)
@@ -215,12 +217,16 @@ class ResultsController extends Controller
                 return [
                     'personal_folio' => $personalFolio,
                     'evaluation_types' => $evaluationTypes,
+                    // Use evaluee_name from Referencia III (main evaluation) with fallback to first evaluation
+                    'evaluee_name' => $evalueeNameFromRef3 ?? $evaluations->first()->evaluee_name,
                     'source' => $source,
                     'total_score' => $totalScore,
                     'created_at' => $evaluations->first()->created_at->format('Y-m-d H:i:s'),
                     'has_referencia_iii' => $hasReferenciaIII,
                     'has_referencia_v' => $hasReferenciaV,
                     'missing_data' => $missingData,
+                    // Include demographic_data for filtering (gender, age, etc.)
+                    'demographic_data' => $referenciaV?->demographic_data,
                     'evaluations' => $evaluations->map(function ($eval) {
                         return [
                             'id' => $eval->id,
