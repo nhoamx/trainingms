@@ -70,15 +70,16 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Fuente
+                                    Género
                                 </label>
                                 <select
-                                    v-model="filters.source"
+                                    v-model="filters.gender"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                 >
-                                    <option value="">Todas</option>
-                                    <option value="paper">Papel</option>
-                                    <option value="online">En Línea</option>
+                                    <option value="">Todos</option>
+                                    <option value="masculino">Masculino</option>
+                                    <option value="femenino">Femenino</option>
+                                    <option value="sin_genero">Sin género</option>
                                 </select>
                             </div>
                             <div>
@@ -115,6 +116,9 @@
                                         Folio Personal
                                     </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Nombre
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Fuente
                                     </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -141,6 +145,12 @@
                                             <div class="text-sm font-medium text-gray-900">{{ group.personal_folio }}</div>
                                         </div>
                                     </td>
+
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        <!-- Nombre: mostrar evaluee_name si existe, si no '-' -->
+                                        <div class="text-sm text-gray-900">{{ group.evaluee_name ? group.evaluee_name : '-' }}</div>
+                                    </td>
+
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span 
                                             :class="getSourceBadgeClass(group.source)"
@@ -248,7 +258,7 @@ const props = defineProps({
 // Filters
 const filters = ref({
     search: '',
-    source: '',
+    gender: '',
     evaluationType: ''
 })
 
@@ -266,6 +276,24 @@ const hasIssues = (group) => {
            (group.missing_data && group.missing_data.length > 0)
 }
 
+// Get gender from evaluation group's demographic data
+const getGenderFromGroup = (group) => {
+    // Gender comes from demographic_data in the group
+    if (!group.demographic_data || !group.demographic_data.sexo) {
+        return 'sin_genero'
+    }
+    
+    const sexo = group.demographic_data.sexo.toLowerCase()
+    
+    if (sexo === 'masculino') {
+        return 'masculino'
+    } else if (sexo === 'femenino') {
+        return 'femenino'
+    }
+    
+    return 'sin_genero'
+}
+
 
 // Computed filtered evaluations
 const filteredEvaluationGroups = computed(() => {
@@ -273,13 +301,13 @@ const filteredEvaluationGroups = computed(() => {
         const matchesSearch = !filters.value.search || 
             group.personal_folio.toLowerCase().includes(filters.value.search.toLowerCase())
         
-        const matchesSource = !filters.value.source || 
-            group.source === filters.value.source
+        const matchesGender = !filters.value.gender || 
+            getGenderFromGroup(group) === filters.value.gender
         
         const matchesEvaluationType = !filters.value.evaluationType || 
             group.evaluation_types.includes(filters.value.evaluationType)
         
-        return matchesSearch && matchesSource && matchesEvaluationType
+        return matchesSearch && matchesGender && matchesEvaluationType
     })
 })
 
