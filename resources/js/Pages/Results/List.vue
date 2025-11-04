@@ -18,6 +18,42 @@
                         </div>
                     </div>
 
+                    <!-- Summary Warnings -->
+                    <div v-if="hasWarnings" class="p-6 border-b border-gray-200">
+                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-md">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <h3 class="text-sm font-medium text-amber-800">
+                                        Se encontraron evaluaciones incompletas
+                                    </h3>
+                                    <div class="mt-2 text-sm text-amber-700">
+                                        <ul class="list-disc list-inside space-y-1">
+                                            <li v-if="summary.missing_referencia_iii > 0">
+                                                <strong>{{ summary.missing_referencia_iii }}</strong> {{ summary.missing_referencia_iii === 1 ? 'persona le falta' : 'personas les falta' }} la <strong>Guía de Referencia III</strong> (Factores de Riesgo Psicosocial)
+                                            </li>
+                                            <li v-if="summary.missing_referencia_v > 0">
+                                                <strong>{{ summary.missing_referencia_v }}</strong> {{ summary.missing_referencia_v === 1 ? 'persona le falta' : 'personas les falta' }} la <strong>Guía de Referencia V</strong> (Datos Demográficos)
+                                            </li>
+                                            <li v-if="summary.with_missing_data > 0">
+                                                <strong>{{ summary.with_missing_data }}</strong> {{ summary.with_missing_data === 1 ? 'persona tiene' : 'personas tienen' }} <strong>datos demográficos incompletos o nulos</strong>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div class="mt-3">
+                                        <p class="text-xs text-amber-600">
+                                            💡 Revisa los folios marcados con el ícono de advertencia ⚠️ en la tabla para completar la información faltante.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Filters -->
                     <div class="p-6 border-b border-gray-200 bg-gray-50">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -96,9 +132,14 @@
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="group in filteredEvaluationGroups" :key="group.personal_folio" class="hover:bg-gray-50">
+                                <tr v-for="group in filteredEvaluationGroups" :key="group.personal_folio" :class="hasIssues(group) ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-gray-50'">
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">{{ group.personal_folio }}</div>
+                                        <div class="flex items-center gap-2">
+                                            <span v-if="hasIssues(group)" class="text-amber-500" title="Esta evaluación tiene datos incompletos">
+                                                ⚠️
+                                            </span>
+                                            <div class="text-sm font-medium text-gray-900">{{ group.personal_folio }}</div>
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span 
@@ -117,6 +158,29 @@
                                                 class="px-2 py-1 text-xs font-semibold rounded-full"
                                             >
                                                 {{ formatEvaluationType(type) }}
+                                            </span>
+                                            <!-- Missing evaluations warnings (only III and V) -->
+                                            <span 
+                                                v-if="!group.has_referencia_iii"
+                                                class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700 border border-red-300"
+                                                title="Falta Guía III"
+                                            >
+                                                Falta Guía III
+                                            </span>
+                                            <span 
+                                                v-if="!group.has_referencia_v"
+                                                class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700 border border-red-300"
+                                                title="Falta Guía V"
+                                            >
+                                                Falta Guía V
+                                            </span>
+                                            <!-- Missing demographic data warning -->
+                                            <span 
+                                                v-if="group.missing_data && group.missing_data.length > 0"
+                                                class="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700 border border-amber-300 cursor-help"
+                                                :title="'Datos faltantes: ' + group.missing_data.join(', ')"
+                                            >
+                                                {{ group.missing_data.length }} {{ group.missing_data.length === 1 ? 'dato faltante' : 'datos faltantes' }}
                                             </span>
                                         </div>
                                     </td>
@@ -174,6 +238,10 @@ const props = defineProps({
     evaluationGroups: {
         type: Array,
         required: true
+    },
+    summary: {
+        type: Object,
+        required: true
     }
 })
 
@@ -183,6 +251,21 @@ const filters = ref({
     source: '',
     evaluationType: ''
 })
+
+// Check if there are any warnings to show
+const hasWarnings = computed(() => {
+    return props.summary.missing_referencia_iii > 0 ||
+           props.summary.missing_referencia_v > 0 ||
+           props.summary.with_missing_data > 0
+})
+
+// Check if a specific group has issues
+const hasIssues = (group) => {
+    return !group.has_referencia_iii || 
+           !group.has_referencia_v || 
+           (group.missing_data && group.missing_data.length > 0)
+}
+
 
 // Computed filtered evaluations
 const filteredEvaluationGroups = computed(() => {

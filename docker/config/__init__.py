@@ -22,11 +22,11 @@ if os.path.exists(config_legacy_path):
         management_questions = config_legacy.management_questions
         citsats_s1 = config_legacy.citsats_s1
         
-        # Import referencia_i and reference_v (use legacy versions if they exist)
+        # Import referencia_i and referencia_v (use legacy versions if they exist)
         if hasattr(config_legacy, 'referencia_i'):
             referencia_i = config_legacy.referencia_i
-        if hasattr(config_legacy, 'reference_v'):
-            reference_v = config_legacy.reference_v
+        if hasattr(config_legacy, 'referencia_v'):
+            referencia_v = config_legacy.referencia_v
         
         # Import Referencia V demographic sections
         demographic_sections = ['sexo', 'edad', 'estado_civil', 'nivel_estudios', 'tiempo_puesto_actual',
