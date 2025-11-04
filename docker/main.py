@@ -197,8 +197,8 @@ def get_referencia_v_complete_answers(image_file, detector, folio, min_fill_thre
         
         # --- Procesamiento especial para nivel_estudios ---
         logging.info("Procesando nivel_estudios (consolidado)...")
-        if hasattr(config, 'reference_v') and 'nivel_estudios' in config.reference_v:
-            nivel_estudios_config = config.reference_v['nivel_estudios']
+        if hasattr(config, 'referencia_v') and 'nivel_estudios' in config.referencia_v:
+            nivel_estudios_config = config.referencia_v['nivel_estudios']
             
             # Estructura para el resultado consolidado
             nivel_estudios_result = {
