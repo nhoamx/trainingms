@@ -109,12 +109,118 @@ class ResultsController extends Controller
                     $totalScore = $scores['total_score'];
                 }
 
+                // Check for missing evaluations (only III and V)
+                $hasReferenciaIII = $evaluations->contains('evaluation_type', 'referencia_iii');
+                $hasReferenciaV = $evaluations->contains('evaluation_type', 'referencia_v');
+
+                // Check for missing or null demographic data
+                $missingData = [];
+                $referenciaV = $evaluations->firstWhere('evaluation_type', 'referencia_v');
+                if ($referenciaV) {
+                    // If demographic_data is null or empty, all fields are missing
+                    if (! $referenciaV->demographic_data || empty($referenciaV->demographic_data)) {
+                        $missingData = ['Todos los datos demográficos'];
+                    } else {
+                        $data = $referenciaV->demographic_data;
+
+                        // Detect if it's paper format (direct fields) or online format (nested datos_laborales)
+                        $isPaperFormat = ! isset($data['datos_laborales']);
+
+                        if ($isPaperFormat) {
+                            // PAPER FORMAT: Check direct fields
+                            $paperFields = [
+                                'edad' => 'Edad',
+                                'sexo' => 'Género',
+                                'estado_civil' => 'Estado Civil',
+                                'ocupacion' => 'Puesto/Ocupación',
+                                'departamento' => 'Departamento',
+                                'tipo_puesto' => 'Tipo de Puesto',
+                                'tipo_contratacion' => 'Tipo de Contratación',
+                                'tipo_jornada' => 'Tipo de Jornada',
+                                'tiempo_puesto_actual' => 'Experiencia en Puesto Actual',
+                            ];
+
+                            foreach ($paperFields as $field => $label) {
+                                $value = $data[$field] ?? null;
+
+                                // Check if empty, null, or array with all null/empty values
+                                if ($value === null || $value === '') {
+                                    $missingData[] = $label;
+                                } elseif (is_array($value)) {
+                                    // For nested arrays like edad: {decenas, unidades} or ocupacion: {fila1, fila2}
+                                    $allEmpty = true;
+                                    foreach ($value as $subValue) {
+                                        if ($subValue !== null && $subValue !== '') {
+                                            $allEmpty = false;
+                                            break;
+                                        }
+                                    }
+                                    if ($allEmpty) {
+                                        $missingData[] = $label;
+                                    }
+                                }
+                            }
+                        } else {
+                            // ONLINE FORMAT: Check basic fields + nested datos_laborales
+                            $basicFields = [
+                                'edad' => 'Edad',
+                                'sexo' => 'Género',
+                                'estado_civil' => 'Estado Civil',
+                                'nivel_estudios' => 'Nivel de Estudios',
+                            ];
+
+                            foreach ($basicFields as $field => $label) {
+                                if (! isset($data[$field]) ||
+                                    $data[$field] === null ||
+                                    $data[$field] === '') {
+                                    $missingData[] = $label;
+                                }
+                            }
+
+                            // Check labor data (nested structure)
+                            if (! isset($data['datos_laborales']) ||
+                                empty($data['datos_laborales'])) {
+                                $missingData[] = 'Todos los Datos Laborales';
+                            } else {
+                                $laborData = $data['datos_laborales'];
+                                $laborFields = [
+                                    'ocupacion_puesto' => 'Puesto',
+                                    'tipo_puesto' => 'Tipo de Puesto',
+                                    'tipo_contratacion' => 'Tipo de Contratación',
+                                    'tipo_jornada' => 'Tipo de Jornada',
+                                    'departamento_seccion_area' => 'Área/Departamento',
+                                ];
+
+                                foreach ($laborFields as $field => $label) {
+                                    if (! isset($laborData[$field]) ||
+                                        $laborData[$field] === null ||
+                                        $laborData[$field] === '') {
+                                        $missingData[] = $label;
+                                    }
+                                }
+
+                                // Check experiencia (nested in experiencia)
+                                if (isset($laborData['experiencia'])) {
+                                    if (empty($laborData['experiencia']['tiempo_puesto_actual'])) {
+                                        $missingData[] = 'Experiencia en Puesto Actual';
+                                    }
+                                } else {
+                                    $missingData[] = 'Experiencia en Puesto Actual';
+                                }
+                            }
+                        }
+                    }
+                }
+
                 return [
                     'personal_folio' => $personalFolio,
                     'evaluation_types' => $evaluationTypes,
                     'source' => $source,
                     'total_score' => $totalScore,
                     'created_at' => $evaluations->first()->created_at->format('Y-m-d H:i:s'),
+                    'has_referencia_iii' => $hasReferenciaIII,
+                    'has_referencia_v' => $hasReferenciaV,
+                    'missing_data' => $missingData,
                     'evaluations' => $evaluations->map(function ($eval) {
                         return [
                             'id' => $eval->id,
@@ -126,9 +232,21 @@ class ResultsController extends Controller
             })
             ->values();
 
+        // Calculate summary statistics
+        $totalEvaluations = $evaluationGroups->count();
+        $missingReferenciaIII = $evaluationGroups->where('has_referencia_iii', false)->count();
+        $missingReferenciaV = $evaluationGroups->where('has_referencia_v', false)->count();
+        $withMissingData = $evaluationGroups->filter(fn ($group) => ! empty($group['missing_data']))->count();
+
         return Inertia::render('Results/List', [
             'organization' => $organization->only('id', 'name'),
             'evaluationGroups' => $evaluationGroups,
+            'summary' => [
+                'total_evaluations' => $totalEvaluations,
+                'missing_referencia_iii' => $missingReferenciaIII,
+                'missing_referencia_v' => $missingReferenciaV,
+                'with_missing_data' => $withMissingData,
+            ],
         ]);
     }
 
