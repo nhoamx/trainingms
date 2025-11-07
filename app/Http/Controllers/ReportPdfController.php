@@ -545,15 +545,16 @@ class ReportPdfController extends Controller
     public function downloadExcelReport(Request $request, string $organizationId)
     {
         try {
-            // Verify organization exists
-            $organization = Organization::findOrFail($organizationId);
-
-            // Verify user has permission
-            if (! $request->user()->can('view', $organization)) {
+            // Authorization check
+            $user = $request->user();
+            if (! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
                 return response()->json([
-                    'error' => 'No tienes permiso para descargar este reporte',
+                    'error' => 'No autorizado para generar reportes',
                 ], 403);
             }
+
+            // Verify organization exists
+            $organization = Organization::findOrFail($organizationId);
 
             // Generate filename
             $filename = 'evaluaciones_'.$organization->name.'_'.now()->format('Y-m-d_His').'.xlsx';

@@ -232,9 +232,19 @@ class PaperEvaluationsExport implements FromCollection, WithHeadings, WithMappin
 
         if (is_array($educationData)) {
             // Handle nested structure like ['Licenciatura' => 'Terminada']
+            // or like ['' => ['completado' => 'incompleto', 'seleccionado' => true]]
             $level = array_key_first($educationData);
             $status = $educationData[$level];
 
+            // If status is an array (like ['completado' => 'incompleto']), extract the completado value
+            if (is_array($status)) {
+                $completado = $status['completado'] ?? '';
+                $level = $level ?: 'Sin especificar';
+
+                return $completado ? "{$level} - {$completado}" : $level;
+            }
+
+            // If status is a string
             return $status ? "{$level} - {$status}" : $level;
         }
 
