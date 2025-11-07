@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GenerateWordReport;
 use App\Models\Organization;
+use App\Models\ReportGeneration;
 use App\Services\ReportPdfService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 use Spatie\Browsershot\Browsershot;
 
 class ReportPdfController extends Controller
@@ -230,6 +233,247 @@ class ReportPdfController extends Controller
 
             return response()->json([
                 'error' => 'Error al generar el reporte ejecutivo: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Convert PDF to DOCX using Python script in Docker
+     */
+    protected function convertPdfToDocx(string $pdfPath, string $docxPath): bool
+    {
+        try {
+            // Get Docker container name from environment or use default
+            $containerName = config('services.docker.omr_container', 'training-and-ms');
+
+            // Paths inside the Docker container
+            $dockerPdfPath = '/app/temp_pdf_input.pdf';
+            $dockerDocxPath = '/app/temp_docx_output.docx';
+
+            Log::info('Starting PDF to DOCX conversion', [
+                'pdf_path' => $pdfPath,
+                'docx_path' => $docxPath,
+                'container' => $containerName,
+            ]);
+
+            // Copy PDF file into Docker container
+            $copyToDocketCommand = "docker cp \"{$pdfPath}\" {$containerName}:{$dockerPdfPath}";
+            $copyResult = Process::timeout(30)->run($copyToDocketCommand);
+
+            if (! $copyResult->successful()) {
+                Log::error('Failed to copy PDF to Docker container', [
+                    'command' => $copyToDocketCommand,
+                    'output' => $copyResult->output(),
+                    'error' => $copyResult->errorOutput(),
+                ]);
+
+                return false;
+            }
+
+            Log::info('PDF copied to Docker container successfully');
+
+            // Run Python conversion script inside Docker container with increased timeout
+            $convertCommand = "docker exec {$containerName} python /app/pdf_converter/convert_pdf_to_word.py {$dockerPdfPath} {$dockerDocxPath}";
+            $convertResult = Process::timeout(300)->run($convertCommand); // 5 minutes timeout
+
+            if (! $convertResult->successful()) {
+                Log::error('Failed to convert PDF to DOCX in Docker', [
+                    'command' => $convertCommand,
+                    'output' => $convertResult->output(),
+                    'error' => $convertResult->errorOutput(),
+                ]);
+
+                return false;
+            }
+
+            Log::info('PDF converted to DOCX successfully', [
+                'output' => $convertResult->output(),
+            ]);
+
+            // Copy DOCX file from Docker container
+            $copyFromDockerCommand = "docker cp {$containerName}:{$dockerDocxPath} \"{$docxPath}\"";
+            $copyBackResult = Process::timeout(30)->run($copyFromDockerCommand);
+
+            if (! $copyBackResult->successful()) {
+                Log::error('Failed to copy DOCX from Docker container', [
+                    'command' => $copyFromDockerCommand,
+                    'output' => $copyBackResult->output(),
+                    'error' => $copyBackResult->errorOutput(),
+                ]);
+
+                return false;
+            }
+
+            Log::info('DOCX copied from Docker container successfully');
+
+            // Clean up temporary files in Docker container
+            Process::timeout(10)->run("docker exec {$containerName} rm -f {$dockerPdfPath} {$dockerDocxPath}");
+
+            $success = file_exists($docxPath);
+
+            if ($success) {
+                Log::info('PDF to DOCX conversion completed successfully', [
+                    'docx_size' => filesize($docxPath),
+                ]);
+            }
+
+            return $success;
+        } catch (\Exception $e) {
+            Log::error('Error in PDF to DOCX conversion: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Initiate Word report generation (queued)
+     */
+    public function downloadDemographicReportWord(Request $request, string $organizationId)
+    {
+        return $this->initiateWordReportGeneration($request, $organizationId, 'demographic');
+    }
+
+    /**
+     * Initiate Word report generation (queued)
+     */
+    public function downloadDiagnosticReportWord(Request $request, string $organizationId)
+    {
+        return $this->initiateWordReportGeneration($request, $organizationId, 'diagnostic');
+    }
+
+    /**
+     * Initiate Word report generation (queued)
+     */
+    public function downloadExecutiveReportWord(Request $request, string $organizationId)
+    {
+        return $this->initiateWordReportGeneration($request, $organizationId, 'executive');
+    }
+
+    /**
+     * Common method to initiate Word report generation
+     */
+    protected function initiateWordReportGeneration(Request $request, string $organizationId, string $reportType)
+    {
+        try {
+            // Authorization check
+            $user = $request->user();
+            if (! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
+                return response()->json([
+                    'error' => 'No autorizado para generar reportes',
+                ], 403);
+            }
+
+            // Verify organization exists
+            $organization = Organization::findOrFail($organizationId);
+
+            // Create report generation record
+            $reportGeneration = ReportGeneration::create([
+                'user_id' => $user->id,
+                'organization_id' => $organization->id,
+                'report_type' => $reportType,
+                'format' => 'docx',
+                'status' => 'pending',
+            ]);
+
+            // Dispatch job
+            GenerateWordReport::dispatch($reportGeneration);
+
+            return response()->json([
+                'success' => true,
+                'report_id' => $reportGeneration->id,
+                'message' => 'El reporte se está generando. Por favor espere...',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error initiating Word report generation', [
+                'organization_id' => $organizationId,
+                'report_type' => $reportType,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => 'Error al iniciar la generación del reporte: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Check report generation status
+     */
+    public function checkReportStatus(Request $request, string $reportId)
+    {
+        try {
+            $user = $request->user();
+            $reportGeneration = ReportGeneration::findOrFail($reportId);
+
+            // Verify user owns this report
+            if ($reportGeneration->user_id !== $user->id) {
+                return response()->json([
+                    'error' => 'No autorizado',
+                ], 403);
+            }
+
+            return response()->json([
+                'status' => $reportGeneration->status,
+                'completed' => $reportGeneration->isCompleted(),
+                'failed' => $reportGeneration->isFailed(),
+                'error_message' => $reportGeneration->error_message,
+                'completed_at' => $reportGeneration->completed_at?->format('Y-m-d H:i:s'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al verificar el estado del reporte',
+            ], 500);
+        }
+    }
+
+    /**
+     * Download completed report
+     */
+    public function downloadCompletedReport(Request $request, string $reportId)
+    {
+        try {
+            $user = $request->user();
+            $reportGeneration = ReportGeneration::findOrFail($reportId);
+
+            // Verify user owns this report
+            if ($reportGeneration->user_id !== $user->id) {
+                return response()->json([
+                    'error' => 'No autorizado',
+                ], 403);
+            }
+
+            // Verify report is completed
+            if (! $reportGeneration->isCompleted()) {
+                return response()->json([
+                    'error' => 'El reporte aún no está listo',
+                ], 400);
+            }
+
+            // Verify file exists
+            if (! file_exists($reportGeneration->file_path)) {
+                return response()->json([
+                    'error' => 'El archivo del reporte no se encuentra disponible',
+                ], 404);
+            }
+
+            // Return file for download
+            return response()->download(
+                $reportGeneration->file_path,
+                $reportGeneration->original_filename,
+                [
+                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                ]
+            )->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            Log::error('Error downloading completed report', [
+                'report_id' => $reportId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => 'Error al descargar el reporte',
             ], 500);
         }
     }

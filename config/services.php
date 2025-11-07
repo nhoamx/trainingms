@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'docker' => [
+        'omr_container' => env('DOCKER_OMR_CONTAINER', 'training-and-ms'),
+    ],
+
 ];
