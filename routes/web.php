@@ -199,6 +199,20 @@ Route::middleware(['auth'])->group(function () {
                 ->name('executive');
         });
 
+        // Word Report Routes
+        Route::prefix('reportes/word')->name('reports.word.')->group(function () {
+            Route::get('/demografico/{organization}', [\App\Http\Controllers\ReportPdfController::class, 'downloadDemographicReportWord'])
+                ->name('demographic');
+            Route::get('/diagnostico/{organization}', [\App\Http\Controllers\ReportPdfController::class, 'downloadDiagnosticReportWord'])
+                ->name('diagnostic');
+            Route::get('/ejecutivo/{organization}', [\App\Http\Controllers\ReportPdfController::class, 'downloadExecutiveReportWord'])
+                ->name('executive');
+            Route::get('/status/{report}', [\App\Http\Controllers\ReportPdfController::class, 'checkReportStatus'])
+                ->name('status');
+            Route::get('/download/{report}', [\App\Http\Controllers\ReportPdfController::class, 'downloadCompletedReport'])
+                ->name('download');
+        });
+
         Route::controller(EvaluationController::class)
             ->prefix('/evaluaciones')
             ->group(function () {

@@ -29,7 +29,7 @@
             text-align: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 3px solid #2563eb;
+            border-bottom: 2px solid #d1d5db;
         }
 
         .header h1 {
@@ -54,7 +54,7 @@
             padding: 12px;
             margin-bottom: 20px;
             border-radius: 5px;
-            border-left: 4px solid #2563eb;
+            border-left: 4px solid #6b7280;
         }
 
         .organization-info h3 {
@@ -84,9 +84,9 @@
         .section-description {
             font-size: 9pt;
             color: #555;
-            background: #eff6ff;
+            background: #f3f4f6;
             padding: 10px;
-            border-left: 3px solid #3b82f6;
+            border-left: 3px solid #6b7280;
             margin-bottom: 15px;
             line-height: 1.5;
             border-radius: 3px;

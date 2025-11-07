@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import BarChart from './BarChart.vue';
 import DemographicChart from './DemographicChart.vue';
@@ -41,6 +41,8 @@ const activeTab = ref<string>('final');
 const rawSummaryData = ref<ReportSummaryData | null>(null);
 const isLoading = ref<boolean>(false);
 const downloadingReport = ref<'demographic' | 'diagnostic' | 'executive' | null>(null);
+const reportGenerationId = ref<number | null>(null);
+const pollInterval = ref<number | null>(null);
 
 // Función para extraer el ID de la organización desde diferentes formatos
 const extractOrgId = (org: any): string | null => {
@@ -126,6 +128,170 @@ const downloadPdfReport = async (reportType: 'demographic' | 'diagnostic' | 'exe
         downloadingReport.value = null;
     }
 };
+
+/**
+ * Download Word reports (with queue and polling)
+ */
+const downloadWordReport = async (reportType: 'demographic' | 'diagnostic' | 'executive') => {
+    if (!selectedOrgId.value) {
+        alert('Por favor selecciona una organización');
+        return;
+    }
+
+    if (downloadingReport.value) {
+        return; // Prevent multiple simultaneous downloads
+    }
+
+    downloadingReport.value = reportType;
+
+    const routes = {
+        demographic: `/reportes/word/demografico/${selectedOrgId.value}`,
+        diagnostic: `/reportes/word/diagnostico/${selectedOrgId.value}`,
+        executive: `/reportes/word/ejecutivo/${selectedOrgId.value}`,
+    };
+
+    try {
+        // Initiate report generation
+        const response = await fetch(routes[reportType], {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data.success || !data.report_id) {
+            throw new Error('Error al iniciar la generación del reporte');
+        }
+
+        // Start polling for report status
+        reportGenerationId.value = data.report_id;
+        startPollingReportStatus();
+
+    } catch (error) {
+        console.error('Error descargando el reporte Word:', error);
+        alert(error instanceof Error ? error.message : 'Error al generar el reporte Word. Por favor intenta de nuevo.');
+        downloadingReport.value = null;
+    }
+};
+
+/**
+ * Start polling for report generation status
+ */
+const startPollingReportStatus = () => {
+    if (!reportGenerationId.value) return;
+
+    // Poll every 2 seconds
+    pollInterval.value = window.setInterval(async () => {
+        try {
+            const response = await fetch(`/reportes/word/status/${reportGenerationId.value}`, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al verificar el estado del reporte');
+            }
+
+            const statusData = await response.json();
+
+            if (statusData.completed) {
+                // Report is ready, download it
+                stopPolling();
+                await downloadGeneratedReport();
+            } else if (statusData.failed) {
+                // Report generation failed
+                stopPolling();
+                downloadingReport.value = null;
+                alert(`Error al generar el reporte: ${statusData.error_message || 'Error desconocido'}`);
+            }
+            // Otherwise, keep polling (status is still 'pending' or 'processing')
+        } catch (error) {
+            console.error('Error polling report status:', error);
+            stopPolling();
+            downloadingReport.value = null;
+            alert('Error al verificar el estado del reporte');
+        }
+    }, 2000); // Poll every 2 seconds
+};
+
+/**
+ * Stop polling
+ */
+const stopPolling = () => {
+    if (pollInterval.value) {
+        clearInterval(pollInterval.value);
+        pollInterval.value = null;
+    }
+};
+
+/**
+ * Download the generated report
+ */
+const downloadGeneratedReport = async () => {
+    if (!reportGenerationId.value) return;
+
+    try {
+        const response = await fetch(`/reportes/word/download/${reportGenerationId.value}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error al descargar el reporte');
+        }
+
+        // Get the blob from response
+        const blob = await response.blob();
+        
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Extract filename from Content-Disposition header or use default
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = `reporte-${downloadingReport.value}-${selectedOrgId.value}.docx`;
+        if (contentDisposition) {
+            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+            if (matches != null && matches[1]) {
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+        
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        downloadingReport.value = null;
+        reportGenerationId.value = null;
+    } catch (error) {
+        console.error('Error descargando el reporte generado:', error);
+        alert(error instanceof Error ? error.message : 'Error al descargar el reporte');
+        downloadingReport.value = null;
+        reportGenerationId.value = null;
+    }
+};
+
+// Cleanup on component unmount
+onUnmounted(() => {
+    stopPolling();
+});
 
 /**
  * Process raw category data into grouped format for charts
@@ -446,8 +612,65 @@ watch(() => props.currentOrganization, (newOrg) => {
 
 <template>
     <div>
-        <!-- PDF Download Buttons -->
+        <!-- Word Download Buttons (Admin Only) -->
         <div v-if="(isAdmin || isSuperAdmin) && selectedOrgId" class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+            <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Descargar Reportes en Word
+            </h3>
+            <div class="flex gap-3 flex-wrap">
+                <button
+                    @click="downloadWordReport('demographic')"
+                    :disabled="downloadingReport !== null"
+                    class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <svg v-if="downloadingReport === 'demographic'" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span v-if="downloadingReport === 'demographic'">Procesando...</span>
+                    <span v-else>Informe Demográfico</span>
+                </button>
+                <button
+                    @click="downloadWordReport('diagnostic')"
+                    :disabled="downloadingReport !== null"
+                    class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <svg v-if="downloadingReport === 'diagnostic'" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span v-if="downloadingReport === 'diagnostic'">Procesando...</span>
+                    <span v-else>Informe de Diagnóstico</span>
+                </button>
+                <button
+                    @click="downloadWordReport('executive')"
+                    :disabled="downloadingReport !== null"
+                    class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <svg v-if="downloadingReport === 'executive'" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span v-if="downloadingReport === 'executive'">Procesando...</span>
+                    <span v-else>Informe Ejecutivo</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- PDF Download Buttons (Hidden temporarily) -->
+        <div v-if="false && (isAdmin || isSuperAdmin) && selectedOrgId" class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
             <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                 <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
