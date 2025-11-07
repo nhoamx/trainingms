@@ -28,7 +28,7 @@
             text-align: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 3px solid #2563eb;
+            border-bottom: 2px solid #d1d5db;
         }
 
         .header h1 {
@@ -53,7 +53,7 @@
             padding: 12px;
             margin-bottom: 20px;
             border-radius: 5px;
-            border-left: 4px solid #2563eb;
+            border-left: 4px solid #6b7280;
         }
 
         .organization-info h3 {
@@ -89,7 +89,7 @@
         }
 
         table th {
-            background: #2563eb;
+            background: #4b5563;
             color: white;
             padding: 8px;
             text-align: center;
@@ -127,8 +127,8 @@
         .risk-muy-alto { background: #ef4444; color: white; }
 
         .summary-box {
-            background: #eff6ff;
-            border-left: 4px solid #3b82f6;
+            background: #f3f4f6;
+            border-left: 4px solid #6b7280;
             padding: 12px;
             margin: 10px 0;
             border-radius: 3px;
