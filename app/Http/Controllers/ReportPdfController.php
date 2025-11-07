@@ -414,14 +414,33 @@ class ReportPdfController extends Controller
                 ], 403);
             }
 
+            // Additional check: ensure file actually exists when status is completed
+            $fileExists = false;
+            if ($reportGeneration->isCompleted() && $reportGeneration->file_path) {
+                $fileExists = file_exists($reportGeneration->file_path);
+
+                if (! $fileExists) {
+                    Log::warning('Report marked as completed but file does not exist', [
+                        'report_id' => $reportId,
+                        'file_path' => $reportGeneration->file_path,
+                        'status' => $reportGeneration->status,
+                    ]);
+                }
+            }
+
             return response()->json([
                 'status' => $reportGeneration->status,
-                'completed' => $reportGeneration->isCompleted(),
+                'completed' => $reportGeneration->isCompleted() && $fileExists,
                 'failed' => $reportGeneration->isFailed(),
                 'error_message' => $reportGeneration->error_message,
                 'completed_at' => $reportGeneration->completed_at?->format('Y-m-d H:i:s'),
             ]);
         } catch (\Exception $e) {
+            Log::error('Error checking report status', [
+                'report_id' => $reportId,
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'error' => 'Error al verificar el estado del reporte',
             ], 500);
@@ -437,8 +456,21 @@ class ReportPdfController extends Controller
             $user = $request->user();
             $reportGeneration = ReportGeneration::findOrFail($reportId);
 
+            Log::info('Download request received', [
+                'report_id' => $reportId,
+                'user_id' => $user->id,
+                'status' => $reportGeneration->status,
+                'file_path' => $reportGeneration->file_path,
+            ]);
+
             // Verify user owns this report
             if ($reportGeneration->user_id !== $user->id) {
+                Log::warning('Unauthorized download attempt', [
+                    'report_id' => $reportId,
+                    'user_id' => $user->id,
+                    'owner_id' => $reportGeneration->user_id,
+                ]);
+
                 return response()->json([
                     'error' => 'No autorizado',
                 ], 403);
@@ -446,17 +478,45 @@ class ReportPdfController extends Controller
 
             // Verify report is completed
             if (! $reportGeneration->isCompleted()) {
+                Log::warning('Download attempted on incomplete report', [
+                    'report_id' => $reportId,
+                    'status' => $reportGeneration->status,
+                ]);
+
                 return response()->json([
                     'error' => 'El reporte aún no está listo',
+                    'status' => $reportGeneration->status,
                 ], 400);
+            }
+
+            // Verify file path exists
+            if (! $reportGeneration->file_path) {
+                Log::error('Report marked as completed but has no file path', [
+                    'report_id' => $reportId,
+                ]);
+
+                return response()->json([
+                    'error' => 'El archivo del reporte no tiene una ruta válida',
+                ], 500);
             }
 
             // Verify file exists
             if (! file_exists($reportGeneration->file_path)) {
+                Log::error('Report file does not exist', [
+                    'report_id' => $reportId,
+                    'file_path' => $reportGeneration->file_path,
+                ]);
+
                 return response()->json([
                     'error' => 'El archivo del reporte no se encuentra disponible',
                 ], 404);
             }
+
+            Log::info('Starting file download', [
+                'report_id' => $reportId,
+                'file_path' => $reportGeneration->file_path,
+                'filename' => $reportGeneration->original_filename,
+            ]);
 
             // Return file for download
             return response()->download(
@@ -470,6 +530,7 @@ class ReportPdfController extends Controller
             Log::error('Error downloading completed report', [
                 'report_id' => $reportId,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([

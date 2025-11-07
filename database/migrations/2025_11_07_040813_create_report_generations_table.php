@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('format')->default('word'); // 'word' (future: 'excel')
             $table->string('status')->default('pending'); // 'pending', 'processing', 'completed', 'failed'
             $table->string('file_path')->nullable(); // Path to generated file
+            $table->string('original_filename')->nullable(); // Original filename for download
             $table->text('error_message')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();

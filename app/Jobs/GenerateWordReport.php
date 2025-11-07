@@ -33,7 +33,10 @@ class GenerateWordReport implements ShouldQueue
     public function handle(): void
     {
         try {
-            $this->reportGeneration->update(['status' => 'processing']);
+            $this->reportGeneration->update([
+                'status' => 'processing',
+                'started_at' => now(),
+            ]);
 
             Log::info('Starting Word report generation', [
                 'report_generation_id' => $this->reportGeneration->id,
@@ -77,6 +80,22 @@ class GenerateWordReport implements ShouldQueue
                 unlink($pdfPath);
             }
 
+            // Verify DOCX file actually exists before marking as completed
+            if (! file_exists($docxPath)) {
+                throw new \Exception('DOCX file was not created: '.$docxPath);
+            }
+
+            $fileSize = filesize($docxPath);
+            if ($fileSize === 0) {
+                throw new \Exception('DOCX file is empty (0 bytes)');
+            }
+
+            Log::info('DOCX file created successfully', [
+                'path' => $docxPath,
+                'size' => $fileSize,
+                'exists' => file_exists($docxPath),
+            ]);
+
             // Update report generation record
             $this->reportGeneration->update([
                 'status' => 'completed',
@@ -88,6 +107,7 @@ class GenerateWordReport implements ShouldQueue
             Log::info('Word report generation completed successfully', [
                 'report_generation_id' => $this->reportGeneration->id,
                 'file_path' => $docxPath,
+                'file_size' => $fileSize,
             ]);
         } catch (\Exception $e) {
             Log::error('Error generating Word report', [
