@@ -538,4 +538,42 @@ class ReportPdfController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Download Excel report with paper evaluations data
+     */
+    public function downloadExcelReport(Request $request, string $organizationId)
+    {
+        try {
+            // Authorization check
+            $user = $request->user();
+            if (! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
+                return response()->json([
+                    'error' => 'No autorizado para generar reportes',
+                ], 403);
+            }
+
+            // Verify organization exists
+            $organization = Organization::findOrFail($organizationId);
+
+            // Generate filename
+            $filename = 'evaluaciones_'.$organization->name.'_'.now()->format('Y-m-d_His').'.xlsx';
+
+            // Return Excel file
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\PaperEvaluationsExport($organizationId),
+                $filename
+            );
+        } catch (\Exception $e) {
+            Log::error('Error downloading Excel report', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'error' => 'Error al generar el reporte Excel: '.$e->getMessage(),
+            ], 500);
+        }
+    }
 }

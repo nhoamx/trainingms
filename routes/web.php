@@ -213,6 +213,10 @@ Route::middleware(['auth'])->group(function () {
                 ->name('download');
         });
 
+        // Excel Report Route
+        Route::get('reportes/excel/{organization}', [\App\Http\Controllers\ReportPdfController::class, 'downloadExcelReport'])
+            ->name('reports.excel.download');
+
         Route::controller(EvaluationController::class)
             ->prefix('/evaluaciones')
             ->group(function () {
