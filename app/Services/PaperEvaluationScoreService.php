@@ -21,8 +21,19 @@ class PaperEvaluationScoreService
         }
 
         $answers = $evaluation->referencia_iii_answers ?? [];
+        $conditionalAnswers = $evaluation->referencia_iii_conditional ?? [];
         $answerValues = config('answer_values');
         $questionDimensions = config('question_dimensions');
+
+        // Check if person is a manager (answered "SI" to management question)
+        $isManager = isset($conditionalAnswers['management']['condition'])
+            && $conditionalAnswers['management']['condition'] === 'SI';
+
+        // Get management questions if applicable
+        $managementQuestions = [];
+        if ($isManager && isset($conditionalAnswers['management']['questions'])) {
+            $managementQuestions = $conditionalAnswers['management']['questions'];
+        }
 
         $categoryScores = [];
         $domainScores = [];
@@ -47,11 +58,21 @@ class PaperEvaluationScoreService
                     $dimensionItems = [];
 
                     foreach ($questions as $questionNumber) {
-                        // Intentar con diferentes formatos de clave
-                        $answer = $answers[$questionNumber]
-                            ?? $answers[sprintf('%02d', $questionNumber)]
-                            ?? $answers[(string) $questionNumber]
-                            ?? null;
+                        // Skip management questions (69-72) if person is not a manager
+                        if (in_array($questionNumber, [69, 70, 71, 72]) && ! $isManager) {
+                            continue;
+                        }
+
+                        // For management questions (69-72), get answer from conditional data
+                        if (in_array($questionNumber, [69, 70, 71, 72]) && $isManager) {
+                            $answer = $managementQuestions[$questionNumber] ?? null;
+                        } else {
+                            // Regular questions from referencia_iii_answers
+                            $answer = $answers[$questionNumber]
+                                ?? $answers[sprintf('%02d', $questionNumber)]
+                                ?? $answers[(string) $questionNumber]
+                                ?? null;
+                        }
 
                         if ($answer) {
                             $score = $this->getAnswerValue($questionNumber, $answer, $answerValues);
