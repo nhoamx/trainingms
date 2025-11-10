@@ -419,6 +419,7 @@
         @include('pdfs.sections.cuantificacion-dimensiones')
 
         @include('pdfs.sections.cuantificacion-respuestas')
+    {{-- @include('pdfs.sections.cuantificacion-bloque-preguntas') --}}
 
         @include('pdfs.sections.conclusiones')
 
@@ -447,6 +448,8 @@
                     categories: diagnosticData.categories || {},
                     domains: diagnosticData.domains || {},
                     dimensions: diagnosticData.dimensions || {},
+                    blocks: diagnosticData.blocks || {},
+                    generalScore: diagnosticData.general_score || {},
                     totalParticipants: diagnosticData.total_participants || 0,
                     charts: []
                 }
@@ -519,6 +522,78 @@
                     });
 
                     this.charts.push(chart);
+                },
+                createEntornoOrganizacionalCharts() {
+                    // Dominios específicos de entorno organizacional
+                    const entornoDomains = [
+                        'Carga de trabajo',
+                        'Falta de control sobre el trabajo',
+                        'Jornada de trabajo',
+                        'Liderazgo',
+                        'Reconocimiento del desempeño',
+                        'Insuficiente sentido de pertenencia e inestabilidad'
+                    ];
+                    
+                    entornoDomains.forEach(domainName => {
+                        if (this.domains && this.domains[domainName]) {
+                            const canvasId = 'entornoChart_' + domainName.replace(/ /g, '_');
+                            const canvas = document.getElementById(canvasId);
+                            if (!canvas) return;
+
+                            const ctx = canvas.getContext('2d');
+                            const levels = this.domains[domainName];
+                            const data = this.riskLevels.map(level => levels[level] || 0);
+
+                            const chart = new Chart(ctx, {
+                                type: 'bar',
+                                data: {
+                                    labels: this.riskLevels,
+                                    datasets: [{
+                                        label: 'Participantes',
+                                        data: data,
+                                        backgroundColor: this.riskColors,
+                                        borderColor: this.riskColors,
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { display: false },
+                                        title: { display: false },
+                                        datalabels: {
+                                            display: true,
+                                            color: (context) => {
+                                                const bgColor = context.dataset.backgroundColor[context.dataIndex];
+                                                return bgColor === '#facc15' || bgColor === '#f97316' ? '#000000' : '#FFFFFF';
+                                            },
+                                            font: { weight: 'bold', size: 11 },
+                                            formatter: (value) => value > 0 ? value : '',
+                                            anchor: 'end',
+                                            align: 'top'
+                                        }
+                                    },
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            ticks: { 
+                                                precision: 0,
+                                                font: { size: 9 }
+                                            }
+                                        },
+                                        x: {
+                                            ticks: {
+                                                font: { size: 9 }
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+
+                            this.charts.push(chart);
+                        }
+                    });
                 },
                 createIndividualChart(name, levels, refPrefix) {
                     const canvasId = refPrefix + name.replace(/ /g, '_');
@@ -655,6 +730,203 @@
                     });
 
                     this.charts.push(chart);
+                },
+                createGeneralScoreChart() {
+                    const colors = ['#065f46', '#a7f3d0'];
+                    const general = this.generalScore?.general;
+                    if (!general) return;
+
+                    const canvas = document.getElementById('generalScoreChart');
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+                    const obtained = general.obtained || 0;
+                    const max = general.max || 0;
+                    const remaining = Math.max(0, max - obtained);
+
+                    const chart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: ['Obtenido', 'No obtenido'],
+                            datasets: [{
+                                data: [obtained, remaining],
+                                backgroundColor: colors,
+                                borderColor: '#ffffff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'bottom',
+                                    labels: {
+                                        font: { size: 11 },
+                                        padding: 12,
+                                        generateLabels: (chart) => {
+                                            const dataSet = chart.data.datasets[0];
+                                            const labels = chart.data.labels;
+                                            const total = dataSet.data.reduce((a,b)=>a+b,0);
+                                            return labels.map((label, i) => {
+                                                const value = dataSet.data[i];
+                                                const pct = total > 0 ? ((value/total)*100).toFixed(1) : 0;
+                                                return { text: `${label}: ${value} (${pct}%)`, fillStyle: dataSet.backgroundColor[i], hidden: false, index: i };
+                                            });
+                                        }
+                                    }
+                                },
+                                datalabels: {
+                                    display: true,
+                                    color: (context) => {
+                                        const bg = context.dataset.backgroundColor[context.dataIndex];
+                                        return bg === '#a7f3d0' ? '#065f46' : '#FFFFFF';
+                                    },
+                                    font: { weight: 'bold', size: 13 },
+                                    formatter: (value, context) => {
+                                        if (value === 0) return '';
+                                        const total = context.dataset.data.reduce((a,b)=>a+b,0);
+                                        const pct = total > 0 ? ((value/total)*100).toFixed(1) : 0;
+                                        return `${value}\n(${pct}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    this.charts.push(chart);
+                },
+                createComponentCharts() {
+                    const colors = ['#065f46', '#a7f3d0'];
+                    if (!this.generalScore) return;
+
+                    ['a', 'b', 'c'].forEach((key) => {
+                        const data = this.generalScore[key];
+                        if (!data || data.max === 0) return;
+
+                        const canvas = document.getElementById('componentChart_' + key);
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        const obtained = data.obtained || 0;
+                        const max = data.max || 0;
+                        const remaining = Math.max(0, max - obtained);
+
+                        const chart = new Chart(ctx, {
+                            type: 'pie',
+                            data: {
+                                labels: ['Obtenido', 'No obtenido'],
+                                datasets: [{
+                                    data: [obtained, remaining],
+                                    backgroundColor: colors,
+                                    borderColor: '#ffffff',
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: 'bottom',
+                                        labels: {
+                                            font: { size: 9 },
+                                            padding: 10,
+                                            generateLabels: (chart) => {
+                                                const dataSet = chart.data.datasets[0];
+                                                const labels = chart.data.labels;
+                                                const total = dataSet.data.reduce((a,b)=>a+b,0);
+                                                return labels.map((label, i) => {
+                                                    const value = dataSet.data[i];
+                                                    const pct = total > 0 ? ((value/total)*100).toFixed(1) : 0;
+                                                    return { text: `${label}: ${value} (${pct}%)`, fillStyle: dataSet.backgroundColor[i], hidden: false, index: i };
+                                                });
+                                            }
+                                        }
+                                    },
+                                    datalabels: {
+                                        display: true,
+                                        color: (context) => {
+                                            const bg = context.dataset.backgroundColor[context.dataIndex];
+                                            return bg === '#a7f3d0' ? '#065f46' : '#FFFFFF';
+                                        },
+                                        font: { weight: 'bold', size: 10 },
+                                        formatter: (value, context) => {
+                                            if (value === 0) return '';
+                                            const total = context.dataset.data.reduce((a,b)=>a+b,0);
+                                            const pct = total > 0 ? ((value/total)*100).toFixed(1) : 0;
+                                            return `${value}\n(${pct}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        this.charts.push(chart);
+                    });
+                },
+                createBlockPieCharts() {
+                    const colors = ['#065f46', '#a7f3d0'];
+                    if (!this.blocks || Object.keys(this.blocks).length === 0) return;
+
+                    Object.entries(this.blocks).forEach(([blockNo, data]) => {
+                        const canvas = document.getElementById('blockChart_' + blockNo);
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        const obtained = data.obtained || 0;
+                        const max = data.max || 0;
+                        const remaining = Math.max(0, max - obtained);
+
+                        const chart = new Chart(ctx, {
+                            type: 'pie',
+                            data: {
+                                labels: ['Obtenido', 'No obtenido'],
+                                datasets: [{
+                                    data: [obtained, remaining],
+                                    backgroundColor: colors,
+                                    borderColor: '#ffffff',
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: 'bottom',
+                                        labels: {
+                                            font: { size: 10 },
+                                            padding: 12,
+                                            generateLabels: (chart) => {
+                                                const dataSet = chart.data.datasets[0];
+                                                const labels = chart.data.labels;
+                                                const total = dataSet.data.reduce((a,b)=>a+b,0);
+                                                return labels.map((label, i) => {
+                                                    const value = dataSet.data[i];
+                                                    const pct = total > 0 ? ((value/total)*100).toFixed(1) : 0;
+                                                    return { text: `${label}: ${value} (${pct}%)`, fillStyle: dataSet.backgroundColor[i], hidden: false, index: i };
+                                                });
+                                            }
+                                        }
+                                    },
+                                    datalabels: {
+                                        display: true,
+                                        color: (context) => {
+                                            const bg = context.dataset.backgroundColor[context.dataIndex];
+                                            return bg === '#a7f3d0' ? '#065f46' : '#FFFFFF';
+                                        },
+                                        font: { weight: 'bold', size: 11 },
+                                        formatter: (value, context) => {
+                                            if (value === 0) return '';
+                                            const total = context.dataset.data.reduce((a,b)=>a+b,0);
+                                            const pct = total > 0 ? ((value/total)*100).toFixed(1) : 0;
+                                            return `${value}\n(${pct}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        this.charts.push(chart);
+                    });
                 }
             },
             mounted() {
@@ -662,6 +934,10 @@
                     setTimeout(() => {
                         this.createFinalRiskChart();
                         this.createViolencePieChart();
+                        this.createGeneralScoreChart();
+                        this.createComponentCharts();
+                        this.createBlockPieCharts();
+                        this.createEntornoOrganizacionalCharts();
                         
                         if (this.hasCategories) {
                             Object.entries(this.categories).forEach(([name, levels]) => {

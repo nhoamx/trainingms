@@ -170,6 +170,8 @@ class ReportPdfService
         $finalRiskByPuesto = $this->getFinalRiskByPuesto($organizationId);
         $responseFrequencies = $this->getResponseFrequencies($organizationId);
         $questionTexts = $this->getQuestionTexts();
+        $blockScores = $this->getBlockScores($organizationId);
+        $generalScore = $this->getGeneralScore($organizationId);
 
         return [
             'final_risk' => $finalRiskDistribution,
@@ -181,6 +183,226 @@ class ReportPdfService
             'final_risk_by_puesto' => $finalRiskByPuesto,
             'response_frequencies' => $responseFrequencies,
             'question_texts' => $questionTexts,
+            'blocks' => $blockScores,
+            'general_score' => $generalScore,
+        ];
+    }
+
+    /**
+     * Compute obtained and maximum scores per block of questions (01-12)
+     * Blocks mapping based on NOM-035 Referencia III guidance.
+     * Returns array keyed by two-digit block number with: name, obtained, max, questions.
+     */
+    private function getBlockScores(string $organizationId): array
+    {
+        // Define blocks and their question numbers
+        $blocks = [
+            '01' => ['name' => 'Condiciones ambientales del centro de trabajo', 'questions' => [1, 2, 3, 4, 5]],
+            '02' => ['name' => 'Cantidad y ritmo de trabajo', 'questions' => [6, 7, 8]],
+            '03' => ['name' => 'Esfuerzo mental requerido', 'questions' => [9, 10, 11, 12]],
+            '04' => ['name' => 'Actividades y responsabilidades del trabajo', 'questions' => [13, 14, 15, 16]],
+            '05' => ['name' => 'Jornada de trabajo', 'questions' => [17, 18, 19, 20, 21, 22]],
+            '06' => ['name' => 'Decisiones en el trabajo', 'questions' => [23, 24, 25, 26, 27, 28]],
+            '07' => ['name' => 'Cambios en el trabajo', 'questions' => [29, 30]],
+            '08' => ['name' => 'Capacitación e información', 'questions' => [31, 32, 33, 34, 35, 36]],
+            '09' => ['name' => 'Relación con jefes', 'questions' => [37, 38, 39, 40, 41]],
+            '10' => ['name' => 'Relación con compañeros', 'questions' => [42, 43, 44, 45, 46]],
+            '11' => ['name' => 'Información, reconocimiento, pertenencia y estabilidad', 'questions' => [47, 48, 49, 50, 51, 52, 53, 54, 55, 56]],
+            '12' => ['name' => 'Violencia laboral', 'questions' => [57, 58, 59, 60, 61, 62, 63, 64]],
+        ];
+
+        // Fetch evaluations
+        $evaluations = \App\Models\PaperEvaluation::where('organization_id', $organizationId)
+            ->where('source', 'paper')
+            ->where('processing_status', 'completed')
+            ->where('evaluation_type', 'referencia_iii')
+            ->get();
+
+        $participantCount = $evaluations->count();
+
+        // Initialize results
+        $results = [];
+        foreach ($blocks as $blockNo => $info) {
+            $results[$blockNo] = [
+                'name' => $info['name'],
+                'obtained' => 0,
+                'max' => ($participantCount * count($info['questions']) * 4),
+                'questions' => $info['questions'],
+            ];
+        }
+
+        if ($participantCount === 0) {
+            return $results;
+        }
+
+        // Load answer value config and prepare quick lookup for groups
+        $answerConfig = config('answer_values');
+        $groupLookups = [];
+        foreach ($answerConfig as $groupKey => $group) {
+            foreach ($group['questions'] as $q) {
+                $groupLookups[$q] = $groupKey;
+            }
+        }
+
+        // Helper to get score for answer
+        $getScore = function (int $questionNumber, ?string $answer) use ($answerConfig, $groupLookups): int {
+            if (! $answer) {
+                return 0;
+            }
+            $qKey = str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT);
+            $groupKey = $groupLookups[$qKey] ?? null;
+            if (! $groupKey) {
+                return 0;
+            }
+            $answer = strtoupper(trim($answer));
+
+            return $answerConfig[$groupKey]['values'][$answer] ?? 0;
+        };
+
+        // Sum obtained points per block
+        foreach ($evaluations as $evaluation) {
+            $answers = $evaluation->referencia_iii_answers ?? [];
+            // Normalize keys to both numeric and zero-padded strings
+            $normalized = [];
+            foreach ($answers as $key => $val) {
+                $num = is_numeric($key) ? (int) $key : (int) ltrim((string) $key, '0');
+                if ($num >= 1 && $num <= 64) {
+                    $normalized[$num] = $val;
+                }
+            }
+
+            foreach ($blocks as $blockNo => $info) {
+                $obtainedThisEval = 0;
+                foreach ($info['questions'] as $q) {
+                    $ans = $normalized[$q] ?? null;
+                    $obtainedThisEval += $getScore($q, is_string($ans) ? $ans : null);
+                }
+                $results[$blockNo]['obtained'] += $obtainedThisEval;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Calculate general score breakdown (A, B, C)
+     * A) 64 questions for all participants
+     * B) 4 questions for client/user attention (conditional questions 65-68)
+     * C) 4 questions for management (conditional questions 69-72)
+     */
+    private function getGeneralScore(string $organizationId): array
+    {
+        $evaluations = \App\Models\PaperEvaluation::where('organization_id', $organizationId)
+            ->where('source', 'paper')
+            ->where('processing_status', 'completed')
+            ->where('evaluation_type', 'referencia_iii')
+            ->get();
+
+        $totalParticipants = $evaluations->count();
+
+        // Count participants with conditional sections
+        $clientAttentionCount = 0;
+        $managementCount = 0;
+
+        $obtainedA = 0;
+        $obtainedB = 0;
+        $obtainedC = 0;
+
+        // Load answer value config
+        $answerConfig = config('answer_values');
+        $groupLookups = [];
+        foreach ($answerConfig as $groupKey => $group) {
+            foreach ($group['questions'] as $q) {
+                $groupLookups[$q] = $groupKey;
+            }
+        }
+
+        $getScore = function (int $questionNumber, ?string $answer) use ($answerConfig, $groupLookups): int {
+            if (! $answer) {
+                return 0;
+            }
+            $qKey = str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT);
+            $groupKey = $groupLookups[$qKey] ?? null;
+            if (! $groupKey) {
+                return 0;
+            }
+            $answer = strtoupper(trim($answer));
+
+            return $answerConfig[$groupKey]['values'][$answer] ?? 0;
+        };
+
+        foreach ($evaluations as $evaluation) {
+            $answers = $evaluation->referencia_iii_answers ?? [];
+            $conditionalAnswers = $evaluation->referencia_iii_conditional ?? [];
+
+            // Normalize answers keys for questions 1-64
+            $normalized = [];
+            foreach ($answers as $key => $val) {
+                $num = is_numeric($key) ? (int) $key : (int) ltrim((string) $key, '0');
+                if ($num >= 1 && $num <= 64) {
+                    $normalized[$num] = $val;
+                }
+            }
+
+            // A) Calculate score for questions 1-64
+            for ($q = 1; $q <= 64; $q++) {
+                $ans = $normalized[$q] ?? null;
+                $obtainedA += $getScore($q, is_string($ans) ? $ans : null);
+            }
+
+            // B) Client attention conditional (questions 65-68)
+            if (isset($conditionalAnswers['client_attention']['condition'])
+                && $conditionalAnswers['client_attention']['condition'] === 'SI') {
+                $clientAttentionCount++;
+                $clientQuestions = $conditionalAnswers['client_attention']['questions'] ?? [];
+                foreach ([65, 66, 67, 68] as $q) {
+                    $ans = $clientQuestions[$q] ?? null;
+                    $obtainedB += $getScore($q, $ans);
+                }
+            }
+
+            // C) Management conditional (questions 69-72)
+            if (isset($conditionalAnswers['management']['condition'])
+                && $conditionalAnswers['management']['condition'] === 'SI') {
+                $managementCount++;
+                $managementQuestions = $conditionalAnswers['management']['questions'] ?? [];
+                foreach ([69, 70, 71, 72] as $q) {
+                    $ans = $managementQuestions[$q] ?? null;
+                    $obtainedC += $getScore($q, $ans);
+                }
+            }
+        }
+
+        $maxA = $totalParticipants * 64 * 4;
+        $maxB = $clientAttentionCount * 4 * 4;
+        $maxC = $managementCount * 4 * 4;
+        $maxGeneral = $maxA + $maxB + $maxC;
+        $obtainedGeneral = $obtainedA + $obtainedB + $obtainedC;
+
+        return [
+            'general' => [
+                'obtained' => $obtainedGeneral,
+                'max' => $maxGeneral,
+                'participants' => $totalParticipants,
+            ],
+            'a' => [
+                'name' => 'Preguntas generales (1-64)',
+                'obtained' => $obtainedA,
+                'max' => $maxA,
+                'participants' => $totalParticipants,
+            ],
+            'b' => [
+                'name' => 'Atención a clientes y usuarios (65-68)',
+                'obtained' => $obtainedB,
+                'max' => $maxB,
+                'participants' => $clientAttentionCount,
+            ],
+            'c' => [
+                'name' => 'Relación con colaboradores que supervisa (69-72)',
+                'obtained' => $obtainedC,
+                'max' => $maxC,
+                'participants' => $managementCount,
+            ],
         ];
     }
 
