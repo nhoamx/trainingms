@@ -387,33 +387,196 @@
                 @endforeach
             </tbody>
         </table>
+
+        @php
+            $porAreas = $executiveData['analisis_cuantitativo_final']['por_areas'] ?? [];
+            $porPuestos = $executiveData['analisis_cuantitativo_final']['por_puestos'] ?? [];
+            
+            // Calcular total y atención (Medio + Alto + Muy Alto) para cada área/puesto
+            $calcularAtencion = function($distribution) {
+                return ($distribution['Medio'] ?? 0) + ($distribution['Alto'] ?? 0) + ($distribution['Muy Alto'] ?? 0);
+            };
+            
+            $calcularTotal = function($distribution) {
+                return array_sum($distribution);
+            };
+        @endphp
+
+        @if(!empty($porAreas) || !empty($porPuestos))
+        <h4 class="section-subtitle" style="margin-top: 20px;">Distribución por Área y Puesto</h4>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+            <!-- Tabla por Área -->
+            <div>
+                <table style="font-size: 8pt;">
+                    <thead>
+                        <tr>
+                            <th colspan="3" style="background-color: #1e40af; color: white;">Área</th>
+                        </tr>
+                        <tr style="background-color: #dbeafe;">
+                            <th style="width: 50%;">Área</th>
+                            <th style="width: 25%;">Total</th>
+                            <th style="width: 25%;">Atención</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($porAreas as $area => $distribution)
+                        @php
+                            $total = $calcularTotal($distribution);
+                            $atencion = $calcularAtencion($distribution);
+                        @endphp
+                        <tr>
+                            <td style="text-align: left; padding-left: 8px;">{{ $area }}</td>
+                            <td>{{ $total }}</td>
+                            <td style="{{ $atencion > 0 ? 'background-color: #fee2e2; font-weight: bold;' : '' }}">{{ $atencion }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabla por Puesto -->
+            <div>
+                <table style="font-size: 8pt;">
+                    <thead>
+                        <tr>
+                            <th colspan="3" style="background-color: #1e40af; color: white;">Puesto</th>
+                        </tr>
+                        <tr style="background-color: #dbeafe;">
+                            <th style="width: 50%;">Puesto</th>
+                            <th style="width: 25%;">Total</th>
+                            <th style="width: 25%;">Atención</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($porPuestos as $puesto => $distribution)
+                        @php
+                            $total = $calcularTotal($distribution);
+                            $atencion = $calcularAtencion($distribution);
+                        @endphp
+                        <tr>
+                            <td style="text-align: left; padding-left: 8px;">{{ $puesto }}</td>
+                            <td>{{ $total }}</td>
+                            <td style="{{ $atencion > 0 ? 'background-color: #fee2e2; font-weight: bold;' : '' }}">{{ $atencion }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @endif
     </div>
 
     <!-- III. Análisis Cuantitativo de Actos de Violencia Laboral -->
-    <div class="section">
+    <div class="section" style="page-break-before: always;">
         <h3 class="section-title">III. Análisis Cuantitativo de Actos de Violencia Laboral</h3>
         
+        <div style="margin-bottom: 20px; text-align: justify; line-height: 1.6;">
+            <p style="margin-bottom: 12px;">
+                La Organización Mundial de la Salud (OMS) define el acoso laboral o <em>mobbing</em> como el comportamiento agresivo de uno o más 
+                miembros de un equipo de trabajo hacia un individuo de dicho grupo, con el objetivo de producir miedo, desprecio o depresión en 
+                ese trabajador, hasta que renuncie o sea despedido.
+            </p>
+            
+            <p style="margin-bottom: 12px;">
+                La violencia laboral, se establece de conformidad con lo siguiente:
+            </p>
+            
+            <p style="margin-bottom: 8px;">
+                <strong>1) Acoso, acoso psicológico:</strong> Aquellos actos que dañan la estabilidad psicológica, la personalidad, la dignidad o integridad del 
+                trabajador. Consiste en acciones de intimidación sistemática y persistente, tales como: descrédito, insultos, humillaciones, 
+                devaluación, marginación, indiferencia, comparaciones destructivas, rechazo, restricción a la autodeterminación y amenazas, las 
+                cuales llevan al trabajador a la depresión, al aislamiento, a la pérdida de su autoestima. Para efectos de esta Norma no se considera 
+                el acoso sexual;
+            </p>
+            
+            <p style="margin-bottom: 8px;">
+                <strong>2) Hostigamiento:</strong> El ejercicio de poder en una relación de subordinación real de la víctima frente al agresor en el ámbito laboral, que 
+                se expresa en conductas verbales, físicas o ambas, y
+            </p>
+            
+            <p style="margin-bottom: 20px;">
+                <strong>3) Malos tratos:</strong> Aquellos actos consistentes en insultos, burlas, humillaciones y/o ridiculizaciones del trabajador, realizados de 
+                manera continua y persistente (más de una vez y/o en diferentes ocasiones).
+            </p>
+        </div>
+
+        <div class="summary-box" style="margin-bottom: 20px;">
+            <p><strong>Total de Participantes:</strong> {{ $executiveData['analisis_violencia_laboral']['total'] }}</p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <h4 class="section-subtitle">Distribución por Nivel de Riesgo (Preguntas 57-64)</h4>
+            <div style="display: flex; justify-content: center; margin: 20px 0;">
+                <div style="width: 500px; height: 350px; position: relative;">
+                    <canvas id="chart-violencia-laboral" style="width: 100% !important; height: 100% !important;"></canvas>
+                </div>
+            </div>
+        </div>
+
         <table>
             <thead>
                 <tr>
-                    <th>Concepto</th>
+                    <th>Nivel de Riesgo</th>
+                    <th>Calificación Total del Dominio</th>
                     <th>Cantidad</th>
                     <th>Porcentaje</th>
                 </tr>
             </thead>
             <tbody>
+                @php
+                    $ranges = [
+                        'Nulo' => 'Nulo o despreciable: ≤6',
+                        'Bajo' => 'Bajo: ≥7 y ≤9',
+                        'Medio' => 'Medio: ≥10 y ≤12',
+                        'Alto' => 'Alto: ≥13 y ≤15',
+                        'Muy Alto' => 'Muy Alto: ≥16',
+                    ];
+                @endphp
+                @foreach(['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'] as $level)
                 <tr>
-                    <td>Trabajadores afectados por violencia laboral</td>
-                    <td>{{ $executiveData['analisis_violencia_laboral']['affected_count'] }}</td>
-                    <td>{{ $executiveData['analisis_violencia_laboral']['percentage'] }}%</td>
+                    <td><span class="risk-badge risk-{{ strtolower(str_replace(' ', '-', $level)) }}">{{ $level }}</span></td>
+                    <td>{{ $ranges[$level] }}</td>
+                    <td>{{ $executiveData['analisis_violencia_laboral']['distribution'][$level] }}</td>
+                    <td>{{ $executiveData['analisis_violencia_laboral']['percentages'][$level] }}%</td>
                 </tr>
-                <tr>
-                    <td>Total de trabajadores evaluados</td>
-                    <td>{{ $executiveData['analisis_violencia_laboral']['total'] }}</td>
-                    <td>100%</td>
-                </tr>
+                @endforeach
             </tbody>
         </table>
+
+        <div style="margin-top: 20px; padding: 15px; background-color: #f9fafb; border-left: 4px solid #1e40af;">
+            <h5 style="margin: 0 0 10px 0; font-size: 12px; color: #1e40af;">Preguntas realizadas en los cuestionarios que dan origen a los datos mostrados:</h5>
+            <table style="font-size: 9px;">
+                <thead>
+                    <tr style="background-color: #dbeafe;">
+                        <th style="width: 50px; text-align: center;">Pregunta</th>
+                        <th style="text-align: left;">Texto</th>
+                        <th style="text-align: center; width: 50px;">Nulo</th>
+                        <th style="text-align: center; width: 50px;">Bajo</th>
+                        <th style="text-align: center; width: 50px;">Medio</th>
+                        <th style="text-align: center; width: 50px;">Alto</th>
+                        <th style="text-align: center; width: 60px;">Muy Alto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @php
+                        $violenciaQuestions = config('referencia_iii.general');
+                        $questionStats = $executiveData['analisis_violencia_laboral']['question_stats'] ?? [];
+                    @endphp
+                    @for($q = 57; $q <= 64; $q++)
+                    <tr>
+                        <td style="text-align: center;">{{ $q }}</td>
+                        <td style="text-align: left; padding-left: 8px;">{{ $violenciaQuestions[$q] ?? '' }}</td>
+                        <td style="text-align: center;">{{ $questionStats[$q]['Nulo'] ?? 0 }}</td>
+                        <td style="text-align: center;">{{ $questionStats[$q]['Bajo'] ?? 0 }}</td>
+                        <td style="text-align: center;">{{ $questionStats[$q]['Medio'] ?? 0 }}</td>
+                        <td style="text-align: center;">{{ $questionStats[$q]['Alto'] ?? 0 }}</td>
+                        <td style="text-align: center;">{{ $questionStats[$q]['Muy Alto'] ?? 0 }}</td>
+                    </tr>
+                    @endfor
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- IV. Evaluación del Entorno Organizacional -->
@@ -786,11 +949,12 @@
         createApp({
             data() {
                 return {
-                    executiveData: @json($executiveData)
+                    executiveData: {!! json_encode($executiveData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) !!}
                 }
             },
             mounted() {
                 this.renderCalificacionFinalChart();
+                this.renderViolenciaLaboralChart();
             },
             methods: {
                 renderCalificacionFinalChart() {
@@ -798,11 +962,11 @@
                     const distribution = this.executiveData.analisis_cuantitativo_final.distribution;
                     
                     new Chart(ctx, {
-                        type: 'bar',
+                        type: 'pie',
                         data: {
                             labels: ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'],
                             datasets: [{
-                                label: 'Cantidad de Trabajadores',
+                                label: 'Trabajadores',
                                 data: [
                                     distribution['Nulo'],
                                     distribution['Bajo'],
@@ -817,13 +981,7 @@
                                     '#f97316',
                                     '#ef4444'
                                 ],
-                                borderColor: [
-                                    '#06b6d4',
-                                    '#22c55e',
-                                    '#facc15',
-                                    '#f97316',
-                                    '#ef4444'
-                                ],
+                                borderColor: '#ffffff',
                                 borderWidth: 2
                             }]
                         },
@@ -832,21 +990,125 @@
                             maintainAspectRatio: true,
                             plugins: {
                                 legend: {
-                                    display: false
+                                    display: true,
+                                    position: 'right',
+                                    labels: {
+                                        font: {
+                                            size: 11
+                                        },
+                                        padding: 15,
+                                        generateLabels: (chart) => {
+                                            const data = chart.data;
+                                            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                            return data.labels.map((label, i) => {
+                                                const value = data.datasets[0].data[i];
+                                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                                return {
+                                                    text: `${label}: ${value} (${percentage}%)`,
+                                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                                    hidden: false,
+                                                    index: i
+                                                };
+                                            });
+                                        }
+                                    }
                                 },
                                 title: {
                                     display: true,
                                     text: 'Distribución de Calificación Final',
                                     font: {
-                                        size: 14
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.label || '';
+                                            const value = context.parsed || 0;
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                            return `${label}: ${value} (${percentage}%)`;
+                                        }
                                     }
                                 }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        stepSize: 1
+                            }
+                        }
+                    });
+                },
+                renderViolenciaLaboralChart() {
+                    const ctx = document.getElementById('chart-violencia-laboral');
+                    if (!ctx) {
+                        console.error('Canvas element chart-violencia-laboral not found');
+                        return;
+                    }
+                    
+                    const distribution = this.executiveData.analisis_violencia_laboral.distribution;
+                    
+                    new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'],
+                            datasets: [{
+                                label: 'Trabajadores',
+                                data: [
+                                    distribution['Nulo'],
+                                    distribution['Bajo'],
+                                    distribution['Medio'],
+                                    distribution['Alto'],
+                                    distribution['Muy Alto']
+                                ],
+                                backgroundColor: [
+                                    '#06b6d4',
+                                    '#22c55e',
+                                    '#facc15',
+                                    '#f97316',
+                                    '#ef4444'
+                                ],
+                                borderColor: '#ffffff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'right',
+                                    labels: {
+                                        font: {
+                                            size: 11
+                                        },
+                                        padding: 15,
+                                        generateLabels: (chart) => {
+                                            const data = chart.data;
+                                            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                            return data.labels.map((label, i) => {
+                                                const value = data.datasets[0].data[i];
+                                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                                return {
+                                                    text: `${label}: ${value} (${percentage}%)`,
+                                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                                    hidden: false,
+                                                    index: i
+                                                };
+                                            });
+                                        }
+                                    }
+                                },
+                                title: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.label || '';
+                                            const value = context.parsed || 0;
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                            return `${label}: ${value} (${percentage}%)`;
+                                        }
                                     }
                                 }
                             }

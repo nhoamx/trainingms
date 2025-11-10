@@ -87,38 +87,82 @@ class ExecutiveReportService
             'distribution' => $distribution,
             'total' => $total,
             'percentages' => $this->calculatePercentages($distribution, $total),
+            'por_areas' => $this->getDistributionByAreas($organizationId),
+            'por_puestos' => $this->getDistributionByPuestos($organizationId),
         ];
     }
 
     /**
      * 2. Análisis Cuantitativo de Actos de Violencia Laboral
+     * Based on questions 57-64 from Referencia III
      */
     protected function getAnalisisViolenciaLaboral(string $organizationId): array
     {
         $evaluations = $this->getCompletedEvaluations($organizationId);
 
         if ($evaluations->isEmpty()) {
-            return ['affected_count' => 0, 'total' => 0, 'percentage' => 0];
+            return $this->getEmptyDistribution();
         }
 
-        $affectedWorkers = 0;
+        $distribution = [
+            'Nulo' => 0,
+            'Bajo' => 0,
+            'Medio' => 0,
+            'Alto' => 0,
+            'Muy Alto' => 0,
+        ];
+
+        // Initialize question statistics for questions 57-64
+        // Now we'll count by risk level per question score
+        $questionStats = [];
+        for ($q = 57; $q <= 64; $q++) {
+            $questionStats[$q] = [
+                'Nulo' => 0,
+                'Bajo' => 0,
+                'Medio' => 0,
+                'Alto' => 0,
+                'Muy Alto' => 0,
+            ];
+        }
+
+        // Risk levels for individual question scores (0-4 points per question)
+        $questionRiskLevels = [
+            0 => 'Nulo',      // 0 points = Nulo
+            1 => 'Bajo',      // 1 point = Bajo
+            2 => 'Medio',     // 2 points = Medio
+            3 => 'Alto',      // 3 points = Alto
+            4 => 'Muy Alto',  // 4 points = Muy Alto
+        ];
 
         foreach ($evaluations as $evaluation) {
-            // Check Cisneros scale answers for violence detection
-            $cisneros = $evaluation->cisneros_answers ?? [];
+            $scores = $this->scoreService->calculateReferenciaIIIScores($evaluation);
 
-            if (! empty($cisneros)) {
-                // If any answer is 'SI', worker experienced violence
-                $hasViolence = false;
-                foreach ($cisneros as $answer) {
-                    if (strtoupper($answer) === 'SI') {
-                        $hasViolence = true;
+            // Find "Violencia" domain within the domains array
+            if (isset($scores['domains'])) {
+                foreach ($scores['domains'] as $domainKey => $domainData) {
+                    if (stripos($domainData['name'], 'Violencia') !== false) {
+                        $riskLevel = $this->getDomainRiskLevel($domainData['name'], $domainData['score']);
+                        $distribution[$riskLevel]++;
                         break;
                     }
                 }
+            }
 
-                if ($hasViolence) {
-                    $affectedWorkers++;
+            // Collect statistics for each question (57-64) by individual score
+            if (isset($scores['dimensions'])) {
+                foreach ($scores['dimensions'] as $dimensionKey => $dimensionData) {
+                    if (stripos($dimensionData['name'], 'Violencia laboral') !== false) {
+                        foreach ($dimensionData['items'] as $item) {
+                            $questionNum = $item['question_number'];
+                            $score = $item['score']; // 0-4 points
+
+                            if (isset($questionStats[$questionNum]) && isset($questionRiskLevels[$score])) {
+                                $riskLevel = $questionRiskLevels[$score];
+                                $questionStats[$questionNum][$riskLevel]++;
+                            }
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -126,9 +170,10 @@ class ExecutiveReportService
         $total = $evaluations->count();
 
         return [
-            'affected_count' => $affectedWorkers,
+            'distribution' => $distribution,
             'total' => $total,
-            'percentage' => $total > 0 ? round(($affectedWorkers / $total) * 100, 2) : 0,
+            'percentages' => $this->calculatePercentages($distribution, $total),
+            'question_stats' => $questionStats,
         ];
     }
 
