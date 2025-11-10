@@ -608,27 +608,46 @@
     <div class="section" style="page-break-before: always;">
         <h3 class="section-title">V. Análisis Cuantitativo de los Factores de Riesgo Psicosocial por Dimensión</h3>
         
-        @foreach($executiveData['analisis_dimensiones'] as $dimensionName => $items)
-        <h4 class="section-subtitle">{{ $dimensionName }}</h4>
+        @php
+            $dimData = $executiveData['analisis_dimensiones'] ?? [];
+            $riskClass = function($level){ return 'risk-'.strtolower(str_replace(' ', '-', $level)); };
+            $rows = [];
+            foreach($dimData as $dimensionName => $items){
+                foreach($items as $item){
+                    $rows[] = [
+                        'dimension' => $dimensionName,
+                        'num' => $item['item_numero'],
+                        'text' => $item['item_text'],
+                        'avg' => $item['average_score'],
+                        'level' => $item['risk_level'] ?? 'Nulo',
+                        'count' => $item['count'] ?? null,
+                    ];
+                }
+            }
+        @endphp
+
         <table>
             <thead>
                 <tr>
-                    <th style="width: 10%">No.</th>
-                    <th style="width: 70%">Pregunta</th>
-                    <th style="width: 20%">Promedio</th>
+                    <th style="width: 8%">No.</th>
+                    <th style="width: 28%">Dimensión</th>
+                    <th style="width: 44%">Pregunta</th>
+                    <th style="width: 10%">Promedio</th>
+                    <th style="width: 10%">Nivel</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($items as $item)
+                @foreach($rows as $r)
                 <tr>
-                    <td>{{ $item['item_numero'] }}</td>
-                    <td style="text-align: left; padding-left: 10px;">{{ $item['item_text'] }}</td>
-                    <td>{{ $item['average_score'] }}</td>
+                    <td>{{ $r['num'] }}</td>
+                    <td style="text-align: left; padding-left: 10px;">{{ $r['dimension'] }}</td>
+                    <td style="text-align: left; padding-left: 10px;">{{ $r['text'] }}</td>
+                    <td>{{ $r['avg'] }}</td>
+                    <td><span class="risk-badge {{ $riskClass($r['level']) }}">{{ $r['level'] }}</span></td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
-        @endforeach
     </div>
 
     <!-- 5. Análisis Cualitativo -->

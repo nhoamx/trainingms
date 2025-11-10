@@ -265,11 +265,21 @@ class ExecutiveReportService
                 $average = count($itemData['scores']) > 0
                     ? array_sum($itemData['scores']) / count($itemData['scores'])
                     : 0;
+                $intAverage = (int) round($average); // entero para mostrar y colorear
+                $riskLevel = match ($intAverage) {
+                    0 => 'Nulo',
+                    1 => 'Bajo',
+                    2 => 'Medio',
+                    3 => 'Alto',
+                    4 => 'Muy Alto',
+                    default => 'Nulo',
+                };
 
                 $dimensionData[] = [
                     'item_numero' => $itemNumero,
                     'item_text' => $itemData['item_text'],
-                    'average_score' => round($average, 2),
+                    'average_score' => $intAverage,
+                    'risk_level' => $riskLevel,
                     'count' => count($itemData['scores']),
                 ];
             }
@@ -381,32 +391,86 @@ class ExecutiveReportService
         $affectedWorkers = [];
 
         foreach ($evaluations as $evaluation) {
-            $cisneros = $evaluation->cisneros_answers ?? [];
+            $scores = $this->scoreService->calculateReferenciaIIIScores($evaluation);
 
+            // 1) Prefer Cisneros scale if present (explicit acts of violence)
+            $cisneros = $evaluation->cisneros_answers ?? [];
             if (! empty($cisneros)) {
                 $hasViolence = false;
                 $violenceEvents = [];
-
                 foreach ($cisneros as $questionId => $answer) {
-                    if (strtoupper($answer) === 'SI') {
+                    if (is_string($answer) && strtoupper($answer) === 'SI') {
                         $hasViolence = true;
                         $violenceEvents[$questionId] = $answer;
                     }
                 }
-
                 if ($hasViolence) {
                     $affectedWorkers[] = [
                         'personal_folio' => $evaluation->personal_folio,
                         'name' => $evaluation->evaluee_name,
+                        'fuente' => 'cisneros',
+                        'nivel_riesgo' => null,
+                        'puntaje_dominio' => null,
                         'events' => $violenceEvents,
                     ];
+                    continue; // Already classified via Cisneros
                 }
+            }
+
+            // 2) Fallback to Referencia III domain "Violencia" risk level (questions 57-64)
+            $domainRiskLevel = null;
+            $domainScore = null;
+            $dimensionEvents = [];
+
+            // Find domain "Violencia" and its dimension "Violencia laboral"
+            if (isset($scores['domains'])) {
+                foreach ($scores['domains'] as $domainData) {
+                    if (stripos($domainData['name'], 'Violencia') !== false) {
+                        $domainScore = $domainData['score'];
+                        $domainRiskLevel = $this->getDomainRiskLevel($domainData['name'], $domainData['score']);
+                        break;
+                    }
+                }
+            }
+
+            if ($domainRiskLevel && $domainRiskLevel !== 'Nulo') {
+                // Collect answers for dimension items (57-64) for context
+                if (isset($scores['dimensions'])) {
+                    foreach ($scores['dimensions'] as $dimensionData) {
+                        if (stripos($dimensionData['name'], 'Violencia laboral') !== false) {
+                            foreach ($dimensionData['items'] as $item) {
+                                // Consider an "evento" only when the scored answer indicates presencia (score >= 2)
+                                if (isset($item['score']) && $item['score'] >= 2) {
+                                    $dimensionEvents[$item['question_number']] = [
+                                        'answer' => $item['answer'],
+                                        'score' => $item['score'],
+                                    ];
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                $affectedWorkers[] = [
+                    'personal_folio' => $evaluation->personal_folio,
+                    'name' => $evaluation->evaluee_name,
+                    'fuente' => 'referencia_iii',
+                    'nivel_riesgo' => $domainRiskLevel,
+                    'puntaje_dominio' => $domainScore,
+                    'events' => $dimensionEvents,
+                ];
             }
         }
 
         return [
             'trabajadores' => $affectedWorkers,
             'total_affected' => count($affectedWorkers),
+            'detalle_niveles' => [
+                'Medio' => count(array_filter($affectedWorkers, fn($w) => $w['nivel_riesgo'] === 'Medio')),
+                'Alto' => count(array_filter($affectedWorkers, fn($w) => $w['nivel_riesgo'] === 'Alto')),
+                'Muy Alto' => count(array_filter($affectedWorkers, fn($w) => $w['nivel_riesgo'] === 'Muy Alto')),
+            ],
         ];
     }
 
