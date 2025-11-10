@@ -520,6 +520,78 @@
 
                     this.charts.push(chart);
                 },
+                createEntornoOrganizacionalCharts() {
+                    // Dominios específicos de entorno organizacional
+                    const entornoDomains = [
+                        'Carga de trabajo',
+                        'Falta de control sobre el trabajo',
+                        'Jornada de trabajo',
+                        'Liderazgo',
+                        'Reconocimiento del desempeño',
+                        'Insuficiente sentido de pertenencia e inestabilidad'
+                    ];
+                    
+                    entornoDomains.forEach(domainName => {
+                        if (this.domains && this.domains[domainName]) {
+                            const canvasId = 'entornoChart_' + domainName.replace(/ /g, '_');
+                            const canvas = document.getElementById(canvasId);
+                            if (!canvas) return;
+
+                            const ctx = canvas.getContext('2d');
+                            const levels = this.domains[domainName];
+                            const data = this.riskLevels.map(level => levels[level] || 0);
+
+                            const chart = new Chart(ctx, {
+                                type: 'bar',
+                                data: {
+                                    labels: this.riskLevels,
+                                    datasets: [{
+                                        label: 'Participantes',
+                                        data: data,
+                                        backgroundColor: this.riskColors,
+                                        borderColor: this.riskColors,
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { display: false },
+                                        title: { display: false },
+                                        datalabels: {
+                                            display: true,
+                                            color: (context) => {
+                                                const bgColor = context.dataset.backgroundColor[context.dataIndex];
+                                                return bgColor === '#facc15' || bgColor === '#f97316' ? '#000000' : '#FFFFFF';
+                                            },
+                                            font: { weight: 'bold', size: 11 },
+                                            formatter: (value) => value > 0 ? value : '',
+                                            anchor: 'end',
+                                            align: 'top'
+                                        }
+                                    },
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            ticks: { 
+                                                precision: 0,
+                                                font: { size: 9 }
+                                            }
+                                        },
+                                        x: {
+                                            ticks: {
+                                                font: { size: 9 }
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+
+                            this.charts.push(chart);
+                        }
+                    });
+                },
                 createIndividualChart(name, levels, refPrefix) {
                     const canvasId = refPrefix + name.replace(/ /g, '_');
                     const canvas = document.getElementById(canvasId);
@@ -662,6 +734,7 @@
                     setTimeout(() => {
                         this.createFinalRiskChart();
                         this.createViolencePieChart();
+                        this.createEntornoOrganizacionalCharts();
                         
                         if (this.hasCategories) {
                             Object.entries(this.categories).forEach(([name, levels]) => {
