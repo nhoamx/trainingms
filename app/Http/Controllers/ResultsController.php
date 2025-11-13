@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\EvaluationTemplateExport;
+use App\Imports\EvaluationBulkUpdateImport;
 use App\Models\Category;
 use App\Models\Evaluation;
 use App\Models\Organization;
@@ -11,6 +13,7 @@ use App\Services\PaperEvaluationScoreService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ResultsController extends Controller
 {
@@ -554,5 +557,80 @@ class ResultsController extends Controller
             'message' => 'Respuesta actualizada correctamente',
             'question' => $question->only('id', 'question', 'answer'),
         ]);
+    }
+
+    /**
+     * Descargar plantilla de Excel para actualización masiva
+     */
+    public function downloadTemplate(Organization $organization)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        $filename = 'plantilla_actualizacion_'.$organization->name.'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(
+            new EvaluationTemplateExport($organization),
+            $filename
+        );
+    }
+
+    /**
+     * Procesar archivo de actualización masiva
+     */
+    public function bulkUpdate(Request $request, Organization $organization)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:10240', // Max 10MB
+        ]);
+
+        try {
+            $import = new EvaluationBulkUpdateImport;
+            Excel::import($import, $request->file('file'));
+
+            $updatedCount = $import->getUpdatedCount();
+            $skippedCount = $import->getSkippedCount();
+            $errors = $import->getErrors();
+
+            // Preparar mensaje de respuesta
+            $message = "Proceso completado: {$updatedCount} folios actualizados";
+
+            if ($skippedCount > 0) {
+                $message .= ", {$skippedCount} folios omitidos";
+            }
+
+            // Si hay errores, incluirlos en la respuesta
+            if (! empty($errors)) {
+                return back()->with([
+                    'success' => $updatedCount > 0,
+                    'message' => $message,
+                    'errors' => $errors,
+                ]);
+            }
+
+            return back()->with([
+                'success' => true,
+                'message' => $message,
+            ]);
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            $errors = [];
+
+            foreach ($failures as $failure) {
+                $errors[] = "Fila {$failure->row()}: ".implode(', ', $failure->errors());
+            }
+
+            return back()->with([
+                'success' => false,
+                'message' => 'Error de validación en el archivo',
+                'errors' => $errors,
+            ]);
+        } catch (\Exception $e) {
+            return back()->with([
+                'success' => false,
+                'message' => 'Error al procesar el archivo: '.$e->getMessage(),
+            ]);
+        }
     }
 }
