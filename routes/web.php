@@ -178,6 +178,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('organization.results.detail')
         ->middleware('can:view-organization-results,organization');
 
+    // Bulk update routes
+    Route::get('/organizacion/{organization}/plantilla-actualizacion', [ResultsController::class, 'downloadTemplate'])
+        ->name('organization.results.template')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::post('/organizacion/{organization}/actualizacion-masiva', [ResultsController::class, 'bulkUpdate'])
+        ->name('organization.results.bulk-update')
+        ->middleware('can:view-organization-results,organization');
+
     Route::get('/{organizationId}/respuestas/{personalId}', [GlobalResponseController::class, 'showPersonResponses'])
         ->name('responses.personal');
 

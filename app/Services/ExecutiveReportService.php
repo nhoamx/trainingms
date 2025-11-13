@@ -413,6 +413,7 @@ class ExecutiveReportService
                         'puntaje_dominio' => null,
                         'events' => $violenceEvents,
                     ];
+
                     continue; // Already classified via Cisneros
                 }
             }
@@ -467,9 +468,9 @@ class ExecutiveReportService
             'trabajadores' => $affectedWorkers,
             'total_affected' => count($affectedWorkers),
             'detalle_niveles' => [
-                'Medio' => count(array_filter($affectedWorkers, fn($w) => $w['nivel_riesgo'] === 'Medio')),
-                'Alto' => count(array_filter($affectedWorkers, fn($w) => $w['nivel_riesgo'] === 'Alto')),
-                'Muy Alto' => count(array_filter($affectedWorkers, fn($w) => $w['nivel_riesgo'] === 'Muy Alto')),
+                'Medio' => count(array_filter($affectedWorkers, fn ($w) => $w['nivel_riesgo'] === 'Medio')),
+                'Alto' => count(array_filter($affectedWorkers, fn ($w) => $w['nivel_riesgo'] === 'Alto')),
+                'Muy Alto' => count(array_filter($affectedWorkers, fn ($w) => $w['nivel_riesgo'] === 'Muy Alto')),
             ],
         ];
     }
