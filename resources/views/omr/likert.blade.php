@@ -160,7 +160,7 @@
     }
     .demographic-title {
         font-weight: bold;
-        font-size: 11px; /* closer to question header size */
+        font-size: 10px; /* match referencia-v section-title */
         margin-bottom: 1.5mm;
         border-bottom: 1px solid black;
         padding-bottom: 0.5mm;
@@ -170,12 +170,12 @@
         display: flex;
         align-items: center;
         margin-bottom: 1.2mm;
-        font-size: 9px; /* slightly larger for readability */
+        font-size: 10px; /* match referencia-v option text */
         min-height: 4mm; /* accommodate larger bubble */
     }
     .demographic-label {
         flex: 1;
-        font-size: 9px;
+        font-size: 10px; /* match referencia-v */
     }
     .demographic-bubble {
         width: 4.5mm; /* match question bubbles */
