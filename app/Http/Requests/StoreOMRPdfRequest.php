@@ -24,7 +24,7 @@ class StoreOMRPdfRequest extends FormRequest
         return [
             'organization_id' => ['required', 'uuid', 'exists:organizations,id'],
             'folio_batch_id' => ['required', 'integer', 'exists:folio_batches,id'],
-            'guide_type' => ['required', 'string', 'in:referencia-i,referencia-iii,referencia-v,escala-cisneros'],
+            'guide_type' => ['required', 'string', 'in:referencia-i,referencia-iii,referencia-v,escala-cisneros,likert'],
             'generate_all' => ['boolean'],
             'folios' => ['array'],
             'folios.*' => ['string', 'size:4'],

@@ -254,7 +254,8 @@ const guideTypes = [
   { value: 'referencia-i', label: 'Guía de Referencia I' },
   { value: 'referencia-iii', label: 'Guía de Referencia III' }, 
   { value: 'referencia-v', label: 'Guía de Referencia V' },
-  { value: 'escala-cisneros', label: 'Escala Cisneros' }
+  { value: 'escala-cisneros', label: 'Escala Cisneros' },
+  { value: 'likert', label: 'Clima laboral' },
 ];
 
 const generatePdfForBatch = (batch) => {
