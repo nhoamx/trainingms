@@ -63,10 +63,30 @@
 
         /* Encabezado */
         .header {
+            position: relative;
             text-align: center;
             margin-bottom: 8px;
             border-bottom: 2px solid black;
             padding-bottom: 5px;
+            min-height: 18mm;
+        }
+
+        .header .header-logo {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32mm; /* reserved space for logo */
+            padding: 2mm 0;
+        }
+
+        .header .header-logo img.org-logo {
+            max-width: 30mm;
+            max-height: 14mm;
+            object-fit: contain;
         }
 
         .header h1 {
@@ -239,9 +259,16 @@
 
         <!-- Encabezado -->
         <div class="header">
-            <h1>IDENTIFICACIÓN Y ANÁLISIS DE LOS FACTORES DE RIESGO PSICOSOCIAL</h1>
-            <h2>Y EVALUACIÓN DEL ENTORNO ORGANIZACIONAL EN LOS CENTROS DE TRABAJO</h2>
-            <p>NOM-035-STPS-2018</p>
+            @hasSection('header-logo')
+                <div class="header-logo">
+                    @yield('header-logo')
+                </div>
+            @endif
+            @section('nom-header')
+                <h1>IDENTIFICACIÓN Y ANÁLISIS DE LOS FACTORES DE RIESGO PSICOSOCIAL</h1>
+                <h2>Y EVALUACIÓN DEL ENTORNO ORGANIZACIONAL EN LOS CENTROS DE TRABAJO</h2>
+                <p>NOM-035-STPS-2018</p>
+            @show
             <h2>@yield('guide-title')</h2>
         </div>
 

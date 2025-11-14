@@ -6,6 +6,7 @@ use App\Http\Requests\StoreOMRPdfRequest;
 use App\Models\FolioBatch;
 use App\Models\Organization;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Browsershot\Browsershot;
 
 class OMRController extends Controller
@@ -18,6 +19,7 @@ class OMRController extends Controller
         'referencia-iii' => '02',
         'referencia-v' => '03',
         'escala-cisneros' => '04',
+        'likert' => '05',
     ];
 
     /**
@@ -70,6 +72,16 @@ class OMRController extends Controller
         // Get guide configuration
         $guideType = $validated['guide_type'];
         $viewData = $this->getGuideData($guideType);
+
+        // Add organization logo if available
+        if ($organization->logo) {
+            // Convert to absolute file path for Browsershot
+            $logoPath = Storage::disk('public')->path($organization->logo);
+            if (file_exists($logoPath)) {
+                // Use absolute file path that Browsershot can read
+                $viewData['logo'] = 'file://'.str_replace('\\', '/', $logoPath);
+            }
+        }
 
         // Generate extended folios and HTML content
         $htmlContent = '';
@@ -139,6 +151,9 @@ class OMRController extends Controller
             'escala-cisneros' => [
                 'questions' => config('escala_cisneros'),
                 'totalQuestions' => count(config('escala_cisneros')),
+            ],
+            'likert' => [
+                'totalQuestions' => 23,
             ],
             default => [],
         };
@@ -211,6 +226,18 @@ class OMRController extends Controller
             'questions' => $questions,
             'totalQuestions' => count($questions),
             'folio' => $request->input('folio', '000000000'),
+        ]);
+    }
+
+    /**
+     * Mostrar hoja OMR para Escala Likert
+     */
+    public function likert(Request $request)
+    {
+        return view('omr.likert', [
+            'totalQuestions' => 23,
+            'folio' => $request->input('folio', '000000000'),
+            'logo' => $request->input('logo'),
         ]);
     }
 }
