@@ -185,6 +185,24 @@
         flex-shrink: 0;
         margin-left: 1.2mm;
     }
+    .manual-fields-section {
+        margin-top: 5mm;
+        padding-top: 3mm;
+    }
+    .manual-field {
+        margin-bottom: 3mm;
+    }
+    .manual-field-label {
+        font-size: 8px;
+        font-weight: bold;
+        margin-bottom: 1mm;
+        display: block;
+    }
+    .manual-field-line {
+        width: 100%;
+        border-bottom: 1px solid black;
+        height: 4mm;
+    }
 </style>
 
 <div class="main-container">
@@ -244,99 +262,88 @@
         </div>
     </div>
     
-    <!-- Demographics Columns (Center + Right) -->
-    <div class="demographics-container">
-        <!-- Center Column -->
-        <div class="demographics-column">
-            <!-- Género -->
-            <div class="demographic-section">
-                <div class="demographic-title">GÉNERO</div>
-                <div class="demographic-item">
-                    <span class="demographic-label">Masculino</span>
-                    <div class="demographic-bubble"></div>
-                </div>
-                <div class="demographic-item">
-                    <span class="demographic-label">Femenino</span>
-                    <div class="demographic-bubble"></div>
-                </div>
+    <!-- Demographics Section (2 separate columns) -->
+    <!-- Column 2: Turno + Manual Fields + Puestos -->
+    <div class="demographics-column">
+        <div class="demographic-section">
+            <div class="demographic-title">TURNO</div>
+            <div class="demographic-item">
+                <span class="demographic-label">Diurno</span>
+                <div class="demographic-bubble"></div>
             </div>
-
-            <!-- Turno -->
-            <div class="demographic-section">
-                <div class="demographic-title">TURNO</div>
-                <div class="demographic-item">
-                    <span class="demographic-label">1° Turno</span>
-                    <div class="demographic-bubble"></div>
-                </div>
-                <div class="demographic-item">
-                    <span class="demographic-label">2° Turno</span>
-                    <div class="demographic-bubble"></div>
-                </div>
-                <div class="demographic-item">
-                    <span class="demographic-label">3° Turno</span>
-                    <div class="demographic-bubble"></div>
-                </div>
-            </div>
-
-            <!-- Tipo de Contratación -->
-            <div class="demographic-section">
-                <div class="demographic-title">TIPO DE CONTRATACIÓN</div>
-                <div class="demographic-item">
-                    <span class="demographic-label">Salary</span>
-                    <div class="demographic-bubble"></div>
-                </div>
-                <div class="demographic-item">
-                    <span class="demographic-label">Hourly</span>
-                    <div class="demographic-bubble"></div>
-                </div>
-            </div>
-
-            <!-- Departamento (19 opciones) -->
-            <div class="demographic-section">
-                <div class="demographic-title">DEPARTAMENTO</div>
-                @for($i = 1; $i <= 19; $i++)
-                    <div class="demographic-item">
-                        <span class="demographic-label">Dept {{ $i }}</span>
-                        <div class="demographic-bubble"></div>
-                    </div>
-                @endfor
+            <div class="demographic-item">
+                <span class="demographic-label">Nocturno</span>
+                <div class="demographic-bubble"></div>
             </div>
         </div>
 
-        <!-- Right Column -->
-        <div class="demographics-column">
-            <!-- Línea (17 opciones) -->
-            <div class="demographic-section">
-                <div class="demographic-title">LÍNEA</div>
-                @for($i = 1; $i <= 17; $i++)
-                    <div class="demographic-item">
-                        <span class="demographic-label">Línea {{ $i }}</span>
-                        <div class="demographic-bubble"></div>
-                    </div>
-                @endfor
+        <!-- Manual Fields Section - Column 2 -->
+        <div class="manual-fields-section">
+            <div class="manual-field">
+                <label class="manual-field-label">GERENTE DE PLANTA:</label>
+                <div class="manual-field-line"></div>
             </div>
+            <div class="manual-field">
+                <label class="manual-field-label">GERENTE DE PRODUCCIÓN:</label>
+                <div class="manual-field-line"></div>
+            </div>
+            <div class="manual-field">
+                <label class="manual-field-label">GERENTE DE RECURSOS HUMANOS:</label>
+                <div class="manual-field-line"></div>
+            </div>
+        </div>
 
-            <!-- Puesto (13 opciones) -->
-            <div class="demographic-section">
-                <div class="demographic-title">PUESTO</div>
-                @for($i = 1; $i <= 13; $i++)
-                    <div class="demographic-item">
-                        <span class="demographic-label">Puesto {{ $i }}</span>
-                        <div class="demographic-bubble"></div>
-                    </div>
-                @endfor
-            </div>
+        <!-- Puestos Section -->
+        <div class="demographic-section" style="margin-top: 5mm;">
+            <div class="demographic-title">PUESTOS</div>
+            @foreach($positions as $position)
+                <div class="demographic-item">
+                    <span class="demographic-label">{{ $position['name'] }}</span>
+                    <div class="demographic-bubble"></div>
+                </div>
+            @endforeach
+        </div>
+    </div>
 
-            <!-- Supervisor (5 opciones) -->
-            <div class="demographic-section">
-                <div class="demographic-title">SUPERVISOR</div>
-                @for($i = 1; $i <= 5; $i++)
-                    <div class="demographic-item">
-                        <span class="demographic-label">Supervisor {{ $i }}</span>
-                        <div class="demographic-bubble"></div>
-                    </div>
-                @endfor
+    <!-- Column 3: Tipo de Contratación + Manual Fields + Áreas -->
+    <div class="demographics-column">
+        <div class="demographic-section">
+            <div class="demographic-title">TIPO DE CONTRATACIÓN</div>
+            <div class="demographic-item">
+                <span class="demographic-label">De confianza</span>
+                <div class="demographic-bubble"></div>
             </div>
+            <div class="demographic-item">
+                <span class="demographic-label">Sindicalizado</span>
+                <div class="demographic-bubble"></div>
+            </div>
+        </div>
+
+        <!-- Manual Fields Section - Column 3 -->
+        <div class="manual-fields-section">
+            <div class="manual-field">
+                <label class="manual-field-label">SUPERVISOR:</label>
+                <div class="manual-field-line"></div>
+            </div>
+            <div class="manual-field">
+                <label class="manual-field-label">LÍDER DE EQUIPO:</label>
+                <div class="manual-field-line"></div>
+            </div>
+            <div class="manual-field">
+                <label class="manual-field-label">LÍNEA:</label>
+                <div class="manual-field-line"></div>
+            </div>
+        </div>
+
+        <!-- Áreas Section -->
+        <div class="demographic-section" style="margin-top: 5mm;">
+            <div class="demographic-title">ÁREAS</div>
+            @foreach($areas as $area)
+                <div class="demographic-item">
+                    <span class="demographic-label">{{ $area['name'] }}</span>
+                    <div class="demographic-bubble"></div>
+                </div>
+            @endforeach
         </div>
     </div>
 </div>

@@ -108,6 +108,37 @@
             margin-bottom: 2px;
         }
 
+        /* Fecha en header */
+        .header-date {
+            position: absolute;
+            right: 0;
+            bottom: 5px;
+            display: flex;
+            gap: 3mm;
+            align-items: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .date-field {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1mm;
+        }
+
+        .date-field-label {
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .date-field-box {
+            width: 12mm;
+            height: 5mm;
+            border: 1.5px solid black;
+            background: white;
+        }
+
         /* Estilos de folio y fecha movidos a plantillas individuales */
 
         /* Contenido principal */
@@ -264,6 +295,22 @@
                     @yield('header-logo')
                 </div>
             @endif
+            
+            <div class="header-date">
+                <div class="date-field">
+                    <span class="date-field-label">DÍA</span>
+                    <div class="date-field-box"></div>
+                </div>
+                <div class="date-field">
+                    <span class="date-field-label">MES</span>
+                    <div class="date-field-box"></div>
+                </div>
+                <div class="date-field">
+                    <span class="date-field-label">AÑO</span>
+                    <div class="date-field-box"></div>
+                </div>
+            </div>
+            
             @section('nom-header')
                 <h1>IDENTIFICACIÓN Y ANÁLISIS DE LOS FACTORES DE RIESGO PSICOSOCIAL</h1>
                 <h2>Y EVALUACIÓN DEL ENTORNO ORGANIZACIONAL EN LOS CENTROS DE TRABAJO</h2>

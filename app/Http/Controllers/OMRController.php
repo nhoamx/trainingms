@@ -73,14 +73,26 @@ class OMRController extends Controller
         $guideType = $validated['guide_type'];
         $viewData = $this->getGuideData($guideType);
 
-        // Add organization logo if available
+        // Add organization logo if available (convert to base64 for Browsershot compatibility)
         if ($organization->logo) {
-            // Convert to absolute file path for Browsershot
             $logoPath = Storage::disk('public')->path($organization->logo);
             if (file_exists($logoPath)) {
-                // Use absolute file path that Browsershot can read
-                $viewData['logo'] = 'file://'.str_replace('\\', '/', $logoPath);
+                // Convert image to base64 to avoid file:// issues with Browsershot
+                $imageData = file_get_contents($logoPath);
+                $base64 = base64_encode($imageData);
+                $mimeType = mime_content_type($logoPath);
+                $viewData['logo'] = "data:{$mimeType};base64,{$base64}";
             }
+        }
+
+        // Add positions and areas for likert template
+        if ($guideType === 'likert') {
+            $positions = $organization->occupationPositions()->get(['name']);
+            $areas = $organization->departmentAreas()->get(['name']);
+
+            // Use defaults if empty
+            $viewData['positions'] = $positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions;
+            $viewData['areas'] = $areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas;
         }
 
         // Generate extended folios and HTML content
@@ -234,10 +246,33 @@ class OMRController extends Controller
      */
     public function likert(Request $request)
     {
+        // Get organization if provided to load positions and areas
+        $organizationId = $request->input('organization_id');
+        $positions = collect([['name' => 'Puesto 1']]);
+        $areas = collect([['name' => 'Área 1']]);
+
+        if ($organizationId) {
+            $organization = Organization::find($organizationId);
+            if ($organization) {
+                $positions = $organization->occupationPositions()->get(['name']);
+                $areas = $organization->departmentAreas()->get(['name']);
+
+                // Use defaults if empty
+                if ($positions->isEmpty()) {
+                    $positions = collect([['name' => 'Puesto 1']]);
+                }
+                if ($areas->isEmpty()) {
+                    $areas = collect([['name' => 'Área 1']]);
+                }
+            }
+        }
+
         return view('omr.likert', [
             'totalQuestions' => 23,
             'folio' => $request->input('folio', '000000000'),
             'logo' => $request->input('logo'),
+            'positions' => $positions,
+            'areas' => $areas,
         ]);
     }
 }

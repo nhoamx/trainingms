@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\OccupationPositionsExport;
+use App\Imports\OccupationPositionsImport;
 use App\Models\OccupationPosition;
 use App\Models\Organization;
 use App\Services\OccupationPositionService;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OccupationPositionController extends Controller
 {
@@ -67,5 +70,63 @@ class OccupationPositionController extends Controller
                 'message' => 'El puesto ha sido eliminado exitosamente.',
             ],
         ]);
+    }
+
+    /**
+     * Descargar plantilla Excel con los puestos actuales
+     */
+    public function downloadTemplate(Organization $organization)
+    {
+        $filename = 'puestos_'.$organization->folio_organization.'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(new OccupationPositionsExport($organization), $filename);
+    }
+
+    /**
+     * Importar puestos desde archivo Excel
+     */
+    public function import(Request $request, Organization $organization)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:10240', // Max 10MB
+        ]);
+
+        try {
+            $import = new OccupationPositionsImport($organization, $this->occupationService);
+
+            Excel::import($import, $request->file('file'));
+
+            $summary = $import->getSummary();
+
+            $message = sprintf(
+                'Importación completada: %d creados, %d actualizados, %d omitidos.',
+                $summary['created'],
+                $summary['updated'],
+                $summary['skipped']
+            );
+
+            if (! empty($summary['errors'])) {
+                $message .= ' Errores: '.implode(', ', array_slice($summary['errors'], 0, 3));
+                if (count($summary['errors']) > 3) {
+                    $message .= '...';
+                }
+            }
+
+            return back()->with([
+                'flash' => [
+                    'type' => empty($summary['errors']) ? 'success' : 'warning',
+                    'title' => 'Importación de Puestos',
+                    'message' => $message,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return back()->with([
+                'flash' => [
+                    'type' => 'error',
+                    'title' => 'Error en la importación',
+                    'message' => 'No se pudo procesar el archivo: '.$e->getMessage(),
+                ],
+            ]);
+        }
     }
 }

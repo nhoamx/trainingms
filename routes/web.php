@@ -260,12 +260,20 @@ Route::middleware(['auth'])->group(function () {
             ->name('occupation-positions.store');
         Route::delete('/occupation-positions/{occupationPosition}', [\App\Http\Controllers\OccupationPositionController::class, 'destroy'])
             ->name('occupation-positions.destroy');
+        Route::get('/occupation-positions/{organization}/template', [\App\Http\Controllers\OccupationPositionController::class, 'downloadTemplate'])
+            ->name('occupation-positions.template');
+        Route::post('/occupation-positions/{organization}/import', [\App\Http\Controllers\OccupationPositionController::class, 'import'])
+            ->name('occupation-positions.import');
 
         // Rutas para áreas de departamento
         Route::post('/department-areas', [\App\Http\Controllers\DepartmentAreaController::class, 'store'])
             ->name('department-areas.store');
         Route::delete('/department-areas/{departmentArea}', [\App\Http\Controllers\DepartmentAreaController::class, 'destroy'])
             ->name('department-areas.destroy');
+        Route::get('/department-areas/{organization}/template', [\App\Http\Controllers\DepartmentAreaController::class, 'downloadTemplate'])
+            ->name('department-areas.template');
+        Route::post('/department-areas/{organization}/import', [\App\Http\Controllers\DepartmentAreaController::class, 'import'])
+            ->name('department-areas.import');
 
         Route::controller(ResultsController::class)->prefix('/resultados')->group(function () {
             Route::get('/', 'index')->name('results.index');
