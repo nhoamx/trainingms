@@ -439,7 +439,7 @@
                         <div class="demographic-bubble"></div>
                     </div>
                     <div class="demographic-item">
-                        <span class="demographic-label">CONFIANZA</span>
+                        <span class="demographic-label">SALARY</span>
                         <div class="demographic-bubble"></div>
                     </div>
                 </div>
@@ -485,6 +485,26 @@
                             <span class="demographic-label-numbered">{{ $index + 1 }}. {{ strtoupper($area['name']) }}</span>
                         </div>
                     @endforeach
+                </div>
+
+                <!-- Manual Fields Section -->
+                <div class="demographic-section" style="margin-top: 2mm;">
+                    <div class="manual-field" style="margin-bottom: 1.5mm;">
+                        <span class="manual-field-label">GTE. DE PLANTA</span>
+                        <div class="manual-field-line"></div>
+                    </div>
+                    <div class="manual-field" style="margin-bottom: 1.5mm;">
+                        <span class="manual-field-label">GTE. DE PRODUCCIÓN</span>
+                        <div class="manual-field-line"></div>
+                    </div>
+                    <div class="manual-field" style="margin-bottom: 1.5mm;">
+                        <span class="manual-field-label">GTE. DE RH</span>
+                        <div class="manual-field-line"></div>
+                    </div>
+                    <div class="manual-field" style="margin-bottom: 1.5mm;">
+                        <span class="manual-field-label">SUPERVISOR</span>
+                        <div class="manual-field-line"></div>
+                    </div>
                 </div>
             </div>
         </div> <!-- /right-columns -->
