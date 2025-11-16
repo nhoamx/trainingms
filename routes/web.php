@@ -43,12 +43,8 @@ Route::middleware(['auth'])->group(function () {
     })->name('organization.report');
 
     // Likert-only reports route
-    Route::get('/organization/{id}/likert/report', function ($id) {
-        return \Inertia\Inertia::render('Reports/LikertOrganizationReport', [
-            'organizationId' => $id,
-            'title' => 'Reporte Likert',
-        ]);
-    })->name('organization.likert.report');
+    Route::get('/organization/{organization}/likert/report', [ResultsController::class, 'showLikertReport'])
+        ->name('organization.likert.report');
 
     // Online results routes
     Route::get('/organization/{id}/online-results', [App\Http\Controllers\OnlineResultsController::class, 'index'])->name('organization.online-results');

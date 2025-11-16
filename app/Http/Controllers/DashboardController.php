@@ -59,6 +59,8 @@ class DashboardController extends Controller
 
             // Add online evaluation counts for each organization
             $data['organizations'] = $this->addOnlineEvaluationCounts($data['organizations']);
+            // Add likert-only flag per organization
+            $data['organizations'] = $this->addLikertOnlyFlag($data['organizations']);
         } elseif ($user->hasRole('super-admin')) {
             $data['organizations'] = $this->evaluationService->getAllEvaluationsByOrganization();
             // Admins/SuperAdmins see global demographics
@@ -68,6 +70,8 @@ class DashboardController extends Controller
 
             // Add online evaluation counts for each organization
             $data['organizations'] = $this->addOnlineEvaluationCounts($data['organizations']);
+            // Add likert-only flag per organization
+            $data['organizations'] = $this->addLikertOnlyFlag($data['organizations']);
         }
 
         return Inertia::render('Dashboard', $data);
@@ -187,6 +191,26 @@ class DashboardController extends Controller
                 ->count('personal_folio');
 
             $org['online_evaluations_count'] = $onlineEvaluationsCount;
+
+            return $org;
+        });
+    }
+
+    /**
+     * Add a boolean flag indicating if the organization has only Likert paper evaluations completed.
+     */
+    protected function addLikertOnlyFlag($organizations)
+    {
+        return $organizations->map(function ($org) {
+            $orgId = $org['id'];
+
+            $baseQuery = \App\Models\PaperEvaluation::where('organization_id', $orgId)
+                ->where('processing_status', 'completed');
+
+            $likertCount = (clone $baseQuery)->where('evaluation_type', 'likert')->count();
+            $otherCount = (clone $baseQuery)->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])->count();
+
+            $org['is_likert_only'] = $likertCount > 0 && $otherCount === 0;
 
             return $org;
         });
