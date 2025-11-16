@@ -9,6 +9,7 @@ use App\Models\Evaluation;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\Question;
+use App\Services\LikertScoreService;
 use App\Services\PaperEvaluationScoreService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -20,7 +21,8 @@ class ResultsController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        protected PaperEvaluationScoreService $scoreService
+        protected PaperEvaluationScoreService $scoreService,
+        protected LikertScoreService $likertScoreService
     ) {}
 
     public function organizationResults(Organization $organization, Request $request)
@@ -105,6 +107,9 @@ class ResultsController extends Controller
 
                 // Get the Referencia III evaluation for score and evaluee_name
                 $referenciaIII = $evaluations->firstWhere('evaluation_type', 'referencia_iii');
+                // Get the Likert evaluation for score if Ref III doesn't exist
+                $likert = $evaluations->firstWhere('evaluation_type', 'likert');
+
                 $totalScore = 0;
                 $evalueeNameFromRef3 = null;
 
@@ -112,16 +117,59 @@ class ResultsController extends Controller
                     $scores = $this->scoreService->calculateReferenciaIIIScores($referenciaIII);
                     $totalScore = $scores['total_score'];
                     $evalueeNameFromRef3 = $referenciaIII->evaluee_name;
+                } elseif ($likert) {
+                    // Calculate Likert score if no Ref III
+                    $likertScores = $this->likertScoreService->calculateLikertScores($likert);
+                    $totalScore = $likertScores['total_score'];
+                    $evalueeNameFromRef3 = $likert->evaluee_name;
                 }
 
                 // Check for missing evaluations (only III and V)
                 $hasReferenciaIII = $evaluations->contains('evaluation_type', 'referencia_iii');
                 $hasReferenciaV = $evaluations->contains('evaluation_type', 'referencia_v');
+                $hasLikert = $evaluations->contains('evaluation_type', 'likert');
 
-                // Check for missing or null demographic data
+                // Check for missing or null data
                 $missingData = [];
                 $referenciaV = $evaluations->firstWhere('evaluation_type', 'referencia_v');
-                if ($referenciaV) {
+
+                // If it's ONLY Likert evaluation, check Likert-specific data
+                if ($hasLikert && ! $hasReferenciaIII && ! $hasReferenciaV) {
+                    $likertData = $likert->likert_answers ?? [];
+
+                    // Check for unanswered questions (1-23)
+                    $questions = $likertData['questions'] ?? [];
+                    $unansweredQuestions = [];
+                    for ($i = 1; $i <= 23; $i++) {
+                        if (! isset($questions[(string) $i]) || empty($questions[(string) $i])) {
+                            $unansweredQuestions[] = $i;
+                        }
+                    }
+
+                    if (count($unansweredQuestions) > 0) {
+                        if (count($unansweredQuestions) <= 5) {
+                            $missingData[] = 'Preguntas sin responder: '.implode(', ', $unansweredQuestions);
+                        } else {
+                            $missingData[] = count($unansweredQuestions).' preguntas sin responder';
+                        }
+                    }
+
+                    // Check demographic fields
+                    $likertFields = [
+                        'genero' => 'Género',
+                        'turno' => 'Turno',
+                        'tipo_contrato' => 'Tipo de Contrato',
+                        'puestos' => 'Puesto',
+                        'areas' => 'Área',
+                    ];
+
+                    foreach ($likertFields as $field => $label) {
+                        if (! isset($likertData[$field]) || $likertData[$field] === null || $likertData[$field] === '') {
+                            $missingData[] = $label;
+                        }
+                    }
+                } elseif ($referenciaV) {
+                    // Check Referencia V demographic data
                     // If demographic_data is null or empty, all fields are missing
                     if (! $referenciaV->demographic_data || empty($referenciaV->demographic_data)) {
                         $missingData = ['Todos los datos demográficos'];
@@ -227,6 +275,7 @@ class ResultsController extends Controller
                     'created_at' => $evaluations->first()->created_at->format('Y-m-d H:i:s'),
                     'has_referencia_iii' => $hasReferenciaIII,
                     'has_referencia_v' => $hasReferenciaV,
+                    'has_likert' => $hasLikert,
                     'missing_data' => $missingData,
                     // Include demographic_data for filtering (gender, age, etc.)
                     'demographic_data' => $referenciaV?->demographic_data,
@@ -243,8 +292,16 @@ class ResultsController extends Controller
 
         // Calculate summary statistics
         $totalEvaluations = $evaluationGroups->count();
-        $missingReferenciaIII = $evaluationGroups->where('has_referencia_iii', false)->count();
-        $missingReferenciaV = $evaluationGroups->where('has_referencia_v', false)->count();
+
+        // Only count missing Ref III/V for non-Likert-only evaluations
+        $missingReferenciaIII = $evaluationGroups->filter(function ($group) {
+            return ! $group['has_referencia_iii'] && ! ($group['has_likert'] && ! $group['has_referencia_v']);
+        })->count();
+
+        $missingReferenciaV = $evaluationGroups->filter(function ($group) {
+            return ! $group['has_referencia_v'] && ! ($group['has_likert'] && ! $group['has_referencia_iii']);
+        })->count();
+
         $withMissingData = $evaluationGroups->filter(fn ($group) => ! empty($group['missing_data']))->count();
 
         return Inertia::render('Results/List', [
@@ -279,6 +336,7 @@ class ResultsController extends Controller
         $referenciaIII = $evaluations->firstWhere('evaluation_type', 'referencia_iii');
         $referenciaV = $evaluations->firstWhere('evaluation_type', 'referencia_v');
         $cisneros = $evaluations->firstWhere('evaluation_type', 'cisneros');
+        $likert = $evaluations->firstWhere('evaluation_type', 'likert');
 
         // Calculate scores for Referencia III
         $results = [];
@@ -464,6 +522,21 @@ class ResultsController extends Controller
             ];
         }
 
+        // Format Likert results (Clima Laboral)
+        $likertResults = null;
+        if ($likert) {
+            $scores = $this->likertScoreService->calculateLikertScores($likert);
+            $demographic = $this->likertScoreService->getDemographicData($likert);
+
+            $likertResults = [
+                'id' => $likert->id,
+                'folio' => $likert->folio,
+                'created_at' => $likert->created_at->format('Y-m-d H:i:s'),
+                'scores' => $scores,
+                'demographic' => $demographic,
+            ];
+        }
+
         return Inertia::render('Results/Detail', [
             'organization' => $organization->only('id', 'name'),
             'personalFolio' => $personalFolio,
@@ -476,7 +549,8 @@ class ResultsController extends Controller
                 'has_guide_i' => (bool) $referenciaI,
                 'has_guide_iii' => (bool) $referenciaIII,
                 'has_guide_v' => (bool) $referenciaV,
-                'has_cisneros' => false,
+                'has_cisneros' => (bool) $cisneros,
+                'has_likert' => (bool) $likert,
             ],
             'totalScore' => $totalScore,
             'results' => $results,
@@ -484,6 +558,7 @@ class ResultsController extends Controller
             'guideVResults' => $guideVResults,
             'guideIIIResults' => $guideIIIResults,
             'cisnerosResults' => $cisnerosResults,
+            'likertResults' => $likertResults,
             'isAdmin' => auth()->user()->hasRole(['admin', 'super-admin']),
             'occupationPositions' => $organization->occupationPositions()->get(['id', 'name'])->toArray(),
             'departmentAreas' => $organization->departmentAreas()->get(['id', 'name'])->toArray(),
@@ -523,6 +598,78 @@ class ResultsController extends Controller
             'message' => 'Respuesta actualizada correctamente',
             'question' => $question->only('id', 'question', 'answer'),
         ]);
+    }
+
+    public function showLikertDetails(Organization $organization, string $personalFolio)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        // Get Likert evaluation for this personal folio
+        $likert = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('personal_folio', $personalFolio)
+            ->where('evaluation_type', 'likert')
+            ->where('processing_status', 'completed')
+            ->firstOrFail();
+
+        // Calculate scores and get demographic data
+        $scores = $this->likertScoreService->calculateLikertScores($likert);
+        $demographic = $this->likertScoreService->getDemographicData($likert);
+
+        // Get questions configuration
+    $questionsText = config('likert-value.preguntas');
+    $niveles = config('likert-value.niveles');
+        $answersData = $likert->likert_answers['questions'] ?? [];
+
+    // Map questions with their answers and values grouped by dimension
+        $questionsList = [];
+
+        foreach ($niveles as $dimension => $data) {
+            $questionNumbers = $data['preguntas'];
+            
+            foreach ($questionNumbers as $questionNumber) {
+                $questionText = $questionsText[$questionNumber] ?? 'Pregunta no encontrada';
+                $answer = $answersData[$questionNumber] ?? null;
+                $value = $this->getAnswerValue($answer);
+
+                $questionsList[] = [
+                    'number' => $questionNumber,
+                    'dimension' => $dimension,
+                    'text' => $questionText,
+                    'answer' => $answer,
+                    'value' => $value,
+                ];
+            }
+        }
+
+        return Inertia::render('Results/LikertDetail', [
+            'organization' => $organization->only('id', 'name'),
+            'personalFolio' => $personalFolio,
+            'evaluation' => [
+                'id' => $likert->id,
+                'folio' => $likert->folio,
+                'evaluee_name' => $likert->evaluee_name,
+                'created_at' => $likert->created_at->format('Y-m-d H:i:s'),
+                'personal_folio' => $personalFolio,
+            ],
+            'scores' => $scores,
+            'demographic' => $demographic,
+            'questions' => $questionsList,
+            'isAdmin' => auth()->user()->hasRole(['admin', 'super-admin']),
+        ]);
+    }
+
+    /**
+     * Get numeric value for Likert answer
+     */
+    private function getAnswerValue(?string $answer): ?int
+    {
+        if ($answer === null) {
+            return null;
+        }
+
+        $values = config('likert-value.valorOpciones');
+
+        return $values[$answer] ?? null;
     }
 
     /**
