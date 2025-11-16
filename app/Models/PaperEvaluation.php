@@ -30,6 +30,7 @@ class PaperEvaluation extends Model
         'referencia_iii_conditional',
         'citsats_s1',
         'cisneros_answers',
+        'likert_answers',
         'raw_data',
         'processing_error',
         'retry_count',
@@ -44,6 +45,7 @@ class PaperEvaluation extends Model
             'referencia_iii_conditional' => 'json',
             'citsats_s1' => 'json',
             'cisneros_answers' => 'json',
+            'likert_answers' => 'json',
             'raw_data' => 'json',
             'processed_at' => 'datetime',
             'retry_count' => 'integer',
@@ -80,6 +82,7 @@ class PaperEvaluation extends Model
             '02' => 'referencia_iii',
             '03' => 'referencia_v',
             '04' => 'cisneros',
+            '05' => 'likert',
             default => throw new \InvalidArgumentException("Invalid evaluation type code: {$code}"),
         };
     }

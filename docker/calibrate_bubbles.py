@@ -1126,17 +1126,19 @@ def generate_likert_23_code(bubbles):
     code += "}\n"
     return code
 
-def generate_single_list_first_code(bubbles, section_key, section_name, total_items='N'):
-    """Generate code that captures only the first item's bubble for a vertical list (then iterate downstream)."""
+def generate_single_list_first_code(bubbles, section_key, section_name, total_items=0):
+    """Generate code for complete list sections (all bubbles individually)."""
     if not bubbles:
         return f"# {section_name}: no hay coordenadas capturadas\n{section_key} = {{}}\n"
-    x, y, w, h = bubbles[0]
-
-    code = f"# {section_name} (lista vertical de {total_items} items)\n"
-    code += f"# Nota: Solo se tomó la primera posición. Itera hacia abajo en tu pipeline para capturar los {total_items} items.\n"
+    
+    code = f"# {section_name} - {total_items} items completos\n"
     code += f"{section_key} = {{\n"
-    code += f"    'first': ({x}, {y}, {w}, {h}),\n"
-    code += f"}}\n"
+    
+    for idx, (x, y, w, h) in enumerate(bubbles):
+        item_num = idx + 1
+        code += f"    '{item_num}': ({x}, {y}, {w}, {h}),\n"
+    
+    code += "}\n"
     return code
 
 def generate_custom_code(bubbles):

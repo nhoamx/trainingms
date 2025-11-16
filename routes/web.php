@@ -42,6 +42,14 @@ Route::middleware(['auth'])->group(function () {
         ]);
     })->name('organization.report');
 
+    // Likert-only reports route
+    Route::get('/organization/{id}/likert/report', function ($id) {
+        return \Inertia\Inertia::render('Reports/LikertOrganizationReport', [
+            'organizationId' => $id,
+            'title' => 'Reporte Likert',
+        ]);
+    })->name('organization.likert.report');
+
     // Online results routes
     Route::get('/organization/{id}/online-results', [App\Http\Controllers\OnlineResultsController::class, 'index'])->name('organization.online-results');
     Route::get('/organization/{id}/online-results/report', [App\Http\Controllers\OnlineResultsController::class, 'report'])->name('organization.online-results.report');
@@ -176,6 +184,10 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/organizacion/{organization}/resultados/{personalFolio}', [ResultsController::class, 'showDetailedResults'])
         ->name('organization.results.detail')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::get('/organizacion/{organization}/resultados/{personalFolio}/likert', [ResultsController::class, 'showLikertDetails'])
+        ->name('organization.results.likert')
         ->middleware('can:view-organization-results,organization');
 
     // Bulk update routes

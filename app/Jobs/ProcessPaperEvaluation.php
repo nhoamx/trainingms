@@ -305,6 +305,7 @@ class ProcessPaperEvaluation implements ShouldQueue
                     'referencia_iii_conditional' => $structuredData['referencia_iii_conditional'] ?? null,
                     'citsats_s1' => $structuredData['citsats_s1'] ?? null,
                     'cisneros_answers' => $structuredData['cisneros_answers'] ?? null,
+                    'likert_answers' => $structuredData['likert_answers'] ?? null,
                     'raw_data' => $rawData,
                 ]
             );
@@ -376,6 +377,18 @@ class ProcessPaperEvaluation implements ShouldQueue
             case 'cisneros':
                 // Cisneros scale - mobbing questions
                 $structuredData['cisneros_answers'] = $rawData['cisneros'] ?? null;
+                break;
+
+            case 'likert':
+                // Likert - Workplace climate evaluation (23 questions + demographics)
+                $structuredData['likert_answers'] = [
+                    'questions' => $rawData['likert'] ?? null,
+                    'genero' => $rawData['genero'] ?? null,
+                    'turno' => $rawData['turno'] ?? null,
+                    'tipo_contrato' => $rawData['tipo_contrato'] ?? null,
+                    'puestos' => $rawData['puestos'] ?? null,
+                    'areas' => $rawData['areas'] ?? null,
+                ];
                 break;
         }
 

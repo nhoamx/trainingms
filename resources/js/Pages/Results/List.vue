@@ -106,6 +106,7 @@
                                     <option value="referencia_iii">Guía III</option>
                                     <option value="referencia_v">Guía V</option>
                                     <option value="cisneros">Cisneros</option>
+                                        <option value="likert">Clima Laboral</option>
                                 </select>
                             </div>
                         </div>
@@ -139,7 +140,7 @@
                                         Fecha
                                     </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Puntaje Total (Ref. III)
+                                        Puntaje Total
                                     </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Acciones
@@ -180,16 +181,16 @@
                                             >
                                                 {{ formatEvaluationType(type) }}
                                             </span>
-                                            <!-- Missing evaluations warnings (only III and V) -->
+                                            <!-- Missing evaluations warnings (only show for non-Likert-only evaluations) -->
                                             <span 
-                                                v-if="!group.has_referencia_iii"
+                                                v-if="!group.has_referencia_iii && !isLikertOnly(group)"
                                                 class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700 border border-red-300"
                                                 title="Falta Guía III"
                                             >
                                                 Falta Guía III
                                             </span>
                                             <span 
-                                                v-if="!group.has_referencia_v"
+                                                v-if="!group.has_referencia_v && !isLikertOnly(group)"
                                                 class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700 border border-red-300"
                                                 title="Falta Guía V"
                                             >
@@ -213,7 +214,7 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                                         <Link
-                                            :href="route('organization.results.detail', { organization: organization.id, personalFolio: group.personal_folio })"
+                                            :href="getDetailRoute(group)"
                                             class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -294,9 +295,35 @@ const hasWarnings = computed(() => {
 
 // Check if a specific group has issues
 const hasIssues = (group) => {
+    // For Likert-only evaluations, only check for missing data
+    if (isLikertOnly(group)) {
+        return group.missing_data && group.missing_data.length > 0
+    }
+    
+    // For other evaluations, check for missing guides and data
     return !group.has_referencia_iii || 
            !group.has_referencia_v || 
            (group.missing_data && group.missing_data.length > 0)
+}
+
+// Check if evaluation is Likert-only (no Referencia III or V)
+const isLikertOnly = (group) => {
+    return group.has_likert && !group.has_referencia_iii && !group.has_referencia_v
+}
+
+// Get the appropriate detail route based on evaluation type
+const getDetailRoute = (group) => {
+    if (isLikertOnly(group)) {
+        return route('organization.results.likert', { 
+            organization: props.organization.id, 
+            personalFolio: group.personal_folio 
+        })
+    }
+    
+    return route('organization.results.detail', { 
+        organization: props.organization.id, 
+        personalFolio: group.personal_folio 
+    })
 }
 
 // Get gender from evaluation group's demographic data
@@ -339,7 +366,8 @@ const formatEvaluationType = (type) => {
         'referencia_i': 'Guía I',
         'referencia_iii': 'Guía III',
         'referencia_v': 'Guía V',
-        'cisneros': 'Cisneros'
+    'cisneros': 'Cisneros',
+    'likert': 'Clima Laboral'
     }
     return types[type] || type
 }
@@ -357,7 +385,8 @@ const getBadgeClass = (type) => {
         'referencia_i': 'bg-purple-100 text-purple-800',
         'referencia_iii': 'bg-blue-100 text-blue-800',
         'referencia_v': 'bg-green-100 text-green-800',
-        'cisneros': 'bg-red-100 text-red-800'
+        'cisneros': 'bg-red-100 text-red-800',
+        'likert': 'bg-yellow-100 text-yellow-800'
     }
     return classes[type] || 'bg-gray-100 text-gray-800'
 }

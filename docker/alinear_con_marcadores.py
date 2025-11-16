@@ -19,12 +19,24 @@ IDEAL_POSITIONS = {
 LABELS = ["TL", "TR", "ML", "MR", "BL", "BR"]
 
 # Para documentos con solo 4 marcadores (esquinas)
+# Posiciones basadas en el CSS del layout:
+# - Página: 215.9mm x 279.4mm con padding 8mm
+# - Marcadores: 8mm x 8mm
+# - TL: top 5mm, left 5mm (desde el borde de la página .page, no del padding)
+# - TR: top 5mm, right 0mm
+# - BL: bottom 0, left 5mm
+# - BR: bottom 0, right 0mm
+# A 300 DPI: 1mm ≈ 11.81px, entonces:
+# - 5mm ≈ 59px
+# - 8mm ≈ 94px (tamaño del marcador)
+# Ancho página: 215.9mm ≈ 2550px
+# Alto página: 279.4mm ≈ 3300px
 LABELS_4_CORNERS = ["TL", "TR", "BL", "BR"]
 IDEAL_POSITIONS_4_CORNERS = {
-    "TL": (200, 200),      # top-left
-    "TR": (2281, 200),     # top-right
-    "BL": (200, 3310),     # bottom-left
-    "BR": (2281, 3310),    # bottom-right
+    "TL": (59, 59),                    # top 5mm, left 5mm
+    "TR": (2491, 59),                  # top 5mm, right 0mm → 2550 - 59
+    "BL": (59, 3241),                  # bottom 0, left 5mm → 3300 - 59
+    "BR": (2491, 3241),                # bottom 0, right 0mm → 2550 - 59, 3300 - 59
 }
 
 # === Configuración de recorte ===
@@ -98,8 +110,9 @@ def detectar_marcadores_4_esquinas(imagen, umbral=150, min_area=3000, debug_path
     ideal_positions_ajustadas = {}
     for label, (ideal_x, ideal_y) in IDEAL_POSITIONS_4_CORNERS.items():
         # Escalar las posiciones ideales a las dimensiones de la imagen recortada
-        scale_x = imagen_recortada.shape[1] / 2481
-        scale_y = imagen_recortada.shape[0] / (3510 - CROP_TOP - CROP_BOTTOM)
+        # Dimensiones base: 2550 x 3300 px (Letter a 300 DPI)
+        scale_x = imagen_recortada.shape[1] / 2550
+        scale_y = imagen_recortada.shape[0] / (3300 - CROP_TOP - CROP_BOTTOM)
         
         scaled_x = int(ideal_x * scale_x)
         # Ajustar la Y considerando el recorte superior
@@ -139,8 +152,8 @@ def detectar_marcadores_4_esquinas(imagen, umbral=150, min_area=3000, debug_path
             
             # Dibuja la posición ideal también
             ideal_x, ideal_y = IDEAL_POSITIONS_4_CORNERS[LABELS_4_CORNERS[i]]
-            scale_x = imagen.shape[1] / 2481
-            scale_y = imagen.shape[0] / 3510
+            scale_x = imagen.shape[1] / 2550
+            scale_y = imagen.shape[0] / 3300
             ix = int(ideal_x * scale_x)
             iy = int(ideal_y * scale_y)
             cv2.circle(debug_img, (ix, iy), 15, (0, 255, 0), 3)
