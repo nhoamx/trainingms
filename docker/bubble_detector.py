@@ -38,7 +38,7 @@ class BubbleDetector:
         self._save_image(binary_path, binary_img)
         return binary_img
     
-    def detect_bubbles(self, img_path, bubble_positions, min_fill_threshold=100, debug=False):
+    def detect_bubbles(self, img_path, bubble_positions, min_fill_threshold=100, debug=False, validate_single_answer=True):
         """
         Detecta burbujas seleccionadas en la imagen.
         
@@ -48,9 +48,13 @@ class BubbleDetector:
             min_fill_threshold: Mínimo de píxeles oscuros para considerar una burbuja marcada
                                (default 100, ajustar según tamaño de burbujas)
             debug: Si es True, imprime información de detección
+            validate_single_answer: Si es True, rechaza respuestas múltiples (returns None si >1 marcada).
+                                    Si es False, selecciona la opción con más píxeles (comportamiento anterior).
+                                    Default True para evaluaciones, False para folio/datos demográficos.
         
         Returns:
             Dict con resultados {pregunta: opcion_seleccionada o None}
+            Si validate_single_answer=True y hay múltiples respuestas marcadas, retorna None
         """
         print(f"Detecting bubbles in {img_path}...")
         try:
@@ -63,6 +67,7 @@ class BubbleDetector:
                 selected_option = None
                 max_non_white_pixels = 0
                 pixel_counts = {}  # Para debug
+                marked_bubbles = []  # Lista de burbujas que superan el umbral
                 
                 for option, pos in positions.items():
                     x, y, w, h = pos
@@ -70,21 +75,37 @@ class BubbleDetector:
                     non_white_pixels = cv2.countNonZero(bubble_roi)
                     pixel_counts[option] = non_white_pixels
                     
+                    # Verificar si esta burbuja supera el umbral
+                    if non_white_pixels >= min_fill_threshold:
+                        marked_bubbles.append((option, non_white_pixels))
+                    
                     if non_white_pixels > max_non_white_pixels:
                         max_non_white_pixels = non_white_pixels
                         selected_option = option
                 
                 if debug:
                     print(f"  Question '{question}': pixel counts = {pixel_counts}")
-                    print(f"    Max pixels: {max_non_white_pixels}, Selected: {selected_option}, Threshold: {min_fill_threshold}")
+                    print(f"    Marked bubbles: {len(marked_bubbles)}, Max pixels: {max_non_white_pixels}, Threshold: {min_fill_threshold}")
                 
-                # Solo asignar si supera el umbral mínimo
-                if max_non_white_pixels >= min_fill_threshold:
+                # VALIDACIÓN: Si validate_single_answer=True y hay más de una burbuja marcada
+                if validate_single_answer and len(marked_bubbles) > 1:
+                    results[question] = None
+                    if debug:
+                        print(f"    ⚠ MULTIPLE ANSWERS DETECTED ({len(marked_bubbles)} bubbles) → Setting to NULL")
+                        print(f"       Marked: {[opt for opt, _ in marked_bubbles]}")
+                # Si hay exactamente una burbuja marcada, asignar esa opción
+                elif len(marked_bubbles) == 1:
+                    results[question] = marked_bubbles[0][0]
+                    if debug:
+                        print(f"    ✓ MARKED as '{marked_bubbles[0][0]}'")
+                # Si validate_single_answer=False y hay >1 burbuja, seleccionar la con más píxeles (comportamiento anterior)
+                elif validate_single_answer is False and max_non_white_pixels >= min_fill_threshold:
                     results[question] = selected_option
                     if debug:
-                        print(f"    ✓ MARKED as '{selected_option}'")
+                        print(f"    ✓ MARKED as '{selected_option}' (validate_single_answer=False, multiple detected)")
+                # Si no hay burbujas marcadas, retornar None
                 else:
-                    results[question] = None  # Burbuja vacía o no marcada suficientemente
+                    results[question] = None
                     if debug:
                         print(f"    ✗ NOT MARKED (below threshold)")
             
