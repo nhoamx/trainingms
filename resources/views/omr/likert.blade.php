@@ -490,19 +490,19 @@
                 <!-- Manual Fields Section -->
                 <div class="demographic-section" style="margin-top: 2mm;">
                     <div class="manual-field" style="margin-bottom: 1.5mm;">
-                        <span class="manual-field-label">GTE. DE PLANTA</span>
+                        <span class="manual-field-label">7. GTE. DE PLANTA</span>
                         <div class="manual-field-line"></div>
                     </div>
                     <div class="manual-field" style="margin-bottom: 1.5mm;">
-                        <span class="manual-field-label">GTE. DE PRODUCCIÓN</span>
+                        <span class="manual-field-label">8. GTE. DE PRODUCCIÓN</span>
                         <div class="manual-field-line"></div>
                     </div>
                     <div class="manual-field" style="margin-bottom: 1.5mm;">
-                        <span class="manual-field-label">GTE. DE RH</span>
+                        <span class="manual-field-label">9. GTE. DE RH</span>
                         <div class="manual-field-line"></div>
                     </div>
                     <div class="manual-field" style="margin-bottom: 1.5mm;">
-                        <span class="manual-field-label">SUPERVISOR</span>
+                        <span class="manual-field-label">10. SUPERVISOR</span>
                         <div class="manual-field-line"></div>
                     </div>
                 </div>
