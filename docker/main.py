@@ -27,7 +27,8 @@ def detect_folio(image_file, detector):
     import logging
     try:
         logging.info(f"Intentando detectar folio en {image_file}")
-        folio_data = detector.detect_bubbles(image_file, config.folio_configuration)
+        # validate_single_answer=False para folio porque pueden haber datos demograficos que no sean tipo selección única
+        folio_data = detector.detect_bubbles(image_file, config.folio_configuration, validate_single_answer=False)
         logging.debug(f"Datos de folio detectados: {folio_data}")
         
         # Combinar los valores detectados en un único string
@@ -716,7 +717,8 @@ def detect_template_type_from_image(image_file, detector):
     Si no se puede detectar, retorna '01' (Referencia I) como default.
     """
     try:
-        folio_data = detector.detect_bubbles(image_file, config.folio_configuration)
+        # validate_single_answer=False para folio porque pueden haber datos demograficos que no sean tipo selección única
+        folio_data = detector.detect_bubbles(image_file, config.folio_configuration, validate_single_answer=False)
         folio = "".join(str(value) for value in folio_data.values() if value is not None)
         
         if folio and len(folio) >= 2:

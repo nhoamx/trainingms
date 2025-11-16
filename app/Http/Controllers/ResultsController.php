@@ -804,6 +804,7 @@ class ResultsController extends Controller
                 'evaluee_name' => $likert->evaluee_name,
                 'created_at' => $likert->created_at->format('Y-m-d H:i:s'),
                 'personal_folio' => $personalFolio,
+                'scanned_image_url' => asset('storage/folios/'.$likert->folio.'.png'),
             ],
             'scores' => $scores,
             'demographic' => $demographic,
