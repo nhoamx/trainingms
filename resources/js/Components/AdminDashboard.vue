@@ -64,7 +64,7 @@
             </a>
 
             <!-- Botón: Reporte General -->
-            <a :href="route('organization.report', { id: org.id })"
+            <a :href="route(org.is_likert_only ? 'organization.likert.report' : 'organization.report', { id: org.id })"
               class="flex items-center justify-center text-blue-700 hover:text-blue-900 font-medium py-2.5 px-3 transition-colors bg-blue-50 border border-blue-300 rounded-md hover:bg-blue-100 hover:shadow-sm">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">

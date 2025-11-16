@@ -25,6 +25,160 @@ class ResultsController extends Controller
         protected LikertScoreService $likertScoreService
     ) {}
 
+    /**
+     * Show Likert report for an organization
+     */
+    public function showLikertReport(Organization $organization)
+    {
+        // Get all completed Likert evaluations for this organization
+        $likertEvaluations = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('evaluation_type', 'likert')
+            ->where('processing_status', 'completed')
+            ->get();
+
+        if ($likertEvaluations->isEmpty()) {
+            return Inertia::render('Reports/LikertOrganizationReport', [
+                'organizationId' => $organization->id,
+                'organizationName' => $organization->name,
+                'title' => 'Reporte Likert',
+                'evaluations' => [],
+                'demographics' => [
+                    'generos' => [],
+                    'tipos_contrato' => [],
+                    'puestos' => [],
+                    'areas' => [],
+                ],
+                'dimensions' => [],
+                'totalScore' => null,
+            ]);
+        }
+
+        // Load configuration
+        $config = config('likert-value');
+        $niveles = $config['niveles'];
+        $preguntas = $config['preguntas'];
+        $valorOpciones = $config['valorOpciones'];
+
+        // Collect unique demographic values
+        $generos = [];
+        $tiposContrato = [];
+        $puestos = [];
+        $areas = [];
+
+        // Process all evaluations
+        $evaluationsData = [];
+        foreach ($likertEvaluations as $evaluation) {
+            $likertAnswers = $evaluation->likert_answers;
+            $questions = $likertAnswers['questions'] ?? [];
+            $demographics = $likertAnswers;
+
+            // Collect demographic values
+            if (isset($demographics['genero'])) {
+                $generos[$demographics['genero']] = true;
+            }
+            if (isset($demographics['tipo_contrato'])) {
+                $tiposContrato[$demographics['tipo_contrato']] = true;
+            }
+            if (isset($demographics['puesto'])) {
+                $puestos[$demographics['puesto']] = true;
+            }
+            if (isset($demographics['area'])) {
+                $areas[$demographics['area']] = true;
+            }
+
+            // Compute scores
+            $scores = $this->likertScoreService->calculateLikertScores($evaluation);
+
+            // Build evaluation data
+            $evaluationsData[] = [
+                'id' => $evaluation->id,
+                'folio' => $evaluation->folio,
+                'personal_folio' => $evaluation->personal_folio,
+                'evaluee_name' => $evaluation->evaluee_name,
+                'demographics' => [
+                    'genero' => $demographics['genero'] ?? null,
+                    'tipo_contrato' => $demographics['tipo_contrato'] ?? null,
+                    'puesto' => $demographics['puesto'] ?? null,
+                    'area' => $demographics['area'] ?? null,
+                ],
+                'scores' => $scores,
+                'answers' => $questions,
+            ];
+        }
+
+        // Build dimension summaries (aggregated across all evaluations)
+        $dimensionSummaries = [];
+        foreach ($niveles as $dimensionName => $dimensionConfig) {
+            $questionNumbers = $dimensionConfig['preguntas'];
+            $totalScore = 0;
+            $questionCount = count($questionNumbers);
+            $questionScores = [];
+
+            foreach ($questionNumbers as $qNum) {
+                $qScore = 0;
+                $qCount = 0;
+                foreach ($evaluationsData as $evalData) {
+                    $answer = $evalData['answers'][$qNum] ?? null;
+                    if ($answer) {
+                        $qScore += $valorOpciones[$answer] ?? 0;
+                        $qCount++;
+                    }
+                }
+                $avgScore = $qCount > 0 ? $qScore / $qCount : 0;
+                $questionScores[$qNum] = [
+                    'question' => $preguntas[$qNum] ?? "Pregunta {$qNum}",
+                    'score' => round($avgScore, 2),
+                ];
+                $totalScore += $avgScore;
+            }
+
+            $dimensionSummaries[$dimensionName] = [
+                'name' => $dimensionName,
+                'score' => round($totalScore, 2),
+                'questionCount' => $questionCount,
+                'questions' => $questionScores,
+            ];
+        }
+
+        // Compute overall total score
+        $overallTotal = 0;
+        foreach ($dimensionSummaries as $dim) {
+            $overallTotal += $dim['score'];
+        }
+
+        return Inertia::render('Reports/LikertOrganizationReport', [
+            'organizationId' => $organization->id,
+            'organizationName' => $organization->name,
+            'title' => 'Reporte Likert - '.$organization->name,
+            'evaluations' => $evaluationsData,
+            'demographics' => [
+                'generos' => array_keys($generos),
+                'tipos_contrato' => array_keys($tiposContrato),
+                'puestos' => array_keys($puestos),
+                'areas' => array_keys($areas),
+            ],
+            'puestosMap' => $config['puestos'],
+            'areasMap' => $config['areas'],
+            'dimensions' => $dimensionSummaries,
+            'totalScore' => round($overallTotal, 2),
+            'totalInterpretation' => $this->getInterpretation($overallTotal, $config['valorNiveles']['Clima Laboral']),
+        ]);
+    }
+
+    /**
+     * Get interpretation label for a score
+     */
+    private function getInterpretation(float $score, array $ranges): string
+    {
+        foreach ($ranges as $label => $range) {
+            if ($score >= $range['min'] && $score <= $range['max']) {
+                return $label;
+            }
+        }
+
+        return 'Sin interpretación';
+    }
+
     public function organizationResults(Organization $organization, Request $request)
     {
         // Si se proporciona un folio específico, buscar esa evaluación
@@ -616,16 +770,16 @@ class ResultsController extends Controller
         $demographic = $this->likertScoreService->getDemographicData($likert);
 
         // Get questions configuration
-    $questionsText = config('likert-value.preguntas');
-    $niveles = config('likert-value.niveles');
+        $questionsText = config('likert-value.preguntas');
+        $niveles = config('likert-value.niveles');
         $answersData = $likert->likert_answers['questions'] ?? [];
 
-    // Map questions with their answers and values grouped by dimension
+        // Map questions with their answers and values grouped by dimension
         $questionsList = [];
 
         foreach ($niveles as $dimension => $data) {
             $questionNumbers = $data['preguntas'];
-            
+
             foreach ($questionNumbers as $questionNumber) {
                 $questionText = $questionsText[$questionNumber] ?? 'Pregunta no encontrada';
                 $answer = $answersData[$questionNumber] ?? null;
