@@ -1,10 +1,10 @@
 <template>
-  <Dashboard :title="title || 'Reporte Likert'">
+  <Dashboard :title="title || 'Reporte Clima Laboral'">
     <div class="max-w-7xl mx-auto p-6">
       <!-- Header -->
       <div class="bg-white rounded-lg shadow p-6 mb-6">
         <h2 class="text-2xl font-bold text-gray-900">
-          Reporte Likert - {{ organizationName }}
+          Reporte Clima Laboal - {{ organizationName }}
         </h2>
         <p class="mt-1 text-sm text-gray-600">
           {{ evaluations.length }} evaluaciones completadas
@@ -13,7 +13,7 @@
 
       <div v-if="evaluations.length === 0" class="bg-white rounded-lg shadow p-8">
         <div class="text-center text-gray-500">
-          <p class="text-lg">No hay evaluaciones Likert completadas para esta organización.</p>
+          <p class="text-lg">No hay evaluaciones Clima Laboral completadas para esta organización.</p>
         </div>
       </div>
 
@@ -323,7 +323,7 @@ const props = defineProps({
   },
   title: {
     type: String,
-    default: 'Reporte Likert',
+    default: 'Reporte Clima Laboral',
   },
   evaluations: {
     type: Array,
