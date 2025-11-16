@@ -29,13 +29,8 @@
             min-height: 279.4mm;  /* US Letter height */
             margin: 0 auto;
             background: white;
-            padding: 8mm 10mm;
+            padding: 8mm 8mm;
             position: relative;
-            page-break-after: always;
-        }
-        
-        .page:last-child {
-            page-break-after: auto;
         }
 
         /* Marcadores de alineación - Optimizados para detección OMR */
@@ -232,12 +227,6 @@
 
         /* Utilidades de impresión */
         @media print {
-            .page {
-                margin: 0;
-                box-shadow: none;
-                page-break-after: always;
-            }
-            
             body {
                 background: white;
             }
