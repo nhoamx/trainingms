@@ -2,11 +2,12 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useForm, router } from '@inertiajs/vue3'
-import { PhotoIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/solid'
+import { PhotoIcon, PlusIcon, PencilIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/solid'
 import Dashboard from '../../Layouts/Dashboard.vue'
 import Alert from '../../Components/Alert.vue'
 import FormInput from "../../Components/FormInput.vue"
 import Folios from './components/Folios.vue'
+import ImportDataModal from '../../Components/ImportDataModal.vue'
 import { defineProps } from 'vue'
 
 // Recibimos la organización desde el backend
@@ -89,6 +90,10 @@ const areaForm = useForm({
 const showDeleteModal = ref(false)
 const itemToDelete = ref(null)
 const deleteType = ref('') // 'position' o 'area'
+
+// Estado para modales de importación
+const showImportPositionsModal = ref(false)
+const showImportAreasModal = ref(false)
 
 // Función para cambiar entre pestañas
 const changeTab = (tab) => {
@@ -273,6 +278,17 @@ const confirmForceDelete = () => {
     if (confirm("¿Estás seguro que deseas eliminar esta organización? Esta acción no se puede deshacer.")) {
         form.delete(route('organizations.force-delete', organization));
     }
+}
+
+// Funciones para importación
+const handleImportPositionsSuccess = () => {
+    showImportPositionsModal.value = false
+    router.reload({ only: ['organization'] })
+}
+
+const handleImportAreasSuccess = () => {
+    showImportAreasModal.value = false
+    router.reload({ only: ['organization'] })
 }
 
 </script>
@@ -554,8 +570,19 @@ const confirmForceDelete = () => {
             <!-- Pestaña de Puestos/Ocupaciones -->
             <div v-else-if="activeTab === 'positions'" class="space-y-6">
                 <div class="border-b border-gray-900/10 pb-6">
-                    <h2 class="text-base font-semibold text-gray-900">Puestos de la organización</h2>
-                    <p class="mt-1 text-sm text-gray-600">Gestiona los puestos/ocupaciones disponibles en esta organización.</p>
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-base font-semibold text-gray-900">Puestos de la organización</h2>
+                            <p class="mt-1 text-sm text-gray-600">Gestiona los puestos/ocupaciones disponibles en esta organización.</p>
+                        </div>
+                        <button
+                            @click="showImportPositionsModal = true"
+                            class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+                        >
+                            <ArrowUpTrayIcon class="-ml-0.5 mr-1.5 h-4 w-4" aria-hidden="true" />
+                            Importar desde Excel
+                        </button>
+                    </div>
                     
                     <!-- Formulario para agregar nuevo puesto -->
                     <div class="mt-6 border rounded-lg p-4 bg-gray-50">
@@ -633,8 +660,19 @@ const confirmForceDelete = () => {
             <!-- Pestaña de Departamentos/Áreas -->
             <div v-else-if="activeTab === 'areas'" class="space-y-6">
                 <div class="border-b border-gray-900/10 pb-6">
-                    <h2 class="text-base font-semibold text-gray-900">Departamentos de la organización</h2>
-                    <p class="mt-1 text-sm text-gray-600">Gestiona los departamentos/áreas disponibles en esta organización.</p>
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-base font-semibold text-gray-900">Departamentos de la organización</h2>
+                            <p class="mt-1 text-sm text-gray-600">Gestiona los departamentos/áreas disponibles en esta organización.</p>
+                        </div>
+                        <button
+                            @click="showImportAreasModal = true"
+                            class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+                        >
+                            <ArrowUpTrayIcon class="-ml-0.5 mr-1.5 h-4 w-4" aria-hidden="true" />
+                            Importar desde Excel
+                        </button>
+                    </div>
                     
                     <!-- Formulario para agregar nuevo departamento -->
                     <div class="mt-6 border rounded-lg p-4 bg-gray-50">
@@ -751,6 +789,30 @@ const confirmForceDelete = () => {
                     </div>
                 </div>
             </div>
+
+            <!-- Modal de importación de puestos -->
+            <ImportDataModal
+                :show="showImportPositionsModal"
+                title="Importar Puestos desde Excel"
+                :download-route="route('occupation-positions.template', organization.id)"
+                :upload-route="route('occupation-positions.import', organization.id)"
+                :has-data="organization.occupation_positions && organization.occupation_positions.length > 0"
+                upload-button-text="Importar Puestos"
+                @close="showImportPositionsModal = false"
+                @success="handleImportPositionsSuccess"
+            />
+
+            <!-- Modal de importación de departamentos -->
+            <ImportDataModal
+                :show="showImportAreasModal"
+                title="Importar Departamentos desde Excel"
+                :download-route="route('department-areas.template', organization.id)"
+                :upload-route="route('department-areas.import', organization.id)"
+                :has-data="organization.department_areas && organization.department_areas.length > 0"
+                upload-button-text="Importar Departamentos"
+                @close="showImportAreasModal = false"
+                @success="handleImportAreasSuccess"
+            />
         </div>
     </Dashboard>
 </template>

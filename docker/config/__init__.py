@@ -38,6 +38,10 @@ if os.path.exists(config_legacy_path):
             if hasattr(config_legacy, section):
                 globals()[section] = getattr(config_legacy, section)
         
+        # Import Likert (template 05) if present in legacy
+        if hasattr(config_legacy, 'likert'):
+            likert = config_legacy.likert
+        
         # Keep reference to config_legacy for backward compatibility
         # This allows: config.config_legacy.variable_name (old style)
         # AND: config.variable_name (new clean style)
@@ -49,6 +53,11 @@ if os.path.exists(config_legacy_path):
         from .referencia_i import referencia_i
         from .referencia_iii import referencia_iii
         from .referencia_v import reference_v
+        # Try to import Likert config if available
+        try:
+            from .likert import likert  # type: ignore
+        except Exception:
+            pass
     finally:
         # Clean up path
         if parent_dir in sys.path:
@@ -64,6 +73,7 @@ __all__ = [
     'conditional_management',
     'management_questions',
     'citsats_s1',
+    'likert',
     # Referencia V demographic sections
     'sexo',
     'edad',

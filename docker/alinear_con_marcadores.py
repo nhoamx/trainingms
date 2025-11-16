@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import sys
+import os
 
 # USO: python alinear_con_marcadores.py imagen_a_alinear.png referencia.png salida.png
 
@@ -27,8 +28,10 @@ IDEAL_POSITIONS_4_CORNERS = {
 }
 
 # === Configuración de recorte ===
-CROP_TOP = 50      # Reducido drasticamente de 430 a 50
-CROP_BOTTOM = 250  # Mantener recorte inferior
+# Permitir override por variables de entorno para iterar rápido sin tocar código
+# Valores por defecto: 50 px arriba y 50 px abajo (antes: bottom 250 recortaba demasiado y ocultaba marcadores inferiores)
+CROP_TOP = int(os.getenv("CROP_TOP", "50"))
+CROP_BOTTOM = int(os.getenv("CROP_BOTTOM", "50"))
 
 def recortar_imagen(imagen, top=CROP_TOP, bottom=CROP_BOTTOM):
     """
