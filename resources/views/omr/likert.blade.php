@@ -3,13 +3,27 @@
 @section('title', 'Clima laboral')
 
 @section('nom-header')
-<h2>CLIMA LABORAL</h2>
+    <div class="header-right-logo">
+        <img src="{{ asset('crossover-logo.jpg') }}" alt="Crossover Solutions" />
+    </div>
+    <div class="header-center">
+        @isset($logo)
+            <img src="{{ $logo }}" alt="Logo de la organización" class="org-center-logo" />
+        @endisset
+        <div class="header-center-title">
+            <div>ENCUESTA</div>
+            <div>CLIMA LABORAL</div>
+        </div>
+    </div>
 @endsection
-@isset($logo)
-    @section('header-logo')
-        <img src="{{ $logo }}" alt="Logo de la organización" class="org-logo">
-    @endsection
-@endisset
+
+@section('header-logo')
+    <img src="{{ asset('training-logo.jpg') }}" alt="TRAINING & MS" class="org-logo" />
+@endsection
+
+@section('date-row')
+    {{-- Ocultamos la fila de fecha global: la fecha irá dentro del bloque de instrucciones --}}
+@endsection
 
 @section('content')
 <style>
@@ -80,9 +94,31 @@
     }
     .right-side-container {
         display: flex;
+        flex-direction: column;
         gap: 3mm;
         flex: 1;
     }
+    .right-columns { display: flex; gap: 3mm; }
+    /* Header customizations for three logos */
+    .header-right-logo {
+        position: absolute;
+        top: 0; right: 0; bottom: 0;
+        width: 32mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2mm 0;
+    }
+    .header-right-logo img { max-width: 30mm; max-height: 14mm; object-fit: contain; }
+    .header-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1mm;
+    }
+    .org-center-logo { max-width: 42mm; max-height: 15mm; object-fit: contain; }
+    .header-center-title { font-size: 12px; font-weight: bold; line-height: 1.1; text-align: center; }
     .questions-column {
         width: 65mm;
         flex-shrink: 0;
@@ -96,9 +132,20 @@
         flex: 1;
     }
     .instructions { 
-        font-size: 7.5px;
+        font-size: 12px;
         line-height: 1.3;
-        margin-bottom: 3mm;
+    }
+    .instructions-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 4mm;
+    }
+    .instructions-text { flex: 1; }
+    .instructions-date {
+        display: flex;
+        gap: 3mm;
+        align-items: center;
     }
     .column-header {
         display: flex;
@@ -108,7 +155,7 @@
         border: 1px solid black;
         padding: 1mm 0.5mm;
         margin-bottom: 2mm;
-        text-align: center;
+        text-align: left;
     }
     .column-header-label {
         flex: 1;
@@ -119,7 +166,7 @@
         display: flex;
         justify-content: space-around;
         flex: 4;
-        gap: 1mm;
+        gap: 7mm;
     }
     .option-label {
         flex: 1;
@@ -154,14 +201,14 @@
         border-radius: 50%;
     }
     .demographic-section {
-        margin-bottom: 3mm;
+        margin-bottom: 0mm;
         border: none; /* remove outer box border */
         padding: 0;   /* remove extra padding from layout defaults */
     }
     .demographic-title {
         font-weight: bold;
         font-size: 10px; /* match referencia-v section-title */
-        margin-bottom: 1.5mm;
+        margin-bottom: 1mm;
         border-bottom: 1px solid black;
         padding-bottom: 0.5mm;
         background: none; /* remove gray background */
@@ -185,6 +232,26 @@
         flex-shrink: 0;
         margin-left: 1.2mm;
     }
+    /* Numbered items with bubble on the left */
+    .demographic-item-numbered {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.2mm;
+        font-size: 10px;
+        min-height: 4mm;
+    }
+    .demographic-bubble-left {
+        width: 4.5mm;
+        height: 4.5mm;
+        border: 1.5px solid black;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-right: 1.2mm;
+    }
+    .demographic-label-numbered {
+        flex: 1;
+        font-size: 10px;
+    }
     .manual-fields-section {
         margin-top: 5mm;
         padding-top: 3mm;
@@ -203,7 +270,57 @@
         border-bottom: 1px solid black;
         height: 4mm;
     }
+    .manual-field-box {
+        width: 100%;
+        height: 10.2mm;
+        border: 1px solid black;
+    }
+    .likert-key { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 1mm 6mm; 
+        margin: 1mm 0 1.5mm; 
+        font-size: 9px;
+        font-weight: bold;
+    }
+    /* Comments section */
+    .comments-section {
+        margin-top: 0;
+        margin-left: 2mm;
+    }
+    .comments-title {
+        display: flex;
+        align-items: center;
+        gap: 2mm;
+        font-weight: bold;
+        font-size: 10px;
+        margin-bottom: 2mm;
+    }
+    .comments-underline {
+        border-bottom: 2px solid #2c8aa7; /* subtle blue like the reference */
+        width: 100%;
+        height: 0;
+    }
+    .comments-box {
+        width: 100%;
+        height: 15mm; /* ample space for brief comments */
+        border: 1px solid black;
+    }
+    /* Bottom-right format code label (below alignment markers) */
+    .watermark {
+        position: absolute;
+        right: 22mm;   /* move left to avoid guide markers (bottom-right marker spans ~5-13mm from the right) */
+        bottom: 2mm;   /* keep it below the bottom markers at 5mm */
+        font-size: 24px; /* larger text as requested */
+        font-weight: bold;
+        color: #4c9cd2; /* requested blue */
+        letter-spacing: 1px;
+        z-index: 2;
+    }
 </style>
+
+<!-- Bottom-right format code label -->
+<div class="watermark">ECL-001</div>
 
 <div class="main-container">
     <!-- Left Side: Folio + Questions -->
@@ -239,7 +356,7 @@
         <!-- Questions Column -->
         <div class="questions-column">
             <div class="column-header">
-                <div class="column-header-label">#</div>
+                <div class="column-header-label"></div>
                 <div class="column-header-options">
                     <div class="option-label">A</div>
                     <div class="option-label">B</div>
@@ -262,89 +379,123 @@
         </div>
     </div>
     
-    <!-- Demographics Section (2 separate columns) -->
-    <!-- Column 2: Turno + Manual Fields + Puestos -->
-    <div class="demographics-column">
-        <div class="demographic-section">
-            <div class="demographic-title">TURNO</div>
-            <div class="demographic-item">
-                <span class="demographic-label">Diurno</span>
-                <div class="demographic-bubble"></div>
-            </div>
-            <div class="demographic-item">
-                <span class="demographic-label">Nocturno</span>
-                <div class="demographic-bubble"></div>
-            </div>
-        </div>
-
-        <!-- Manual Fields Section - Column 2 -->
-        <div class="manual-fields-section">
-            <div class="manual-field">
-                <label class="manual-field-label">GERENTE DE PLANTA:</label>
-                <div class="manual-field-line"></div>
-            </div>
-            <div class="manual-field">
-                <label class="manual-field-label">GERENTE DE PRODUCCIÓN:</label>
-                <div class="manual-field-line"></div>
-            </div>
-            <div class="manual-field">
-                <label class="manual-field-label">GERENTE DE RECURSOS HUMANOS:</label>
-                <div class="manual-field-line"></div>
-            </div>
-        </div>
-
-        <!-- Puestos Section -->
-        <div class="demographic-section" style="margin-top: 5mm;">
-            <div class="demographic-title">PUESTOS</div>
-            @foreach($positions as $position)
-                <div class="demographic-item">
-                    <span class="demographic-label">{{ $position['name'] }}</span>
-                    <div class="demographic-bubble"></div>
+    <!-- Right side: Instructions + Two demographic columns -->
+    <div class="right-side-container">
+        <!-- Instructions block -->
+        <div class="instructions">
+            <div class="instructions-row">
+                <div class="instructions-text">
+                    <p><strong>Instrucciones:</strong></p>
+                    <ul style="margin-left: 4mm; margin-top: 1mm;">
+                        <li>Seleccionar una opción</li>
+                    </ul>
+                    <div class="likert-key">
+                        <div>A = Totalmente de acuerdo</div>
+                        <div>B = De acuerdo</div>
+                        <div>C = Desacuerdo</div>
+                        <div>D = Totalmente desacuerdo</div>
+                    </div>
+                    <ul style="margin-left: 4mm;">
+                        <li>Rellenar completamente el círculo.</li>
+                        <li>Contestar objetivamente al día de hoy, tomando en cuenta el departamento y actividades que realiza.</li>
+                    </ul>
                 </div>
-            @endforeach
+                <div class="instructions-date">
+                    <div class="date-field">
+                        <span class="date-field-label">DÍA</span>
+                        <div class="date-field-box"></div>
+                    </div>
+                    <div class="date-field">
+                        <span class="date-field-label">MES</span>
+                        <div class="date-field-box"></div>
+                    </div>
+                    <div class="date-field">
+                        <span class="date-field-label">AÑO</span>
+                        <div class="date-field-box"></div>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <div class="right-columns">
+            <!-- Column 2: Género + Contratación + Manual Fields + Puestos -->
+            <div class="demographics-column">
+                <div class="demographic-section">
+                    <div class="demographic-title">GÉNERO</div>
+                    <div class="demographic-item">
+                        <span class="demographic-label">MASCULINO</span>
+                        <div class="demographic-bubble"></div>
+                    </div>
+                    <div class="demographic-item">
+                        <span class="demographic-label">FEMENINO</span>
+                        <div class="demographic-bubble"></div>
+                    </div>
+                </div>
+
+                <div class="demographic-section">
+                    <div class="demographic-title">CONTRATACIÓN</div>
+                    <div class="demographic-item">
+                        <span class="demographic-label">SINDICALIZADO</span>
+                        <div class="demographic-bubble"></div>
+                    </div>
+                    <div class="demographic-item">
+                        <span class="demographic-label">CONFIANZA</span>
+                        <div class="demographic-bubble"></div>
+                    </div>
+                </div>
+
+                <!-- Puestos Section -->
+                <div class="demographic-section" style="margin-top: 1mm;">
+                    <div class="demographic-title">PUESTOS</div>
+                    @foreach($positions as $index => $position)
+                        <div class="demographic-item-numbered">
+                            <div class="demographic-bubble-left"></div>
+                            <span class="demographic-label-numbered">{{ $index + 1 }}. {{ strtoupper($position['name']) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- Column 3: Turno + Línea (field) + Manual Fields + Áreas -->
+            <div class="demographics-column">
+                <div class="demographic-section">
+                    <div class="demographic-title">TURNO</div>
+                    <div class="demographic-item">
+                        <span class="demographic-label">MATUTINO</span>
+                        <div class="demographic-bubble"></div>
+                    </div>
+                    <div class="demographic-item">
+                        <span class="demographic-label">NOCTURNO</span>
+                        <div class="demographic-bubble"></div>
+                    </div>
+                </div>
+
+                <!-- Línea as a dedicated write-in field (rectangle) -->
+                <div class="demographic-section" style="margin-top: 1mm;">
+                    <div class="demographic-title">LÍNEA</div>
+                    <div class="manual-field-box"></div>
+                </div>
+
+                <!-- Áreas Section -->
+                <div class="demographic-section" style="margin-top: 1mm;">
+                    <div class="demographic-title">ÁREAS</div>
+                    @foreach($areas as $index => $area)
+                        <div class="demographic-item-numbered">
+                            <div class="demographic-bubble-left"></div>
+                            <span class="demographic-label-numbered">{{ $index + 1 }}. {{ strtoupper($area['name']) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div> <!-- /right-columns -->
     </div>
+</div>
 
-    <!-- Column 3: Tipo de Contratación + Manual Fields + Áreas -->
-    <div class="demographics-column">
-        <div class="demographic-section">
-            <div class="demographic-title">TIPO DE CONTRATACIÓN</div>
-            <div class="demographic-item">
-                <span class="demographic-label">De confianza</span>
-                <div class="demographic-bubble"></div>
-            </div>
-            <div class="demographic-item">
-                <span class="demographic-label">Sindicalizado</span>
-                <div class="demographic-bubble"></div>
-            </div>
-        </div>
-
-        <!-- Manual Fields Section - Column 3 -->
-        <div class="manual-fields-section">
-            <div class="manual-field">
-                <label class="manual-field-label">SUPERVISOR:</label>
-                <div class="manual-field-line"></div>
-            </div>
-            <div class="manual-field">
-                <label class="manual-field-label">LÍDER DE EQUIPO:</label>
-                <div class="manual-field-line"></div>
-            </div>
-            <div class="manual-field">
-                <label class="manual-field-label">LÍNEA:</label>
-                <div class="manual-field-line"></div>
-            </div>
-        </div>
-
-        <!-- Áreas Section -->
-        <div class="demographic-section" style="margin-top: 5mm;">
-            <div class="demographic-title">ÁREAS</div>
-            @foreach($areas as $area)
-                <div class="demographic-item">
-                    <span class="demographic-label">{{ $area['name'] }}</span>
-                    <div class="demographic-bubble"></div>
-                </div>
-            @endforeach
-        </div>
+<div class="comments-section">
+    <div class="comments-title">
+        <span>24. COMENTARIOS ADICIONALES (Breves)</span>
+    </div>
+    <div class="comments-box"></div>
     </div>
 </div>
 

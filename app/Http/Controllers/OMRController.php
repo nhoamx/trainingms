@@ -126,7 +126,11 @@ class OMRController extends Controller
         $browsershot = Browsershot::html($htmlContent)
             ->noSandbox()
             ->format('Letter')
-            ->margins(10, 10, 10, 10)
+            // Force zero PDF margins; internal spacing is handled by the .page container padding
+            ->margins(0, 0, 0, 0)
+            // Slightly shrink the entire page to avoid accidental overflow to a second page
+            // This preserves the relative geometry between alignment markers and bubbles
+            ->scale(0.96)
             ->showBackground()
             ->waitUntilNetworkIdle();
 

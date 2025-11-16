@@ -232,6 +232,14 @@ HTML_TEMPLATE = """
                                 <option value="custom">Personalizado</option>
                 <option value="folio">Folio (F1-F9, dígitos 0-9)</option>
                 <option value="referencia-i">Referencia I (Preguntas 1-24, SI/NO)</option>
+                <optgroup label="Likert 23">
+                    <option value="likert-23">Likert 23 - Preguntas (1-23, A/B/C/D)</option>
+                    <option value="likert-23-puestos">Likert 23 - Puestos (lista)</option>
+                    <option value="likert-23-areas">Likert 23 - Áreas (lista)</option>
+                    <option value="likert-genero">Likert 23 - Género (2 opciones)</option>
+                    <option value="likert-turno">Likert 23 - Turno (3 opciones)</option>
+                    <option value="likert-tipo-contrato">Likert 23 - Tipo de contrato (4 opciones)</option>
+                </optgroup>
                 <optgroup label="Referencia III - Secciones">
                     <option value="referencia-iii">Ref III - Generales (1-64, A/B/C/D/E)</option>
                     <option value="referencia-iii-cond-customer">Ref III - Condición Servicio Cliente (SÍ/NO)</option>
@@ -448,6 +456,24 @@ HTML_TEMPLATE = """
                 const questionIndex = Math.floor(bubbleIndex / 2);
                 const optionIndex = bubbleIndex % 2;
                 return `Pregunta ${startQuestion + questionIndex}, ${optionIndex === 0 ? 'SI' : 'NO'}`;
+            } else if (section === 'likert-23') {
+                const questionIndex = Math.floor(bubbleIndex / 4);
+                const optionIndex = bubbleIndex % 4;
+                const options = ['A', 'B', 'C', 'D'];
+                return `Pregunta ${startQuestion + questionIndex}, ${options[optionIndex]}`;
+            } else if (section === 'likert-23-puestos') {
+                return `Puesto ${bubbleIndex + 1} de 24`;
+            } else if (section === 'likert-23-areas') {
+                return `Área ${bubbleIndex + 1} de 17`;
+            } else if (section === 'likert-genero') {
+                const options = ['Masculino', 'Femenino'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'likert-turno') {
+                const options = ['Matutino', 'Vespertino', 'Nocturno'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
+            } else if (section === 'likert-tipo-contrato') {
+                const options = ['Por obra o proyecto', 'Por tiempo determinado', 'Tiempo indeterminado', 'Honorarios'];
+                return options[bubbleIndex] || `Opción ${bubbleIndex + 1}`;
             } else if (section === 'referencia-iii') {
                 const questionIndex = Math.floor(bubbleIndex / 5);
                 const optionIndex = bubbleIndex % 5;
@@ -618,6 +644,26 @@ HTML_TEMPLATE = """
                 const questionIndex = Math.floor(bubbleCount / 2);
                 const optionIndex = bubbleCount % 2;
                 itemText = `Pregunta ${startQuestion + questionIndex}, ${optionIndex === 0 ? 'SI' : 'NO'}`;
+            } else if (section === 'likert-23') {
+                const questionIndex = Math.floor(bubbleCount / 4);
+                const optionIndex = bubbleCount % 4;
+                const options = ['A', 'B', 'C', 'D'];
+                itemText = `Pregunta ${startQuestion + questionIndex}, ${options[optionIndex]}`;
+            } else if (section === 'likert-23-puestos') {
+                itemText = `Puesto ${bubbleCount + 1} de 24`;
+                if (bubbleCount >= 24) itemText = 'Completo (24 puestos)';
+            } else if (section === 'likert-23-areas') {
+                itemText = `Área ${bubbleCount + 1} de 17`;
+                if (bubbleCount >= 17) itemText = 'Completo (17 áreas)';
+            } else if (section === 'likert-genero') {
+                const options = ['Masculino', 'Femenino'];
+                itemText = bubbleCount < options.length ? options[bubbleCount] : 'Completo';
+            } else if (section === 'likert-turno') {
+                const options = ['Matutino', 'Vespertino', 'Nocturno'];
+                itemText = bubbleCount < options.length ? options[bubbleCount] : 'Completo';
+            } else if (section === 'likert-tipo-contrato') {
+                const options = ['Por obra o proyecto', 'Por tiempo determinado', 'Tiempo indeterminado', 'Honorarios'];
+                itemText = bubbleCount < options.length ? options[bubbleCount] : 'Completo';
             } else if (section === 'referencia-iii') {
                 const questionIndex = Math.floor(bubbleCount / 5);
                 const optionIndex = bubbleCount % 5;
@@ -860,6 +906,18 @@ def generate_config_code():
         return generate_referencia_v_coding_code(bubbles, 'ocupacion', 'Ocupación/Profesión/Puesto')
     elif current_section == 'referencia-v-departamento':
         return generate_referencia_v_coding_code(bubbles, 'departamento', 'Departamento/Sección/Área')
+    elif current_section == 'likert-23':
+        return generate_likert_23_code(bubbles)
+    elif current_section == 'likert-23-puestos':
+        return generate_single_list_first_code(bubbles, 'likert_puestos', 'Likert Puestos', total_items=24)
+    elif current_section == 'likert-23-areas':
+        return generate_single_list_first_code(bubbles, 'likert_areas', 'Likert Áreas', total_items=17)
+    elif current_section == 'likert-genero':
+        return generate_referencia_v_simple_code(bubbles, 'likert_genero', ['Masculino', 'Femenino'])
+    elif current_section == 'likert-turno':
+        return generate_referencia_v_simple_code(bubbles, 'likert_turno', ['Matutino', 'Vespertino', 'Nocturno'])
+    elif current_section == 'likert-tipo-contrato':
+        return generate_referencia_v_simple_code(bubbles, 'likert_tipo_contrato', ['Por obra o proyecto', 'Por tiempo determinado', 'Tiempo indeterminado', 'Honorarios'])
     else:
         return generate_custom_code(bubbles)
 
@@ -1047,6 +1105,38 @@ def generate_referencia_iii_management_code(bubbles):
         code += "    },\n"
     
     code += "}\n"
+    return code
+
+def generate_likert_23_code(bubbles):
+    """Generate code for Likert evaluation (23 questions, A/B/C/D)."""
+    code = "likert = {\n"
+    options = ['A', 'B', 'C', 'D']
+    for q_idx in range(23):
+        question_num = current_question + q_idx
+        bubble_idx = q_idx * 4
+        if bubble_idx >= len(bubbles):
+            break
+        code += f"    '{question_num}': {{\n"
+        for opt_idx, option in enumerate(options):
+            idx = bubble_idx + opt_idx
+            if idx < len(bubbles):
+                x, y, w, h = bubbles[idx]
+                code += f"        '{option}': ({x}, {y}, {w}, {h}),\n"
+        code += "    },\n"
+    code += "}\n"
+    return code
+
+def generate_single_list_first_code(bubbles, section_key, section_name, total_items='N'):
+    """Generate code that captures only the first item's bubble for a vertical list (then iterate downstream)."""
+    if not bubbles:
+        return f"# {section_name}: no hay coordenadas capturadas\n{section_key} = {{}}\n"
+    x, y, w, h = bubbles[0]
+
+    code = f"# {section_name} (lista vertical de {total_items} items)\n"
+    code += f"# Nota: Solo se tomó la primera posición. Itera hacia abajo en tu pipeline para capturar los {total_items} items.\n"
+    code += f"{section_key} = {{\n"
+    code += f"    'first': ({x}, {y}, {w}, {h}),\n"
+    code += f"}}\n"
     return code
 
 def generate_custom_code(bubbles):

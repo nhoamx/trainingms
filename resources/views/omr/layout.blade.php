@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title') - NOM-035-STPS-2018</title>
     <style>
+        /* Ensure the PDF renderer uses exact Letter size with no outer margins */
+        @page {
+            size: 215.9mm 279.4mm; /* US Letter */
+            margin: 0;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -48,17 +54,17 @@
 
         .marker-top-right {
             top: 5mm;
-            right: 5mm;
+            right: 0mm;
         }
 
         .marker-bottom-left {
-            bottom: 5mm;
+            bottom: 0;;
             left: 5mm;
         }
 
         .marker-bottom-right {
-            bottom: 5mm;
-            right: 5mm;
+            bottom: 0;
+            right: 0mm;
         }
 
         /* Encabezado */
@@ -108,16 +114,16 @@
             margin-bottom: 2px;
         }
 
-        /* Fecha en header */
-        .header-date {
-            position: absolute;
-            right: 0;
-            bottom: 5px;
+        /* Fecha debajo del header */
+        .date-row {
             display: flex;
             gap: 3mm;
             align-items: center;
+            justify-content: flex-end;
             font-size: 10px;
             font-weight: bold;
+            margin-top: 4px;
+            margin-bottom: 6mm;
         }
 
         .date-field {
@@ -143,7 +149,7 @@
 
         /* Contenido principal */
         .content {
-            margin-top: 6mm;
+            margin-top: 1mm;
             clear: both;
         }
 
@@ -296,7 +302,17 @@
                 </div>
             @endif
             
-            <div class="header-date">
+            @section('nom-header')
+                <h1>IDENTIFICACIÓN Y ANÁLISIS DE LOS FACTORES DE RIESGO PSICOSOCIAL</h1>
+                <h2>Y EVALUACIÓN DEL ENTORNO ORGANIZACIONAL EN LOS CENTROS DE TRABAJO</h2>
+                <p>NOM-035-STPS-2018</p>
+            @show
+            <h2>@yield('guide-title')</h2>
+        </div>
+
+        <!-- Fila de fecha colocada debajo del header (personalizable por plantilla) -->
+        @section('date-row')
+            <div class="date-row">
                 <div class="date-field">
                     <span class="date-field-label">DÍA</span>
                     <div class="date-field-box"></div>
@@ -310,14 +326,7 @@
                     <div class="date-field-box"></div>
                 </div>
             </div>
-            
-            @section('nom-header')
-                <h1>IDENTIFICACIÓN Y ANÁLISIS DE LOS FACTORES DE RIESGO PSICOSOCIAL</h1>
-                <h2>Y EVALUACIÓN DEL ENTORNO ORGANIZACIONAL EN LOS CENTROS DE TRABAJO</h2>
-                <p>NOM-035-STPS-2018</p>
-            @show
-            <h2>@yield('guide-title')</h2>
-        </div>
+        @show
 
         <!-- Contenido específico de cada guía -->
         <div class="content">

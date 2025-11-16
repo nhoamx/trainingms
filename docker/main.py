@@ -2,7 +2,7 @@ from pdf_to_image_converter import PDFToImageConverter
 from bubble_detector import BubbleDetector
 import os
 import shutil
-import config
+import config_legacy as config
 import json
 import cv2
 import numpy as np
@@ -131,6 +131,129 @@ def get_referencia_iii_complete_answers(image_file, detector, folio):
         
     except Exception as e:
         logging.error(f"Error procesando Referencia III completa en {image_file}: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+
+def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=800):
+    """
+    Obtiene las respuestas completas de Likert incluyendo:
+    - 23 preguntas con opciones A/B/C/D
+    - Demografía: género, turno, tipo de contrato
+    - Listas verticales: puestos (24 items) y áreas (17 items)
+    
+    Args:
+        min_fill_threshold: Umbral mínimo de píxeles para considerar una burbuja marcada (default 800)
+    """
+    import logging
+    try:
+        complete_answers = {}
+        
+        # 1. Procesar preguntas principales Likert (1-23, A/B/C/D)
+        logging.info("Procesando preguntas Likert (1-23)...")
+        if hasattr(config, 'likert'):
+            likert_answers = detector.detect_bubbles(image_file, config.likert, min_fill_threshold=min_fill_threshold)
+            complete_answers['likert'] = likert_answers
+        else:
+            logging.warning("No se encontró config.likert")
+        
+        # 2. Procesar demografía simple
+        simple_demographics = [
+            ('likert_genero', 'genero'),
+            ('likert_turno', 'turno'),
+            ('likert_tipo_contrato', 'tipo_contrato'),
+        ]
+        
+        for config_attr, result_key in simple_demographics:
+            logging.info(f"Procesando {result_key}... (config_attr={config_attr})")
+            if hasattr(config, config_attr):
+                section_config = getattr(config, config_attr)
+                logging.info(f"  Config encontrado para {config_attr}: {section_config}")
+                section_answer = detector.detect_bubbles(image_file, {result_key: section_config}, min_fill_threshold=min_fill_threshold)
+                logging.info(f"  Respuesta detectada: {section_answer}")
+                complete_answers[result_key] = section_answer.get(result_key)
+                logging.info(f"  Guardado en complete_answers['{result_key}']: {complete_answers[result_key]}")
+            else:
+                logging.warning(f"No se encontró config.{config_attr}")
+                complete_answers[result_key] = None
+        
+        # 3. Procesar listas verticales (puestos y áreas)
+        # Espaciado vertical entre burbujas (ajustar según layout real)
+        VERTICAL_SPACING_PUESTOS = 60  # Espaciado vertical entre puestos consecutivos
+        VERTICAL_SPACING_AREAS = 60    # Espaciado vertical entre áreas consecutivas
+        
+        # Procesar Puestos (24 items)
+        logging.info("Intentando procesar puestos...")
+        if hasattr(config, 'likert_puestos'):
+            logging.info(f"  Config likert_puestos encontrado: {config.likert_puestos}")
+            if 'first' in config.likert_puestos:
+                logging.info("Procesando puestos (24 items verticales)...")
+                first_x, first_y, w, h = config.likert_puestos['first']
+                logging.info(f"  Primera burbuja en: ({first_x}, {first_y}, {w}, {h})")
+                puestos_selected = []
+                
+                for i in range(24):
+                    y_offset = first_y + (i * VERTICAL_SPACING_PUESTOS)
+                    bubble_roi = (first_x, y_offset, w, h)
+                    
+                    # Detectar si la burbuja está marcada
+                    temp_config = {'puesto': {'temp': bubble_roi}}
+                    temp_answer = detector.detect_bubbles(image_file, temp_config, min_fill_threshold=min_fill_threshold)
+                    
+                    if temp_answer.get('puesto') == 'temp':
+                        puestos_selected.append(i + 1)  # Índice 1-based
+                        logging.info(f"  Puesto {i+1} DETECTADO")
+                
+                complete_answers['puestos'] = puestos_selected
+                logging.info(f"Puestos seleccionados: {puestos_selected}")
+            else:
+                logging.warning("config.likert_puestos no tiene 'first'")
+                complete_answers['puestos'] = []
+        else:
+            logging.warning("No se encontró config.likert_puestos")
+            complete_answers['puestos'] = []
+        
+        # Procesar Áreas (17 items)
+        logging.info("Intentando procesar áreas...")
+        if hasattr(config, 'likert_areas'):
+            logging.info(f"  Config likert_areas encontrado: {config.likert_areas}")
+            if 'first' in config.likert_areas:
+                logging.info("Procesando áreas (17 items verticales)...")
+                first_x, first_y, w, h = config.likert_areas['first']
+                logging.info(f"  Primera burbuja en: ({first_x}, {first_y}, {w}, {h})")
+                areas_selected = []
+                
+                for i in range(17):
+                    y_offset = first_y + (i * VERTICAL_SPACING_AREAS)
+                    bubble_roi = (first_x, y_offset, w, h)
+                    
+                    # Detectar si la burbuja está marcada
+                    temp_config = {'area': {'temp': bubble_roi}}
+                    temp_answer = detector.detect_bubbles(image_file, temp_config, min_fill_threshold=min_fill_threshold)
+                    
+                    if temp_answer.get('area') == 'temp':
+                        areas_selected.append(i + 1)  # Índice 1-based
+                        logging.info(f"  Área {i+1} DETECTADA")
+                
+                complete_answers['areas'] = areas_selected
+                logging.info(f"Áreas seleccionadas: {areas_selected}")
+            else:
+                logging.warning("config.likert_areas no tiene 'first'")
+                complete_answers['areas'] = []
+        else:
+            logging.warning("No se encontró config.likert_areas")
+            complete_answers['areas'] = []
+        
+        # Guardar el JSON completo
+        json_filename = f"{folio}.json"
+        json_output_path = os.path.join(output_json_folder, json_filename)
+        with open(json_output_path, 'w') as json_file:
+            json.dump(complete_answers, json_file, indent=4)
+        
+        logging.info(f"Resultados completos de Likert guardados en: {json_output_path}")
+        logging.info(f"Secciones detectadas: {list(complete_answers.keys())}")
+        
+    except Exception as e:
+        logging.error(f"Error procesando Likert completo en {image_file}: {e}")
         import traceback
         logging.error(traceback.format_exc())
 
@@ -305,6 +428,20 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
         
         # Crear una copia para dibujar
         img_marked = img.copy()
+
+        # 1) Detectar y dibujar marcadores de alineación (4 esquinas) sobre la imagen alineada
+        try:
+            from alinear_con_marcadores import detectar_marcadores_4_esquinas, LABELS_4_CORNERS
+            debug_align_path = os.path.join(output_with_markers_folder, f"{folio}_alignment_debug.png")
+            esquinas = detectar_marcadores_4_esquinas(img, debug_path=debug_align_path)
+            # Dibujar marcadores detectados (círculos y etiquetas TL/TR/BL/BR)
+            for i, (cx, cy) in enumerate(esquinas):
+                cv2.circle(img_marked, (cx, cy), 25, (0, 255, 255), 4)  # amarillo
+                label = LABELS_4_CORNERS[i] if i < len(LABELS_4_CORNERS) else '?'
+                cv2.putText(img_marked, label, (cx + 10, cy - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 3)
+        except Exception as e:
+            logging = __import__('logging')
+            logging.warning(f"No se pudieron detectar/dibujar marcadores de alineación: {e}")
         
         # Definir colores y configuración para cada sección
         # BGR format para OpenCV
@@ -350,9 +487,46 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
             }
         }
         
+        # Configuración para Likert (template 05)
+        section_config_likert = {
+            'likert': {
+                'color': (0, 165, 255),    # ORANGE (preguntas principales)
+                'letter': None,
+                'letter_position': None
+            },
+            'likert_genero': {
+                'color': (255, 0, 255),    # MAGENTA (demografía)
+                'letter': 'G',
+                'letter_position': 'top'
+            },
+            'likert_turno': {
+                'color': (255, 0, 255),    # MAGENTA (demografía)
+                'letter': 'T',
+                'letter_position': 'top'
+            },
+            'likert_tipo_contrato': {
+                'color': (255, 0, 255),    # MAGENTA (demografía)
+                'letter': 'C',
+                'letter_position': 'top'
+            },
+            'likert_puestos': {
+                'color': (0, 255, 255),    # CYAN (listas)
+                'letter': 'P',
+                'letter_position': 'left'
+            },
+            'likert_areas': {
+                'color': (0, 255, 255),    # CYAN (listas)
+                'letter': 'A',
+                'letter_position': 'left'
+            }
+        }
+        
         # Seleccionar configuración según el tipo de template
         if template_type == '02':  # Referencia III
             section_config = section_config_ref3
+            section_names = list(section_config.keys())
+        elif template_type == '05':  # Likert
+            section_config = section_config_likert
             section_names = list(section_config.keys())
         else:
             # Para Referencia I, V, Cisneros: usar color azul simple
@@ -383,6 +557,13 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
                 else:
                     # Fallback
                     color_info = {'color': (100, 100, 100), 'letter': None, 'letter_position': None}
+            elif template_type == '05':  # Likert - mapeo por índice
+                if idx < len(section_names):
+                    section_name = section_names[idx]
+                    color_info = section_config[section_name]
+                else:
+                    # Fallback
+                    color_info = {'color': (100, 100, 100), 'letter': None, 'letter_position': None}
             else:
                 # Para otras referencias, usar la configuración genérica
                 color_info = section_config_generic['default']
@@ -393,7 +574,25 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
             
             # Procesar cada burbuja en esta sección
             for question, positions in config_dict.items():
-                if isinstance(positions, dict):
+                # Caso especial: listas verticales de Likert (puestos/areas)
+                if question == 'first' and template_type == '05':
+                    # Esta es una lista vertical - dibujar solo la primera burbuja
+                    if isinstance(positions, tuple) and len(positions) == 4:
+                        x, y, w, h = positions
+                        center_x = x + w // 2
+                        center_y = y + h // 2 + vertical_offset
+                        radius = max(w, h) // 2
+                        cv2.circle(img_marked, (center_x, center_y), radius, color, 2)
+                        
+                        # Dibujar letra a la izquierda para listas
+                        if letter and letter_position == 'left':
+                            letter_x = center_x - radius - 25
+                            letter_y = center_y + 8
+                            font = cv2.FONT_HERSHEY_SIMPLEX
+                            font_scale = 0.8
+                            font_thickness = 2
+                            cv2.putText(img_marked, letter, (letter_x, letter_y), font, font_scale, color, font_thickness)
+                elif isinstance(positions, dict):
                     for option, coords in positions.items():
                         if isinstance(coords, tuple) and len(coords) == 4:
                             x, y, w, h = coords
@@ -403,8 +602,8 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
                             radius = max(w, h) // 2
                             cv2.circle(img_marked, (center_x, center_y), radius, color, 2)
                             
-                            # Dibujar letra si corresponde (solo para Referencia III)
-                            if letter and template_type == '02':
+                            # Dibujar letra si corresponde
+                            if letter and template_type in ['02', '05']:
                                 # Calcular posición de la letra
                                 if letter_position == 'top':
                                     # Arriba del círculo
@@ -412,6 +611,15 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
                                 elif letter_position == 'bottom':
                                     # Abajo del círculo
                                     letter_y = center_y + radius + 25
+                                elif letter_position == 'left':
+                                    # A la izquierda del círculo
+                                    letter_x = center_x - radius - 25
+                                    letter_y = center_y + 8
+                                    font = cv2.FONT_HERSHEY_SIMPLEX
+                                    font_scale = 0.8
+                                    font_thickness = 2
+                                    cv2.putText(img_marked, letter, (letter_x, letter_y), font, font_scale, color, font_thickness)
+                                    continue
                                 else:
                                     letter_y = center_y
                                 
@@ -423,7 +631,7 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
                                 font_thickness = 2
                                 cv2.putText(img_marked, letter, (letter_x, letter_y), font, font_scale, color, font_thickness)
         
-        # Guardar la imagen con marcadores
+    # Guardar la imagen con marcadores
         output_path = os.path.join(output_with_markers_folder, f"{folio}.png")
         cv2.imwrite(output_path, img_marked)
         logging.info(f"Imagen con burbujas detectadas guardada: {output_path}")
@@ -473,6 +681,7 @@ REFERENCE_IMAGES = {
     '02': '/app/reference-referencia-iii.png',    # Referencia III
     '03': '/app/reference-referencia-v.png',      # Referencia V
     '04': '/app/reference-referencia-i.png',      # Escala Cisneros (usar Ref I como fallback)
+    '05': '/app/reference-referencia-iii.png',    # Clima laboral (Likert) - similar layout a Ref III
 }
 
 def get_reference_image_for_template(template_type):
@@ -533,6 +742,16 @@ for image_file in image_files:
             shutil.copy(image_file, original_save_path)
             logging.info(f"Imagen original guardada")
         
+        # --- PRE: Detectar y dibujar marcadores ANTES de alinear (debug temprana) ---
+        try:
+            img_raw = cv2.imread(image_file)
+            pre_debug_path = os.path.join(output_with_markers_folder, f"{os.path.splitext(os.path.basename(image_file))[0]}_prealign_markers.png")
+            # Guardará líneas de recorte y marcadores detectados sobre la imagen original
+            _ = detectar_marcadores_4_esquinas(img_raw, debug_path=pre_debug_path)
+            logging.info(f"Pre-alineación: debug de marcadores guardado en {pre_debug_path}")
+        except Exception as e:
+            logging.warning(f"No se pudieron detectar marcadores en imagen original (pre-alineación): {e}")
+
         # --- Paso 1: Detectar template type de forma preliminar ---
         template_type = detect_template_type_from_image(image_file, detector)
         
@@ -563,7 +782,7 @@ for image_file in aligned_image_files:
     folio = detect_folio(image_file, detector)
 
     # Validar que el folio inicie con 01, 02, 03, 04 (template types)
-    valid_prefixes = ['01', '02', '03', '04']
+    valid_prefixes = ['01', '02', '03', '04', '05']
     is_valid = any(folio.startswith(prefix) for prefix in valid_prefixes)
     
     if not is_valid:
@@ -634,6 +853,24 @@ for image_file in aligned_image_files:
         bubble_configs_list.append(evaluation_config)
         logging.info(f"Folio {folio} → Escala Cisneros (Mobbing)")
         get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
+    elif template_type == "05":
+        # Clima laboral - Likert (23 preguntas + demografía + listas)
+        # Agregar configuraciones de Likert a la visualización
+        if hasattr(config, 'likert'):
+            bubble_configs_list.append(config.likert)
+        
+        # Agregar demografía simple
+        for attr in ['likert_genero', 'likert_turno', 'likert_tipo_contrato']:
+            if hasattr(config, attr):
+                bubble_configs_list.append(getattr(config, attr))
+        
+        # Agregar listas (solo first bubble, la iteración la hace get_likert_complete_answers)
+        for attr in ['likert_puestos', 'likert_areas']:
+            if hasattr(config, attr):
+                bubble_configs_list.append(getattr(config, attr))
+        
+        logging.info(f"Folio {folio} → Clima Laboral (Likert) COMPLETO")
+        get_likert_complete_answers(new_image_path, detector, folio)
     else:
         logging.warning(f"Template type '{template_type}' no reconocido, usando evaluación por defecto")
         evaluation_config = config.referencia_iii
