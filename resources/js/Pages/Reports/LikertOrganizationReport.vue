@@ -166,45 +166,56 @@
               <div>
                 <h4 class="text-md font-semibold text-gray-900 mb-4">Mapa de Calor - Todas las Preguntas</h4>
                 <div class="overflow-x-auto">
-                  <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                      <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <table class="min-w-full border-collapse border border-gray-300">
+                    <thead>
+                      <!-- Dimension headers row -->
+                      <tr class="bg-gray-100">
+                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 sticky left-0 bg-gray-100 z-10">
+                          Folio
+                        </th>
+                        <template v-for="(dim, dimName) in filteredDimensions" :key="`dim-header-${dimName}`">
+                          <th 
+                            :colspan="dim.questionCount" 
+                            class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 text-center"
+                          >
+                            {{ dimName }}
+                          </th>
+                        </template>
+                      </tr>
+                      <!-- Question numbers row -->
+                      <tr class="bg-gray-50">
+                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 sticky left-0 bg-gray-50 z-10">
                           #
                         </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Pregunta
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Puntuación Promedio
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Nivel
-                        </th>
+                        <template v-for="(dim, dimName) in filteredDimensions" :key="`questions-${dimName}`">
+                          <th 
+                            v-for="qNum in Object.keys(dim.questions)" 
+                            :key="`q-header-${qNum}`"
+                            class="border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 text-center"
+                          >
+                            {{ qNum }}
+                          </th>
+                        </template>
                       </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                      <template v-for="(dim, dimName) in filteredDimensions" :key="`dim-${dimName}`">
-                        <tr class="bg-gray-100">
-                          <td colspan="4" class="px-4 py-2 text-sm font-semibold text-gray-900">
-                            {{ dimName }}
+                    <tbody>
+                      <tr v-for="evaluation in filteredEvaluations" :key="`eval-${evaluation.folio}`">
+                        <!-- Personal folio column -->
+                        <td class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-900 sticky left-0 bg-white z-10">
+                          {{ evaluation.personal_folio }}
+                        </td>
+                        <!-- Answer cells for each question -->
+                        <template v-for="(dim, dimName) in filteredDimensions" :key="`eval-dim-${evaluation.folio}-${dimName}`">
+                          <td 
+                            v-for="qNum in Object.keys(dim.questions)" 
+                            :key="`eval-q-${evaluation.folio}-${qNum}`"
+                            class="border border-gray-300 px-2 py-2 text-center text-xs font-bold"
+                            :class="getAnswerColorClass(evaluation.answers[qNum])"
+                          >
+                            {{ getAnswerNumericValue(evaluation.answers[qNum]) }}
                           </td>
-                        </tr>
-                        <tr 
-                          v-for="(q, qNum) in dim.questions" 
-                          :key="`q-${dimName}-${qNum}`"
-                          :class="getHeatmapColor(q.score)"
-                        >
-                          <td class="px-4 py-2 text-sm text-gray-900">{{ qNum }}</td>
-                          <td class="px-4 py-2 text-sm text-gray-700">{{ q.question }}</td>
-                          <td class="px-4 py-2 text-sm font-semibold text-gray-900">{{ q.score.toFixed(2) }}</td>
-                          <td class="px-4 py-2 text-sm">
-                            <span class="px-2 py-1 rounded text-xs font-medium" :class="getScoreBadgeClass(q.score)">
-                              {{ getScoreLevel(q.score) }}
-                            </span>
-                          </td>
-                        </tr>
-                      </template>
+                        </template>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -237,39 +248,38 @@
 
               <!-- Mapa de Calor para esta Dimensión -->
               <div>
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Mapa de Calor</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Mapa de Calor - {{ activeTab }}</h4>
                 <div class="overflow-x-auto">
-                  <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                      <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Pregunta
+                  <table class="min-w-full border-collapse border border-gray-300">
+                    <thead>
+                      <!-- Question numbers row -->
+                      <tr class="bg-gray-50">
+                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 sticky left-0 bg-gray-50 z-10">
+                          Folio
                         </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Puntuación
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Nivel
+                        <th 
+                          v-for="qNum in Object.keys(filteredDimensions[activeTab]?.questions || {})" 
+                          :key="`dim-q-header-${qNum}`"
+                          class="border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 text-center"
+                        >
+                          {{ qNum }}
                         </th>
                       </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                      <tr 
-                        v-for="(q, qNum) in filteredDimensions[activeTab].questions" 
-                        :key="qNum"
-                        :class="getHeatmapColor(q.score)"
-                      >
-                        <td class="px-4 py-3 text-sm text-gray-700">
-                          <div class="font-medium text-gray-900 mb-1">Pregunta {{ qNum }}</div>
-                          <div class="text-xs">{{ q.question }}</div>
+                    <tbody>
+                      <tr v-for="evaluation in filteredEvaluations" :key="`dim-eval-${evaluation.folio}`">
+                        <!-- Personal folio column -->
+                        <td class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-900 sticky left-0 bg-white z-10">
+                          {{ evaluation.personal_folio }}
                         </td>
-                        <td class="px-4 py-3 text-sm font-bold text-gray-900">
-                          {{ q.score.toFixed(2) }}
-                        </td>
-                        <td class="px-4 py-3 text-sm">
-                          <span class="px-2 py-1 rounded text-xs font-medium" :class="getScoreBadgeClass(q.score)">
-                            {{ getScoreLevel(q.score) }}
-                          </span>
+                        <!-- Answer cells for this dimension's questions -->
+                        <td 
+                          v-for="qNum in Object.keys(filteredDimensions[activeTab]?.questions || {})" 
+                          :key="`dim-eval-q-${evaluation.folio}-${qNum}`"
+                          class="border border-gray-300 px-2 py-2 text-center text-xs font-bold"
+                          :class="getAnswerColorClass(evaluation.answers[qNum])"
+                        >
+                          {{ getAnswerNumericValue(evaluation.answers[qNum]) }}
                         </td>
                       </tr>
                     </tbody>
@@ -576,6 +586,41 @@ const resetFilters = () => {
     tipo_contrato: '',
     puesto: '',
     area: '',
+  }
+}
+
+// Helper: Convert letter answer to numeric value
+const getAnswerNumericValue = (answer) => {
+  const valueMap = {
+    'A': 4,
+    'B': 3,
+    'C': 2,
+    'D': 1
+  }
+  return valueMap[answer] || '-'
+}
+
+// Helper: Get Tailwind color class for answer value
+const getAnswerColorClass = (answer) => {
+  const value = getAnswerNumericValue(answer)
+  
+  // Standardized colors per user specification:
+  // 4 (A): Azul marino (dark blue) - Totalmente de Acuerdo
+  // 3 (B): Verde mayate (green) - De Acuerdo
+  // 2 (C): Amarillo mostaza (mustard yellow) - Desacuerdo
+  // 1 (D): Rojo (red) - Totalmente Desacuerdo
+  
+  switch(value) {
+    case 4:
+      return 'bg-blue-900 text-white'  // Azul marino
+    case 3:
+      return 'bg-green-600 text-white'  // Verde mayate
+    case 2:
+      return 'bg-yellow-500 text-black'  // Amarillo mostaza
+    case 1:
+      return 'bg-red-600 text-white'  // Rojo
+    default:
+      return 'bg-gray-200 text-gray-500'  // Sin respuesta
   }
 }
 
