@@ -109,14 +109,55 @@ class ResultsController extends Controller
             ];
         }
 
-        // Build dimension summaries (aggregated across all evaluations)
+        // Calculate distribution of people by Clima Laboral level
+        $climaLaboralDistribution = [
+            'Totalmente de Acuerdo' => 0,
+            'De Acuerdo' => 0,
+            'Desacuerdo' => 0,
+            'Totalmente Desacuerdo' => 0,
+        ];
+
+        foreach ($evaluationsData as $evalData) {
+            $totalScore = $evalData['scores']['total_score'];
+            $interpretation = $evalData['scores']['interpretation'];
+            if ($interpretation) {
+                $climaLaboralDistribution[$interpretation] = ($climaLaboralDistribution[$interpretation] ?? 0) + 1;
+            }
+        }
+
+        // Build dimension summaries (count people by level for each dimension)
         $dimensionSummaries = [];
         foreach ($niveles as $dimensionName => $dimensionConfig) {
             $questionNumbers = $dimensionConfig['preguntas'];
-            $totalScore = 0;
             $questionCount = count($questionNumbers);
             $questionScores = [];
 
+            // Distribution of people by level for this dimension
+            $dimensionDistribution = [
+                'Totalmente de Acuerdo' => 0,
+                'De Acuerdo' => 0,
+                'Desacuerdo' => 0,
+                'Totalmente Desacuerdo' => 0,
+            ];
+
+            // Calculate score for each person in this dimension
+            foreach ($evaluationsData as $evalData) {
+                $personScore = 0;
+                foreach ($questionNumbers as $qNum) {
+                    $answer = $evalData['answers'][$qNum] ?? null;
+                    if ($answer) {
+                        $personScore += $valorOpciones[$answer] ?? 0;
+                    }
+                }
+
+                // Get interpretation for this person's dimension score
+                $interpretation = $this->getInterpretation($personScore, $config['valorNiveles'][$dimensionName]);
+                if ($interpretation) {
+                    $dimensionDistribution[$interpretation] = ($dimensionDistribution[$interpretation] ?? 0) + 1;
+                }
+            }
+
+            // Calculate average scores per question for display
             foreach ($questionNumbers as $qNum) {
                 $qScore = 0;
                 $qCount = 0;
@@ -132,21 +173,14 @@ class ResultsController extends Controller
                     'question' => $preguntas[$qNum] ?? "Pregunta {$qNum}",
                     'score' => round($avgScore, 2),
                 ];
-                $totalScore += $avgScore;
             }
 
             $dimensionSummaries[$dimensionName] = [
                 'name' => $dimensionName,
-                'score' => round($totalScore, 2),
+                'distribution' => $dimensionDistribution,
                 'questionCount' => $questionCount,
                 'questions' => $questionScores,
             ];
-        }
-
-        // Compute overall total score
-        $overallTotal = 0;
-        foreach ($dimensionSummaries as $dim) {
-            $overallTotal += $dim['score'];
         }
 
         return Inertia::render('Reports/LikertOrganizationReport', [
@@ -163,8 +197,8 @@ class ResultsController extends Controller
             'puestosMap' => $config['puestos'],
             'areasMap' => $config['areas'],
             'dimensions' => $dimensionSummaries,
-            'totalScore' => round($overallTotal, 2),
-            'totalInterpretation' => $this->getInterpretation($overallTotal, $config['valorNiveles']['Clima Laboral']),
+            'climaLaboralDistribution' => $climaLaboralDistribution,
+            'totalPeople' => count($evaluationsData),
         ]);
     }
 

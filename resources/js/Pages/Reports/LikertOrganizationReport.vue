@@ -117,41 +117,46 @@
           <div class="p-6">
             <!-- Total Tab -->
             <div v-if="activeTab === 'Total'">
-              <!-- Calificación General -->
+              <!-- Clima Laboral -->
               <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Calificación General</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Clima Laboral</h3>
                 <div class="flex items-baseline gap-3">
-                  <span class="text-4xl font-bold text-blue-600">{{ filteredTotalScore.toFixed(2) }}</span>
-                  <span class="text-lg text-gray-600">/ 92</span>
-                  <span class="ml-4 px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    {{ filteredTotalInterpretation }}
-                  </span>
+                  <span class="text-3xl font-bold text-blue-600">{{ getMostCommonInterpretation }}</span>
+                  <span class="text-lg text-gray-600">/ {{ filteredTotalPeople }} {{ filteredTotalPeople === 1 ? 'persona' : 'personas' }}</span>
+                </div>
+                <div class="text-sm text-gray-600 mt-2">
+                  Nivel más frecuente en la organización
                 </div>
               </div>
 
-              <!-- Gráfica de Pastel - Distribución por Dimensión -->
+              <!-- Gráfica de Pastel - Distribución por Nivel de Clima Laboral -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Puntuación por Dimensión (%)</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Nivel de Clima Laboral (%)</h4>
                 <div class="bg-gray-50 rounded-lg p-4">
                   <canvas ref="pieChartTotal"></canvas>
                 </div>
               </div>
 
-              <!-- Lista de Dimensiones con Puntuaciones -->
+              <!-- Lista de Dimensiones con Distribución de Personas -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Puntuación por Dimensión</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Dimensión</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div 
                     v-for="(dim, dimName) in filteredDimensions" 
                     :key="dimName"
                     class="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500"
                   >
-                    <div class="flex justify-between items-start">
+                    <div class="mb-3">
                       <span class="font-medium text-gray-900">{{ dimName }}</span>
-                      <span class="text-lg font-bold text-blue-600">{{ dim.score.toFixed(2) }}</span>
+                      <div class="text-xs text-gray-500 mt-1">
+                        {{ dim.questionCount }} preguntas
+                      </div>
                     </div>
-                    <div class="text-xs text-gray-500 mt-1">
-                      {{ dim.questionCount }} preguntas
+                    <div class="space-y-1 text-sm">
+                      <div v-for="(count, level) in dim.distribution" :key="level" class="flex justify-between">
+                        <span class="text-gray-600">{{ level }}:</span>
+                        <span class="font-medium">{{ count }} {{ count === 1 ? 'persona' : 'personas' }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -342,13 +347,18 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-  totalScore: {
+  climaLaboralDistribution: {
+    type: Object,
+    default: () => ({
+      'Totalmente de Acuerdo': 0,
+      'De Acuerdo': 0,
+      'Desacuerdo': 0,
+      'Totalmente Desacuerdo': 0,
+    }),
+  },
+  totalPeople: {
     type: Number,
     default: 0,
-  },
-  totalInterpretation: {
-    type: String,
-    default: '',
   },
   puestosMap: {
     type: Object,
@@ -393,7 +403,7 @@ const filteredEvaluations = computed(() => {
   })
 })
 
-// Recompute dimensions based on filtered evaluations
+// Recompute dimensions distribution based on filtered evaluations
 const filteredDimensions = computed(() => {
   if (filteredEvaluations.value.length === 0 || !props.dimensions || Object.keys(props.dimensions).length === 0) {
     return props.dimensions || {}
@@ -407,9 +417,37 @@ const filteredDimensions = computed(() => {
     if (!dimension || !dimension.questions) return
 
     const questionNumbers = Object.keys(dimension.questions).map(Number)
-    let totalScore = 0
     const questionScores = {}
 
+    // Distribution of people by level for this dimension (filtered)
+    const dimensionDistribution = {
+      'Totalmente de Acuerdo': 0,
+      'De Acuerdo': 0,
+      'Desacuerdo': 0,
+      'Totalmente Desacuerdo': 0,
+    }
+
+    // Get dimension level ranges from config
+    const dimensionRanges = getLevelRanges(dimensionName)
+
+    // Calculate score for each person in this dimension
+    filteredEvaluations.value.forEach(evalData => {
+      let personScore = 0
+      questionNumbers.forEach(qNum => {
+        const answer = evalData.answers[qNum]
+        if (answer) {
+          personScore += valorOpciones[answer] || 0
+        }
+      })
+
+      // Get interpretation for this person's dimension score
+      const interpretation = getScoreInterpretation(personScore, dimensionRanges)
+      if (interpretation) {
+        dimensionDistribution[interpretation] = (dimensionDistribution[interpretation] || 0) + 1
+      }
+    })
+
+    // Calculate average scores per question for display
     questionNumbers.forEach(qNum => {
       let qScore = 0
       let qCount = 0
@@ -426,12 +464,11 @@ const filteredDimensions = computed(() => {
         question: (typeof origQuestion === 'object' ? origQuestion.question : origQuestion) || `Pregunta ${qNum}`,
         score: avgScore,
       }
-      totalScore += avgScore
     })
 
     dimensionSummaries[dimensionName] = {
       name: dimensionName,
-      score: totalScore,
+      distribution: dimensionDistribution,
       questionCount: questionNumbers.length,
       questions: questionScores,
     }
@@ -440,21 +477,123 @@ const filteredDimensions = computed(() => {
   return dimensionSummaries
 })
 
-const filteredTotalScore = computed(() => {
-  let total = 0
-  Object.values(filteredDimensions.value).forEach(dim => {
-    total += dim.score
+// Calculate Clima Laboral distribution for filtered evaluations
+const filteredClimaLaboralDistribution = computed(() => {
+  const distribution = {
+    'Totalmente de Acuerdo': 0,
+    'De Acuerdo': 0,
+    'Desacuerdo': 0,
+    'Totalmente Desacuerdo': 0,
+  }
+
+  filteredEvaluations.value.forEach(evalData => {
+    const interpretation = evalData.scores?.interpretation
+    if (interpretation) {
+      distribution[interpretation] = (distribution[interpretation] || 0) + 1
+    }
   })
-  return total
+
+  return distribution
 })
 
-const filteredTotalInterpretation = computed(() => {
-  const score = filteredTotalScore.value
-  if (score >= 75.6) return 'Totalmente de Acuerdo'
-  if (score >= 59) return 'De Acuerdo'
-  if (score >= 40.6) return 'Desacuerdo'
-  return 'Totalmente Desacuerdo'
+const filteredTotalPeople = computed(() => {
+  return filteredEvaluations.value.length
 })
+
+// Get most common interpretation (modal)
+const getMostCommonInterpretation = computed(() => {
+  const dist = filteredClimaLaboralDistribution.value
+  let maxCount = 0
+  let mostCommon = 'Sin datos'
+
+  Object.entries(dist).forEach(([level, count]) => {
+    if (count > maxCount) {
+      maxCount = count
+      mostCommon = level
+    }
+  })
+
+  return mostCommon
+})
+
+// Helper function to get level ranges for a dimension
+const getLevelRanges = (dimensionName) => {
+  // These ranges should match the config in likert-value.php
+  const ranges = {
+    'Entorno Laboral Seguro': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Seguridad Laboral': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Compensación Justa': [
+      { min: 3.26, max: 4, level: 'Totalmente de Acuerdo' },
+      { min: 2.6, max: 3.25, level: 'De Acuerdo' },
+      { min: 1.76, max: 2.5, level: 'Desacuerdo' },
+      { min: 1, max: 1.75, level: 'Totalmente Desacuerdo' },
+    ],
+    'Comunicación Abierta': [
+      { min: 19.6, max: 24, level: 'Totalmente de Acuerdo' },
+      { min: 15.1, max: 19.5, level: 'De Acuerdo' },
+      { min: 10.6, max: 15, level: 'Desacuerdo' },
+      { min: 6, max: 10.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Participación de los Empleados': [
+      { min: 9.76, max: 12, level: 'Totalmente de Acuerdo' },
+      { min: 7.6, max: 9.75, level: 'De Acuerdo' },
+      { min: 5.26, max: 7.5, level: 'Desacuerdo' },
+      { min: 3, max: 5.25, level: 'Totalmente Desacuerdo' },
+    ],
+    'Reconocimiento y Recompensa': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Capacitación y Desarrollo': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Equilibrio entre Vida Laboral y Personal': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Avance Profesional': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Apoyo al Empleado': [
+      { min: 3.26, max: 4, level: 'Totalmente de Acuerdo' },
+      { min: 2.6, max: 3.25, level: 'De Acuerdo' },
+      { min: 1.76, max: 2.5, level: 'Desacuerdo' },
+      { min: 1, max: 1.75, level: 'Totalmente Desacuerdo' },
+    ],
+  }
+
+  return ranges[dimensionName] || []
+}
+
+// Helper function to get interpretation from score
+const getScoreInterpretation = (score, ranges) => {
+  for (const range of ranges) {
+    if (score >= range.min && score <= range.max) {
+      return range.level
+    }
+  }
+  return null
+}
 
 const resetFilters = () => {
   filters.value = {
@@ -547,7 +686,8 @@ const createPieChart = (canvasRef, labels, data, title) => {
               const value = context.parsed || 0
               const total = context.dataset.data.reduce((a, b) => a + b, 0)
               const percentage = ((value / total) * 100).toFixed(1)
-              return `${label}: ${percentage}%`
+              const personas = value === 1 ? 'persona' : 'personas'
+              return `${label}: ${value} ${personas} (${percentage}%)`
             }
           }
         }
@@ -560,11 +700,15 @@ const createPieChart = (canvasRef, labels, data, title) => {
 
 const renderCharts = () => {
   nextTick(() => {
-    // Total pie chart
+    // Total pie chart - Distribution by Clima Laboral level
     if (pieChartTotal.value) {
-      const labels = Object.keys(filteredDimensions.value)
-      const data = labels.map(key => filteredDimensions.value[key].score)
-      createPieChart(pieChartTotal.value, labels, data, 'Total')
+      const distribution = filteredClimaLaboralDistribution.value
+      const labels = Object.keys(distribution).filter(key => distribution[key] > 0)
+      const data = labels.map(key => distribution[key])
+      
+      if (data.length > 0) {
+        createPieChart(pieChartTotal.value, labels, data, 'Total')
+      }
     }
 
     // Dimension-specific pie charts
