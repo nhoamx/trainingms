@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Events\EvaluationProcessingStatusChanged;
+use App\Models\DemographicData;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use Illuminate\Bus\Queueable;
@@ -287,7 +288,7 @@ class ProcessPaperEvaluation implements ShouldQueue
             $structuredData = $this->extractStructuredData($rawData, $folioData['evaluation_type']);
 
             // Create or update PaperEvaluation
-            PaperEvaluation::updateOrCreate(
+            $paperEvaluation = PaperEvaluation::updateOrCreate(
                 ['folio' => $folio],
                 [
                     'evaluation_type_code' => $folioData['evaluation_type_code'],
@@ -309,6 +310,11 @@ class ProcessPaperEvaluation implements ShouldQueue
                     'raw_data' => $rawData,
                 ]
             );
+
+            // Save demographic data if present
+            if (isset($structuredData['demographic_data']) && ! empty($structuredData['demographic_data'])) {
+                $this->saveDemographicData($paperEvaluation, $structuredData['demographic_data']);
+            }
 
             Log::info("Paper evaluation processed successfully: {$folio}");
 
@@ -463,5 +469,84 @@ class ProcessPaperEvaluation implements ShouldQueue
         } catch (\Exception $e) {
             Log::error('Error during cleanup: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Save demographic data to DemographicData table
+     */
+    protected function saveDemographicData(PaperEvaluation $paperEvaluation, array $demographicData): void
+    {
+        try {
+            $extractedData = $this->extractDemographicInfo($demographicData);
+
+            // Delete existing demographic data to avoid duplicates
+            $paperEvaluation->demographicData?->delete();
+
+            // Create new demographic data record
+            DemographicData::create([
+                'paper_evaluation_id' => $paperEvaluation->id,
+                'gender' => $extractedData['gender'] ?? null,
+                'age' => $extractedData['age'] ?? null,
+                'estado_civil' => $extractedData['estado_civil'] ?? null,
+                'nivel_estudios' => $extractedData['nivel_estudios'] ?? null,
+                'puesto' => $extractedData['puesto'] ?? null,
+                'area' => $extractedData['area'] ?? null,
+                'tipo_puesto' => $extractedData['tipo_puesto'] ?? null,
+                'tipo_contratacion' => $extractedData['tipo_contratacion'] ?? null,
+                'tipo_personal' => $extractedData['tipo_personal'] ?? null,
+                'tipo_jornada' => $extractedData['tipo_jornada'] ?? null,
+                'rotacion_turnos' => $extractedData['rotacion_turnos'] ?? null,
+                'tiempo_puesto_actual' => $extractedData['tiempo_puesto_actual'] ?? null,
+                'tiempo_experiencia_laboral' => $extractedData['tiempo_experiencia_laboral'] ?? null,
+                'extra_fields' => $extractedData['extra_fields'] ?? null,
+            ]);
+
+            Log::info("Demographic data saved successfully for evaluation: {$paperEvaluation->folio}");
+        } catch (\Exception $e) {
+            Log::error("Error saving demographic data for evaluation {$paperEvaluation->folio}: ".$e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Extract demographic information from raw data
+     */
+    protected function extractDemographicInfo(array $demographicData): array
+    {
+        $info = [
+            'gender' => $demographicData['genero'] ?? null,
+            'age' => $demographicData['edad'] ?? null,
+            'estado_civil' => $demographicData['estado_civil'] ?? null,
+            'nivel_estudios' => $demographicData['nivel_estudios'] ?? null,
+            'puesto' => $demographicData['ocupacion_puesto'] ?? null,
+            'area' => $demographicData['departamento_seccion_area'] ?? null,
+            'tipo_puesto' => $demographicData['tipo_puesto'] ?? null,
+            'tipo_contratacion' => $demographicData['tipo_contratacion'] ?? null,
+            'tipo_personal' => $demographicData['tipo_personal'] ?? null,
+            'tipo_jornada' => $demographicData['tipo_jornada'] ?? null,
+            'rotacion_turnos' => $demographicData['rotacion_turnos'] ?? null,
+            'tiempo_puesto_actual' => $demographicData['tiempo_puesto_actual'] ?? null,
+            'tiempo_experiencia_laboral' => $demographicData['tiempo_experiencia_laboral'] ?? null,
+        ];
+
+        // Store any extra fields in the extra_fields JSON column
+        $knownFields = [
+            'genero', 'edad', 'estado_civil', 'nivel_estudios', 'ocupacion_puesto',
+            'departamento_seccion_area', 'tipo_puesto', 'tipo_contratacion', 'tipo_personal',
+            'tipo_jornada', 'rotacion_turnos', 'tiempo_puesto_actual', 'tiempo_experiencia_laboral',
+        ];
+
+        $extraFields = [];
+        foreach ($demographicData as $key => $value) {
+            if (! in_array($key, $knownFields)) {
+                $extraFields[$key] = $value;
+            }
+        }
+
+        if (! empty($extraFields)) {
+            $info['extra_fields'] = $extraFields;
+        }
+
+        return $info;
     }
 }
