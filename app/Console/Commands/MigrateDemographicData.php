@@ -43,10 +43,16 @@ class MigrateDemographicData extends Command
         }
 
         try {
-            // Get all paper evaluations with referencia_v type (demographic data)
-            $evaluations = PaperEvaluation::ofType(['referencia_v', 'likert'])
-                ->whereNotNull(['demographic_data', 'likert_answers'])
-                ->get();
+            // Get all paper evaluations with referencia_v and likert types (demographic data)
+            $evaluations = PaperEvaluation::where(function ($query) {
+                $query->where(function ($q) {
+                    $q->ofType('referencia_v')
+                        ->whereNotNull('demographic_data');
+                })->orWhere(function ($q) {
+                    $q->ofType('likert')
+                        ->whereNotNull('likert_answers');
+                });
+            })->get();
 
             $this->info("Found {$evaluations->count()} evaluations with demographic data");
 
@@ -120,11 +126,16 @@ class MigrateDemographicData extends Command
 
     /**
      * Extract demographic information from the JSON data
-     * Handles both new nested structure (datos_laborales) and old OCR structure
+     * Handles new nested structure (datos_laborales), old OCR structure, and Likert data
      */
     private function extractDemographicInfo(array $demographicData): array
     {
-        // Determine which structure we're dealing with
+        // Check if this is Likert data (has 'questions' key indicating it's from likert_answers)
+        if (isset($demographicData['questions'])) {
+            return $this->extractFromLikert($demographicData);
+        }
+
+        // Determine which structure we're dealing with for Referencia V
         if ($this->isNewStructure($demographicData)) {
             return $this->extractFromNewStructure($demographicData);
         } else {
@@ -138,6 +149,34 @@ class MigrateDemographicData extends Command
     private function isNewStructure(array $data): bool
     {
         return isset($data['datos_laborales']) && is_array($data['datos_laborales']);
+    }
+
+    /**
+     * Extract from Likert scale data (workplace climate evaluation)
+     */
+    private function extractFromLikert(array $likertData): array
+    {
+        return [
+            'gender' => $this->normalizeValue($likertData['genero'] ?? null, [
+                'masculino' => 'Masculino',
+                'femenino' => 'Femenino',
+            ]),
+            'age' => null, // Not provided in Likert data
+            'marital_status' => null, // Not provided in Likert data
+            'education_level' => null, // Not provided in Likert data
+            'position' => $likertData['puestos'] ?? null,
+            'department' => $likertData['areas'] ?? null,
+            'position_type' => null, // Not provided in Likert data
+            'contract_type' => $this->normalizeContractType($likertData['tipo_contrato'] ?? null),
+            'personnel_type' => null, // Not provided in Likert data
+            'work_schedule' => $this->normalizeWorkSchedule($likertData['turno'] ?? null),
+            'shift_rotation' => null, // Not provided in Likert data
+            'time_in_current_position' => null, // Not provided in Likert data
+            'work_experience' => null, // Not provided in Likert data
+            'extra_fields' => [
+                'questions' => $likertData['questions'] ?? null,
+            ],
+        ];
     }
 
     /**
@@ -307,7 +346,10 @@ class MigrateDemographicData extends Command
             'por_obra_o_proyecto' => 'Por obra o proyecto',
             'por_tiempo_determinado_temporal' => 'Por tiempo determinado (temporal)',
             'tiempo_indeterminado' => 'Tiempo indeterminado',
+            'tiempo_determinado' => 'Tiempo determinado',
             'honorarios' => 'Honorarios',
+            'confianza' => 'Confianza',
+            'sindicalizado' => 'Sindicalizado',
         ];
 
         return $map[strtolower($value)] ?? $value;
