@@ -336,15 +336,29 @@
             <tr class="text-left text-gray-600">
               <th class="py-2 pr-4">Folio</th>
               <th class="py-2">Nombre</th>
+              <th class="py-2"></th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="foliosModalItems.length === 0">
-              <td colspan="2" class="py-4 text-gray-500">No hay folios para este nivel.</td>
+              <td colspan="3" class="py-4 text-gray-500">No hay folios para este nivel.</td>
             </tr>
             <tr v-for="item in foliosModalItems" :key="item.folio" class="border-t">
               <td class="py-2 pr-4 font-medium">{{ item.folio }}</td>
               <td class="py-2">{{ item.name || 'Sin nombre' }}</td>
+              <td class="py-2">
+                <Link
+                  :href="route('organization.results.likert', { organization: organizationId, personalFolio: item.folio })"
+                  target="_blank"
+                  class="inline-flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Ver datos
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 3h7m0 0v7m0-7L10 14" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10v10a1 1 0 001 1h10" />
+                  </svg>
+                </Link>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -360,6 +374,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import Dashboard from '@/Layouts/Dashboard.vue'
 import { Chart, registerables } from 'chart.js'
+import { Link } from '@inertiajs/vue3'
 
 Chart.register(...registerables)
 
