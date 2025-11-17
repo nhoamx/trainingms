@@ -26,17 +26,17 @@ CREATE TABLE demographic_data (
     paper_evaluation_id CHAR(36) FOREIGN KEY,
     gender VARCHAR(255),
     age VARCHAR(255),
-    estado_civil VARCHAR(255),
-    nivel_estudios VARCHAR(255),
-    puesto VARCHAR(255),
-    area VARCHAR(255),
-    tipo_puesto VARCHAR(255),
-    tipo_contratacion VARCHAR(255),
-    tipo_personal VARCHAR(255),
-    tipo_jornada VARCHAR(255),
-    rotacion_turnos VARCHAR(255),
-    tiempo_puesto_actual VARCHAR(255),
-    tiempo_experiencia_laboral VARCHAR(255),
+    marital_status VARCHAR(255),
+    education_level VARCHAR(255),
+    position VARCHAR(255),
+    department VARCHAR(255),
+    position_type VARCHAR(255),
+    contract_type VARCHAR(255),
+    personnel_type VARCHAR(255),
+    work_schedule VARCHAR(255),
+    shift_rotation VARCHAR(255),
+    time_in_current_position VARCHAR(255),
+    work_experience VARCHAR(255),
     extra_fields JSON,
     created_at TIMESTAMP,
     updated_at TIMESTAMP
@@ -146,17 +146,17 @@ Found 250 evaluations with demographic data
 |---|---|---|---|
 | genero | gender | varchar | Masculino / Femenino |
 | edad | age | varchar | Age range (e.g., "25 - 29") |
-| estado_civil | estado_civil | varchar | Marital status |
-| nivel_estudios | nivel_estudios | varchar | Educational level |
-| ocupacion_puesto | puesto | varchar | Job position/occupation |
-| departamento_seccion_area | area | varchar | Department/Section |
-| tipo_puesto | tipo_puesto | varchar | Operational/Professional/Supervisor/Manager |
-| tipo_contratacion | tipo_contratacion | varchar | Contract type |
-| tipo_personal | tipo_personal | varchar | Syndical/Confidence/None |
-| tipo_jornada | tipo_jornada | varchar | Work schedule type |
-| rotacion_turnos | rotacion_turnos | varchar | Shift rotation |
-| tiempo_puesto_actual | tiempo_puesto_actual | varchar | Time in current position |
-| tiempo_experiencia_laboral | tiempo_experiencia_laboral | varchar | Years of work experience |
+| estado_civil | marital_status | varchar | Marital status |
+| nivel_estudios | education_level | varchar | Educational level |
+| ocupacion_puesto | position | varchar | Job position/occupation |
+| departamento_seccion_area | department | varchar | Department/Section |
+| tipo_puesto | position_type | varchar | Operational/Professional/Supervisor/Manager |
+| tipo_contratacion | contract_type | varchar | Contract type |
+| tipo_personal | personnel_type | varchar | Syndical/Confidence/None |
+| tipo_jornada | work_schedule | varchar | Work schedule type |
+| rotacion_turnos | shift_rotation | varchar | Shift rotation |
+| tiempo_puesto_actual | time_in_current_position | varchar | Time in current position |
+| tiempo_experiencia_laboral | work_experience | varchar | Years of work experience |
 
 ### Extra Fields Storage
 
