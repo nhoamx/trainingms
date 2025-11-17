@@ -150,4 +150,46 @@ class ProcessPaperEvaluationTest extends TestCase
 
         $this->assertEquals($demographicData, $evaluation->fresh()->demographic_data);
     }
+
+    public function test_likert_data_structure_is_stored_correctly(): void
+    {
+        $organization = Organization::factory()->create([
+            'folio_organization' => '301',
+        ]);
+
+        $folio = '053010001';
+        $likertData = [
+            'questions' => [
+                '1' => 'A',
+                '2' => 'A',
+                '3' => 'A',
+            ],
+            'areas' => 1,
+            'turno' => 'nocturno',
+            'genero' => 'masculino',
+            'puestos' => 1,
+            'tipo_contrato' => 'confianza',
+        ];
+
+        $evaluation = PaperEvaluation::create([
+            'folio' => $folio,
+            'evaluation_type_code' => '05',
+            'organization_code' => '301',
+            'personal_folio' => '0001',
+            'organization_id' => $organization->id,
+            'evaluation_type' => 'likert',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'likert_answers' => $likertData,
+        ]);
+
+        // Verify the likert data structure is stored correctly
+        $this->assertEquals($likertData, $evaluation->fresh()->likert_answers);
+        $this->assertIsArray($evaluation->fresh()->likert_answers['questions']);
+        $this->assertEquals('masculino', $evaluation->fresh()->likert_answers['genero']);
+        $this->assertEquals('nocturno', $evaluation->fresh()->likert_answers['turno']);
+        $this->assertEquals('confianza', $evaluation->fresh()->likert_answers['tipo_contrato']);
+        $this->assertEquals(1, $evaluation->fresh()->likert_answers['areas']);
+        $this->assertEquals(1, $evaluation->fresh()->likert_answers['puestos']);
+    }
 }

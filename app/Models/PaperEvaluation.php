@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PaperEvaluation extends Model
@@ -70,6 +71,14 @@ class PaperEvaluation extends Model
         }
 
         return $this->belongsTo(Quiz::class, 'raw_data->quiz_id');
+    }
+
+    /**
+     * Get the demographic data for this evaluation
+     */
+    public function demographicData(): HasOne
+    {
+        return $this->hasOne(DemographicData::class);
     }
 
     /**
