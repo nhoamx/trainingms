@@ -226,25 +226,49 @@
 
             <!-- Dimension Tabs -->
             <div v-else-if="filteredDimensions[activeTab]">
-              <!-- Distribución de la Dimensión -->
-              <div class="mb-6 bg-gray-50 rounded-lg p-6 border-2 border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ activeTab }}</h3>
-                <div class="text-sm text-gray-600 mb-3">
-                  {{ filteredDimensions[activeTab].questionCount }} preguntas evaluadas
+              <!-- Clima Laboral de la Dimensión (encabezado como en Total) -->
+              <div class="mb-6 rounded-lg p-6" :class="getLevelColor(activeDimensionMostCommon).bgSolid">
+                <h3 class="text-lg font-semibold mb-2" :class="getLevelColor(activeDimensionMostCommon).text">Clima Laboral - {{ activeTab }}</h3>
+                <div class="flex items-baseline gap-3">
+                  <span class="text-3xl font-bold" :class="getLevelColor(activeDimensionMostCommon).text">{{ activeDimensionMostCommon }}</span>
+                  <span class="text-lg opacity-90" :class="getLevelColor(activeDimensionMostCommon).text">/ {{ activeDimensionTotalPeople }} {{ activeDimensionTotalPeople === 1 ? 'persona' : 'personas' }}</span>
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div v-for="(count, level) in filteredDimensions[activeTab].distribution" :key="level" class="text-center p-3 rounded-lg" :class="getLevelColor(level).bgSolid">
-                    <div class="text-2xl font-bold" :class="getLevelColor(level).text">{{ count }}</div>
-                    <div class="text-xs mt-1" :class="getLevelColor(level).text">{{ level }}</div>
-                  </div>
+                <div class="text-sm mt-2 opacity-90" :class="getLevelColor(activeDimensionMostCommon).text">
+                  Nivel más frecuente en la dimensión
                 </div>
               </div>
 
-              <!-- Gráfica de Pastel - Distribución de Personas por Nivel -->
+              <!-- Distribución + Chart en 2 columnas -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Nivel (%)</h4>
-                <div class="bg-gray-50 rounded-lg p-4">
-                  <canvas ref="dimensionChartCanvas"></canvas>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  <!-- Bloques de niveles (izquierda) -->
+                  <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="flex items-center justify-between mb-3">
+                      <div>
+                        <h4 class="text-md font-semibold text-gray-900">Distribución por nivel</h4>
+                        <div class="text-xs text-gray-500">{{ filteredDimensions[activeTab].questionCount }} preguntas evaluadas</div>
+                      </div>
+                    </div>
+                    <div class="flex flex-col gap-3">
+                      <button
+                        v-for="(count, level) in filteredDimensions[activeTab].distribution"
+                        :key="level"
+                        type="button"
+                        class="text-left px-4 py-3 rounded-lg shadow-sm transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2"
+                        :class="getLevelColor(level).bgSolid + ' ' + getLevelColor(level).text"
+                        @click="openFoliosModal(`Folios en ${level} - ${activeTab}`, getFoliosForDimensionLevel(activeTab, level))"
+                      >
+                        <div class="text-2xl font-bold">{{ count }}</div>
+                        <div class="text-xs mt-1">{{ level }}</div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Gráfica (derecha) -->
+                  <div class="bg-gray-50 rounded-lg p-4 md:ml-auto w-full">
+                    <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Nivel (%)</h4>
+                    <canvas ref="dimensionChartCanvas"></canvas>
+                  </div>
                 </div>
               </div>
 
@@ -525,6 +549,32 @@ const filteredTotalPeople = computed(() => {
   return filteredEvaluations.value.length
 })
 
+// Dimension-level helpers for header (similar to Total)
+const activeDimensionDistribution = computed(() => {
+  if (activeTab.value === 'Total') return null
+  return filteredDimensions.value[activeTab.value]?.distribution || null
+})
+
+const activeDimensionMostCommon = computed(() => {
+  const dist = activeDimensionDistribution.value
+  if (!dist) return 'Sin datos'
+  let maxCount = -1
+  let mostCommon = 'Sin datos'
+  Object.entries(dist).forEach(([level, count]) => {
+    if ((count || 0) > maxCount) {
+      maxCount = count || 0
+      mostCommon = level
+    }
+  })
+  return mostCommon
+})
+
+const activeDimensionTotalPeople = computed(() => {
+  const dist = activeDimensionDistribution.value
+  if (!dist) return 0
+  return Object.values(dist).reduce((sum, n) => sum + (n || 0), 0)
+})
+
 // Get most common interpretation (modal)
 const getMostCommonInterpretation = computed(() => {
   const dist = filteredClimaLaboralDistribution.value
@@ -729,7 +779,7 @@ const getScoreLevel = (score) => {
   return 'Totalmente Desacuerdo'
 }
 
-const createPieChart = (canvasRef, labels, data, title, legendClickHandler = null) => {
+const createPieChart = (canvasRef, labels, data, title, legendClickHandler = null, legendPosition = 'right') => {
   if (!canvasRef) return
 
   const ctx = canvasRef.getContext('2d')
@@ -759,7 +809,7 @@ const createPieChart = (canvasRef, labels, data, title, legendClickHandler = nul
       maintainAspectRatio: true,
       plugins: {
         legend: {
-          position: 'right',
+          position: legendPosition,
           labels: {
             boxWidth: 12,
             padding: 10,
@@ -829,7 +879,7 @@ const renderCharts = () => {
           // Show folios by overall Clima Laboral interpretation
           const items = getFoliosForClimaLevel(levelLabel)
           openFoliosModal(`Folios en ${levelLabel} (Clima Laboral)`, items)
-        })
+        }, 'right')
       }
     }
 
@@ -849,7 +899,8 @@ const renderCharts = () => {
             (levelLabel) => {
               const items = getFoliosForDimensionLevel(activeTab.value, levelLabel)
               openFoliosModal(`Folios en ${levelLabel} - ${activeTab.value}`, items)
-            }
+            },
+            'bottom'
           )
         } else {
           // Destroy existing dimension chart if no data
