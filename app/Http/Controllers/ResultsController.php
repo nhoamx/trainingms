@@ -41,7 +41,7 @@ class ResultsController extends Controller
             return Inertia::render('Reports/LikertOrganizationReport', [
                 'organizationId' => $organization->id,
                 'organizationName' => $organization->name,
-                'title' => 'Reporte Likert',
+                'title' => 'Reporte Clima Laboral',
                 'evaluations' => [],
                 'demographics' => [
                     'generos' => [],
@@ -186,7 +186,7 @@ class ResultsController extends Controller
         return Inertia::render('Reports/LikertOrganizationReport', [
             'organizationId' => $organization->id,
             'organizationName' => $organization->name,
-            'title' => 'Reporte Likert - '.$organization->name,
+            'title' => 'Clima Laboral - '.$organization->name,
             'evaluations' => $evaluationsData,
             'demographics' => [
                 'generos' => array_keys($generos),

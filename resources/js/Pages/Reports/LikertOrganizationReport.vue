@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="bg-white rounded-lg shadow p-6 mb-6">
         <h2 class="text-2xl font-bold text-gray-900">
-          Reporte Clima Laboal - {{ organizationName }}
+          Reporte Clima Laboral - {{ organizationName }}
         </h2>
         <p class="mt-1 text-sm text-gray-600">
           {{ evaluations.length }} evaluaciones completadas
