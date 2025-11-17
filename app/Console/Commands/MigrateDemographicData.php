@@ -126,17 +126,17 @@ class MigrateDemographicData extends Command
         $info = [
             'gender' => $demographicData['genero'] ?? null,
             'age' => $demographicData['edad'] ?? null,
-            'estado_civil' => $demographicData['estado_civil'] ?? null,
-            'nivel_estudios' => $demographicData['nivel_estudios'] ?? null,
-            'puesto' => $demographicData['ocupacion_puesto'] ?? null,
-            'area' => $demographicData['departamento_seccion_area'] ?? null,
-            'tipo_puesto' => $demographicData['tipo_puesto'] ?? null,
-            'tipo_contratacion' => $demographicData['tipo_contratacion'] ?? null,
-            'tipo_personal' => $demographicData['tipo_personal'] ?? null,
-            'tipo_jornada' => $demographicData['tipo_jornada'] ?? null,
-            'rotacion_turnos' => $demographicData['rotacion_turnos'] ?? null,
-            'tiempo_puesto_actual' => $demographicData['tiempo_puesto_actual'] ?? null,
-            'tiempo_experiencia_laboral' => $demographicData['tiempo_experiencia_laboral'] ?? null,
+            'marital_status' => $demographicData['estado_civil'] ?? null,
+            'education_level' => $demographicData['nivel_estudios'] ?? null,
+            'position' => $demographicData['ocupacion_puesto'] ?? null,
+            'department' => $demographicData['departamento_seccion_area'] ?? null,
+            'position_type' => $demographicData['tipo_puesto'] ?? null,
+            'contract_type' => $demographicData['tipo_contratacion'] ?? null,
+            'personnel_type' => $demographicData['tipo_personal'] ?? null,
+            'work_schedule' => $demographicData['tipo_jornada'] ?? null,
+            'shift_rotation' => $demographicData['rotacion_turnos'] ?? null,
+            'time_in_current_position' => $demographicData['tiempo_puesto_actual'] ?? null,
+            'work_experience' => $demographicData['tiempo_experiencia_laboral'] ?? null,
         ];
 
         // Store any extra fields in the extra_fields JSON column
