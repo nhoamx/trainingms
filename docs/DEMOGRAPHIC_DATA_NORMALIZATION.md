@@ -124,6 +124,38 @@ Legacy OCR-processed records contain demographic data with object-type fields:
 
 **Migration Status**: Successfully migrated 60 evaluations (58 old format, 2 new format).
 
+### Structure 3: Likert Scale Format
+
+Likert workplace climate evaluations provide demographic data with the following structure:
+
+```json
+{
+  "areas": 1,
+  "turno": "nocturno",
+  "genero": "masculino",
+  "puestos": 1,
+  "tipo_contrato": "confianza",
+  "questions": {
+    "1": "A",
+    "2": "A",
+    "3": "A",
+    "4": "A",
+    "5": "A",
+    // ... additional questions up to 23
+  }
+}
+```
+
+**Detection**: System checks for presence of `questions` key (Likert-specific).
+
+**Mapped Fields**:
+- `genero` → `gender` (normalized: Masculino / Femenino)
+- `turno` → `work_schedule` (normalized: Fijo diurno / Nocturno / Rotativo)
+- `tipo_contrato` → `contract_type` (normalized: Tiempo indeterminado, Confianza, etc)
+- `areas` → `department` (numeric area code)
+- `puestos` → `position` (numeric position code)
+- `questions` → `extra_fields['questions']` (stored as JSON)
+
 ## Implementation Details
 
 ### Models
@@ -165,22 +197,29 @@ $demo = $evaluation->demographicData; // Access normalized data
 
 When processing paper-based evaluations:
 
-1. **Automatic Structure Detection** (`isNewStructure()`):
-   - Checks for `datos_laborales` key
+1. **Automatic Structure Detection** (`extractDemographicInfo()`):
+   - Checks for `questions` key → Likert format
+   - Checks for `datos_laborales` key → New nested format
+   - Falls back to old OCR format
    - Routes to appropriate extraction method
 
-2. **New Format Extraction** (`extractFromNewStructure()`):
+2. **Likert Format Extraction** (`extractFromLikert()`):
+   - Extracts gender, work schedule, contract type, areas, and puestos
+   - Normalizes enum values (gender, work schedule, contract type)
+   - Stores all questions in `extra_fields['questions']` JSON
+
+3. **New Format Extraction** (`extractFromNewStructure()`):
    - Directly maps nested labor data to English columns
    - Extracts education from `experiencia` sub-object
    - Converts enum values to proper format
 
-3. **Old OCR Format Extraction** (`extractFromOldStructure()`):
+4. **Old OCR Format Extraction** (`extractFromOldStructure()`):
    - Extracts values from `fila1`/`fila2` fields
    - Converts numeric age (`decenas` + `unidades`) to range format
    - Handles education with `completado` flag
    - Normalizes all enum values
 
-4. **Normalization Helpers**:
+5. **Normalization Helpers**:
    - `convertAgeToRange()` - Converts age number to range string
    - `normalizePosicionType()` - Maps position types
    - `normalizeContractType()` - Maps contract types
@@ -226,6 +265,51 @@ php artisan demographic-data:migrate --force
   - Migrated: 58 (old OCR format)
   - Migrated: 2 (new nested format)
   - Skipped: 0 (all processed)
+```
+
+### Integration with Likert Scale Evaluations
+
+When processing Likert workplace climate evaluations (evaluation type 05):
+
+1. **Data Capture**: Likert data includes demographic information along with 23 climate questions
+2. **Storage**: Data stored in `likert_answers` JSON field with structure:
+   ```json
+   {
+     "questions": {...},
+     "genero": "...",
+     "turno": "...",
+     "tipo_contrato": "...",
+     "areas": "...",
+     "puestos": "..."
+   }
+   ```
+3. **Extraction**: `ProcessPaperEvaluation` job detects Likert structure by presence of `questions` key
+4. **Normalization**: `extractFromLikert()` method normalizes enum values and maps fields to DemographicData table
+5. **Result**: Demographics from Likert evaluations are stored alongside Referencia V data in the same normalized table
+
+**Example Likert Demographic Extraction**:
+```php
+// Likert input
+{
+    "areas": 1,
+    "turno": "nocturno",
+    "genero": "masculino",
+    "puestos": 1,
+    "tipo_contrato": "confianza",
+    "questions": {...}
+}
+
+// Normalized output in DemographicData
+{
+    "gender": "Masculino",
+    "work_schedule": "Nocturno",
+    "contract_type": "Confianza",
+    "department": 1,
+    "position": 1,
+    "extra_fields": {
+        "questions": {...}
+    }
+}
 ```
 
 
