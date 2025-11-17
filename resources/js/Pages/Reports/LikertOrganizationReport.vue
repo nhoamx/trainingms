@@ -231,31 +231,7 @@
               <div class="mb-6">
                 <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Nivel (%)</h4>
                 <div class="bg-gray-50 rounded-lg p-4">
-                  <canvas :ref="`pieChart-${activeTab}`"></canvas>
-                </div>
-              </div>
-
-              <!-- Lista de Preguntas con Calificación Promedio -->
-              <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Preguntas (Score Promedio)</h4>
-                <div class="space-y-3">
-                  <div 
-                    v-for="(q, qNum) in filteredDimensions[activeTab].questions" 
-                    :key="qNum"
-                    class="bg-gray-50 rounded-lg p-4 border-l-4"
-                    :class="getQuestionBorderClass(q.score)"
-                  >
-                    <div class="flex justify-between items-start mb-2">
-                      <span class="text-xs font-semibold text-gray-500">Pregunta {{ qNum }}</span>
-                      <div class="flex items-center gap-2">
-                        <span class="text-lg font-bold text-blue-600">{{ q.score.toFixed(2) }}</span>
-                        <span class="px-2 py-1 rounded text-xs font-medium" :class="getScoreBadgeClass(q.score)">
-                          {{ getScoreLevel(q.score) }}
-                        </span>
-                      </div>
-                    </div>
-                    <p class="text-sm text-gray-700">{{ q.question }}</p>
-                  </div>
+                  <canvas :ref="el => dimensionChartRefs[activeTab] = el"></canvas>
                 </div>
               </div>
 
@@ -309,7 +285,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick, getCurrentInstance } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import Dashboard from '@/Layouts/Dashboard.vue'
 import { Chart, registerables } from 'chart.js'
 
@@ -377,6 +353,7 @@ const filters = ref({
 })
 
 const pieChartTotal = ref(null)
+const dimensionChartRefs = ref({})
 const chartInstances = ref({})
 
 // Helper functions to get names
@@ -711,8 +688,7 @@ const renderCharts = () => {
 
     // Dimension-specific pie charts - Distribution by level for each dimension
     Object.keys(filteredDimensions.value).forEach(dimensionName => {
-      const refKey = `pieChart-${dimensionName}`
-      const canvasRef = getCurrentInstance()?.refs[refKey]
+      const canvasRef = dimensionChartRefs.value[dimensionName]
       if (canvasRef && canvasRef instanceof HTMLCanvasElement) {
         const dimension = filteredDimensions.value[dimensionName]
         const distribution = dimension.distribution
