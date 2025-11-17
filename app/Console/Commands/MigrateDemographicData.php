@@ -79,17 +79,17 @@ class MigrateDemographicData extends Command
                         'paper_evaluation_id' => $evaluation->id,
                         'gender' => $demographicInfo['gender'] ?? null,
                         'age' => $demographicInfo['age'] ?? null,
-                        'estado_civil' => $demographicInfo['estado_civil'] ?? null,
-                        'nivel_estudios' => $demographicInfo['nivel_estudios'] ?? null,
-                        'puesto' => $demographicInfo['puesto'] ?? null,
-                        'area' => $demographicInfo['area'] ?? null,
-                        'tipo_puesto' => $demographicInfo['tipo_puesto'] ?? null,
-                        'tipo_contratacion' => $demographicInfo['tipo_contratacion'] ?? null,
-                        'tipo_personal' => $demographicInfo['tipo_personal'] ?? null,
-                        'tipo_jornada' => $demographicInfo['tipo_jornada'] ?? null,
-                        'rotacion_turnos' => $demographicInfo['rotacion_turnos'] ?? null,
-                        'tiempo_puesto_actual' => $demographicInfo['tiempo_puesto_actual'] ?? null,
-                        'tiempo_experiencia_laboral' => $demographicInfo['tiempo_experiencia_laboral'] ?? null,
+                        'marital_status' => $demographicInfo['marital_status'] ?? null,
+                        'education_level' => $demographicInfo['education_level'] ?? null,
+                        'position' => $demographicInfo['position'] ?? null,
+                        'department' => $demographicInfo['department'] ?? null,
+                        'position_type' => $demographicInfo['position_type'] ?? null,
+                        'contract_type' => $demographicInfo['contract_type'] ?? null,
+                        'personnel_type' => $demographicInfo['personnel_type'] ?? null,
+                        'work_schedule' => $demographicInfo['work_schedule'] ?? null,
+                        'shift_rotation' => $demographicInfo['shift_rotation'] ?? null,
+                        'time_in_current_position' => $demographicInfo['time_in_current_position'] ?? null,
+                        'work_experience' => $demographicInfo['work_experience'] ?? null,
                         'extra_fields' => $demographicInfo['extra_fields'] ?? null,
                     ]);
 
@@ -120,43 +120,303 @@ class MigrateDemographicData extends Command
 
     /**
      * Extract demographic information from the JSON data
+     * Handles both new nested structure (datos_laborales) and old OCR structure
      */
     private function extractDemographicInfo(array $demographicData): array
     {
-        $info = [
-            'gender' => $demographicData['genero'] ?? null,
+        // Determine which structure we're dealing with
+        if ($this->isNewStructure($demographicData)) {
+            return $this->extractFromNewStructure($demographicData);
+        } else {
+            return $this->extractFromOldStructure($demographicData);
+        }
+    }
+
+    /**
+     * Check if using new nested structure (datos_laborales)
+     */
+    private function isNewStructure(array $data): bool
+    {
+        return isset($data['datos_laborales']) && is_array($data['datos_laborales']);
+    }
+
+    /**
+     * Extract from new nested structure (datos_laborales)
+     */
+    private function extractFromNewStructure(array $demographicData): array
+    {
+        $laboralData = $demographicData['datos_laborales'] ?? [];
+        $experiencia = $laboralData['experiencia'] ?? [];
+
+        return [
+            'gender' => $demographicData['sexo'] ?? null,
             'age' => $demographicData['edad'] ?? null,
             'marital_status' => $demographicData['estado_civil'] ?? null,
             'education_level' => $demographicData['nivel_estudios'] ?? null,
-            'position' => $demographicData['ocupacion_puesto'] ?? null,
-            'department' => $demographicData['departamento_seccion_area'] ?? null,
-            'position_type' => $demographicData['tipo_puesto'] ?? null,
-            'contract_type' => $demographicData['tipo_contratacion'] ?? null,
-            'personnel_type' => $demographicData['tipo_personal'] ?? null,
-            'work_schedule' => $demographicData['tipo_jornada'] ?? null,
-            'shift_rotation' => $demographicData['rotacion_turnos'] ?? null,
-            'time_in_current_position' => $demographicData['tiempo_puesto_actual'] ?? null,
-            'work_experience' => $demographicData['tiempo_experiencia_laboral'] ?? null,
+            'position' => $laboralData['ocupacion_puesto'] ?? null,
+            'department' => $laboralData['departamento_seccion_area'] ?? null,
+            'position_type' => $laboralData['tipo_puesto'] ?? null,
+            'contract_type' => $laboralData['tipo_contratacion'] ?? null,
+            'personnel_type' => $laboralData['tipo_personal'] ?? null,
+            'work_schedule' => $laboralData['tipo_jornada'] ?? null,
+            'shift_rotation' => $laboralData['rotacion_turnos'] ?? null,
+            'time_in_current_position' => $experiencia['tiempo_puesto_actual'] ?? null,
+            'work_experience' => $experiencia['tiempo_experiencia_laboral'] ?? null,
+        ];
+    }
+
+    /**
+     * Extract from old OCR structure
+     */
+    private function extractFromOldStructure(array $demographicData): array
+    {
+        // Build age from decenas/unidades if available
+        $age = null;
+        if (isset($demographicData['edad']) && is_array($demographicData['edad'])) {
+            $decenas = $demographicData['edad']['decenas'] ?? 0;
+            $unidades = $demographicData['edad']['unidades'] ?? 0;
+            $ageValue = ($decenas * 10) + $unidades;
+            // Convert numeric age to range format
+            $age = $this->convertAgeToRange($ageValue);
+        } elseif (is_string($demographicData['edad'] ?? null)) {
+            $age = $demographicData['edad'];
+        }
+
+        // Extract from fila1 if value is array
+        $position = $this->extractFromObject($demographicData['ocupacion_puesto'] ?? null);
+        $department = $this->extractFromObject($demographicData['departamento_seccion_area'] ?? null);
+
+        // Normalize field values (convert underscores to proper format)
+        $sexo = $demographicData['sexo'] ?? null;
+        $sexo = $this->normalizeValue($sexo, ['masculino' => 'Masculino', 'femenino' => 'Femenino']);
+
+        $estadoCivil = $demographicData['estado_civil'] ?? null;
+        $estadoCivil = $this->normalizeValue($estadoCivil, [
+            'soltero' => 'Soltero',
+            'casado' => 'Casado',
+            'union_libre' => 'Unión libre',
+            'divorciado' => 'Divorciado',
+            'viudo' => 'Viudo',
+        ]);
+
+        $nivelEstudios = $this->extractEducationLevel($demographicData['nivel_estudios'] ?? null);
+
+        return [
+            'gender' => $sexo,
+            'age' => $age,
+            'marital_status' => $estadoCivil,
+            'education_level' => $nivelEstudios,
+            'position' => $position,
+            'department' => $department,
+            'position_type' => $this->normalizePosicionType($demographicData['tipo_puesto'] ?? null),
+            'contract_type' => $this->normalizeContractType($demographicData['tipo_contratacion'] ?? null),
+            'personnel_type' => $this->normalizePersonnelType($demographicData['tipo_personal'] ?? null),
+            'work_schedule' => $this->normalizeWorkSchedule($demographicData['tipo_jornada'] ?? null),
+            'shift_rotation' => $this->normalizeYesNo($demographicData['rotacion_turnos'] ?? null),
+            'time_in_current_position' => $this->normalizeExperience($demographicData['tiempo_puesto_actual'] ?? null),
+            'work_experience' => $this->normalizeExperience($demographicData['tiempo_experiencia_laboral'] ?? null),
+        ];
+    }
+
+    /**
+     * Extract value from object (fila1 or direct value)
+     */
+    private function extractFromObject($value): ?string
+    {
+        if (is_array($value) && isset($value['fila1'])) {
+            return $value['fila1'] ?: null;
+        }
+
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * Convert numeric age to age range format
+     */
+    private function convertAgeToRange(int $age): string
+    {
+        if ($age < 15) {
+            return '15 - 19';
+        }
+        if ($age <= 19) {
+            return '15 - 19';
+        }
+        if ($age <= 24) {
+            return '20 - 24';
+        }
+        if ($age <= 29) {
+            return '25 - 29';
+        }
+        if ($age <= 34) {
+            return '30 - 34';
+        }
+        if ($age <= 39) {
+            return '35 - 39';
+        }
+        if ($age <= 44) {
+            return '40 - 44';
+        }
+        if ($age <= 49) {
+            return '45 - 49';
+        }
+        if ($age <= 54) {
+            return '50 - 54';
+        }
+        if ($age <= 59) {
+            return '55 - 59';
+        }
+        if ($age <= 64) {
+            return '60 - 64';
+        }
+        if ($age <= 69) {
+            return '65 - 69';
+        }
+
+        return '70 o más';
+    }
+
+    /**
+     * Normalize position type
+     */
+    private function normalizePosicionType(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $map = [
+            'operativo' => 'Operativo',
+            'profesional_o_tecnico' => 'Profesional o técnico',
+            'supervisor' => 'Supervisor',
+            'gerente' => 'Gerente',
         ];
 
-        // Store any extra fields in the extra_fields JSON column
-        $knownFields = [
-            'genero', 'edad', 'estado_civil', 'nivel_estudios', 'ocupacion_puesto',
-            'departamento_seccion_area', 'tipo_puesto', 'tipo_contratacion', 'tipo_personal',
-            'tipo_jornada', 'rotacion_turnos', 'tiempo_puesto_actual', 'tiempo_experiencia_laboral',
+        return $map[strtolower($value)] ?? $value;
+    }
+
+    /**
+     * Normalize contract type
+     */
+    private function normalizeContractType(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $map = [
+            'por_obra_o_proyecto' => 'Por obra o proyecto',
+            'por_tiempo_determinado_temporal' => 'Por tiempo determinado (temporal)',
+            'tiempo_indeterminado' => 'Tiempo indeterminado',
+            'honorarios' => 'Honorarios',
         ];
 
-        $extraFields = [];
-        foreach ($demographicData as $key => $value) {
-            if (! in_array($key, $knownFields)) {
-                $extraFields[$key] = $value;
+        return $map[strtolower($value)] ?? $value;
+    }
+
+    /**
+     * Normalize personnel type
+     */
+    private function normalizePersonnelType(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $map = [
+            'sindicalizado' => 'Sindicalizado',
+            'confianza' => 'Confianza',
+            'ninguno' => 'Ninguno',
+        ];
+
+        return $map[strtolower($value)] ?? $value;
+    }
+
+    /**
+     * Normalize work schedule
+     */
+    private function normalizeWorkSchedule(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $map = [
+            'fijo_nocturno_(entre_las_20:00_y_6:00_hrs)' => 'Fijo nocturno (entre las 20:00 y 6:00 hrs)',
+            'fijo_diurno_(entre_las_6:00_y_20:00_hrs)' => 'Fijo diurno (entre las 6:00 y 20:00 hrs)',
+            'fijo_mixto_(combinacion_de_nocturno_y_diurno)' => 'Fijo mixto (combinación de nocturno y diurno)',
+        ];
+
+        return $map[strtolower($value)] ?? $value;
+    }
+
+    /**
+     * Normalize yes/no values
+     */
+    private function normalizeYesNo(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        return match (strtolower($value)) {
+            'si', 'yes', 'true' => 'Sí',
+            'no', 'false' => 'No',
+            default => $value,
+        };
+    }
+
+    /**
+     * Normalize experience/time ranges
+     */
+    private function normalizeExperience(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $map = [
+            'menos_de_6_meses' => 'Menos de 6 meses',
+            'entre_6_meses_y_1_ano' => 'Entre 6 meses y 1 año',
+            'entre_1_a_4_anos' => 'Entre 1 a 4 años',
+            'entre_5_a_9_anos' => 'Entre 5 a 9 años',
+            'entre_10_a_14_anos' => 'Entre 10 a 14 años',
+            'entre_15_a_19_anos' => 'Entre 15 a 19 años',
+            'entre_20_a_24_anos' => 'Entre 20 a 24 años',
+            '25_anos_o_mas' => '25 años o más',
+        ];
+
+        return $map[strtolower($value)] ?? $value;
+    }
+
+    /**
+     * Extract education level from nested structure
+     */
+    private function extractEducationLevel($value): ?string
+    {
+        if (is_array($value)) {
+            // Old OCR structure with nested education
+            foreach ($value as $key => $item) {
+                if (is_array($item) && isset($item['seleccionado']) && $item['seleccionado']) {
+                    $completado = $item['completado'] ?? 'Terminada';
+                    $level = empty($key) ? 'Desconocido' : ucfirst(str_replace('_', ' ', $key));
+
+                    return $level.' - '.ucfirst(str_replace('_', ' ', $completado));
+                }
             }
         }
 
-        if (! empty($extraFields)) {
-            $info['extra_fields'] = $extraFields;
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * Normalize generic values
+     */
+    private function normalizeValue(?string $value, array $map): ?string
+    {
+        if (! $value) {
+            return null;
         }
 
-        return $info;
+        return $map[strtolower($value)] ?? $value;
     }
 }
