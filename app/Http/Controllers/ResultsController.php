@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\EvaluationTemplateExport;
 use App\Imports\EvaluationBulkUpdateImport;
 use App\Models\Category;
+use App\Models\DemographicData;
 use App\Models\Evaluation;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
@@ -40,7 +41,7 @@ class ResultsController extends Controller
             return Inertia::render('Reports/LikertOrganizationReport', [
                 'organizationId' => $organization->id,
                 'organizationName' => $organization->name,
-                'title' => 'Reporte Likert',
+                'title' => 'Reporte Clima Laboral',
                 'evaluations' => [],
                 'demographics' => [
                     'generos' => [],
@@ -68,11 +69,12 @@ class ResultsController extends Controller
         // Process all evaluations
         $evaluationsData = [];
         foreach ($likertEvaluations as $evaluation) {
-            $likertAnswers = $evaluation->likert_answers;
-            $questions = $likertAnswers['questions'] ?? [];
-            $demographics = $likertAnswers;
+            $questions = $evaluation->likert_answers['questions'] ?? [];
 
-            // Collect demographic values
+            // Get demographic data from DemographicData model (with fallback to likert_answers)
+            $demographics = $this->likertScoreService->getDemographicData($evaluation);
+
+            // Collect demographic values (already formatted in Spanish from getDemographicData)
             if (isset($demographics['genero'])) {
                 $generos[$demographics['genero']] = true;
             }
@@ -100,20 +102,62 @@ class ResultsController extends Controller
                     'tipo_contrato' => $demographics['tipo_contrato'] ?? null,
                     'puesto' => $demographics['puesto'] ?? null,
                     'area' => $demographics['area'] ?? null,
+                    'turno' => $demographics['turno'] ?? null,
                 ],
                 'scores' => $scores,
                 'answers' => $questions,
             ];
         }
 
-        // Build dimension summaries (aggregated across all evaluations)
+        // Calculate distribution of people by Clima Laboral level
+        $climaLaboralDistribution = [
+            'Totalmente de Acuerdo' => 0,
+            'De Acuerdo' => 0,
+            'Desacuerdo' => 0,
+            'Totalmente Desacuerdo' => 0,
+        ];
+
+        foreach ($evaluationsData as $evalData) {
+            $totalScore = $evalData['scores']['total_score'];
+            $interpretation = $evalData['scores']['interpretation'];
+            if ($interpretation) {
+                $climaLaboralDistribution[$interpretation] = ($climaLaboralDistribution[$interpretation] ?? 0) + 1;
+            }
+        }
+
+        // Build dimension summaries (count people by level for each dimension)
         $dimensionSummaries = [];
         foreach ($niveles as $dimensionName => $dimensionConfig) {
             $questionNumbers = $dimensionConfig['preguntas'];
-            $totalScore = 0;
             $questionCount = count($questionNumbers);
             $questionScores = [];
 
+            // Distribution of people by level for this dimension
+            $dimensionDistribution = [
+                'Totalmente de Acuerdo' => 0,
+                'De Acuerdo' => 0,
+                'Desacuerdo' => 0,
+                'Totalmente Desacuerdo' => 0,
+            ];
+
+            // Calculate score for each person in this dimension
+            foreach ($evaluationsData as $evalData) {
+                $personScore = 0;
+                foreach ($questionNumbers as $qNum) {
+                    $answer = $evalData['answers'][$qNum] ?? null;
+                    if ($answer) {
+                        $personScore += $valorOpciones[$answer] ?? 0;
+                    }
+                }
+
+                // Get interpretation for this person's dimension score
+                $interpretation = $this->getInterpretation($personScore, $config['valorNiveles'][$dimensionName]);
+                if ($interpretation) {
+                    $dimensionDistribution[$interpretation] = ($dimensionDistribution[$interpretation] ?? 0) + 1;
+                }
+            }
+
+            // Calculate average scores per question for display
             foreach ($questionNumbers as $qNum) {
                 $qScore = 0;
                 $qCount = 0;
@@ -129,27 +173,20 @@ class ResultsController extends Controller
                     'question' => $preguntas[$qNum] ?? "Pregunta {$qNum}",
                     'score' => round($avgScore, 2),
                 ];
-                $totalScore += $avgScore;
             }
 
             $dimensionSummaries[$dimensionName] = [
                 'name' => $dimensionName,
-                'score' => round($totalScore, 2),
+                'distribution' => $dimensionDistribution,
                 'questionCount' => $questionCount,
                 'questions' => $questionScores,
             ];
         }
 
-        // Compute overall total score
-        $overallTotal = 0;
-        foreach ($dimensionSummaries as $dim) {
-            $overallTotal += $dim['score'];
-        }
-
         return Inertia::render('Reports/LikertOrganizationReport', [
             'organizationId' => $organization->id,
             'organizationName' => $organization->name,
-            'title' => 'Reporte Likert - '.$organization->name,
+            'title' => 'Clima Laboral - '.$organization->name,
             'evaluations' => $evaluationsData,
             'demographics' => [
                 'generos' => array_keys($generos),
@@ -160,8 +197,8 @@ class ResultsController extends Controller
             'puestosMap' => $config['puestos'],
             'areasMap' => $config['areas'],
             'dimensions' => $dimensionSummaries,
-            'totalScore' => round($overallTotal, 2),
-            'totalInterpretation' => $this->getInterpretation($overallTotal, $config['valorNiveles']['Clima Laboral']),
+            'climaLaboralDistribution' => $climaLaboralDistribution,
+            'totalPeople' => count($evaluationsData),
         ]);
     }
 
@@ -433,6 +470,22 @@ class ResultsController extends Controller
                     'missing_data' => $missingData,
                     // Include demographic_data for filtering (gender, age, etc.)
                     'demographic_data' => $referenciaV?->demographic_data,
+                    // Include Likert demographic data from DemographicData model if available
+                    'likert_demographic_data' => $likert?->demographicData ? [
+                        'gender' => $likert->demographicData->gender,
+                        'age' => $likert->demographicData->age,
+                        'marital_status' => $likert->demographicData->marital_status,
+                        'education_level' => $likert->demographicData->education_level,
+                        'position' => $likert->demographicData->position,
+                        'department' => $likert->demographicData->department,
+                        'position_type' => $likert->demographicData->position_type,
+                        'contract_type' => $likert->demographicData->contract_type,
+                        'personnel_type' => $likert->demographicData->personnel_type,
+                        'work_schedule' => $likert->demographicData->work_schedule,
+                        'shift_rotation' => $likert->demographicData->shift_rotation,
+                        'time_in_current_position' => $likert->demographicData->time_in_current_position,
+                        'work_experience' => $likert->demographicData->work_experience,
+                    ] : null,
                     'evaluations' => $evaluations->map(function ($eval) {
                         return [
                             'id' => $eval->id,
@@ -825,6 +878,48 @@ class ResultsController extends Controller
         $values = config('likert-value.valorOpciones');
 
         return $values[$answer] ?? null;
+    }
+
+    /**
+     * Update Likert demographic data and evaluee name
+     */
+    public function updateLikertDemographicData(Organization $organization, string $personalFolio, Request $request)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        // Get Likert evaluation
+        $likert = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('personal_folio', $personalFolio)
+            ->where('evaluation_type', 'likert')
+            ->where('processing_status', 'completed')
+            ->firstOrFail();
+
+        // Update evaluee name if provided
+        if ($request->filled('evaluee_name')) {
+            $likert->update(['evaluee_name' => $request->input('evaluee_name')]);
+        }
+
+        // Update or create DemographicData
+        $demographicData = $likert->demographicData ?? new DemographicData;
+
+        $demographicData->fill([
+            'gender' => $request->input('gender'),
+            'work_schedule' => $request->input('work_schedule'),
+            'contract_type' => $request->input('contract_type'),
+            'position' => $request->input('position'),
+            'department' => $request->input('department'),
+        ]);
+
+        if (! $demographicData->paper_evaluation_id) {
+            $demographicData->paper_evaluation_id = $likert->id;
+        }
+
+        $demographicData->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Datos demográficos actualizados correctamente',
+        ]);
     }
 
     /**
