@@ -190,6 +190,11 @@ Route::middleware(['auth'])->group(function () {
         ->name('organization.results.likert.update')
         ->middleware('can:view-organization-results,organization');
 
+    // Update Likert answers (edit responses UI)
+    Route::post('/organizacion/{organization}/resultados/{personalFolio}/likert/answers', [ResultsController::class, 'updateLikertAnswers'])
+        ->name('organization.results.likert.update-answers')
+        ->middleware('can:view-organization-results,organization');
+
     // Bulk update routes
     Route::get('/organizacion/{organization}/plantilla-actualizacion', [ResultsController::class, 'downloadTemplate'])
         ->name('organization.results.template')

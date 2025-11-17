@@ -345,18 +345,42 @@ class ResultsController extends Controller
                         }
                     }
 
-                    // Check demographic fields
-                    $likertFields = [
-                        'genero' => 'Género',
-                        'turno' => 'Turno',
-                        'tipo_contrato' => 'Tipo de Contrato',
-                        'puestos' => 'Puesto',
-                        'areas' => 'Área',
+                    // Check demographic fields, preferring normalized DemographicData model values
+                    $demoModel = $likert->demographicData; // App\Models\DemographicData or null
+
+                    $checks = [
+                        [
+                            'label' => 'Género',
+                            'model' => $demoModel?->gender,
+                            'json' => $likertData['genero'] ?? null,
+                        ],
+                        [
+                            'label' => 'Turno',
+                            'model' => $demoModel?->work_schedule,
+                            'json' => $likertData['turno'] ?? null,
+                        ],
+                        [
+                            'label' => 'Tipo de Contrato',
+                            'model' => $demoModel?->contract_type,
+                            'json' => $likertData['tipo_contrato'] ?? null,
+                        ],
+                        [
+                            'label' => 'Puesto',
+                            'model' => $demoModel?->position,
+                            'json' => $likertData['puestos'] ?? null,
+                        ],
+                        [
+                            'label' => 'Área',
+                            'model' => $demoModel?->department,
+                            'json' => $likertData['areas'] ?? null,
+                        ],
                     ];
 
-                    foreach ($likertFields as $field => $label) {
-                        if (! isset($likertData[$field]) || $likertData[$field] === null || $likertData[$field] === '') {
-                            $missingData[] = $label;
+                    foreach ($checks as $c) {
+                        $modelVal = is_string($c['model'] ?? null) ? trim($c['model']) : ($c['model'] ?? null);
+                        $jsonVal = is_string($c['json'] ?? null) ? trim($c['json']) : ($c['json'] ?? null);
+                        if (($modelVal === null || $modelVal === '') && ($jsonVal === null || $jsonVal === '')) {
+                            $missingData[] = $c['label'];
                         }
                     }
                 } elseif ($referenciaV) {
@@ -919,6 +943,58 @@ class ResultsController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Datos demográficos actualizados correctamente',
+        ]);
+    }
+
+    /**
+     * Update Likert answers stored in PaperEvaluation.likert_answers JSON
+     */
+    public function updateLikertAnswers(Organization $organization, string $personalFolio, Request $request)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        // Validate: answers must be an array of questionNumber => A|B|C|D|null
+        $validated = $request->validate([
+            'answers' => ['required', 'array'],
+        ]);
+
+        // Find Likert evaluation for this person
+        $likert = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('personal_folio', $personalFolio)
+            ->where('evaluation_type', 'likert')
+            ->where('processing_status', 'completed')
+            ->firstOrFail();
+
+        // Current likert_answers structure
+        $likertAnswers = $likert->likert_answers ?? [];
+        $questions = $likertAnswers['questions'] ?? [];
+
+        // Sanitize and apply updates (only allow A/B/C/D or null/empty)
+        foreach ($validated['answers'] as $q => $val) {
+            $qNum = (string) (int) $q; // normalize keys to string numbers
+            if ($val === null || $val === '') {
+                $questions[$qNum] = null;
+
+                continue;
+            }
+            $v = strtoupper(trim((string) $val));
+            if (in_array($v, ['A', 'B', 'C', 'D'], true)) {
+                $questions[$qNum] = $v;
+            }
+        }
+
+        // Persist back preserving other fields in likert_answers
+        $likertAnswers['questions'] = $questions;
+        $likert->likert_answers = $likertAnswers;
+        $likert->save();
+
+        // Optionally return recalculated scores for instant UI feedback
+        $scores = $this->likertScoreService->calculateLikertScores($likert);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Respuestas actualizadas correctamente',
+            'scores' => $scores,
         ]);
     }
 

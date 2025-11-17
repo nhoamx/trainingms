@@ -122,12 +122,21 @@
                         </svg>
                         Editar Datos
                     </button>
+                    <button
+                        @click="openAnswersModal()"
+                        class="ml-3 inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Editar Respuestas
+                    </button>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Total Score -->
+                    <!-- Total Score (Clima Laboral) -->
                     <div class="p-6 rounded-lg border-2" :class="getClimaLaboralBgClass(scores.total_score)">
-                        <h3 class="text-lg font-semibold mb-2" :class="getClimaLaboralTextClass(scores.total_score)">Calificación Final</h3>
+                        <h3 class="text-lg font-semibold mb-2" :class="getClimaLaboralTextClass(scores.total_score)">Clima Laboral</h3>
                         <div class="text-5xl font-bold mb-2" :class="getClimaLaboralTextClass(scores.total_score)">
                             {{ scores.total_score }}
                         </div>
@@ -405,6 +414,67 @@
             </div>
         </div>
     </div>
+    
+        <!-- Edit Answers Modal -->
+        <div v-if="showAnswersModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click="showAnswersModal = false">
+            <div class="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden" @click.stop>
+                <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                    <h3 class="text-xl font-bold text-gray-900">Editar Respuestas (A/B/C/D)</h3>
+                    <button @click="showAnswersModal = false" class="text-gray-500 hover:text-gray-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4 overflow-auto">
+                    <div class="flex justify-end mb-2">
+                        <button @click="setAllBlank" type="button" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded">Limpiar todas</button>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div v-for="q in questions" :key="q.number" class="border rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">P{{ q.number }}</span>
+                                <span class="text-xs text-gray-500">{{ q.dimension }}</span>
+                            </div>
+                            <div class="text-sm text-gray-800 mb-3">{{ q.text }}</div>
+                            <div class="flex items-center gap-3 flex-wrap">
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="radio" :name="`q-${q.number}`" value="A" v-model="editableAnswers[q.number]" />
+                                    <span class="px-2 py-1 rounded bg-blue-100 text-blue-700 font-semibold">A</span>
+                                    <span class="text-xs text-gray-600">Totalmente de acuerdo</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="radio" :name="`q-${q.number}`" value="B" v-model="editableAnswers[q.number]" />
+                                    <span class="px-2 py-1 rounded bg-green-100 text-green-700 font-semibold">B</span>
+                                    <span class="text-xs text-gray-600">De acuerdo</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="radio" :name="`q-${q.number}`" value="C" v-model="editableAnswers[q.number]" />
+                                    <span class="px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold">C</span>
+                                    <span class="text-xs text-gray-600">En desacuerdo</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="radio" :name="`q-${q.number}`" value="D" v-model="editableAnswers[q.number]" />
+                                    <span class="px-2 py-1 rounded bg-red-100 text-red-700 font-semibold">D</span>
+                                    <span class="text-xs text-gray-600">Totalmente en desacuerdo</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="radio" :name="`q-${q.number}`" value="" v-model="editableAnswers[q.number]" />
+                                    <span class="px-2 py-1 rounded bg-gray-100 text-gray-700 font-semibold">Vaciar</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
+                    <button type="button" @click="showAnswersModal = false" class="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200">Cancelar</button>
+                    <button type="button" :disabled="answersSubmitting" @click="saveAnswers" class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:bg-emerald-400">
+                        <span v-if="!answersSubmitting">Guardar Respuestas</span>
+                        <span v-else>Guardando...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
 </template>
 
 <script setup>
@@ -425,12 +495,16 @@ const props = defineProps({
 const showImageModal = ref(false)
 const showEditModal = ref(false)
 const isSubmitting = ref(false)
+const showAnswersModal = ref(false)
+const answersSubmitting = ref(false)
+const editableAnswers = ref({})
 
 const formData = ref({
     evaluee_name: props.evaluation?.evaluee_name || '',
-    gender: props.demographic?.genero || '',
-    work_schedule: props.demographic?.turno || '',
-    contract_type: props.demographic?.tipo_contrato || '',
+    // Initialize with normalized codes expected by backend
+    gender: null,
+    work_schedule: null,
+    contract_type: null,
     position: props.demographic?.puesto || '',
     department: props.demographic?.area || '',
 })
@@ -484,6 +558,61 @@ const formatDemographic = (field, value) => {
     
     return value
 }
+
+// Reverse mappers: Spanish label/value -> normalized code used in DemographicData
+const mapGenderToCode = (value) => {
+    if (!value) return ''
+    const v = String(value).toLowerCase()
+    if (v === 'masculino' || v === 'male' || v === 'm') return 'male'
+    if (v === 'femenino' || v === 'female' || v === 'f') return 'female'
+    return ''
+}
+
+const mapShiftToCode = (value) => {
+    if (!value) return ''
+    const v = String(value).toLowerCase().replace(/\s+/g, '_')
+    const map = {
+        'matutino': 'morning',
+        'vespertino': 'afternoon',
+        'nocturno': 'night',
+        'matutino-vespertino': 'morning_afternoon',
+        'vespertino-nocturno': 'afternoon_night',
+        'rotativo': 'rotating',
+        // Already-coded values should pass through
+        'morning': 'morning',
+        'afternoon': 'afternoon',
+        'night': 'night',
+        'morning_afternoon': 'morning_afternoon',
+        'afternoon_night': 'afternoon_night',
+        'rotating': 'rotating',
+    }
+    return map[v] || ''
+}
+
+const mapContractToCode = (value) => {
+    if (!value) return ''
+    const v = String(value).toLowerCase().replace(/\s+/g, '_')
+    const map = {
+        'tiempo_indeterminado': 'permanent',
+        'por_tiempo_determinado': 'fixed_term',
+        'por_obra_o_proyecto': 'project_based',
+        'honorarios': 'honorarios',
+        'confianza': 'confidence',
+        'sindicalizado': 'unionized',
+        // Already-coded values should pass through
+        'permanent': 'permanent',
+        'fixed_term': 'fixed_term',
+        'project_based': 'project_based',
+        'confidence': 'confidence',
+        'unionized': 'unionized',
+    }
+    return map[v] || ''
+}
+
+// Initialize select fields with normalized codes derived from incoming demographic labels
+formData.value.gender = mapGenderToCode(props.demographic?.genero)
+formData.value.work_schedule = mapShiftToCode(props.demographic?.turno)
+formData.value.contract_type = mapContractToCode(props.demographic?.tipo_contrato)
 
 // Helper: Get standardized color for answer value
 // Standardized colors: 4 (A) = Azul cielo, 3 (B) = Verde, 2 (C) = Amarillo, 1 (D) = Rojo
@@ -610,6 +739,14 @@ const submitForm = async () => {
     isSubmitting.value = true
     
     try {
+        // Ensure payload uses normalized codes
+        const payload = {
+            ...formData.value,
+            gender: mapGenderToCode(formData.value.gender) || formData.value.gender || '',
+            work_schedule: mapShiftToCode(formData.value.work_schedule) || formData.value.work_schedule || '',
+            contract_type: mapContractToCode(formData.value.contract_type) || formData.value.contract_type || '',
+        }
+
         const response = await fetch(
             `/organizacion/${props.organization.id}/resultados/${props.personalFolio}/likert/update`,
             {
@@ -618,7 +755,7 @@ const submitForm = async () => {
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content,
                 },
-                body: JSON.stringify(formData.value),
+                body: JSON.stringify(payload),
             }
         )
 
@@ -635,6 +772,52 @@ const submitForm = async () => {
         alert('Error al guardar los datos: ' + error.message)
     } finally {
         isSubmitting.value = false
+    }
+}
+
+// ===== Edit Answers Modal logic =====
+const openAnswersModal = () => {
+    // Initialize editable answers from current props.questions
+    const map = {}
+    for (const q of props.questions || []) {
+        map[q.number] = q.answer || ''
+    }
+    editableAnswers.value = map
+    showAnswersModal.value = true
+}
+
+const setAllBlank = () => {
+    const map = { ...editableAnswers.value }
+    Object.keys(map).forEach((k) => { map[k] = '' })
+    editableAnswers.value = map
+}
+
+const saveAnswers = async () => {
+    answersSubmitting.value = true
+    try {
+        const payload = { answers: editableAnswers.value }
+        const response = await fetch(
+            `/organizacion/${props.organization.id}/resultados/${props.personalFolio}/likert/answers`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content,
+                },
+                body: JSON.stringify(payload),
+            }
+        )
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}))
+            throw new Error(err.message || 'No se pudieron guardar las respuestas')
+        }
+        // Close modal and refresh to reflect recalculated scores and answers
+        showAnswersModal.value = false
+        window.location.reload()
+    } catch (e) {
+        alert(e.message)
+    } finally {
+        answersSubmitting.value = false
     }
 }
 </script>
