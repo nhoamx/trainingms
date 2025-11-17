@@ -14,6 +14,7 @@ use App\Services\LikertScoreService;
 use App\Services\PaperEvaluationScoreService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -1054,6 +1055,12 @@ class ResultsController extends Controller
     {
         $this->authorize('view-organization-results', $organization);
 
+        Log::info('=== BULK UPDATE REQUEST RECEIVED ===', [
+            'organization_id' => $organization->id,
+            'file_name' => $request->file('file')->getClientOriginalName(),
+            'file_size' => $request->file('file')->getSize()
+        ]);
+
         $request->validate([
             'file' => 'required|file|mimes:xlsx,xls|max:10240', // Max 10MB
         ]);
@@ -1066,6 +1073,12 @@ class ResultsController extends Controller
             $skippedCount = $import->getSkippedCount();
             $errors = $import->getErrors();
 
+            Log::info('=== BULK UPDATE COMPLETED ===', [
+                'updated' => $updatedCount,
+                'skipped' => $skippedCount,
+                'errors_count' => count($errors)
+            ]);
+
             // Preparar mensaje de respuesta
             $message = "Proceso completado: {$updatedCount} folios actualizados";
 
@@ -1075,10 +1088,11 @@ class ResultsController extends Controller
 
             // Si hay errores, incluirlos en la respuesta
             if (! empty($errors)) {
+                Log::warning('Bulk update had errors', ['errors' => $errors]);
                 return back()->with([
                     'success' => $updatedCount > 0,
                     'message' => $message,
-                    'bulk_update_errors' => $errors,
+                    'errors' => $errors,
                 ]);
             }
 
@@ -1094,12 +1108,22 @@ class ResultsController extends Controller
                 $errors[] = "Fila {$failure->row()}: ".implode(', ', $failure->errors());
             }
 
+            Log::error('Bulk update validation exception', [
+                'errors' => $errors,
+                'exception' => $e->getMessage()
+            ]);
+
             return back()->with([
                 'success' => false,
                 'message' => 'Error de validación en el archivo',
-                'bulk_update_errors' => $errors,
+                'errors' => $errors,
             ]);
         } catch (\Exception $e) {
+            Log::error('Bulk update general exception', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return back()->with([
                 'success' => false,
                 'message' => 'Error al procesar el archivo: '.$e->getMessage(),
