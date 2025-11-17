@@ -129,11 +129,37 @@
                 </div>
               </div>
 
-              <!-- Gráfica de Pastel - Distribución por Nivel de Clima Laboral -->
+              <!-- Distribución + Chart en 2 columnas (Total) -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Nivel de Satisfacción</h4>
-                <div class="bg-gray-50 rounded-lg p-4">
-                  <canvas ref="pieChartTotal"></canvas>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  <!-- Bloques de niveles (izquierda) -->
+                  <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="flex items-center justify-between mb-3">
+                      <div>
+                        <h4 class="text-md font-semibold text-gray-900">Distribución por nivel</h4>
+                        <div class="text-xs text-gray-500">{{ filteredTotalPeople }} {{ filteredTotalPeople === 1 ? 'persona' : 'personas' }}</div>
+                      </div>
+                    </div>
+                    <div class="flex flex-col gap-3">
+                      <button
+                        v-for="(count, level) in filteredClimaLaboralDistribution"
+                        :key="level"
+                        type="button"
+                        class="text-left px-4 py-3 rounded-lg shadow-sm transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2"
+                        :class="getLevelColor(level).bgSolid + ' ' + getLevelColor(level).text"
+                        @click="openFoliosModal(`Folios en ${level} (Clima Laboral)`, getFoliosForClimaLevel(level))"
+                      >
+                        <div class="text-2xl font-bold">{{ count }}</div>
+                        <div class="text-xs mt-1">{{ level }}</div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Gráfica (derecha) -->
+                  <div class="bg-gray-50 rounded-lg p-4 md:ml-auto w-full">
+                    <h4 class="text-md font-semibold text-gray-900 mb-4">Nivel de Satisfacción</h4>
+                    <canvas ref="pieChartTotal"></canvas>
+                  </div>
                 </div>
               </div>
 
@@ -266,7 +292,7 @@
 
                   <!-- Gráfica (derecha) -->
                   <div class="bg-gray-50 rounded-lg p-4 md:ml-auto w-full">
-                    <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Nivel (%)</h4>
+                    <h4 class="text-md font-semibold text-gray-900 mb-4">Nivel de Satisfacción</h4>
                     <canvas ref="dimensionChartCanvas"></canvas>
                   </div>
                 </div>
@@ -347,7 +373,7 @@
               <td class="py-2 pr-4 font-medium">{{ item.folio }}</td>
               <td class="py-2">{{ item.name || 'Sin nombre' }}</td>
               <td class="py-2">
-                <Link
+                <a
                   :href="route('organization.results.likert', { organization: organizationId, personalFolio: item.folio })"
                   target="_blank"
                   class="inline-flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -357,7 +383,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 3h7m0 0v7m0-7L10 14" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10v10a1 1 0 001 1h10" />
                   </svg>
-                </Link>
+                </a>
               </td>
             </tr>
           </tbody>
@@ -894,7 +920,7 @@ const renderCharts = () => {
           // Show folios by overall Clima Laboral interpretation
           const items = getFoliosForClimaLevel(levelLabel)
           openFoliosModal(`Folios en ${levelLabel} (Clima Laboral)`, items)
-        }, 'right')
+        }, 'bottom')
       }
     }
 
