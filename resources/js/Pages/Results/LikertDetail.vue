@@ -274,15 +274,47 @@ const formatDemographic = (field, value) => {
     if (!value) return 'No especificado'
     
     if (field === 'genero') {
-        return value.charAt(0).toUpperCase() + value.slice(1)
+        // Handle both Spanish and English values
+        const genderMap = {
+            'masculino': 'Masculino',
+            'femenino': 'Femenino',
+            'male': 'Masculino',
+            'female': 'Femenino'
+        }
+        return genderMap[value.toLowerCase()] || value
     }
     
     if (field === 'turno') {
-        return value.charAt(0).toUpperCase() + value.slice(1)
+        // Handle both Spanish and English values for shift/work schedule
+        const shiftMap = {
+            'matutino': 'Matutino',
+            'vespertino': 'Vespertino',
+            'nocturno': 'Nocturno',
+            'morning': 'Matutino',
+            'afternoon': 'Vespertino',
+            'night': 'Nocturno',
+            'morning_afternoon': 'Matutino-Vespertino',
+            'afternoon_night': 'Vespertino-Nocturno',
+            'rotating': 'Rotativo'
+        }
+        return shiftMap[value.toLowerCase()] || value
     }
     
     if (field === 'tipo_contrato') {
-        return value.charAt(0).toUpperCase() + value.slice(1)
+        // Handle both Spanish and English values for contract type
+        const contractMap = {
+            'por_obra_o_proyecto': 'Por obra o proyecto',
+            'por_tiempo_determinado': 'Por tiempo determinado',
+            'tiempo_indeterminado': 'Tiempo indeterminado',
+            'honorarios': 'Honorarios',
+            'confianza': 'Confianza',
+            'permanent': 'Tiempo indeterminado',
+            'fixed_term': 'Por tiempo determinado',
+            'project_based': 'Por obra o proyecto',
+            'confidence': 'Confianza',
+            'unionized': 'Sindicalizado'
+        }
+        return contractMap[value.toLowerCase()] || value
     }
     
     return value

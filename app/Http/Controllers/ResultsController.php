@@ -433,6 +433,22 @@ class ResultsController extends Controller
                     'missing_data' => $missingData,
                     // Include demographic_data for filtering (gender, age, etc.)
                     'demographic_data' => $referenciaV?->demographic_data,
+                    // Include Likert demographic data from DemographicData model if available
+                    'likert_demographic_data' => $likert?->demographicData ? [
+                        'gender' => $likert->demographicData->gender,
+                        'age' => $likert->demographicData->age,
+                        'marital_status' => $likert->demographicData->marital_status,
+                        'education_level' => $likert->demographicData->education_level,
+                        'position' => $likert->demographicData->position,
+                        'department' => $likert->demographicData->department,
+                        'position_type' => $likert->demographicData->position_type,
+                        'contract_type' => $likert->demographicData->contract_type,
+                        'personnel_type' => $likert->demographicData->personnel_type,
+                        'work_schedule' => $likert->demographicData->work_schedule,
+                        'shift_rotation' => $likert->demographicData->shift_rotation,
+                        'time_in_current_position' => $likert->demographicData->time_in_current_position,
+                        'work_experience' => $likert->demographicData->work_experience,
+                    ] : null,
                     'evaluations' => $evaluations->map(function ($eval) {
                         return [
                             'id' => $eval->id,

@@ -542,8 +542,8 @@ class ProcessPaperEvaluation implements ShouldQueue
             'age' => null, // Not provided in Likert data
             'marital_status' => null, // Not provided in Likert data
             'education_level' => null, // Not provided in Likert data
-            'position' => $likertData['puestos'] ?? null,
-            'department' => $likertData['areas'] ?? null,
+            'position' => $this->normalizePositionType($likertData['puestos'] ?? null),
+            'department' => $this->normalizeDepartmentType($likertData['areas'] ?? null),
             'position_type' => null, // Not provided in Likert data
             'contract_type' => $this->normalizeContractType($likertData['tipo_contrato'] ?? null),
             'personnel_type' => null, // Not provided in Likert data
@@ -742,6 +742,34 @@ class ProcessPaperEvaluation implements ShouldQueue
     }
 
     /**
+     * Normalize position
+     */
+    private function normalizePositionType(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $map = config('likert-value.puestos');
+
+        return $map[strtolower($value)] ?? $value;
+    }
+
+    /**
+     * Normalize department
+     */
+    private function normalizeDepartmentType(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $map = config('likert-value.areas');
+
+        return $map[strtolower($value)] ?? $value;
+    }
+
+    /**
      * Normalize personnel type
      */
     private function normalizePersonnelType(?string $value): ?string
@@ -752,8 +780,7 @@ class ProcessPaperEvaluation implements ShouldQueue
 
         $map = [
             'sindicalizado' => 'Sindicalizado',
-            'confianza' => 'Confianza',
-            'ninguno' => 'Ninguno',
+            'confianza' => 'Salary',
         ];
 
         return $map[strtolower($value)] ?? $value;

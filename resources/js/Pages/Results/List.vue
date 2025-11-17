@@ -328,7 +328,19 @@ const getDetailRoute = (group) => {
 
 // Get gender from evaluation group's demographic data
 const getGenderFromGroup = (group) => {
-    // Gender comes from demographic_data in the group
+    // For Likert-only evaluations, gender comes from demographic_data model (in English)
+    if (group.has_likert && !group.has_referencia_iii && !group.has_referencia_v) {
+        // Check if demographic_data exists from DemographicData model
+        if (group.likert_demographic_data) {
+            const gender = group.likert_demographic_data.gender
+            if (gender === 'male') return 'masculino'
+            if (gender === 'female') return 'femenino'
+            return 'sin_genero'
+        }
+        return 'sin_genero'
+    }
+    
+    // For other evaluations, get from Referencia V demographic_data
     if (!group.demographic_data || !group.demographic_data.sexo) {
         return 'sin_genero'
     }

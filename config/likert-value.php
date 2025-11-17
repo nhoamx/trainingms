@@ -41,7 +41,7 @@ return [
         11 => 'PROYECTOS / PROGRAMACIÓN',
         12 => 'ALMACÉN',
         13 => 'FINANZAS',
-        14 => 'INPORT / EXPORT',
+        14 => 'IMPORT / EXPORT',
         15 => 'OPERACIONES',
         16 => 'MANUFACTURA',
         17 => 'OTROS',
