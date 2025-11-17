@@ -386,6 +386,10 @@ class MigrateDemographicData extends Command
             'fijo_nocturno_(entre_las_20:00_y_6:00_hrs)' => 'Fijo nocturno (entre las 20:00 y 6:00 hrs)',
             'fijo_diurno_(entre_las_6:00_y_20:00_hrs)' => 'Fijo diurno (entre las 6:00 y 20:00 hrs)',
             'fijo_mixto_(combinacion_de_nocturno_y_diurno)' => 'Fijo mixto (combinación de nocturno y diurno)',
+            'rotativo' => 'Rotativo',
+            'nocturno' => 'Nocturno',
+            'diurno' => 'Diurno',
+            'mixto' => 'Mixto',
         ];
 
         return $map[strtolower($value)] ?? $value;
