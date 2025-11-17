@@ -213,33 +213,31 @@
 
             <!-- Dimension Tabs -->
             <div v-else-if="filteredDimensions[activeTab]">
-              <!-- Calificación de la Dimensión -->
+              <!-- Distribución de la Dimensión -->
               <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ activeTab }}</h3>
-                <div class="flex items-baseline gap-3">
-                  <span class="text-4xl font-bold text-blue-600">
-                    {{ filteredDimensions[activeTab].score.toFixed(2) }}
-                  </span>
-                  <span class="text-lg text-gray-600">
-                    / {{ filteredDimensions[activeTab].questionCount * 4 }}
-                  </span>
-                </div>
-                <div class="text-sm text-gray-600 mt-2">
+                <div class="text-sm text-gray-600 mb-3">
                   {{ filteredDimensions[activeTab].questionCount }} preguntas evaluadas
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div v-for="(count, level) in filteredDimensions[activeTab].distribution" :key="level" class="text-center">
+                    <div class="text-2xl font-bold text-blue-600">{{ count }}</div>
+                    <div class="text-xs text-gray-600">{{ level }}</div>
+                  </div>
                 </div>
               </div>
 
-              <!-- Gráfica de Pastel - Distribución de Respuestas -->
+              <!-- Gráfica de Pastel - Distribución de Personas por Nivel -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Puntuación por Pregunta (%)</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Nivel (%)</h4>
                 <div class="bg-gray-50 rounded-lg p-4">
                   <canvas :ref="`pieChart-${activeTab}`"></canvas>
                 </div>
               </div>
 
-              <!-- Lista de Preguntas con Calificación -->
+              <!-- Lista de Preguntas con Calificación Promedio -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Preguntas</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Preguntas (Score Promedio)</h4>
                 <div class="space-y-3">
                   <div 
                     v-for="(q, qNum) in filteredDimensions[activeTab].questions" 
@@ -711,15 +709,19 @@ const renderCharts = () => {
       }
     }
 
-    // Dimension-specific pie charts
+    // Dimension-specific pie charts - Distribution by level for each dimension
     Object.keys(filteredDimensions.value).forEach(dimensionName => {
       const refKey = `pieChart-${dimensionName}`
       const canvasRef = getCurrentInstance()?.refs[refKey]
       if (canvasRef && canvasRef instanceof HTMLCanvasElement) {
         const dimension = filteredDimensions.value[dimensionName]
-        const labels = Object.keys(dimension.questions).map(qNum => `P${qNum}`)
-        const data = Object.values(dimension.questions).map(q => q.score)
-        createPieChart(canvasRef, labels, data, dimensionName)
+        const distribution = dimension.distribution
+        const labels = Object.keys(distribution).filter(key => distribution[key] > 0)
+        const data = labels.map(key => distribution[key])
+        
+        if (data.length > 0) {
+          createPieChart(canvasRef, labels, data, dimensionName)
+        }
       }
     })
   })
