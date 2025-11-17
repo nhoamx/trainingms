@@ -23,6 +23,7 @@ class EvaluationTemplateExport implements FromCollection, WithHeadings, WithMapp
         return PaperEvaluation::where('organization_id', $this->organization->id)
             ->whereIn('source', ['paper', 'online'])
             ->where('processing_status', 'completed')
+            ->with('demographicData') // Eager load DemographicData relationship
             ->orderBy('personal_folio')
             ->get()
             ->groupBy('personal_folio')
@@ -34,25 +35,33 @@ class EvaluationTemplateExport implements FromCollection, WithHeadings, WithMapp
                 $referenciaV = $evaluations->firstWhere('evaluation_type', 'referencia_v');
                 $demographicData = $referenciaV?->demographic_data ?? [];
 
-                // Determine if it's paper or online format
-                $isPaperFormat = ! isset($demographicData['datos_laborales']);
-
-                // Extract Puesto and Area based on format
+                // Extract Puesto and Area
                 $puesto = '';
                 $area = '';
 
-                if ($isPaperFormat) {
-                    // Paper format: direct fields (might be arrays with fila1, fila2)
-                    $puestoData = $demographicData['ocupacion'] ?? '';
-                    $areaData = $demographicData['departamento'] ?? '';
-
-                    // If it's an array, extract fila1
-                    $puesto = is_array($puestoData) ? ($puestoData['fila1'] ?? '') : $puestoData;
-                    $area = is_array($areaData) ? ($areaData['fila1'] ?? '') : $areaData;
+                // First, try to get from DemographicData model (for Likert evaluations)
+                $demographicDataModel = $firstEvaluation->demographicData;
+                if ($demographicDataModel) {
+                    $puesto = $demographicDataModel->position ?? '';
+                    $area = $demographicDataModel->department ?? '';
                 } else {
-                    // Online format: nested in datos_laborales (should be strings)
-                    $puesto = $demographicData['datos_laborales']['ocupacion_puesto'] ?? '';
-                    $area = $demographicData['datos_laborales']['departamento_seccion_area'] ?? '';
+                    // Fallback: get from Referencia V demographic_data JSON
+                    // Determine if it's paper or online format
+                    $isPaperFormat = ! isset($demographicData['datos_laborales']);
+
+                    if ($isPaperFormat) {
+                        // Paper format: direct fields (might be arrays with fila1, fila2)
+                        $puestoData = $demographicData['ocupacion'] ?? '';
+                        $areaData = $demographicData['departamento'] ?? '';
+
+                        // If it's an array, extract fila1
+                        $puesto = is_array($puestoData) ? ($puestoData['fila1'] ?? '') : $puestoData;
+                        $area = is_array($areaData) ? ($areaData['fila1'] ?? '') : $areaData;
+                    } else {
+                        // Online format: nested in datos_laborales (should be strings)
+                        $puesto = $demographicData['datos_laborales']['ocupacion_puesto'] ?? '';
+                        $area = $demographicData['datos_laborales']['departamento_seccion_area'] ?? '';
+                    }
                 }
 
                 return [
