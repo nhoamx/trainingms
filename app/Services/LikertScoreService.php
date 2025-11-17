@@ -100,9 +100,24 @@ class LikertScoreService
 
     /**
      * Get demographic data from Likert evaluation
+     * Tries to fetch from DemographicData model first, falls back to likert_answers JSON
      */
     public function getDemographicData(PaperEvaluation $evaluation): array
     {
+        // Try to load demographic data from DemographicData model
+        $demographicData = $evaluation->demographicData;
+
+        if ($demographicData) {
+            return [
+                'genero' => $this->capitalizeGender($demographicData->gender),
+                'turno' => $this->capitalizeShift($demographicData->work_schedule),
+                'tipo_contrato' => $this->capitalizeContractType($demographicData->contract_type),
+                'puesto' => $demographicData->position,
+                'area' => $demographicData->department,
+            ];
+        }
+
+        // Fallback to likert_answers JSON if DemographicData not found
         $likertAnswers = $evaluation->likert_answers ?? [];
 
         return [
@@ -164,6 +179,65 @@ class LikertScoreService
             'tiempo_indeterminado' => 'Tiempo indeterminado',
             'honorarios' => 'Honorarios',
             'confianza' => 'Confianza',
+        ];
+
+        return $mapping[strtolower($contractType)] ?? ucfirst(str_replace('_', ' ', $contractType));
+    }
+
+    /**
+     * Capitalize gender value from DemographicData model (in English)
+     */
+    protected function capitalizeGender(?string $gender): ?string
+    {
+        if (! $gender) {
+            return null;
+        }
+
+        $mapping = [
+            'male' => 'Masculino',
+            'female' => 'Femenino',
+        ];
+
+        return $mapping[strtolower($gender)] ?? ucfirst($gender);
+    }
+
+    /**
+     * Capitalize shift value from DemographicData model (in English)
+     */
+    protected function capitalizeShift(?string $shift): ?string
+    {
+        if (! $shift) {
+            return null;
+        }
+
+        $mapping = [
+            'morning' => 'Matutino',
+            'afternoon' => 'Vespertino',
+            'night' => 'Nocturno',
+            'morning_afternoon' => 'Matutino-Vespertino',
+            'afternoon_night' => 'Vespertino-Nocturno',
+            'rotating' => 'Rotativo',
+        ];
+
+        return $mapping[strtolower($shift)] ?? ucfirst(str_replace('_', ' ', $shift));
+    }
+
+    /**
+     * Capitalize contract type from DemographicData model (in English)
+     */
+    protected function capitalizeContractType(?string $contractType): ?string
+    {
+        if (! $contractType) {
+            return null;
+        }
+
+        $mapping = [
+            'permanent' => 'Tiempo indeterminado',
+            'fixed_term' => 'Por tiempo determinado',
+            'project_based' => 'Por obra o proyecto',
+            'honorarios' => 'Honorarios',
+            'confidence' => 'Confianza',
+            'unionized' => 'Sindicalizado',
         ];
 
         return $mapping[strtolower($contractType)] ?? ucfirst(str_replace('_', ' ', $contractType));

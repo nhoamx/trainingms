@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="bg-white rounded-lg shadow p-6 mb-6">
         <h2 class="text-2xl font-bold text-gray-900">
-          Reporte Clima Laboal - {{ organizationName }}
+          Reporte Clima Laboral - {{ organizationName }}
         </h2>
         <p class="mt-1 text-sm text-gray-600">
           {{ evaluations.length }} evaluaciones completadas
@@ -117,41 +117,48 @@
           <div class="p-6">
             <!-- Total Tab -->
             <div v-if="activeTab === 'Total'">
-              <!-- Calificación General -->
-              <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Calificación General</h3>
+              <!-- Clima Laboral -->
+              <div class="mb-6 rounded-lg p-6" :class="getLevelColor(getMostCommonInterpretation).bgSolid">
+                <h3 class="text-lg font-semibold mb-2" :class="getLevelColor(getMostCommonInterpretation).text">Clima Laboral</h3>
                 <div class="flex items-baseline gap-3">
-                  <span class="text-4xl font-bold text-blue-600">{{ filteredTotalScore.toFixed(2) }}</span>
-                  <span class="text-lg text-gray-600">/ 92</span>
-                  <span class="ml-4 px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    {{ filteredTotalInterpretation }}
-                  </span>
+                  <span class="text-3xl font-bold" :class="getLevelColor(getMostCommonInterpretation).text">{{ getMostCommonInterpretation }}</span>
+                  <span class="text-lg opacity-90" :class="getLevelColor(getMostCommonInterpretation).text">/ {{ filteredTotalPeople }} {{ filteredTotalPeople === 1 ? 'persona' : 'personas' }}</span>
+                </div>
+                <div class="text-sm mt-2 opacity-90" :class="getLevelColor(getMostCommonInterpretation).text">
+                  Nivel más frecuente en la organización
                 </div>
               </div>
 
-              <!-- Gráfica de Pastel - Distribución por Dimensión -->
+              <!-- Gráfica de Pastel - Distribución por Nivel de Clima Laboral -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Puntuación por Dimensión (%)</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Nivel de Clima Laboral (%)</h4>
                 <div class="bg-gray-50 rounded-lg p-4">
                   <canvas ref="pieChartTotal"></canvas>
                 </div>
               </div>
 
-              <!-- Lista de Dimensiones con Puntuaciones -->
+              <!-- Lista de Dimensiones con Distribución de Personas -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Puntuación por Dimensión</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Dimensión</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div 
                     v-for="(dim, dimName) in filteredDimensions" 
                     :key="dimName"
                     class="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500"
                   >
-                    <div class="flex justify-between items-start">
+                    <div class="mb-3">
                       <span class="font-medium text-gray-900">{{ dimName }}</span>
-                      <span class="text-lg font-bold text-blue-600">{{ dim.score.toFixed(2) }}</span>
+                      <div class="text-xs text-gray-500 mt-1">
+                        {{ dim.questionCount }} preguntas
+                      </div>
                     </div>
-                    <div class="text-xs text-gray-500 mt-1">
-                      {{ dim.questionCount }} preguntas
+                    <div class="space-y-2 text-sm">
+                      <div v-for="(count, level) in dim.distribution" :key="level" class="flex items-center justify-between gap-2">
+                        <span class="px-2 py-1 rounded text-xs font-medium flex-shrink-0" :class="getLevelColor(level).badge">
+                          {{ level }}
+                        </span>
+                        <span class="font-medium text-gray-900">{{ count }} {{ count === 1 ? 'persona' : 'personas' }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -161,45 +168,56 @@
               <div>
                 <h4 class="text-md font-semibold text-gray-900 mb-4">Mapa de Calor - Todas las Preguntas</h4>
                 <div class="overflow-x-auto">
-                  <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                      <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <table class="min-w-full border-collapse border border-gray-300">
+                    <thead>
+                      <!-- Dimension headers row -->
+                      <tr class="bg-gray-100">
+                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 sticky left-0 bg-gray-100 z-10">
+                          Folio
+                        </th>
+                        <template v-for="(dim, dimName) in filteredDimensions" :key="`dim-header-${dimName}`">
+                          <th 
+                            :colspan="dim.questionCount" 
+                            class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 text-center"
+                          >
+                            {{ dimName }}
+                          </th>
+                        </template>
+                      </tr>
+                      <!-- Question numbers row -->
+                      <tr class="bg-gray-50">
+                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 sticky left-0 bg-gray-50 z-10">
                           #
                         </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Pregunta
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Puntuación Promedio
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Nivel
-                        </th>
+                        <template v-for="(dim, dimName) in filteredDimensions" :key="`questions-${dimName}`">
+                          <th 
+                            v-for="qNum in Object.keys(dim.questions)" 
+                            :key="`q-header-${qNum}`"
+                            class="border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 text-center"
+                          >
+                            {{ qNum }}
+                          </th>
+                        </template>
                       </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                      <template v-for="(dim, dimName) in filteredDimensions" :key="`dim-${dimName}`">
-                        <tr class="bg-gray-100">
-                          <td colspan="4" class="px-4 py-2 text-sm font-semibold text-gray-900">
-                            {{ dimName }}
+                    <tbody>
+                      <tr v-for="evaluation in filteredEvaluations" :key="`eval-${evaluation.folio}`">
+                        <!-- Personal folio column -->
+                        <td class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-900 sticky left-0 bg-white z-10">
+                          {{ evaluation.personal_folio }}
+                        </td>
+                        <!-- Answer cells for each question -->
+                        <template v-for="(dim, dimName) in filteredDimensions" :key="`eval-dim-${evaluation.folio}-${dimName}`">
+                          <td 
+                            v-for="qNum in Object.keys(dim.questions)" 
+                            :key="`eval-q-${evaluation.folio}-${qNum}`"
+                            class="border border-gray-300 px-2 py-2 text-center text-xs font-bold"
+                            :class="getAnswerColorClass(evaluation.answers[qNum])"
+                          >
+                            {{ getAnswerNumericValue(evaluation.answers[qNum]) }}
                           </td>
-                        </tr>
-                        <tr 
-                          v-for="(q, qNum) in dim.questions" 
-                          :key="`q-${dimName}-${qNum}`"
-                          :class="getHeatmapColor(q.score)"
-                        >
-                          <td class="px-4 py-2 text-sm text-gray-900">{{ qNum }}</td>
-                          <td class="px-4 py-2 text-sm text-gray-700">{{ q.question }}</td>
-                          <td class="px-4 py-2 text-sm font-semibold text-gray-900">{{ q.score.toFixed(2) }}</td>
-                          <td class="px-4 py-2 text-sm">
-                            <span class="px-2 py-1 rounded text-xs font-medium" :class="getScoreBadgeClass(q.score)">
-                              {{ getScoreLevel(q.score) }}
-                            </span>
-                          </td>
-                        </tr>
-                      </template>
+                        </template>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -208,89 +226,62 @@
 
             <!-- Dimension Tabs -->
             <div v-else-if="filteredDimensions[activeTab]">
-              <!-- Calificación de la Dimensión -->
-              <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
+              <!-- Distribución de la Dimensión -->
+              <div class="mb-6 bg-gray-50 rounded-lg p-6 border-2 border-gray-200">
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ activeTab }}</h3>
-                <div class="flex items-baseline gap-3">
-                  <span class="text-4xl font-bold text-blue-600">
-                    {{ filteredDimensions[activeTab].score.toFixed(2) }}
-                  </span>
-                  <span class="text-lg text-gray-600">
-                    / {{ filteredDimensions[activeTab].questionCount * 4 }}
-                  </span>
-                </div>
-                <div class="text-sm text-gray-600 mt-2">
+                <div class="text-sm text-gray-600 mb-3">
                   {{ filteredDimensions[activeTab].questionCount }} preguntas evaluadas
                 </div>
-              </div>
-
-              <!-- Gráfica de Pastel - Distribución de Respuestas -->
-              <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Puntuación por Pregunta (%)</h4>
-                <div class="bg-gray-50 rounded-lg p-4">
-                  <canvas :ref="`pieChart-${activeTab}`"></canvas>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div v-for="(count, level) in filteredDimensions[activeTab].distribution" :key="level" class="text-center p-3 rounded-lg" :class="getLevelColor(level).bgSolid">
+                    <div class="text-2xl font-bold" :class="getLevelColor(level).text">{{ count }}</div>
+                    <div class="text-xs mt-1" :class="getLevelColor(level).text">{{ level }}</div>
+                  </div>
                 </div>
               </div>
 
-              <!-- Lista de Preguntas con Calificación -->
+              <!-- Gráfica de Pastel - Distribución de Personas por Nivel -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Preguntas</h4>
-                <div class="space-y-3">
-                  <div 
-                    v-for="(q, qNum) in filteredDimensions[activeTab].questions" 
-                    :key="qNum"
-                    class="bg-gray-50 rounded-lg p-4 border-l-4"
-                    :class="getQuestionBorderClass(q.score)"
-                  >
-                    <div class="flex justify-between items-start mb-2">
-                      <span class="text-xs font-semibold text-gray-500">Pregunta {{ qNum }}</span>
-                      <div class="flex items-center gap-2">
-                        <span class="text-lg font-bold text-blue-600">{{ q.score.toFixed(2) }}</span>
-                        <span class="px-2 py-1 rounded text-xs font-medium" :class="getScoreBadgeClass(q.score)">
-                          {{ getScoreLevel(q.score) }}
-                        </span>
-                      </div>
-                    </div>
-                    <p class="text-sm text-gray-700">{{ q.question }}</p>
-                  </div>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Nivel (%)</h4>
+                <div class="bg-gray-50 rounded-lg p-4">
+                  <canvas :ref="el => dimensionChartRefs[activeTab] = el"></canvas>
                 </div>
               </div>
 
               <!-- Mapa de Calor para esta Dimensión -->
               <div>
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Mapa de Calor</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Mapa de Calor - {{ activeTab }}</h4>
                 <div class="overflow-x-auto">
-                  <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                      <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Pregunta
+                  <table class="min-w-full border-collapse border border-gray-300">
+                    <thead>
+                      <!-- Question numbers row -->
+                      <tr class="bg-gray-50">
+                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 sticky left-0 bg-gray-50 z-10">
+                          Folio
                         </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Puntuación
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Nivel
+                        <th 
+                          v-for="qNum in Object.keys(filteredDimensions[activeTab]?.questions || {})" 
+                          :key="`dim-q-header-${qNum}`"
+                          class="border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 text-center"
+                        >
+                          {{ qNum }}
                         </th>
                       </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                      <tr 
-                        v-for="(q, qNum) in filteredDimensions[activeTab].questions" 
-                        :key="qNum"
-                        :class="getHeatmapColor(q.score)"
-                      >
-                        <td class="px-4 py-3 text-sm text-gray-700">
-                          <div class="font-medium text-gray-900 mb-1">Pregunta {{ qNum }}</div>
-                          <div class="text-xs">{{ q.question }}</div>
+                    <tbody>
+                      <tr v-for="evaluation in filteredEvaluations" :key="`dim-eval-${evaluation.folio}`">
+                        <!-- Personal folio column -->
+                        <td class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-900 sticky left-0 bg-white z-10">
+                          {{ evaluation.personal_folio }}
                         </td>
-                        <td class="px-4 py-3 text-sm font-bold text-gray-900">
-                          {{ q.score.toFixed(2) }}
-                        </td>
-                        <td class="px-4 py-3 text-sm">
-                          <span class="px-2 py-1 rounded text-xs font-medium" :class="getScoreBadgeClass(q.score)">
-                            {{ getScoreLevel(q.score) }}
-                          </span>
+                        <!-- Answer cells for this dimension's questions -->
+                        <td 
+                          v-for="qNum in Object.keys(filteredDimensions[activeTab]?.questions || {})" 
+                          :key="`dim-eval-q-${evaluation.folio}-${qNum}`"
+                          class="border border-gray-300 px-2 py-2 text-center text-xs font-bold"
+                          :class="getAnswerColorClass(evaluation.answers[qNum])"
+                        >
+                          {{ getAnswerNumericValue(evaluation.answers[qNum]) }}
                         </td>
                       </tr>
                     </tbody>
@@ -306,7 +297,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick, getCurrentInstance } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import Dashboard from '@/Layouts/Dashboard.vue'
 import { Chart, registerables } from 'chart.js'
 
@@ -342,13 +333,18 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-  totalScore: {
+  climaLaboralDistribution: {
+    type: Object,
+    default: () => ({
+      'Totalmente de Acuerdo': 0,
+      'De Acuerdo': 0,
+      'Desacuerdo': 0,
+      'Totalmente Desacuerdo': 0,
+    }),
+  },
+  totalPeople: {
     type: Number,
     default: 0,
-  },
-  totalInterpretation: {
-    type: String,
-    default: '',
   },
   puestosMap: {
     type: Object,
@@ -369,6 +365,7 @@ const filters = ref({
 })
 
 const pieChartTotal = ref(null)
+const dimensionChartRefs = ref({})
 const chartInstances = ref({})
 
 // Helper functions to get names
@@ -393,7 +390,7 @@ const filteredEvaluations = computed(() => {
   })
 })
 
-// Recompute dimensions based on filtered evaluations
+// Recompute dimensions distribution based on filtered evaluations
 const filteredDimensions = computed(() => {
   if (filteredEvaluations.value.length === 0 || !props.dimensions || Object.keys(props.dimensions).length === 0) {
     return props.dimensions || {}
@@ -407,9 +404,37 @@ const filteredDimensions = computed(() => {
     if (!dimension || !dimension.questions) return
 
     const questionNumbers = Object.keys(dimension.questions).map(Number)
-    let totalScore = 0
     const questionScores = {}
 
+    // Distribution of people by level for this dimension (filtered)
+    const dimensionDistribution = {
+      'Totalmente de Acuerdo': 0,
+      'De Acuerdo': 0,
+      'Desacuerdo': 0,
+      'Totalmente Desacuerdo': 0,
+    }
+
+    // Get dimension level ranges from config
+    const dimensionRanges = getLevelRanges(dimensionName)
+
+    // Calculate score for each person in this dimension
+    filteredEvaluations.value.forEach(evalData => {
+      let personScore = 0
+      questionNumbers.forEach(qNum => {
+        const answer = evalData.answers[qNum]
+        if (answer) {
+          personScore += valorOpciones[answer] || 0
+        }
+      })
+
+      // Get interpretation for this person's dimension score
+      const interpretation = getScoreInterpretation(personScore, dimensionRanges)
+      if (interpretation) {
+        dimensionDistribution[interpretation] = (dimensionDistribution[interpretation] || 0) + 1
+      }
+    })
+
+    // Calculate average scores per question for display
     questionNumbers.forEach(qNum => {
       let qScore = 0
       let qCount = 0
@@ -426,12 +451,11 @@ const filteredDimensions = computed(() => {
         question: (typeof origQuestion === 'object' ? origQuestion.question : origQuestion) || `Pregunta ${qNum}`,
         score: avgScore,
       }
-      totalScore += avgScore
     })
 
     dimensionSummaries[dimensionName] = {
       name: dimensionName,
-      score: totalScore,
+      distribution: dimensionDistribution,
       questionCount: questionNumbers.length,
       questions: questionScores,
     }
@@ -440,21 +464,123 @@ const filteredDimensions = computed(() => {
   return dimensionSummaries
 })
 
-const filteredTotalScore = computed(() => {
-  let total = 0
-  Object.values(filteredDimensions.value).forEach(dim => {
-    total += dim.score
+// Calculate Clima Laboral distribution for filtered evaluations
+const filteredClimaLaboralDistribution = computed(() => {
+  const distribution = {
+    'Totalmente de Acuerdo': 0,
+    'De Acuerdo': 0,
+    'Desacuerdo': 0,
+    'Totalmente Desacuerdo': 0,
+  }
+
+  filteredEvaluations.value.forEach(evalData => {
+    const interpretation = evalData.scores?.interpretation
+    if (interpretation) {
+      distribution[interpretation] = (distribution[interpretation] || 0) + 1
+    }
   })
-  return total
+
+  return distribution
 })
 
-const filteredTotalInterpretation = computed(() => {
-  const score = filteredTotalScore.value
-  if (score >= 75.6) return 'Totalmente de Acuerdo'
-  if (score >= 59) return 'De Acuerdo'
-  if (score >= 40.6) return 'Desacuerdo'
-  return 'Totalmente Desacuerdo'
+const filteredTotalPeople = computed(() => {
+  return filteredEvaluations.value.length
 })
+
+// Get most common interpretation (modal)
+const getMostCommonInterpretation = computed(() => {
+  const dist = filteredClimaLaboralDistribution.value
+  let maxCount = 0
+  let mostCommon = 'Sin datos'
+
+  Object.entries(dist).forEach(([level, count]) => {
+    if (count > maxCount) {
+      maxCount = count
+      mostCommon = level
+    }
+  })
+
+  return mostCommon
+})
+
+// Helper function to get level ranges for a dimension
+const getLevelRanges = (dimensionName) => {
+  // These ranges should match the config in likert-value.php
+  const ranges = {
+    'Entorno Laboral Seguro': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Seguridad Laboral': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Compensación Justa': [
+      { min: 3.26, max: 4, level: 'Totalmente de Acuerdo' },
+      { min: 2.6, max: 3.25, level: 'De Acuerdo' },
+      { min: 1.76, max: 2.5, level: 'Desacuerdo' },
+      { min: 1, max: 1.75, level: 'Totalmente Desacuerdo' },
+    ],
+    'Comunicación Abierta': [
+      { min: 19.6, max: 24, level: 'Totalmente de Acuerdo' },
+      { min: 15.1, max: 19.5, level: 'De Acuerdo' },
+      { min: 10.6, max: 15, level: 'Desacuerdo' },
+      { min: 6, max: 10.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Participación de los Empleados': [
+      { min: 9.76, max: 12, level: 'Totalmente de Acuerdo' },
+      { min: 7.6, max: 9.75, level: 'De Acuerdo' },
+      { min: 5.26, max: 7.5, level: 'Desacuerdo' },
+      { min: 3, max: 5.25, level: 'Totalmente Desacuerdo' },
+    ],
+    'Reconocimiento y Recompensa': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Capacitación y Desarrollo': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Equilibrio entre Vida Laboral y Personal': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Avance Profesional': [
+      { min: 6.6, max: 8, level: 'Totalmente de Acuerdo' },
+      { min: 5.1, max: 6.5, level: 'De Acuerdo' },
+      { min: 3.6, max: 5, level: 'Desacuerdo' },
+      { min: 2, max: 3.5, level: 'Totalmente Desacuerdo' },
+    ],
+    'Apoyo al Empleado': [
+      { min: 3.26, max: 4, level: 'Totalmente de Acuerdo' },
+      { min: 2.6, max: 3.25, level: 'De Acuerdo' },
+      { min: 1.76, max: 2.5, level: 'Desacuerdo' },
+      { min: 1, max: 1.75, level: 'Totalmente Desacuerdo' },
+    ],
+  }
+
+  return ranges[dimensionName] || []
+}
+
+// Helper function to get interpretation from score
+const getScoreInterpretation = (score, ranges) => {
+  for (const range of ranges) {
+    if (score >= range.min && score <= range.max) {
+      return range.level
+    }
+  }
+  return null
+}
 
 const resetFilters = () => {
   filters.value = {
@@ -462,6 +588,78 @@ const resetFilters = () => {
     tipo_contrato: '',
     puesto: '',
     area: '',
+  }
+}
+
+// Helper: Convert letter answer to numeric value
+const getAnswerNumericValue = (answer) => {
+  const valueMap = {
+    'A': 4,
+    'B': 3,
+    'C': 2,
+    'D': 1
+  }
+  return valueMap[answer] || '-'
+}
+
+// Helper: Get Tailwind color class for answer value
+const getAnswerColorClass = (answer) => {
+  const value = getAnswerNumericValue(answer)
+  
+  // Standardized colors per user specification:
+  // 4 (A): Azul marino (dark blue) - Totalmente de Acuerdo
+  // 3 (B): Verde mayate (green) - De Acuerdo
+  // 2 (C): Amarillo mostaza (mustard yellow) - Desacuerdo
+  // 1 (D): Rojo (red) - Totalmente Desacuerdo
+  
+  switch(value) {
+    case 4:
+      return 'bg-blue-900 text-white'  // Azul marino
+    case 3:
+      return 'bg-green-600 text-white'  // Verde mayate
+    case 2:
+      return 'bg-yellow-500 text-black'  // Amarillo mostaza
+    case 1:
+      return 'bg-red-600 text-white'  // Rojo
+    default:
+      return 'bg-gray-200 text-gray-500'  // Sin respuesta
+  }
+}
+
+// Helper: Get standardized color for level (used in charts and badges)
+const getLevelColor = (level) => {
+  // Same standardized colors as heat map
+  const colorMap = {
+    'Totalmente de Acuerdo': {
+      bg: 'rgba(30, 58, 138, 0.8)',      // Blue-900 with opacity
+      bgSolid: 'bg-blue-900',
+      text: 'text-white',
+      badge: 'bg-blue-900 text-white'
+    },
+    'De Acuerdo': {
+      bg: 'rgba(22, 163, 74, 0.8)',      // Green-600 with opacity
+      bgSolid: 'bg-green-600',
+      text: 'text-white',
+      badge: 'bg-green-600 text-white'
+    },
+    'Desacuerdo': {
+      bg: 'rgba(234, 179, 8, 0.8)',      // Yellow-500 with opacity
+      bgSolid: 'bg-yellow-500',
+      text: 'text-black',
+      badge: 'bg-yellow-500 text-black'
+    },
+    'Totalmente Desacuerdo': {
+      bg: 'rgba(220, 38, 38, 0.8)',      // Red-600 with opacity
+      bgSolid: 'bg-red-600',
+      text: 'text-white',
+      badge: 'bg-red-600 text-white'
+    }
+  }
+  return colorMap[level] || {
+    bg: 'rgba(156, 163, 175, 0.8)',
+    bgSolid: 'bg-gray-400',
+    text: 'text-white',
+    badge: 'bg-gray-400 text-white'
   }
 }
 
@@ -504,24 +702,16 @@ const createPieChart = (canvasRef, labels, data, title) => {
     existingChart.destroy()
   }
 
+  // Generate colors based on labels using standardized color scheme
+  const backgroundColors = labels.map(label => getLevelColor(label).bg)
+
   const chart = new Chart(ctx, {
     type: 'pie',
     data: {
       labels: labels,
       datasets: [{
         data: data,
-        backgroundColor: [
-          'rgba(59, 130, 246, 0.8)',
-          'rgba(16, 185, 129, 0.8)',
-          'rgba(245, 158, 11, 0.8)',
-          'rgba(239, 68, 68, 0.8)',
-          'rgba(139, 92, 246, 0.8)',
-          'rgba(236, 72, 153, 0.8)',
-          'rgba(20, 184, 166, 0.8)',
-          'rgba(251, 146, 60, 0.8)',
-          'rgba(99, 102, 241, 0.8)',
-          'rgba(234, 179, 8, 0.8)',
-        ],
+        backgroundColor: backgroundColors,
         borderWidth: 2,
         borderColor: '#fff',
       }]
@@ -547,7 +737,8 @@ const createPieChart = (canvasRef, labels, data, title) => {
               const value = context.parsed || 0
               const total = context.dataset.data.reduce((a, b) => a + b, 0)
               const percentage = ((value / total) * 100).toFixed(1)
-              return `${label}: ${percentage}%`
+              const personas = value === 1 ? 'persona' : 'personas'
+              return `${label}: ${value} ${personas} (${percentage}%)`
             }
           }
         }
@@ -560,22 +751,29 @@ const createPieChart = (canvasRef, labels, data, title) => {
 
 const renderCharts = () => {
   nextTick(() => {
-    // Total pie chart
+    // Total pie chart - Distribution by Clima Laboral level
     if (pieChartTotal.value) {
-      const labels = Object.keys(filteredDimensions.value)
-      const data = labels.map(key => filteredDimensions.value[key].score)
-      createPieChart(pieChartTotal.value, labels, data, 'Total')
+      const distribution = filteredClimaLaboralDistribution.value
+      const labels = Object.keys(distribution).filter(key => distribution[key] > 0)
+      const data = labels.map(key => distribution[key])
+      
+      if (data.length > 0) {
+        createPieChart(pieChartTotal.value, labels, data, 'Total')
+      }
     }
 
-    // Dimension-specific pie charts
+    // Dimension-specific pie charts - Distribution by level for each dimension
     Object.keys(filteredDimensions.value).forEach(dimensionName => {
-      const refKey = `pieChart-${dimensionName}`
-      const canvasRef = getCurrentInstance()?.refs[refKey]
+      const canvasRef = dimensionChartRefs.value[dimensionName]
       if (canvasRef && canvasRef instanceof HTMLCanvasElement) {
         const dimension = filteredDimensions.value[dimensionName]
-        const labels = Object.keys(dimension.questions).map(qNum => `P${qNum}`)
-        const data = Object.values(dimension.questions).map(q => q.score)
-        createPieChart(canvasRef, labels, data, dimensionName)
+        const distribution = dimension.distribution
+        const labels = Object.keys(distribution).filter(key => distribution[key] > 0)
+        const data = labels.map(key => distribution[key])
+        
+        if (data.length > 0) {
+          createPieChart(canvasRef, labels, data, dimensionName)
+        }
       }
     })
   })

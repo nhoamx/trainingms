@@ -186,6 +186,10 @@ Route::middleware(['auth'])->group(function () {
         ->name('organization.results.likert')
         ->middleware('can:view-organization-results,organization');
 
+    Route::post('/organizacion/{organization}/resultados/{personalFolio}/likert/update', [ResultsController::class, 'updateLikertDemographicData'])
+        ->name('organization.results.likert.update')
+        ->middleware('can:view-organization-results,organization');
+
     // Bulk update routes
     Route::get('/organizacion/{organization}/plantilla-actualizacion', [ResultsController::class, 'downloadTemplate'])
         ->name('organization.results.template')
