@@ -607,14 +607,14 @@ const getAnswerColorClass = (answer) => {
   const value = getAnswerNumericValue(answer)
   
   // Standardized colors per user specification:
-  // 4 (A): Azul marino (dark blue) - Totalmente de Acuerdo
+  // 4 (A): Azul cielo (sky blue) - Totalmente de Acuerdo
   // 3 (B): Verde mayate (green) - De Acuerdo
   // 2 (C): Amarillo mostaza (mustard yellow) - Desacuerdo
   // 1 (D): Rojo (red) - Totalmente Desacuerdo
   
   switch(value) {
     case 4:
-      return 'bg-blue-900 text-white'  // Azul marino
+      return 'bg-blue-400 text-black'  // Azul cielo
     case 3:
       return 'bg-green-600 text-white'  // Verde mayate
     case 2:
@@ -631,10 +631,10 @@ const getLevelColor = (level) => {
   // Same standardized colors as heat map
   const colorMap = {
     'Totalmente de Acuerdo': {
-      bg: 'rgba(30, 58, 138, 0.8)',      // Blue-900 with opacity
-      bgSolid: 'bg-blue-900',
-      text: 'text-white',
-      badge: 'bg-blue-900 text-white'
+      bg: 'rgba(96, 165, 250, 0.8)',      // Blue-400 with opacity
+      bgSolid: 'bg-blue-400',
+      text: 'text-black',
+      badge: 'bg-blue-400 text-black'
     },
     'De Acuerdo': {
       bg: 'rgba(22, 163, 74, 0.8)',      // Green-600 with opacity

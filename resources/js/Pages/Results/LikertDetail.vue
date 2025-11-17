@@ -126,13 +126,13 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Total Score -->
-                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg border-2 border-blue-300">
-                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Calificación Final</h3>
-                        <div class="text-5xl font-bold text-blue-600 mb-2">
+                    <div class="p-6 rounded-lg border-2" :class="getClimaLaboralBgClass(scores.total_score)">
+                        <h3 class="text-lg font-semibold mb-2" :class="getClimaLaboralTextClass(scores.total_score)">Calificación Final</h3>
+                        <div class="text-5xl font-bold mb-2" :class="getClimaLaboralTextClass(scores.total_score)">
                             {{ scores.total_score }}
                         </div>
-                        <div class="text-sm text-gray-600">
-                            Interpretación: <span class="font-semibold text-blue-700">{{ scores.interpretation }}</span>
+                        <div class="text-sm opacity-90" :class="getClimaLaboralTextClass(scores.total_score)">
+                            Interpretación: <span class="font-semibold">{{ scores.interpretation }}</span>
                         </div>
                     </div>
 
@@ -176,7 +176,7 @@
                     >
                         <h4 class="text-sm font-semibold text-gray-700 mb-2">{{ name }}</h4>
                         <div class="flex items-center justify-between">
-                            <div class="text-3xl font-bold" :class="getScoreColorClass(dimension.score)">
+                            <div class="text-3xl font-bold" :class="getScoreColorClass(name, dimension.score)">
                                 {{ dimension.score }}
                             </div>
                             <div class="text-xs text-gray-500 text-right">
@@ -235,25 +235,25 @@
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Escala de Respuestas</h3>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded bg-green-100 border-2 border-green-500 flex items-center justify-center font-bold text-green-700">
+                        <div class="w-8 h-8 rounded bg-blue-400 border-2 border-blue-400 flex items-center justify-center font-bold text-black">
                             A
                         </div>
                         <span class="text-sm text-gray-700">Totalmente de acuerdo (4 pts)</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded bg-blue-100 border-2 border-blue-500 flex items-center justify-center font-bold text-blue-700">
+                        <div class="w-8 h-8 rounded bg-green-600 border-2 border-green-600 flex items-center justify-center font-bold text-white">
                             B
                         </div>
                         <span class="text-sm text-gray-700">De acuerdo (3 pts)</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded bg-orange-100 border-2 border-orange-500 flex items-center justify-center font-bold text-orange-700">
+                        <div class="w-8 h-8 rounded bg-yellow-500 border-2 border-yellow-500 flex items-center justify-center font-bold text-black">
                             C
                         </div>
                         <span class="text-sm text-gray-700">En desacuerdo (2 pts)</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded bg-red-100 border-2 border-red-500 flex items-center justify-center font-bold text-red-700">
+                        <div class="w-8 h-8 rounded bg-red-600 border-2 border-red-600 flex items-center justify-center font-bold text-white">
                             D
                         </div>
                         <span class="text-sm text-gray-700">Totalmente en desacuerdo (1 pt)</span>
@@ -485,29 +485,125 @@ const formatDemographic = (field, value) => {
     return value
 }
 
-const getScoreColorClass = (score) => {
-    if (score === 0) return 'text-green-600'
-    if (score <= 5) return 'text-blue-600'
-    if (score <= 10) return 'text-orange-600'
-    return 'text-red-600'
-}
-
+// Helper: Get standardized color for answer value
+// Standardized colors: 4 (A) = Azul cielo, 3 (B) = Verde, 2 (C) = Amarillo, 1 (D) = Rojo
 const getAnswerColorClass = (answer) => {
     if (!answer) return 'text-gray-400'
-    if (answer === 'A') return 'text-green-600'
-    if (answer === 'B') return 'text-blue-600'
-    if (answer === 'C') return 'text-orange-600'
-    if (answer === 'D') return 'text-red-600'
+    if (answer === 'A') return 'text-blue-400'      // 4 pts - Azul cielo
+    if (answer === 'B') return 'text-green-600'     // 3 pts - Verde mayate
+    if (answer === 'C') return 'text-yellow-500'    // 2 pts - Amarillo mostaza
+    if (answer === 'D') return 'text-red-600'       // 1 pt - Rojo
     return 'text-gray-600'
 }
 
 const getQuestionBorderClass = (answer) => {
     if (!answer) return 'border-gray-300 bg-gray-50'
-    if (answer === 'A') return 'border-green-500 bg-green-50'
-    if (answer === 'B') return 'border-blue-500 bg-blue-50'
-    if (answer === 'C') return 'border-orange-500 bg-orange-50'
-    if (answer === 'D') return 'border-red-500 bg-red-50'
+    if (answer === 'A') return 'border-blue-400 bg-blue-50'      // 4 pts - Azul cielo
+    if (answer === 'B') return 'border-green-600 bg-green-50'    // 3 pts - Verde
+    if (answer === 'C') return 'border-yellow-500 bg-yellow-50'  // 2 pts - Amarillo
+    if (answer === 'D') return 'border-red-600 bg-red-50'        // 1 pt - Rojo
     return 'border-gray-300'
+}
+
+// Helper: Get color class based on dimension score and ranges from config
+const getScoreColorClass = (dimensionName, score) => {
+    // valorNiveles ranges from config/likert-value.php
+    const ranges = {
+        'Entorno Laboral Seguro': [
+            { min: 6.6, max: 8, color: 'text-blue-400' },      // Totalmente de Acuerdo
+            { min: 5.1, max: 6.5, color: 'text-green-600' },   // De Acuerdo
+            { min: 3.6, max: 5, color: 'text-yellow-500' },    // Desacuerdo
+            { min: 2, max: 3.5, color: 'text-red-600' },       // Totalmente Desacuerdo
+        ],
+        'Seguridad Laboral': [
+            { min: 6.6, max: 8, color: 'text-blue-400' },
+            { min: 5.1, max: 6.5, color: 'text-green-600' },
+            { min: 3.6, max: 5, color: 'text-yellow-500' },
+            { min: 2, max: 3.5, color: 'text-red-600' },
+        ],
+        'Compensación Justa': [
+            { min: 3.26, max: 4, color: 'text-blue-400' },
+            { min: 2.6, max: 3.25, color: 'text-green-600' },
+            { min: 1.76, max: 2.5, color: 'text-yellow-500' },
+            { min: 1, max: 1.75, color: 'text-red-600' },
+        ],
+        'Comunicación Abierta': [
+            { min: 19.6, max: 24, color: 'text-blue-400' },
+            { min: 15.1, max: 19.5, color: 'text-green-600' },
+            { min: 10.6, max: 15, color: 'text-yellow-500' },
+            { min: 6, max: 10.5, color: 'text-red-600' },
+        ],
+        'Participación de los Empleados': [
+            { min: 9.76, max: 12, color: 'text-blue-400' },
+            { min: 7.6, max: 9.75, color: 'text-green-600' },
+            { min: 5.26, max: 7.5, color: 'text-yellow-500' },
+            { min: 3, max: 5.25, color: 'text-red-600' },
+        ],
+        'Reconocimiento y Recompensa': [
+            { min: 6.6, max: 8, color: 'text-blue-400' },
+            { min: 5.1, max: 6.5, color: 'text-green-600' },
+            { min: 3.6, max: 5, color: 'text-yellow-500' },
+            { min: 2, max: 3.5, color: 'text-red-600' },
+        ],
+        'Capacitación y Desarrollo': [
+            { min: 6.6, max: 8, color: 'text-blue-400' },
+            { min: 5.1, max: 6.5, color: 'text-green-600' },
+            { min: 3.6, max: 5, color: 'text-yellow-500' },
+            { min: 2, max: 3.5, color: 'text-red-600' },
+        ],
+        'Equilibrio entre Vida Laboral y Personal': [
+            { min: 6.6, max: 8, color: 'text-blue-400' },
+            { min: 5.1, max: 6.5, color: 'text-green-600' },
+            { min: 3.6, max: 5, color: 'text-yellow-500' },
+            { min: 2, max: 3.5, color: 'text-red-600' },
+        ],
+        'Avance Profesional': [
+            { min: 6.6, max: 8, color: 'text-blue-400' },
+            { min: 5.1, max: 6.5, color: 'text-green-600' },
+            { min: 3.6, max: 5, color: 'text-yellow-500' },
+            { min: 2, max: 3.5, color: 'text-red-600' },
+        ],
+        'Apoyo al Empleado': [
+            { min: 3.26, max: 4, color: 'text-blue-400' },
+            { min: 2.6, max: 3.25, color: 'text-green-600' },
+            { min: 1.76, max: 2.5, color: 'text-yellow-500' },
+            { min: 1, max: 1.75, color: 'text-red-600' },
+        ],
+        'Clima Laboral': [
+            { min: 75.6, max: 93, color: 'text-blue-400' },
+            { min: 59, max: 75.5, color: 'text-green-600' },
+            { min: 40.6, max: 58, color: 'text-yellow-500' },
+            { min: 23, max: 40.5, color: 'text-red-600' },
+        ],
+    }
+
+    const dimensionRanges = ranges[dimensionName] || ranges['Clima Laboral']
+    
+    for (const range of dimensionRanges) {
+        if (score >= range.min && score <= range.max) {
+            return range.color
+        }
+    }
+    
+    return 'text-gray-600'
+}
+
+// Helper: Get background class for Clima Laboral score
+const getClimaLaboralBgClass = (score) => {
+    if (score >= 75.6 && score <= 93) return 'bg-blue-400'      // Totalmente de Acuerdo
+    if (score >= 59 && score <= 75.5) return 'bg-green-600'     // De Acuerdo
+    if (score >= 40.6 && score <= 58) return 'bg-yellow-500'    // Desacuerdo
+    if (score >= 23 && score <= 40.5) return 'bg-red-600'       // Totalmente Desacuerdo
+    return 'bg-gray-400'
+}
+
+// Helper: Get text class for Clima Laboral score
+const getClimaLaboralTextClass = (score) => {
+    if (score >= 75.6 && score <= 93) return 'text-black'       // Totalmente de Acuerdo
+    if (score >= 59 && score <= 75.5) return 'text-white'       // De Acuerdo
+    if (score >= 40.6 && score <= 58) return 'text-black'       // Desacuerdo
+    if (score >= 23 && score <= 40.5) return 'text-white'       // Totalmente Desacuerdo
+    return 'text-white'
 }
 
 const submitForm = async () => {
