@@ -8,9 +8,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\WithValidation;
 
-class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow, WithValidation
+class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
 {
     protected int $updatedCount = 0;
 
@@ -148,33 +147,6 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow, WithVa
                 $this->skippedCount++;
             }
         }
-    }
-
-    /**
-     * Reglas de validación para el archivo
-     */
-    public function rules(): array
-    {
-        return [
-            'folio_personal' => 'required|string',
-            'nombre' => 'nullable|string',
-            'puesto' => 'nullable|string',
-            'area' => 'nullable|string',
-        ];
-    }
-
-    /**
-     * Mensajes de validación personalizados
-     */
-    public function customValidationMessages(): array
-    {
-        return [
-            'folio_personal.required' => 'El campo Folio Personal es requerido',
-            'folio_personal.string' => 'El campo Folio Personal debe ser texto',
-            'nombre.string' => 'El campo Nombre debe ser texto',
-            'puesto.string' => 'El campo Puesto debe ser texto',
-            'area.string' => 'El campo Area debe ser texto',
-        ];
     }
 
     /**
