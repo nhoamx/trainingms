@@ -287,6 +287,10 @@ class ProcessPaperEvaluation implements ShouldQueue
             // Extract structured data based on evaluation type
             $structuredData = $this->extractStructuredData($rawData, $folioData['evaluation_type']);
 
+            // Check if evaluation already exists to preserve evaluee_name
+            $existingEvaluation = PaperEvaluation::where('folio', $folio)->first();
+            $preservedName = $existingEvaluation?->evaluee_name;
+
             // Create or update PaperEvaluation
             $paperEvaluation = PaperEvaluation::updateOrCreate(
                 ['folio' => $folio],
@@ -300,6 +304,7 @@ class ProcessPaperEvaluation implements ShouldQueue
                     'processing_status' => 'completed',
                     'processed_at' => now(),
                     'pdf_file_path' => $this->fullPath,
+                    'evaluee_name' => $preservedName, // Preserve existing name if re-processing
                     'demographic_data' => $structuredData['demographic_data'] ?? null,
                     'referencia_i_answers' => $structuredData['referencia_i_answers'] ?? null,
                     'referencia_iii_answers' => $structuredData['referencia_iii_answers'] ?? null,
