@@ -122,15 +122,6 @@
                         </svg>
                         Editar Datos
                     </button>
-                    <button
-                        @click="openAnswersModal()"
-                        class="ml-3 inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        Editar Respuestas
-                    </button>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -176,7 +167,19 @@
 
             <!-- Dimension Scores -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
+                <div class="flex justify-between items-start mb-6">
                 <h3 class="text-xl font-bold text-gray-900 mb-4">Calificación por Dimensiones</h3>
+
+                    <button
+                        @click="openAnswersModal()"
+                        class="ml-3 inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Editar Respuestas
+                    </button>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div
                         v-for="(dimension, name) in scores.dimensions"
