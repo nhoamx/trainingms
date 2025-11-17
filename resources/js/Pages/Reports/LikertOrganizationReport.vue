@@ -118,13 +118,13 @@
             <!-- Total Tab -->
             <div v-if="activeTab === 'Total'">
               <!-- Clima Laboral -->
-              <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Clima Laboral</h3>
+              <div class="mb-6 rounded-lg p-6" :class="getLevelColor(getMostCommonInterpretation).bgSolid">
+                <h3 class="text-lg font-semibold mb-2" :class="getLevelColor(getMostCommonInterpretation).text">Clima Laboral</h3>
                 <div class="flex items-baseline gap-3">
-                  <span class="text-3xl font-bold text-blue-600">{{ getMostCommonInterpretation }}</span>
-                  <span class="text-lg text-gray-600">/ {{ filteredTotalPeople }} {{ filteredTotalPeople === 1 ? 'persona' : 'personas' }}</span>
+                  <span class="text-3xl font-bold" :class="getLevelColor(getMostCommonInterpretation).text">{{ getMostCommonInterpretation }}</span>
+                  <span class="text-lg opacity-90" :class="getLevelColor(getMostCommonInterpretation).text">/ {{ filteredTotalPeople }} {{ filteredTotalPeople === 1 ? 'persona' : 'personas' }}</span>
                 </div>
-                <div class="text-sm text-gray-600 mt-2">
+                <div class="text-sm mt-2 opacity-90" :class="getLevelColor(getMostCommonInterpretation).text">
                   Nivel más frecuente en la organización
                 </div>
               </div>
@@ -152,10 +152,12 @@
                         {{ dim.questionCount }} preguntas
                       </div>
                     </div>
-                    <div class="space-y-1 text-sm">
-                      <div v-for="(count, level) in dim.distribution" :key="level" class="flex justify-between">
-                        <span class="text-gray-600">{{ level }}:</span>
-                        <span class="font-medium">{{ count }} {{ count === 1 ? 'persona' : 'personas' }}</span>
+                    <div class="space-y-2 text-sm">
+                      <div v-for="(count, level) in dim.distribution" :key="level" class="flex items-center justify-between gap-2">
+                        <span class="px-2 py-1 rounded text-xs font-medium flex-shrink-0" :class="getLevelColor(level).badge">
+                          {{ level }}
+                        </span>
+                        <span class="font-medium text-gray-900">{{ count }} {{ count === 1 ? 'persona' : 'personas' }}</span>
                       </div>
                     </div>
                   </div>
@@ -225,15 +227,15 @@
             <!-- Dimension Tabs -->
             <div v-else-if="filteredDimensions[activeTab]">
               <!-- Distribución de la Dimensión -->
-              <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
+              <div class="mb-6 bg-gray-50 rounded-lg p-6 border-2 border-gray-200">
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ activeTab }}</h3>
                 <div class="text-sm text-gray-600 mb-3">
                   {{ filteredDimensions[activeTab].questionCount }} preguntas evaluadas
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div v-for="(count, level) in filteredDimensions[activeTab].distribution" :key="level" class="text-center">
-                    <div class="text-2xl font-bold text-blue-600">{{ count }}</div>
-                    <div class="text-xs text-gray-600">{{ level }}</div>
+                  <div v-for="(count, level) in filteredDimensions[activeTab].distribution" :key="level" class="text-center p-3 rounded-lg" :class="getLevelColor(level).bgSolid">
+                    <div class="text-2xl font-bold" :class="getLevelColor(level).text">{{ count }}</div>
+                    <div class="text-xs mt-1" :class="getLevelColor(level).text">{{ level }}</div>
                   </div>
                 </div>
               </div>
@@ -624,6 +626,43 @@ const getAnswerColorClass = (answer) => {
   }
 }
 
+// Helper: Get standardized color for level (used in charts and badges)
+const getLevelColor = (level) => {
+  // Same standardized colors as heat map
+  const colorMap = {
+    'Totalmente de Acuerdo': {
+      bg: 'rgba(30, 58, 138, 0.8)',      // Blue-900 with opacity
+      bgSolid: 'bg-blue-900',
+      text: 'text-white',
+      badge: 'bg-blue-900 text-white'
+    },
+    'De Acuerdo': {
+      bg: 'rgba(22, 163, 74, 0.8)',      // Green-600 with opacity
+      bgSolid: 'bg-green-600',
+      text: 'text-white',
+      badge: 'bg-green-600 text-white'
+    },
+    'Desacuerdo': {
+      bg: 'rgba(234, 179, 8, 0.8)',      // Yellow-500 with opacity
+      bgSolid: 'bg-yellow-500',
+      text: 'text-black',
+      badge: 'bg-yellow-500 text-black'
+    },
+    'Totalmente Desacuerdo': {
+      bg: 'rgba(220, 38, 38, 0.8)',      // Red-600 with opacity
+      bgSolid: 'bg-red-600',
+      text: 'text-white',
+      badge: 'bg-red-600 text-white'
+    }
+  }
+  return colorMap[level] || {
+    bg: 'rgba(156, 163, 175, 0.8)',
+    bgSolid: 'bg-gray-400',
+    text: 'text-white',
+    badge: 'bg-gray-400 text-white'
+  }
+}
+
 const getHeatmapColor = (score) => {
   if (score >= 3.5) return 'bg-green-100'
   if (score >= 2.5) return 'bg-yellow-100'
@@ -663,24 +702,16 @@ const createPieChart = (canvasRef, labels, data, title) => {
     existingChart.destroy()
   }
 
+  // Generate colors based on labels using standardized color scheme
+  const backgroundColors = labels.map(label => getLevelColor(label).bg)
+
   const chart = new Chart(ctx, {
     type: 'pie',
     data: {
       labels: labels,
       datasets: [{
         data: data,
-        backgroundColor: [
-          'rgba(59, 130, 246, 0.8)',
-          'rgba(16, 185, 129, 0.8)',
-          'rgba(245, 158, 11, 0.8)',
-          'rgba(239, 68, 68, 0.8)',
-          'rgba(139, 92, 246, 0.8)',
-          'rgba(236, 72, 153, 0.8)',
-          'rgba(20, 184, 166, 0.8)',
-          'rgba(251, 146, 60, 0.8)',
-          'rgba(99, 102, 241, 0.8)',
-          'rgba(234, 179, 8, 0.8)',
-        ],
+        backgroundColor: backgroundColors,
         borderWidth: 2,
         borderColor: '#fff',
       }]
