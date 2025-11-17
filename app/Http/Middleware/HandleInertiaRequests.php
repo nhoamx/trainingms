@@ -44,7 +44,7 @@ class HandleInertiaRequests extends Middleware
             'flash' => fn () => [
                 'success' => $request->session()->get('success'),
                 'message' => $request->session()->get('message'),
-                'errors' => $request->session()->get('errors'),
+                'bulk_errors' => $request->session()->get('bulk_errors'),
             ],
             'csrf_token' => fn () => csrf_token(),
             'currentOrganization' => fn () => $request->user() && $request->user()->organization ? $request->user()->organization : null,

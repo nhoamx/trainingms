@@ -228,7 +228,7 @@ watch(() => page.props.flash, (flash) => {
         
         if (flash.success) {
             successMessage.value = flash.message
-            updateErrors.value = flash.errors || []
+            updateErrors.value = flash.bulk_errors || []
             selectedFile.value = null
             
             // Auto close after showing success
@@ -240,7 +240,7 @@ watch(() => page.props.flash, (flash) => {
             }, 3000)
         } else {
             uploadError.value = flash.message
-            updateErrors.value = flash.errors || []
+            updateErrors.value = flash.bulk_errors || []
         }
     }
 }, { deep: true })

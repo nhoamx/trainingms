@@ -37,6 +37,12 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow, WithVa
                     return is_string($value) ? trim($value) : $value;
                 });
 
+                // Skip completely empty rows
+                if ($row->filter()->isEmpty()) {
+                    Log::info("Row {$rowNumber} is completely empty, skipping");
+                    continue;
+                }
+
                 $personalFolio = $row['folio_personal'] ?? null;
                 $nombre = $row['nombre'] ?? null;
                 $puesto = $row['puesto'] ?? null;
@@ -53,6 +59,7 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow, WithVa
                 if (empty($personalFolio)) {
                     $this->errors[] = "Fila {$rowNumber}: Folio Personal es requerido";
                     $this->skippedCount++;
+                    Log::warning("Row {$rowNumber} skipped - missing personal_folio");
 
                     continue;
                 }

@@ -1092,7 +1092,7 @@ class ResultsController extends Controller
                 return back()->with([
                     'success' => $updatedCount > 0,
                     'message' => $message,
-                    'errors' => $errors,
+                    'bulk_errors' => $errors, // Changed from 'errors' to 'bulk_errors'
                 ]);
             }
 
@@ -1116,7 +1116,7 @@ class ResultsController extends Controller
             return back()->with([
                 'success' => false,
                 'message' => 'Error de validación en el archivo',
-                'errors' => $errors,
+                'bulk_errors' => $errors, // Changed from 'errors' to 'bulk_errors'
             ]);
         } catch (\Exception $e) {
             Log::error('Bulk update general exception', [
