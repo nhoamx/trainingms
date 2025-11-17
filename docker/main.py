@@ -153,9 +153,19 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
         logging.info("Procesando preguntas Likert (1-23)...")
         if hasattr(config, 'likert'):
             likert_answers = detector.detect_bubbles(image_file, config.likert, min_fill_threshold=min_fill_threshold)
+            
+            # REGLA ESPECIAL LIKERT: Si una pregunta tiene más de 1 respuesta o está vacía (None),
+            # marcarla como 'A' (Totalmente de Acuerdo)
+            for question_num in range(1, 24):  # Preguntas 1-23
+                q_key = str(question_num)
+                if q_key in likert_answers:
+                    if likert_answers[q_key] is None:
+                        logging.info(f"  Pregunta {q_key}: sin respuesta o respuesta múltiple detectada → Asignando 'A' (Totalmente de Acuerdo)")
+                        likert_answers[q_key] = 'A'
+            
             complete_answers['likert'] = likert_answers
         else:
-            logging.warning("No se encontró config.likert")
+            logging.warning("No se encontró configuración 'likert', omitiendo sección")
         
         # 2. Procesar demografía simple
         simple_demographics = [
