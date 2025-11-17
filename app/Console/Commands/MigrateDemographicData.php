@@ -78,7 +78,20 @@ class MigrateDemographicData extends Command
                         continue;
                     }
 
-                    $demographicInfo = $this->extractDemographicInfo($evaluation->demographic_data);
+                    // Get demographic data from appropriate field based on evaluation type
+                    $rawDemographicData = $evaluation->evaluation_type === 'likert'
+                        ? $evaluation->likert_answers
+                        : $evaluation->demographic_data;
+
+                    // Skip if no demographic data found
+                    if (! $rawDemographicData) {
+                        $skippedCount++;
+                        $bar->advance();
+
+                        continue;
+                    }
+
+                    $demographicInfo = $this->extractDemographicInfo($rawDemographicData);
 
                     // Create DemographicData record
                     DemographicData::create([
