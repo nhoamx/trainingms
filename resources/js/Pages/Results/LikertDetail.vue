@@ -111,7 +111,18 @@
 
             <!-- Score Summary -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6">Evaluación de Clima Laboral</h2>
+                <div class="flex justify-between items-start mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Evaluación de Clima Laboral</h2>
+                    <button
+                        @click="showEditModal = true"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Editar Datos
+                    </button>
+                </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Total Score -->
@@ -251,6 +262,149 @@
             </div>
         </div>
     </Dashboard>
+
+    <!-- Edit Demographic Data Modal -->
+    <div
+        v-if="showEditModal"
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+        @click="showEditModal = false"
+    >
+        <div
+            class="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            @click.stop
+        >
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                <h3 class="text-xl font-bold text-gray-900">
+                    Editar Datos Demográficos
+                </h3>
+                <button
+                    @click="showEditModal = false"
+                    class="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="flex-1 overflow-auto p-6">
+                <form @submit.prevent="submitForm" class="space-y-6">
+                    <!-- Evaluee Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Nombre del Evaluado
+                        </label>
+                        <input
+                            v-model="formData.evaluee_name"
+                            type="text"
+                            class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                            placeholder="Nombre completo"
+                        />
+                    </div>
+
+                    <!-- Gender -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Género
+                        </label>
+                        <select
+                            v-model="formData.gender"
+                            class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                        >
+                            <option value="">Seleccionar género</option>
+                            <option value="male">Masculino</option>
+                            <option value="female">Femenino</option>
+                        </select>
+                    </div>
+
+                    <!-- Work Schedule -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Turno
+                        </label>
+                        <select
+                            v-model="formData.work_schedule"
+                            class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                        >
+                            <option value="">Seleccionar turno</option>
+                            <option value="morning">Matutino</option>
+                            <option value="afternoon">Vespertino</option>
+                            <option value="night">Nocturno</option>
+                            <option value="morning_afternoon">Matutino-Vespertino</option>
+                            <option value="afternoon_night">Vespertino-Nocturno</option>
+                            <option value="rotating">Rotativo</option>
+                        </select>
+                    </div>
+
+                    <!-- Contract Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Tipo de Contrato
+                        </label>
+                        <select
+                            v-model="formData.contract_type"
+                            class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                        >
+                            <option value="">Seleccionar tipo de contrato</option>
+                            <option value="permanent">Tiempo indeterminado</option>
+                            <option value="fixed_term">Por tiempo determinado</option>
+                            <option value="project_based">Por obra o proyecto</option>
+                            <option value="honorarios">Honorarios</option>
+                            <option value="confidence">Confianza</option>
+                            <option value="unionized">Sindicalizado</option>
+                        </select>
+                    </div>
+
+                    <!-- Position -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Puesto
+                        </label>
+                        <input
+                            v-model="formData.position"
+                            type="text"
+                            class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                            placeholder="Puesto/Ocupación"
+                        />
+                    </div>
+
+                    <!-- Department -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Área/Departamento
+                        </label>
+                        <input
+                            v-model="formData.department"
+                            type="text"
+                            class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                            placeholder="Área o departamento"
+                        />
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="flex gap-3 justify-end pt-6 border-t border-gray-200">
+                        <button
+                            type="button"
+                            @click="showEditModal = false"
+                            class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            :disabled="isSubmitting"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors font-medium"
+                        >
+                            <span v-if="!isSubmitting">Guardar Cambios</span>
+                            <span v-else>Guardando...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup>
@@ -269,6 +423,17 @@ const props = defineProps({
 })
 
 const showImageModal = ref(false)
+const showEditModal = ref(false)
+const isSubmitting = ref(false)
+
+const formData = ref({
+    evaluee_name: props.evaluation?.evaluee_name || '',
+    gender: props.demographic?.genero || '',
+    work_schedule: props.demographic?.turno || '',
+    contract_type: props.demographic?.tipo_contrato || '',
+    position: props.demographic?.puesto || '',
+    department: props.demographic?.area || '',
+})
 
 const formatDemographic = (field, value) => {
     if (!value) return 'No especificado'
@@ -343,5 +508,37 @@ const getQuestionBorderClass = (answer) => {
     if (answer === 'C') return 'border-orange-500 bg-orange-50'
     if (answer === 'D') return 'border-red-500 bg-red-50'
     return 'border-gray-300'
+}
+
+const submitForm = async () => {
+    isSubmitting.value = true
+    
+    try {
+        const response = await fetch(
+            `/organizacion/${props.organization.id}/resultados/${props.personalFolio}/likert/update`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content,
+                },
+                body: JSON.stringify(formData.value),
+            }
+        )
+
+        if (response.ok) {
+            showEditModal.value = false
+            // Reload page to show updated data
+            window.location.reload()
+        } else {
+            const error = await response.json()
+            alert('Error al guardar: ' + (error.message || 'Error desconocido'))
+        }
+    } catch (error) {
+        console.error('Error:', error)
+        alert('Error al guardar los datos: ' + error.message)
+    } finally {
+        isSubmitting.value = false
+    }
 }
 </script>

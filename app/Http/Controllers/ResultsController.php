@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\EvaluationTemplateExport;
 use App\Imports\EvaluationBulkUpdateImport;
 use App\Models\Category;
+use App\Models\DemographicData;
 use App\Models\Evaluation;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
@@ -841,6 +842,48 @@ class ResultsController extends Controller
         $values = config('likert-value.valorOpciones');
 
         return $values[$answer] ?? null;
+    }
+
+    /**
+     * Update Likert demographic data and evaluee name
+     */
+    public function updateLikertDemographicData(Organization $organization, string $personalFolio, Request $request)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        // Get Likert evaluation
+        $likert = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('personal_folio', $personalFolio)
+            ->where('evaluation_type', 'likert')
+            ->where('processing_status', 'completed')
+            ->firstOrFail();
+
+        // Update evaluee name if provided
+        if ($request->filled('evaluee_name')) {
+            $likert->update(['evaluee_name' => $request->input('evaluee_name')]);
+        }
+
+        // Update or create DemographicData
+        $demographicData = $likert->demographicData ?? new DemographicData;
+
+        $demographicData->fill([
+            'gender' => $request->input('gender'),
+            'work_schedule' => $request->input('work_schedule'),
+            'contract_type' => $request->input('contract_type'),
+            'position' => $request->input('position'),
+            'department' => $request->input('department'),
+        ]);
+
+        if (! $demographicData->paper_evaluation_id) {
+            $demographicData->paper_evaluation_id = $likert->id;
+        }
+
+        $demographicData->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Datos demográficos actualizados correctamente',
+        ]);
     }
 
     /**
