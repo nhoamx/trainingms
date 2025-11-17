@@ -131,7 +131,7 @@
 
               <!-- Gráfica de Pastel - Distribución por Nivel de Clima Laboral -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Nivel de Clima Laboral (%)</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Nivel de Satisfacción</h4>
                 <div class="bg-gray-50 rounded-lg p-4">
                   <canvas ref="pieChartTotal"></canvas>
                 </div>
