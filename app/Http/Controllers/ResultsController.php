@@ -69,11 +69,12 @@ class ResultsController extends Controller
         // Process all evaluations
         $evaluationsData = [];
         foreach ($likertEvaluations as $evaluation) {
-            $likertAnswers = $evaluation->likert_answers;
-            $questions = $likertAnswers['questions'] ?? [];
-            $demographics = $likertAnswers;
+            $questions = $evaluation->likert_answers['questions'] ?? [];
 
-            // Collect demographic values
+            // Get demographic data from DemographicData model (with fallback to likert_answers)
+            $demographics = $this->likertScoreService->getDemographicData($evaluation);
+
+            // Collect demographic values (already formatted in Spanish from getDemographicData)
             if (isset($demographics['genero'])) {
                 $generos[$demographics['genero']] = true;
             }
@@ -101,6 +102,7 @@ class ResultsController extends Controller
                     'tipo_contrato' => $demographics['tipo_contrato'] ?? null,
                     'puesto' => $demographics['puesto'] ?? null,
                     'area' => $demographics['area'] ?? null,
+                    'turno' => $demographics['turno'] ?? null,
                 ],
                 'scores' => $scores,
                 'answers' => $questions,
