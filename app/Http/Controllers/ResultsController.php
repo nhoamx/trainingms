@@ -1078,7 +1078,7 @@ class ResultsController extends Controller
                 return back()->with([
                     'success' => $updatedCount > 0,
                     'message' => $message,
-                    'errors' => $errors,
+                    'bulk_update_errors' => $errors,
                 ]);
             }
 
@@ -1097,7 +1097,7 @@ class ResultsController extends Controller
             return back()->with([
                 'success' => false,
                 'message' => 'Error de validación en el archivo',
-                'errors' => $errors,
+                'bulk_update_errors' => $errors,
             ]);
         } catch (\Exception $e) {
             return back()->with([
