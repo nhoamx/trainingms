@@ -244,7 +244,7 @@
               <div class="mb-6">
                 <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Nivel (%)</h4>
                 <div class="bg-gray-50 rounded-lg p-4">
-                  <canvas :ref="el => dimensionChartRefs[activeTab] = el"></canvas>
+                  <canvas ref="dimensionChartCanvas"></canvas>
                 </div>
               </div>
 
@@ -294,6 +294,42 @@
       </div>
     </div>
   </Dashboard>
+  
+  <!-- Modal de Folios por nivel -->
+  <div v-if="showFoliosModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click="closeFoliosModal">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-xl max-h-[80vh] overflow-hidden" @click.stop>
+      <div class="flex items-center justify-between p-4 border-b">
+        <h3 class="text-lg font-semibold">{{ foliosModalTitle }}</h3>
+        <button @click="closeFoliosModal" class="text-gray-500 hover:text-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="p-4 overflow-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left text-gray-600">
+              <th class="py-2 pr-4">Folio</th>
+              <th class="py-2">Nombre</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="foliosModalItems.length === 0">
+              <td colspan="2" class="py-4 text-gray-500">No hay folios para este nivel.</td>
+            </tr>
+            <tr v-for="item in foliosModalItems" :key="item.folio" class="border-t">
+              <td class="py-2 pr-4 font-medium">{{ item.folio }}</td>
+              <td class="py-2">{{ item.name || 'Sin nombre' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="p-4 border-t flex justify-end">
+        <button @click="closeFoliosModal" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Cerrar</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -365,8 +401,10 @@ const filters = ref({
 })
 
 const pieChartTotal = ref(null)
-const dimensionChartRefs = ref({})
-const chartInstances = ref({})
+const dimensionChartCanvas = ref(null)
+const chartInstances = ref({}) // keyed instances; we'll use 'Total' and 'Dimension'
+const TOTAL_CHART_KEY = 'Total'
+const DIMENSION_CHART_KEY = 'Dimension'
 
 // Helper functions to get names
 const getPuestoName = (puestoId) => {
@@ -691,7 +729,7 @@ const getScoreLevel = (score) => {
   return 'Totalmente Desacuerdo'
 }
 
-const createPieChart = (canvasRef, labels, data, title) => {
+const createPieChart = (canvasRef, labels, data, title, legendClickHandler = null) => {
   if (!canvasRef) return
 
   const ctx = canvasRef.getContext('2d')
@@ -725,7 +763,36 @@ const createPieChart = (canvasRef, labels, data, title) => {
           labels: {
             boxWidth: 12,
             padding: 10,
-          }
+            // Append counts to legend labels
+            generateLabels: (chart) => {
+              const data = chart.data
+              if (!data.labels) return []
+              const counts = (data.datasets?.[0]?.data || [])
+              return data.labels.map((label, i) => {
+                const meta = chart.getDatasetMeta(0)
+                const hidden = meta.data[i]?.hidden === true || meta._hiddenIndices?.[i]
+                const color = (data.datasets?.[0]?.backgroundColor || [])[i]
+                const value = counts[i] || 0
+                const personas = value === 1 ? 'persona' : 'personas'
+                return {
+                  text: `${label} (${value} ${personas})`,
+                  fillStyle: color,
+                  strokeStyle: '#ffffff',
+                  lineWidth: 2,
+                  hidden,
+                  index: i,
+                }
+              })
+            },
+          },
+          // On legend click, optionally show folios modal instead of toggling visibility
+          onClick: (evt, legendItem, legend) => {
+            if (typeof legendClickHandler === 'function') {
+              const label = legendItem.text?.split(' (')?.[0] || legendItem.text || ''
+              legendClickHandler(label)
+              return
+            }
+          },
         },
         title: {
           display: false,
@@ -758,24 +825,41 @@ const renderCharts = () => {
       const data = labels.map(key => distribution[key])
       
       if (data.length > 0) {
-        createPieChart(pieChartTotal.value, labels, data, 'Total')
+        createPieChart(pieChartTotal.value, labels, data, TOTAL_CHART_KEY, (levelLabel) => {
+          // Show folios by overall Clima Laboral interpretation
+          const items = getFoliosForClimaLevel(levelLabel)
+          openFoliosModal(`Folios en ${levelLabel} (Clima Laboral)`, items)
+        })
       }
     }
 
-    // Dimension-specific pie charts - Distribution by level for each dimension
-    Object.keys(filteredDimensions.value).forEach(dimensionName => {
-      const canvasRef = dimensionChartRefs.value[dimensionName]
-      if (canvasRef && canvasRef instanceof HTMLCanvasElement) {
-        const dimension = filteredDimensions.value[dimensionName]
+    // Dimension-specific pie chart - Only for active tab
+    if (activeTab.value !== 'Total' && dimensionChartCanvas.value) {
+      const dimension = filteredDimensions.value[activeTab.value]
+      if (dimension) {
         const distribution = dimension.distribution
         const labels = Object.keys(distribution).filter(key => distribution[key] > 0)
         const data = labels.map(key => distribution[key])
-        
         if (data.length > 0) {
-          createPieChart(canvasRef, labels, data, dimensionName)
+          createPieChart(
+            dimensionChartCanvas.value,
+            labels,
+            data,
+            DIMENSION_CHART_KEY,
+            (levelLabel) => {
+              const items = getFoliosForDimensionLevel(activeTab.value, levelLabel)
+              openFoliosModal(`Folios en ${levelLabel} - ${activeTab.value}`, items)
+            }
+          )
+        } else {
+          // Destroy existing dimension chart if no data
+          if (chartInstances.value[DIMENSION_CHART_KEY]) {
+            chartInstances.value[DIMENSION_CHART_KEY].destroy()
+            delete chartInstances.value[DIMENSION_CHART_KEY]
+          }
         }
       }
-    })
+    }
   })
 }
 
@@ -786,4 +870,55 @@ onMounted(() => {
 watch([activeTab, filteredDimensions], () => {
   renderCharts()
 }, { deep: true })
+
+// Compute the list of folios for a given level in the current dimension
+const valorOpciones = { A: 4, B: 3, C: 2, D: 1 }
+
+const getFoliosForDimensionLevel = (dimensionName, level) => {
+  const ranges = getLevelRanges(dimensionName)
+  const range = ranges.find(r => r.level === level)
+  if (!range) return []
+
+  // Identify question numbers for this dimension from props.dimensions
+  const dim = props.dimensions[dimensionName]
+  if (!dim || !dim.questions) return []
+  const qNums = Object.keys(dim.questions).map(n => parseInt(n, 10))
+
+  // For filtered evaluations, compute person score for this dimension
+  const items = []
+  filteredEvaluations.value.forEach(evalData => {
+    let score = 0
+    qNums.forEach(q => {
+      const ans = evalData.answers[q]
+      if (ans) score += (valorOpciones[ans] || 0)
+    })
+    if (score >= range.min && score <= range.max) {
+      items.push({ folio: evalData.personal_folio, name: evalData.evaluee_name || '' })
+    }
+  })
+  return items
+}
+
+const getFoliosForClimaLevel = (level) => {
+  const items = []
+  filteredEvaluations.value.forEach(evalData => {
+    const interpretation = evalData.scores?.interpretation
+    if (interpretation === level) {
+      items.push({ folio: evalData.personal_folio, name: evalData.evaluee_name || '' })
+    }
+  })
+  return items
+}
+
+// Modal to display folios list
+const showFoliosModal = ref(false)
+const foliosModalTitle = ref('')
+const foliosModalItems = ref([])
+
+const openFoliosModal = (title, items) => {
+  foliosModalTitle.value = title
+  foliosModalItems.value = items
+  showFoliosModal.value = true
+}
+const closeFoliosModal = () => { showFoliosModal.value = false }
 </script>
