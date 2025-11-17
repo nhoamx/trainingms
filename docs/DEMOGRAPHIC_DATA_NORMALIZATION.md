@@ -1,8 +1,8 @@
-# Demographic Data Normalization Implementation
+# Demographic Data Normalization
 
 ## Overview
 
-This document describes the demographic data normalization feature that moves demographic information from unstructured JSON storage into a normalized relational table. This enables complex queries, aggregations, and report generation for psychosocial risk assessment data.
+The demographic data normalization system extracts and standardizes demographic information from paper-based evaluations (processed via OCR) and stores it in a normalized relational structure. The system supports both legacy OCR data formats and new evaluation structures automatically, ensuring backward compatibility while standardizing data representation.
 
 ## Problem Statement
 
@@ -11,43 +11,118 @@ Previously, demographic data from paper-based evaluations (referencia_v type) wa
 - Difficult to perform complex SQL queries on demographic attributes
 - Hard to aggregate and analyze demographic patterns
 - No type safety or validation at the database level
-- Inconsistent field naming across evaluations
+- Inconsistent field naming and value formats across evaluations
+- Multiple JSON structure formats from different data sources (OCR vs manual entry)
 - Difficult to maintain data integrity
 
-## Solution Architecture
+## Solution: Automatic Structure Detection & Normalization
 
-### New Database Table: `demographic_data`
+### Data Flow
 
-A new normalized table stores demographic information with the following structure:
+```
+PaperEvaluation.demographic_data (JSON)
+            ↓
+    [Structure Detection]
+            ↓
+    ┌───────┴──────────┐
+    ↓                  ↓
+New Format         Old OCR Format
+(dados_laborales)  (decenas/unidades)
+    ↓                  ↓
+    └───────┬──────────┘
+            ↓
+Value Normalization & Mapping
+            ↓
+DemographicData Table (15 columns + extra_fields JSON)
+```
+
+### Database Table: `demographic_data`
+
+Normalized table with all demographic attributes:
 
 ```sql
 CREATE TABLE demographic_data (
     id CHAR(36) PRIMARY KEY,
-    paper_evaluation_id CHAR(36) FOREIGN KEY,
-    gender VARCHAR(255),
-    age VARCHAR(255),
-    marital_status VARCHAR(255),
-    education_level VARCHAR(255),
+    paper_evaluation_id CHAR(36) FOREIGN KEY ON DELETE CASCADE,
+    gender VARCHAR(50),
+    age VARCHAR(20),
+    marital_status VARCHAR(100),
+    education_level VARCHAR(100),
     position VARCHAR(255),
     department VARCHAR(255),
-    position_type VARCHAR(255),
-    contract_type VARCHAR(255),
-    personnel_type VARCHAR(255),
+    position_type VARCHAR(100),
+    contract_type VARCHAR(100),
+    personnel_type VARCHAR(100),
     work_schedule VARCHAR(255),
-    shift_rotation VARCHAR(255),
-    time_in_current_position VARCHAR(255),
-    work_experience VARCHAR(255),
+    shift_rotation VARCHAR(100),
+    time_in_current_position INT,
+    work_experience VARCHAR(100),
     extra_fields JSON,
     created_at TIMESTAMP,
     updated_at TIMESTAMP
 );
 ```
 
-### Database Constraints
+## Supported Data Structures
 
-- **Primary Key**: UUID (`id`)
-- **Foreign Key**: `paper_evaluation_id` references `paper_evaluations.id` with `ON DELETE CASCADE`
-- **Extra Fields**: JSON column stores any unmapped demographic data for flexibility
+### Structure 1: New Nested Format
+
+Newer evaluation records contain demographic data in a nested `datos_laborales` object:
+
+```json
+{
+  "datos_laborales": {
+    "ocupacion_puesto": "Software Developer",
+    "area_departamento": "IT",
+    "tipo_posicion": "profesional_o_tecnico",
+    "tipo_contrato": "tiempo_indeterminado",
+    "tipo_personal": "confianza",
+    "horario_laboral": "fijo_diurno_(entre_las_6:00_y_20:00_hrs)",
+    "rotacion_turnos": "no_aplica",
+    "antiguedad_puesto": "5",
+    "experiencia": {
+      "anos": 10,
+      "tipo": "entre_5_a_9_anos"
+    }
+  }
+}
+```
+
+**Detection**: System checks for presence of `datos_laborales` key.
+
+### Structure 2: Old OCR Format (Legacy)
+
+Legacy OCR-processed records contain demographic data with object-type fields:
+
+```json
+{
+  "edad": {
+    "decenas": 2,
+    "unidades": 7
+  },
+  "genero": {
+    "fila1": "femenino"
+  },
+  "estado_civil": {
+    "fila1": "casado"
+  },
+  "escolaridad": {
+    "fila1": "primaria",
+    "completado": true
+  },
+  "ocupacion_puesto": {
+    "fila1": "Engineer",
+    "fila2": ""
+  },
+  "tipo_posicion": {
+    "fila1": "operativo"
+  }
+}
+```
+
+**Detection**: System checks for absence of `datos_laborales` key.
+
+**Migration Status**: Successfully migrated 60 evaluations (58 old format, 2 new format).
 
 ## Implementation Details
 
@@ -56,87 +131,104 @@ CREATE TABLE demographic_data (
 #### DemographicData Model (`app/Models/DemographicData.php`)
 
 - Uses `HasUuids` trait for UUID primary key generation
-- Configured with 15 fillable attributes corresponding to demographic columns
+- Configured with 15 fillable attributes in English
 - Casts `extra_fields` as JSON for automatic serialization
 - `BelongsTo` relationship to `PaperEvaluation` model
+
+**Attributes**:
+- `gender`, `age`, `marital_status`, `education_level`, `position`, `department`
+- `position_type`, `contract_type`, `personnel_type`, `work_schedule`, `shift_rotation`
+- `time_in_current_position`, `work_experience`, `extra_fields`
 
 **Usage:**
 ```php
 $demographic = \App\Models\DemographicData::find($id);
-$evaluation = $demographic->paperEvaluation; // Access parent evaluation
-$extras = $demographic->extra_fields; // Access any extra fields
+$evaluation = $demographic->paperEvaluation;
+$extras = $demographic->extra_fields;
 ```
 
 #### PaperEvaluation Model Updates
 
 - Added `HasOne` relationship to `DemographicData` model
 - Maintains backward compatibility with existing `demographic_data` JSON field
-- Allows eager loading of normalized demographic data
+- Allows eager loading: `with('demographicData')`
 
 **Usage:**
 ```php
 $evaluation = \App\Models\PaperEvaluation::with('demographicData')->first();
-$demo = $evaluation->demographicData; // Access normalized demographic data
+$demo = $evaluation->demographicData; // Access normalized data
 ```
 
 ### Jobs
 
-#### ProcessPaperEvaluation Job Updates (`app/Jobs/ProcessPaperEvaluation.php`)
+#### ProcessPaperEvaluation Job (`app/Jobs/ProcessPaperEvaluation.php`)
 
-When processing paper-based referencia_v evaluations:
+When processing paper-based evaluations:
 
-1. Extracts demographic data from OCR raw output
-2. Maps Spanish field names to English database columns:
-   - `genero` → `gender`
-   - `edad` → `age`
-   - `estado_civil` → `estado_civil`
-   - `nivel_estudios` → `nivel_estudios`
-   - `ocupacion_puesto` → `puesto`
-   - `departamento_seccion_area` → `area`
-   - `tipo_puesto` → `tipo_puesto`
-   - `tipo_contratacion` → `tipo_contratacion`
-   - `tipo_personal` → `tipo_personal`
-   - `tipo_jornada` → `tipo_jornada`
-   - `rotacion_turnos` → `rotacion_turnos`
-   - `tiempo_puesto_actual` → `tiempo_puesto_actual`
-   - `tiempo_experiencia_laboral` → `tiempo_experiencia_laboral`
+1. **Automatic Structure Detection** (`isNewStructure()`):
+   - Checks for `datos_laborales` key
+   - Routes to appropriate extraction method
 
-3. Stores unmapped fields in `extra_fields` JSON column
-4. Deletes existing demographic records before creating new ones (prevents duplicates)
-5. Maintains backward compatibility by also storing raw JSON in `demographic_data` field
+2. **New Format Extraction** (`extractFromNewStructure()`):
+   - Directly maps nested labor data to English columns
+   - Extracts education from `experiencia` sub-object
+   - Converts enum values to proper format
+
+3. **Old OCR Format Extraction** (`extractFromOldStructure()`):
+   - Extracts values from `fila1`/`fila2` fields
+   - Converts numeric age (`decenas` + `unidades`) to range format
+   - Handles education with `completado` flag
+   - Normalizes all enum values
+
+4. **Normalization Helpers**:
+   - `convertAgeToRange()` - Converts age number to range string
+   - `normalizePosicionType()` - Maps position types
+   - `normalizeContractType()` - Maps contract types
+   - `normalizePersonnelType()` - Maps personnel types
+   - `normalizeWorkSchedule()` - Maps work schedules
+   - `normalizeYesNo()` - Maps yes/no values
+   - `normalizeExperience()` - Maps experience ranges
+   - `extractEducationLevel()` - Extracts education with completado status
+   - `normalizeValue()` - General value normalization
+
+5. **Storage**:
+   - Deletes existing demographic record (prevents duplicates)
+   - Creates new DemographicData entry
+   - Stores unmapped values in `extra_fields` JSON
 
 ### Artisan Command
 
 #### MigrateDemographicData Command (`app/Console/Commands/MigrateDemographicData.php`)
 
-One-time command to migrate existing demographic data from the JSON field to the normalized table.
+One-time command for existing demographic data migration.
 
 **Usage:**
 ```bash
 # Run with confirmation
 php artisan demographic-data:migrate
 
-# Skip confirmation and run immediately
+# Skip confirmation
 php artisan demographic-data:migrate --force
 ```
 
 **Features:**
-- Queries only referencia_v type evaluations with demographic data
-- Skips evaluations that already have normalized data
-- Shows progress bar during migration
-- Logs detailed information about the process
+- Automatic structure detection (same logic as ProcessPaperEvaluation)
+- Queries only referencia_v evaluations
+- Skips already-migrated records
+- Progress bar with detailed output
+- Supports both old OCR and new nested formats
 - Handles extra fields gracefully
-- Returns summary statistics
 
-**Output Example:**
+**Migration Results**:
 ```
-Starting demographic data migration...
-Found 250 evaluations with demographic data
-[==========================================] 250/250
 ✓ Migration completed successfully!
-  - Migrated: 245
-  - Skipped: 5
+  - Total evaluated: 60
+  - Migrated: 58 (old OCR format)
+  - Migrated: 2 (new nested format)
+  - Skipped: 0 (all processed)
 ```
+
+
 
 ## Data Mapping Reference
 
@@ -147,16 +239,16 @@ Found 250 evaluations with demographic data
 | genero | gender | varchar | Masculino / Femenino |
 | edad | age | varchar | Age range (e.g., "25 - 29") |
 | estado_civil | marital_status | varchar | Marital status |
-| nivel_estudios | education_level | varchar | Educational level |
+| escolaridad / nivel_estudios | education_level | varchar | Educational level |
 | ocupacion_puesto | position | varchar | Job position/occupation |
 | departamento_seccion_area | department | varchar | Department/Section |
-| tipo_puesto | position_type | varchar | Operational/Professional/Supervisor/Manager |
-| tipo_contratacion | contract_type | varchar | Contract type |
-| tipo_personal | personnel_type | varchar | Syndical/Confidence/None |
-| tipo_jornada | work_schedule | varchar | Work schedule type |
-| rotacion_turnos | shift_rotation | varchar | Shift rotation |
-| tiempo_puesto_actual | time_in_current_position | varchar | Time in current position |
-| tiempo_experiencia_laboral | work_experience | varchar | Years of work experience |
+| tipo_posicion | position_type | varchar | Operativo / Profesional o técnico / Directivo |
+| tipo_contrato | contract_type | varchar | Tiempo indeterminado / Tiempo determinado |
+| tipo_personal | personnel_type | varchar | Confianza / Sindicalizado |
+| horario_laboral | work_schedule | varchar | Fijo diurno / Fijo nocturno / Rotativo |
+| rotacion_turnos | shift_rotation | varchar | Sí / No / No aplica |
+| antiguedad_puesto | time_in_current_position | int | Years in position |
+| experiencia | work_experience | varchar | Experience range or description |
 
 ### Extra Fields Storage
 
@@ -230,7 +322,7 @@ $females = DemographicData::where('gender', 'Femenino')->get();
 $ageGroup = DemographicData::where('age', '30 - 34')->get();
 
 // Get employees with specific contract type
-$permanent = DemographicData::where('tipo_contratacion', 'Tiempo indeterminado')->get();
+$permanent = DemographicData::where('contract_type', 'Tiempo indeterminado')->get();
 ```
 
 ### Aggregation Queries
@@ -247,8 +339,8 @@ $ageDistribution = DemographicData::selectRaw('age, COUNT(*) as count')
     ->get();
 
 // Get average time in current position by department
-$byDepartment = DemographicData::selectRaw('area, tiempo_puesto_actual, COUNT(*) as count')
-    ->groupBy('area', 'tiempo_puesto_actual')
+$byDepartment = DemographicData::selectRaw('department, time_in_current_position, COUNT(*) as count')
+    ->groupBy('department', 'time_in_current_position')
     ->get();
 ```
 
@@ -267,7 +359,7 @@ $evaluations = PaperEvaluation::ofType('referencia_v')
 
 // Filter by demographic criteria and get evaluation answers
 $evaluations = PaperEvaluation::whereHas('demographicData', function($query) {
-    $query->where('tipo_puesto', 'Gerente');
+    $query->where('position_type', 'Directivo');
 })->with('demographicData')->get();
 ```
 
@@ -286,8 +378,8 @@ Consider adding additional indexes if frequently querying by demographic attribu
 Schema::table('demographic_data', function (Blueprint $table) {
     $table->index('gender');
     $table->index('age');
-    $table->index('tipo_puesto');
-    $table->index('area');
+    $table->index('position_type');
+    $table->index('department');
     // Add more indexes based on query patterns
 });
 ```
@@ -314,6 +406,73 @@ The implementation includes:
 - Migration file creation and structure
 - Factory for creating test data
 - Command functionality tests
+
+## Normalization Rules Reference
+
+### Age Conversion
+Converts numeric age (stored as `decenas` + `unidades` in old OCR format) to age range:
+
+| Input | Output | Input | Output |
+|-------|--------|-------|--------|
+| 15-19 | 15 - 19 | 50-54 | 50 - 54 |
+| 20-24 | 20 - 24 | 55-59 | 55 - 59 |
+| 25-29 | 25 - 29 | 60+ | 60+ |
+| 30-34 | 30 - 34 | | |
+| 35-39 | 35 - 39 | | |
+| 40-44 | 40 - 44 | | |
+| 45-49 | 45 - 49 | | |
+
+### Enum Value Mappings
+
+#### Gender
+```
+masculino → Masculino
+femenino → Femenino
+```
+
+#### Marital Status
+```
+soltero → Soltero
+casado → Casado
+union_libre → Unión libre
+divorciado → Divorciado
+viudo → Viudo
+```
+
+#### Position Type
+```
+operativo → Operativo
+profesional_o_tecnico → Profesional o técnico
+directivo → Directivo
+```
+
+#### Contract Type
+```
+tiempo_indeterminado → Tiempo indeterminado
+tiempo_determinado → Tiempo determinado
+contrato_temporal → Contrato temporal
+```
+
+#### Personnel Type
+```
+confianza → Confianza
+sindicalizado → Sindicalizado
+```
+
+#### Work Schedule
+```
+fijo_diurno_(entre_las_6:00_y_20:00_hrs) → Fijo diurno (entre las 6:00 y 20:00 hrs)
+fijo_nocturno_(entre_las_20:00_y_6:00_hrs) → Fijo nocturno (entre las 20:00 y 6:00 hrs)
+rotativo → Rotativo
+```
+
+#### Experience Ranges
+```
+entre_1_a_4_anos → Entre 1 a 4 años
+entre_5_a_9_anos → Entre 5 a 9 años
+entre_10_a_19_anos → Entre 10 a 19 años
+mas_de_20_anos → Más de 20 años
+```
 
 ## Future Enhancements
 
