@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\DemographicData;
 use App\Models\PaperEvaluation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -48,6 +49,7 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow, WithVa
                 $evaluations = PaperEvaluation::where('personal_folio', $personalFolio)
                     ->whereIn('source', ['paper', 'online'])
                     ->where('processing_status', 'completed')
+                    ->with('demographicData') // Eager load DemographicData relationship
                     ->get();
 
                 if ($evaluations->isEmpty()) {
@@ -64,6 +66,22 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow, WithVa
                     if (! empty($nombre) && $nombre !== $evaluation->evaluee_name) {
                         $evaluation->evaluee_name = $nombre;
                         $updated = true;
+                    }
+
+                    // Check if this evaluation has DemographicData model (for Likert evaluations)
+                    if ($evaluation->demographicData) {
+                        // Update DemographicData model
+                        if (! empty($puesto) && $puesto !== $evaluation->demographicData->position) {
+                            $evaluation->demographicData->position = $puesto;
+                            $evaluation->demographicData->save();
+                            $updated = true;
+                        }
+
+                        if (! empty($area) && $area !== $evaluation->demographicData->department) {
+                            $evaluation->demographicData->department = $area;
+                            $evaluation->demographicData->save();
+                            $updated = true;
+                        }
                     }
 
                     // Update demographic data if it's a Referencia V evaluation
