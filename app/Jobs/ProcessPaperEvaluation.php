@@ -311,9 +311,11 @@ class ProcessPaperEvaluation implements ShouldQueue
                 ]
             );
 
-            // Save demographic data if present
+            // Save demographic data if present (from Referencia V or Likert)
             if (isset($structuredData['demographic_data']) && ! empty($structuredData['demographic_data'])) {
                 $this->saveDemographicData($paperEvaluation, $structuredData['demographic_data']);
+            } elseif (isset($structuredData['likert_answers']) && ! empty($structuredData['likert_answers'])) {
+                $this->saveDemographicData($paperEvaluation, $structuredData['likert_answers']);
             }
 
             Log::info("Paper evaluation processed successfully: {$folio}");
@@ -510,16 +512,49 @@ class ProcessPaperEvaluation implements ShouldQueue
 
     /**
      * Extract demographic information from raw data
-     * Handles both new nested structure (datos_laborales) and old OCR structure
+     * Handles new nested structure (datos_laborales), old OCR structure, and Likert data
      */
     protected function extractDemographicInfo(array $demographicData): array
     {
-        // Determine which structure we're dealing with
+        // Check if this is Likert data (has 'questions' key indicating it's from likert_answers)
+        if (isset($demographicData['questions'])) {
+            return $this->extractFromLikert($demographicData);
+        }
+
+        // Determine which structure we're dealing with for Referencia V
         if ($this->isNewStructure($demographicData)) {
             return $this->extractFromNewStructure($demographicData);
         } else {
             return $this->extractFromOldStructure($demographicData);
         }
+    }
+
+    /**
+     * Extract from Likert scale data (workplace climate evaluation)
+     */
+    private function extractFromLikert(array $likertData): array
+    {
+        return [
+            'gender' => $this->normalizeValue($likertData['genero'] ?? null, [
+                'masculino' => 'Masculino',
+                'femenino' => 'Femenino',
+            ]),
+            'age' => null, // Not provided in Likert data
+            'marital_status' => null, // Not provided in Likert data
+            'education_level' => null, // Not provided in Likert data
+            'position' => $likertData['puestos'] ?? null,
+            'department' => $likertData['areas'] ?? null,
+            'position_type' => null, // Not provided in Likert data
+            'contract_type' => $this->normalizeContractType($likertData['tipo_contrato'] ?? null),
+            'personnel_type' => null, // Not provided in Likert data
+            'work_schedule' => $this->normalizeWorkSchedule($likertData['turno'] ?? null),
+            'shift_rotation' => null, // Not provided in Likert data
+            'time_in_current_position' => null, // Not provided in Likert data
+            'work_experience' => null, // Not provided in Likert data
+            'extra_fields' => [
+                'questions' => $likertData['questions'] ?? null,
+            ],
+        ];
     }
 
     /**
