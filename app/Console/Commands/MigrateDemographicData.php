@@ -44,8 +44,8 @@ class MigrateDemographicData extends Command
 
         try {
             // Get all paper evaluations with referencia_v type (demographic data)
-            $evaluations = PaperEvaluation::ofType('referencia_v')
-                ->whereNotNull('demographic_data')
+            $evaluations = PaperEvaluation::ofType(['referencia_v', 'likert'])
+                ->whereNotNull(['demographic_data', 'likert_answers'])
                 ->get();
 
             $this->info("Found {$evaluations->count()} evaluations with demographic data");
