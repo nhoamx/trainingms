@@ -254,7 +254,7 @@
             <div v-else-if="filteredDimensions[activeTab]">
               <!-- Clima Laboral de la Dimensión (encabezado como en Total) -->
               <div class="mb-6 rounded-lg p-6" :class="getLevelColor(activeDimensionMostCommon).bgSolid">
-                <h3 class="text-lg font-semibold mb-2" :class="getLevelColor(activeDimensionMostCommon).text">Clima Laboral - {{ activeTab }}</h3>
+                <h3 class="text-lg font-semibold mb-2" :class="getLevelColor(activeDimensionMostCommon).text">Clima Laboral</h3>
                 <div class="flex items-baseline gap-3">
                   <span class="text-3xl font-bold" :class="getLevelColor(activeDimensionMostCommon).text">{{ activeDimensionMostCommon }}</span>
                   <span class="text-lg opacity-90" :class="getLevelColor(activeDimensionMostCommon).text">/ {{ activeDimensionTotalPeople }} {{ activeDimensionTotalPeople === 1 ? 'persona' : 'personas' }}</span>
@@ -300,7 +300,7 @@
 
               <!-- Mapa de Calor para esta Dimensión -->
               <div>
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Mapa de Calor - {{ activeTab }}</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Mapa de Calor</h4>
                 <div class="overflow-x-auto">
                   <table class="min-w-full border-collapse border border-gray-300">
                     <thead>
