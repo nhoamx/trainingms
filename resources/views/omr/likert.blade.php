@@ -435,7 +435,11 @@
                 <div class="demographic-section">
                     <div class="demographic-title">CONTRATACIÓN</div>
                     <div class="demographic-item">
-                        <span class="demographic-label">SINDICALIZADO</span>
+                        <span class="demographic-label">DIRECTO</span>
+                        <div class="demographic-bubble"></div>
+                    </div>
+                    <div class="demographic-item">
+                        <span class="demographic-label">INDIRECTO</span>
                         <div class="demographic-bubble"></div>
                     </div>
                     <div class="demographic-item">
@@ -461,11 +465,11 @@
                 <div class="demographic-section">
                     <div class="demographic-title">TURNO</div>
                     <div class="demographic-item">
-                        <span class="demographic-label">MATUTINO</span>
+                        <span class="demographic-label">PRIMERO</span>
                         <div class="demographic-bubble"></div>
                     </div>
                     <div class="demographic-item">
-                        <span class="demographic-label">NOCTURNO</span>
+                        <span class="demographic-label">SEGUNDO</span>
                         <div class="demographic-bubble"></div>
                     </div>
                 </div>
