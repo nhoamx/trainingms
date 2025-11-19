@@ -135,6 +135,7 @@
         font-size: 12px;
         line-height: 1.3;
         width: 100%;
+        position: relative;
     }
     .instructions-row {
         display: flex;
@@ -143,13 +144,15 @@
         width: 100%;
     }
     .instructions-text { 
-        flex: 0 0 70%;
+        width: 100%;
     }
     .instructions-date {
         display: flex;
         gap: 3mm;
         align-items: center;
-        flex: 0 0 30%;
+        position: absolute;
+        top: 0;
+        right: 0;
     }
     .column-header {
         display: flex;
