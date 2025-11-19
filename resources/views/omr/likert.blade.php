@@ -134,18 +134,22 @@
     .instructions { 
         font-size: 12px;
         line-height: 1.3;
+        width: 100%;
     }
     .instructions-row {
         display: flex;
-        justify-content: space-between;
         align-items: flex-start;
         gap: 4mm;
+        width: 100%;
     }
-    .instructions-text { flex: 1; }
+    .instructions-text { 
+        flex: 0 0 70%;
+    }
     .instructions-date {
         display: flex;
         gap: 3mm;
         align-items: center;
+        flex: 0 0 30%;
     }
     .column-header {
         display: flex;
@@ -397,7 +401,7 @@
                     </div>
                     <ul style="margin-left: 4mm;">
                         <li>Rellenar completamente el círculo.</li>
-                        <li>Contestar objetivamente al día de hoy, tomando en cuenta el departamento y actividades que realiza.</li>
+                        <li>Contestar objetivamente con sinceridad su percepción actual, tomando en cuenta el departamento y actividades que realiza.</li>
                     </ul>
                 </div>
                 <div class="instructions-date">
@@ -492,7 +496,7 @@
                 </div>
 
                 <!-- Manual Fields Section -->
-                <div class="demographic-section" style="margin-top: 2mm;">
+                <div class="demographic-section" style="margin-top: 5mm;">
                     <div class="manual-field" style="margin-bottom: 1.5mm;">
                         <span class="manual-field-label">7. GTE. DE PLANTA</span>
                         <div class="manual-field-line"></div>
