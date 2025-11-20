@@ -488,7 +488,7 @@
                 </div>
 
                 <!-- Áreas Section -->
-                <div class="demographic-section" style="margin-top: 1mm;">
+                <div class="demographic-section" style="margin-top:7mm;">
                     <div class="demographic-title">ÁREAS</div>
                     @foreach($areas as $index => $area)
                         <div class="demographic-item-numbered">
