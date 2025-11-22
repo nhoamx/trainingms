@@ -2,18 +2,15 @@
 
 namespace App\Jobs;
 
-use App\Models\FolioBatch;
 use App\Models\Organization;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Browsershot\Browsershot;
 
 class GenerateOMRPdfJob implements ShouldQueue
 {
-
-    //TODO: Use  Ghostscript to merge pdfs 
+    // TODO: Use  Ghostscript to merge pdfs
     use Queueable;
 
     public $timeout = 1800; // 30 minutes
@@ -29,8 +26,7 @@ class GenerateOMRPdfJob implements ShouldQueue
         public array $viewData,
         public int $batchNumber = 1,
         public int $totalBatches = 1
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.
@@ -39,38 +35,44 @@ class GenerateOMRPdfJob implements ShouldQueue
     {
         $startTime = now();
         $totalFolios = count($this->foliosToGenerate);
-        
-        Log::info("=== INICIANDO GENERACIÓN DE PDFs OMR ===", [
+
+        Log::info('=== INICIANDO GENERACIÓN DE PDFs OMR ===', [
             'organization' => $this->organization->name,
             'guide_type' => $this->guideType,
             'total_folios' => $totalFolios,
             'batch_number' => $this->batchNumber,
             'total_batches' => $this->totalBatches,
-            'start_time' => $startTime->toDateTimeString()
+            'start_time' => $startTime->toDateTimeString(),
         ]);
 
-        // Increase memory limit and execution time
-        ini_set('memory_limit', '512M');
-        ini_set('max_execution_time', '1800');
-        set_time_limit(1800);
+        // Get configuration values
+        $chunkSize = config('omr.pdf_generation.chunk_size', 100);
+        $memoryLimit = config('omr.pdf_generation.memory_limit', 512).'M';
+        $executionTime = config('omr.pdf_generation.execution_time', 1800);
 
-        // Split folios into chunks of 100 to avoid memory issues
-        $chunks = array_chunk($this->foliosToGenerate, 100);
+        // Increase memory limit and execution time
+        ini_set('memory_limit', $memoryLimit);
+        ini_set('max_execution_time', (string) $executionTime);
+        set_time_limit($executionTime);
+
+        // Split folios into chunks to avoid memory issues
+        $chunks = array_chunk($this->foliosToGenerate, $chunkSize);
         $timestamp = date('Y-m-d_H-i-s');
 
-        Log::info("Dividiendo en chunks", [
+        Log::info('Dividiendo en chunks', [
             'total_chunks' => count($chunks),
-            'pages_per_chunk' => 100
+            'pages_per_chunk' => $chunkSize,
+            'configured_chunk_size' => $chunkSize,
         ]);
 
         foreach ($chunks as $chunkIndex => $chunk) {
             $chunkStartTime = now();
             $chunkNumber = $chunkIndex + 1;
             $totalChunks = count($chunks);
-            
+
             Log::info("→ Procesando chunk {$chunkNumber}/{$totalChunks}", [
                 'chunk_folios' => count($chunk),
-                'chunk_start' => $chunkStartTime->toDateTimeString()
+                'chunk_start' => $chunkStartTime->toDateTimeString(),
             ]);
 
             // Generate HTML content for this chunk only
@@ -96,33 +98,43 @@ class GenerateOMRPdfJob implements ShouldQueue
             }
 
             Log::info("  HTML generado para chunk {$chunkNumber}", [
-                'html_size_kb' => round(strlen($htmlContent) / 1024, 2)
+                'html_size_kb' => round(strlen($htmlContent) / 1024, 2),
             ]);
 
             // Generate PDF for this chunk
-            $filename = str_replace('-', '_', $this->guideType) . '_' . 
-                       $this->organization->name . '_' . 
-                       ($totalChunks > 1 ? 'parte_' . $chunkNumber . '_de_' . $totalChunks . '_' : '') .
-                       $timestamp . '.pdf';
-            
-            $storagePath = 'public/pdfs/' . $filename;
-            $fullPath = storage_path('app/' . $storagePath);
+            // Get folio range for this chunk
+            $firstFolio = $chunk[0];
+            $lastFolio = $chunk[count($chunk) - 1];
+
+            // Format: {empresa}-folio-del-{folio inicial}-al-{folio final}-{fecha}
+            $filename = $this->organization->name.
+                       '-folio-del-'.$firstFolio.
+                       '-al-'.$lastFolio.
+                       ($totalChunks > 1 ? '-parte-'.$chunkNumber.'-de-'.$totalChunks : '').
+                       '-'.$timestamp.'.pdf';
+
+            $storagePath = 'public/pdfs/'.$filename;
+            $fullPath = storage_path('app/'.$storagePath);
 
             // Create directory if it doesn't exist
-            if (!file_exists(dirname($fullPath))) {
+            if (! file_exists(dirname($fullPath))) {
                 mkdir(dirname($fullPath), 0755, true);
             }
 
             Log::info("  Generando PDF para chunk {$chunkNumber}...");
+
+            // Get Browsershot configuration
+            $browsershotTimeout = config('omr.pdf_generation.browsershot_timeout', 300);
+            $scaleFactor = config('omr.pdf_generation.scale_factor', 0.96);
 
             // Configure Browsershot with optimized settings for chunks
             $browsershot = Browsershot::html($htmlContent)
                 ->noSandbox()
                 ->format('Letter')
                 ->margins(0, 0, 0, 0)
-                ->scale(0.96)
+                ->scale($scaleFactor)
                 ->showBackground()
-                ->timeout(300) // 5 minutes per chunk (100 pages)
+                ->timeout($browsershotTimeout)
                 ->setOption('args', ['--disable-dev-shm-usage', '--no-sandbox'])
                 ->waitUntilNetworkIdle();
 
@@ -142,7 +154,7 @@ class GenerateOMRPdfJob implements ShouldQueue
                 'filename' => $filename,
                 'file_size_mb' => $fileSize,
                 'duration_seconds' => $chunkDuration,
-                'pages' => count($chunk)
+                'pages' => count($chunk),
             ]);
 
             // Clear memory after each chunk
@@ -153,14 +165,14 @@ class GenerateOMRPdfJob implements ShouldQueue
         $endTime = now();
         $totalDuration = $startTime->diffInSeconds($endTime);
 
-        Log::info("=== GENERACIÓN DE PDFs COMPLETADA ===", [
+        Log::info('=== GENERACIÓN DE PDFs COMPLETADA ===', [
             'organization' => $this->organization->name,
             'total_chunks_generated' => count($chunks),
             'total_folios' => $totalFolios,
             'total_duration_seconds' => $totalDuration,
             'total_duration_minutes' => round($totalDuration / 60, 2),
             'avg_seconds_per_chunk' => round($totalDuration / count($chunks), 2),
-            'end_time' => $endTime->toDateTimeString()
+            'end_time' => $endTime->toDateTimeString(),
         ]);
     }
 

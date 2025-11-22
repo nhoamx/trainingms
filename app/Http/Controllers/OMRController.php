@@ -20,7 +20,7 @@ class OMRController extends Controller
         'referencia-iii' => '02',
         'referencia-v' => '03',
         'escala-cisneros' => '04',
-        'likert' => '06',
+        'likert' => '05',
     ];
 
     /**
@@ -40,7 +40,7 @@ class OMRController extends Controller
         }
 
         // return $typeCode.$orgCode.$personCode;
-        return $typeCode.'031'.$personCode;
+        return $typeCode.'030'.$personCode;
     }
 
     /**
@@ -48,10 +48,14 @@ class OMRController extends Controller
      */
     public function generatePdf(StoreOMRPdfRequest $request)
     {
+        // Get configuration values
+        $memoryLimit = config('omr.pdf_generation.memory_limit', 512).'M';
+        $executionTime = config('omr.pdf_generation.execution_time', 1800);
+
         // Increase memory limit and execution time for large batch generation
-        ini_set('memory_limit', '512M');
-        ini_set('max_execution_time', '300'); // 5 minutes
-        
+        ini_set('memory_limit', $memoryLimit);
+        ini_set('max_execution_time', (string) $executionTime);
+
         $validated = $request->validated();
 
         // Get organization and batch
@@ -75,11 +79,15 @@ class OMRController extends Controller
             return back()->with('error', 'No se proporcionaron folios para generar el PDF.');
         }
 
-        // For large batches (>100 folios), split into multiple PDFs
-        if (count($foliosToGenerate) > 100) {
-            // Split into batches of 100
-            $chunks = array_chunk($foliosToGenerate, 100);
-            
+        // Get configuration values
+        $jobThreshold = config('omr.pdf_generation.job_threshold', 100);
+        $chunkSize = config('omr.pdf_generation.chunk_size', 100);
+
+        // For large batches, split into multiple PDFs
+        if (count($foliosToGenerate) > $jobThreshold) {
+            // Split into configurable chunks
+            $chunks = array_chunk($foliosToGenerate, $chunkSize);
+
             // Get guide configuration
             $guideType = $validated['guide_type'];
             $viewData = $this->getGuideData($guideType);
@@ -106,10 +114,10 @@ class OMRController extends Controller
             // Dispatch multiple jobs, one per chunk
             foreach ($chunks as $chunkIndex => $chunk) {
                 GenerateOMRPdfJob::dispatch(
-                    $validated, 
-                    $guideType, 
-                    $organization, 
-                    $chunk, 
+                    $validated,
+                    $guideType,
+                    $organization,
+                    $chunk,
                     $viewData,
                     $chunkIndex + 1, // Batch number
                     count($chunks)   // Total batches
@@ -118,11 +126,11 @@ class OMRController extends Controller
 
             $totalFolios = count($foliosToGenerate);
             $totalBatches = count($chunks);
-            
+
             return back()->with('flash', [
                 'type' => 'success',
                 'title' => 'Generación de PDFs iniciada',
-                'message' => "Se están generando {$totalBatches} archivos PDF con {$totalFolios} folios en total (100 folios por archivo). Los archivos estarán disponibles en storage/app/public/pdfs/ en unos minutos."
+                'message' => "Se están generando {$totalBatches} archivos PDF con {$totalFolios} folios en total (100 folios por archivo). Los archivos estarán disponibles en storage/app/public/pdfs/ en unos minutos.",
             ]);
         }
 
@@ -168,7 +176,7 @@ class OMRController extends Controller
             if ($index < count($foliosToGenerate) - 1) {
                 $htmlContent .= '<div style="page-break-after: always;"></div>';
             }
-            
+
             // Free memory every 100 pages
             if (($index + 1) % 100 === 0) {
                 gc_collect_cycles();
@@ -334,7 +342,7 @@ class OMRController extends Controller
             }
         }
 
-        return view('omr.likert-planta-3', [
+        return view('omr.likert', [
             'totalQuestions' => 23,
             'folio' => $request->input('folio', '000000000'),
             'logo' => $request->input('logo'),
