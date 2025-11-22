@@ -297,8 +297,8 @@ const handleImportAreasSuccess = () => {
     <Dashboard>
         <div class="bg-white px-4 sm:px-6 py-4">
             <Alert
-                v-if="$page.props.flash"
-                :type="$page.props.flash.type"
+                v-if="$page.props.flash && $page.props.flash.message"
+                :type="$page.props.flash.type || 'info'"
                 :title="$page.props.flash.title"
                 :message="$page.props.flash.message"
                 class="my-4"

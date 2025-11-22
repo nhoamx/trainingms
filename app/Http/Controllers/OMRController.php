@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOMRPdfRequest;
+use App\Jobs\GenerateOMRPdfJob;
 use App\Models\FolioBatch;
 use App\Models\Organization;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class OMRController extends Controller
         'referencia-iii' => '02',
         'referencia-v' => '03',
         'escala-cisneros' => '04',
-        'likert' => '05',
+        'likert' => '06',
     ];
 
     /**
@@ -38,7 +39,8 @@ class OMRController extends Controller
             $personCode = str_pad($personFolio, 4, '0', STR_PAD_LEFT);
         }
 
-        return $typeCode.$orgCode.$personCode;
+        // return $typeCode.$orgCode.$personCode;
+        return $typeCode.'031'.$personCode;
     }
 
     /**
@@ -46,6 +48,10 @@ class OMRController extends Controller
      */
     public function generatePdf(StoreOMRPdfRequest $request)
     {
+        // Increase memory limit and execution time for large batch generation
+        ini_set('memory_limit', '512M');
+        ini_set('max_execution_time', '300'); // 5 minutes
+        
         $validated = $request->validated();
 
         // Get organization and batch
@@ -67,6 +73,57 @@ class OMRController extends Controller
 
         if (empty($foliosToGenerate)) {
             return back()->with('error', 'No se proporcionaron folios para generar el PDF.');
+        }
+
+        // For large batches (>100 folios), split into multiple PDFs
+        if (count($foliosToGenerate) > 100) {
+            // Split into batches of 100
+            $chunks = array_chunk($foliosToGenerate, 100);
+            
+            // Get guide configuration
+            $guideType = $validated['guide_type'];
+            $viewData = $this->getGuideData($guideType);
+
+            // Add organization logo if available
+            if ($organization->logo) {
+                $logoPath = Storage::disk('public')->path($organization->logo);
+                if (file_exists($logoPath)) {
+                    $imageData = file_get_contents($logoPath);
+                    $base64 = base64_encode($imageData);
+                    $mimeType = mime_content_type($logoPath);
+                    $viewData['logo'] = "data:{$mimeType};base64,{$base64}";
+                }
+            }
+
+            // Add positions and areas for likert template
+            if ($guideType === 'likert') {
+                $positions = $organization->occupationPositions()->get(['name']);
+                $areas = $organization->departmentAreas()->get(['name']);
+                $viewData['positions'] = $positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions;
+                $viewData['areas'] = $areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas;
+            }
+
+            // Dispatch multiple jobs, one per chunk
+            foreach ($chunks as $chunkIndex => $chunk) {
+                GenerateOMRPdfJob::dispatch(
+                    $validated, 
+                    $guideType, 
+                    $organization, 
+                    $chunk, 
+                    $viewData,
+                    $chunkIndex + 1, // Batch number
+                    count($chunks)   // Total batches
+                );
+            }
+
+            $totalFolios = count($foliosToGenerate);
+            $totalBatches = count($chunks);
+            
+            return back()->with('flash', [
+                'type' => 'success',
+                'title' => 'Generación de PDFs iniciada',
+                'message' => "Se están generando {$totalBatches} archivos PDF con {$totalFolios} folios en total (100 folios por archivo). Los archivos estarán disponibles en storage/app/public/pdfs/ en unos minutos."
+            ]);
         }
 
         // Get guide configuration
@@ -111,6 +168,11 @@ class OMRController extends Controller
             if ($index < count($foliosToGenerate) - 1) {
                 $htmlContent .= '<div style="page-break-after: always;"></div>';
             }
+            
+            // Free memory every 100 pages
+            if (($index + 1) % 100 === 0) {
+                gc_collect_cycles();
+            }
         }
 
         // Generate PDF
@@ -132,6 +194,7 @@ class OMRController extends Controller
             // This preserves the relative geometry between alignment markers and bubbles
             ->scale(0.96)
             ->showBackground()
+            ->timeout(300) // 5 minutes timeout for large batches
             ->waitUntilNetworkIdle();
 
         // Configure for WSL if needed
@@ -271,7 +334,7 @@ class OMRController extends Controller
             }
         }
 
-        return view('omr.likert', [
+        return view('omr.likert-planta-3', [
             'totalQuestions' => 23,
             'folio' => $request->input('folio', '000000000'),
             'logo' => $request->input('logo'),
