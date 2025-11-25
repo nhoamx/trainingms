@@ -23,7 +23,9 @@ class UserController extends Controller
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
+                    'email' => $user->email,
                     'role' => $user->role_name, // Using the accessor we already have
+                    'is_disabled' => (bool) $user->is_disabled,
                     'organization' => [
                         'name' => $user->organization?->name ?? 'Sin organización',
                         'logo' => $user->organization?->logo ?? null,
