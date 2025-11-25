@@ -34,22 +34,156 @@ class DashboardController extends Controller
         $personalIdsForDemographics = [];
 
         if ($user->hasRole('organization') && $user->organization) {
-            $data['evaluations'] = $this->evaluationService->getOrganizationEvaluations($user->organization);
-            // Fetch personal_ids specifically for this organization for accurate demographics
-            // Assuming EvaluationService can provide this or we query Questions table
-            // Placeholder: $personalIdsForDemographics = $this->evaluationService->getPersonalIdsForOrganization($user->organization);
-            // A simpler way for now, if acceptable, is to fetch all guide V answers and let the service handle it.
-            // If filtering is strictly required per-org, we need the list of personal_ids.
-            // Let's assume for now the ReportService implicitly handles context or we fetch all.
-
-            // $data['demographic_data'] = $this->evaluationService->getDemographicData($user->organization); // Keep this if still used elsewhere?
-            $data['category_qualifications'] = $this->reportService->calculateCategoryQualifications();
-            $data['domain_qualifications'] = $this->reportService->calculateDomainQualifications();
-            // NEW: Get Demographic Distributions
-            $data['demographic_distributions'] = $this->reportService->getDemographicDistributions(); // Pass specific $personalIds if available/needed
-
+            // Base flags
             $data['isAdmin'] = false;
             $data['isSuperAdmin'] = false;
+
+            $organization = $user->organization;
+            $data['organization'] = [
+                'id' => $organization->id,
+                'name' => $organization->name,
+            ];
+
+            // Fetch all individual evaluations (one row per evaluation for status per guía)
+            $rawEvaluations = \App\Models\PaperEvaluation::where('organization_id', $organization->id)
+                ->orderByDesc('created_at')
+                ->get();
+
+            $data['recent_evaluations'] = $rawEvaluations->map(function ($ev) {
+                $evaluationType = $ev->evaluation_type; // referencia_i, referencia_iii, referencia_v, cisneros, likert
+
+                // Detect missing demographic data
+                $demographicMissing = false;
+                $gender = null;
+                if (in_array($evaluationType, ['referencia_v'])) { // referencia_v holds demographic_data
+                    if (! is_array($ev->demographic_data) || empty($ev->demographic_data)) {
+                        $demographicMissing = true;
+                    } else {
+                        if (! isset($ev->demographic_data['sexo']) || empty($ev->demographic_data['sexo'])) {
+                            $demographicMissing = true;
+                        } else {
+                            $gender = strtolower($ev->demographic_data['sexo']);
+                        }
+                    }
+                } elseif ($evaluationType === 'likert') {
+                    // For likert we rely on likert_answers genero only
+                    if (is_array($ev->likert_answers) && isset($ev->likert_answers['genero']) && ! empty($ev->likert_answers['genero'])) {
+                        $gender = strtolower($ev->likert_answers['genero']);
+                    } else {
+                        $demographicMissing = true;
+                    }
+                } else {
+                    // For other references & cisneros, attempt to infer gender from likert answers if present
+                    if (is_array($ev->likert_answers) && isset($ev->likert_answers['genero']) && ! empty($ev->likert_answers['genero'])) {
+                        $gender = strtolower($ev->likert_answers['genero']);
+                    }
+                }
+
+                // Detect missing questions (only for non-likert types)
+                $missingQuestions = false;
+                if (in_array($evaluationType, ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])) {
+                    $answers = match ($evaluationType) {
+                        'referencia_i' => $ev->referencia_i_answers,
+                        'referencia_iii' => $ev->referencia_iii_answers ?: $ev->referencia_iii_conditional,
+                        'referencia_v' => $ev->demographic_data, // treat demographic fields as answers presence
+                        'cisneros' => $ev->cisneros_answers,
+                        default => null,
+                    };
+                    if (is_array($answers)) {
+                        foreach ($answers as $val) {
+                            if ($val === null || $val === '' || (is_string($val) && trim($val) === '')) {
+                                $missingQuestions = true;
+                                break;
+                            }
+                        }
+                    } else {
+                        $missingQuestions = true; // no answers array means missing
+                    }
+                }
+
+                // Determine status combining missing flags (likert ignores missingQuestions)
+                $status = 'completo';
+                if ($evaluationType === 'likert') {
+                    if ($demographicMissing) {
+                        $status = 'faltan_datos';
+                    }
+                } else {
+                    if ($missingQuestions && $demographicMissing) {
+                        $status = 'faltan_preguntas_y_datos';
+                    } elseif ($missingQuestions) {
+                        $status = 'faltan_preguntas';
+                    } elseif ($demographicMissing) {
+                        $status = 'faltan_datos';
+                    }
+                }
+
+                return [
+                    'id' => $ev->id,
+                    'personal_folio' => $ev->personal_folio,
+                    'evaluee_name' => $ev->evaluee_name,
+                    'evaluation_type' => $evaluationType,
+                    'status' => $status,
+                    'missing_questions' => $missingQuestions,
+                    'demographic_missing' => $demographicMissing,
+                    'gender' => $gender,
+                    'created_at' => $ev->created_at?->toDateTimeString(),
+                ];
+            });
+
+            // Evaluation counts aggregated (ATS combines Referencias I, III, V)
+            $counts = \App\Models\PaperEvaluation::where('organization_id', $organization->id)
+                ->selectRaw('evaluation_type, COUNT(*) as total')
+                ->groupBy('evaluation_type')
+                ->pluck('total', 'evaluation_type');
+
+            $atsCount = ($counts['referencia_i'] ?? 0) + ($counts['referencia_iii'] ?? 0) + ($counts['referencia_v'] ?? 0);
+            $cisnerosCount = ($counts['cisneros'] ?? 0);
+            $climaCount = ($counts['likert'] ?? 0);
+
+            $stats = [];
+            if ($atsCount > 0) {
+                $stats[] = [
+                    'key' => 'ats',
+                    'label' => 'ATS',
+                    'description' => 'Conjunto de instrumentos Referencia I, III y V.',
+                    'count' => $atsCount,
+                    'highlight' => true,
+                ];
+            }
+            if ($cisnerosCount > 0) {
+                $stats[] = [
+                    'key' => 'cisneros',
+                    'label' => 'Cisneros',
+                    'description' => 'Medición de violencia / acoso laboral.',
+                    'count' => $cisnerosCount,
+                    'highlight' => false,
+                ];
+            }
+            if ($climaCount > 0) {
+                $stats[] = [
+                    'key' => 'clima_laboral',
+                    'label' => 'Clima laboral',
+                    'description' => 'Percepción general del clima y satisfacción.',
+                    'count' => $climaCount,
+                    'highlight' => true,
+                ];
+            }
+            $data['evaluation_stats'] = $stats;
+
+            // Routes for actions per instrument (existing routes or fallback)
+            $data['instrument_routes'] = [
+                'ats' => route('organization.results.list', ['organization' => $organization->id]).'?grupo=ats',
+                'cisneros' => route('organization.results.list', ['organization' => $organization->id]).'?tipo=cisneros',
+                'clima_laboral' => route('organization.likert.report', ['organization' => $organization->id]),
+                'results_list' => route('organization.results.list', ['organization' => $organization->id]),
+            ];
+
+            // High-level help / guidance (static copy for initial UX)
+            $data['onboarding_tips'] = [
+                'Explora cada tarjeta para acceder al reporte específico.',
+                'Usa el listado reciente para validar procesamiento y folios.',
+                'Descarga reportes avanzados desde la sección de resultados detallados.',
+            ];
         } elseif ($user->hasRole('admin')) {
             $data['organizations'] = $this->evaluationService->getAllEvaluationsByOrganization();
             // Admins/SuperAdmins see global demographics

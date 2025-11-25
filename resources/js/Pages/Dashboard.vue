@@ -1,36 +1,27 @@
 <script setup>
-import DashboardLayout from "../Layouts/Dashboard.vue"; // Asumo que este es el Layout principal
+import DashboardLayout from "../Layouts/Dashboard.vue"; // Layout principal
 import AdminDashboard from '../Components/AdminDashboard.vue';
-import ReportSummaryDashboard from '../Components/ReportSummaryDashboard.vue'; // Componente para la vista de reportes
-import { ref, computed } from 'vue'; // computed podría no ser necesario aquí directamente
+import OrganizationOverviewDashboard from '../Components/OrganizationOverviewDashboard.vue';
+import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3'
 
 
 const props = defineProps({
-    evaluations: {
-        default: () => []
-    },
-    organizations: { // Necesario para AdminDashboard
-        default: () => []
-    },
-    demographic_data: {
-        default: () => ({})
-    },
-    category_qualifications: {
-        default: () => []
-    },
-    domain_qualifications: {
-        default: () => []
-    },
-    demographic_distributions: {
-        default: () => ([])
-    },
-    isAdmin: {
-        default: false
-    },
-    isSuperAdmin: {
-        default: false
-    }
+    // Admin props
+    evaluations: { default: () => [] },
+    organizations: { default: () => [] },
+    demographic_data: { default: () => ({}) },
+    category_qualifications: { default: () => [] },
+    domain_qualifications: { default: () => [] },
+    demographic_distributions: { default: () => ([]) },
+    isAdmin: { default: false },
+    isSuperAdmin: { default: false },
+    // Organization dashboard props
+    organization: { default: () => null },
+    evaluation_stats: { default: () => [] },
+    instrument_routes: { default: () => ({}) },
+    recent_evaluations: { default: () => [] },
+    onboarding_tips: { default: () => [] },
 });
 
 const page = usePage();
@@ -55,11 +46,12 @@ const showAdminView = computed(() => props.isAdmin || props.isSuperAdmin);
             />
         </div>
         <div v-else>
-            <ReportSummaryDashboard
-                :organizations="props.organizations"
-                :is-admin="props.isAdmin"
-                :is-super-admin="props.isSuperAdmin"
-                :current-organization="currentOrganization"
+            <OrganizationOverviewDashboard
+                :organization="props.organization"
+                :evaluation-stats="props.evaluation_stats"
+                :instrument-routes="props.instrument_routes"
+                :recent-evaluations="props.recent_evaluations"
+                :onboarding-tips="props.onboarding_tips"
             />
         </div>
     </DashboardLayout>
