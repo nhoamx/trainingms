@@ -49,6 +49,7 @@ class ResultsController extends Controller
                     'tipos_contrato' => [],
                     'puestos' => [],
                     'areas' => [],
+                    'turnos' => [],
                 ],
                 'dimensions' => [],
                 'totalScore' => null,
@@ -66,6 +67,7 @@ class ResultsController extends Controller
         $tiposContrato = [];
         $puestos = [];
         $areas = [];
+        $turnos = [];
 
         // Process all evaluations
         $evaluationsData = [];
@@ -87,6 +89,9 @@ class ResultsController extends Controller
             }
             if (isset($demographics['area'])) {
                 $areas[$demographics['area']] = true;
+            }
+            if (isset($demographics['turno'])) {
+                $turnos[$demographics['turno']] = true;
             }
 
             // Compute scores
@@ -194,6 +199,7 @@ class ResultsController extends Controller
                 'tipos_contrato' => array_keys($tiposContrato),
                 'puestos' => array_keys($puestos),
                 'areas' => array_keys($areas),
+                'turnos' => array_keys($turnos),
             ],
             'puestosMap' => $config['puestos'],
             'areasMap' => $config['areas'],
@@ -1058,7 +1064,7 @@ class ResultsController extends Controller
         Log::info('=== BULK UPDATE REQUEST RECEIVED ===', [
             'organization_id' => $organization->id,
             'file_name' => $request->file('file')->getClientOriginalName(),
-            'file_size' => $request->file('file')->getSize()
+            'file_size' => $request->file('file')->getSize(),
         ]);
 
         $request->validate([
@@ -1076,7 +1082,7 @@ class ResultsController extends Controller
             Log::info('=== BULK UPDATE COMPLETED ===', [
                 'updated' => $updatedCount,
                 'skipped' => $skippedCount,
-                'errors_count' => count($errors)
+                'errors_count' => count($errors),
             ]);
 
             // Preparar mensaje de respuesta
@@ -1089,6 +1095,7 @@ class ResultsController extends Controller
             // Si hay errores, incluirlos en la respuesta
             if (! empty($errors)) {
                 Log::warning('Bulk update had errors', ['errors' => $errors]);
+
                 return back()->with([
                     'success' => $updatedCount > 0,
                     'message' => $message,
@@ -1110,7 +1117,7 @@ class ResultsController extends Controller
 
             Log::error('Bulk update validation exception', [
                 'errors' => $errors,
-                'exception' => $e->getMessage()
+                'exception' => $e->getMessage(),
             ]);
 
             return back()->with([
@@ -1121,9 +1128,9 @@ class ResultsController extends Controller
         } catch (\Exception $e) {
             Log::error('Bulk update general exception', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return back()->with([
                 'success' => false,
                 'message' => 'Error al procesar el archivo: '.$e->getMessage(),

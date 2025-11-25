@@ -21,7 +21,7 @@
         <!-- Filtros Demográficos -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Filtros</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <!-- Género -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Género</label>
@@ -67,6 +67,18 @@
               >
                 <option value="">Todas</option>
                 <option v-for="a in demographics.areas" :key="a" :value="a">{{ getAreaName(a) }}</option>
+              </select>
+            </div>
+
+            <!-- Turno -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Turno</label>
+              <select 
+                v-model="filters.turno"
+                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="">Todos</option>
+                <option v-for="t in demographics.turnos" :key="t" :value="t">{{ t }}</option>
               </select>
             </div>
           </div>
@@ -428,6 +440,7 @@ const props = defineProps({
       tipos_contrato: [],
       puestos: [],
       areas: [],
+      turnos: [],
     }),
   },
   dimensions: {
@@ -463,6 +476,7 @@ const filters = ref({
   tipo_contrato: '',
   puesto: '',
   area: '',
+  turno: '',
 })
 
 const pieChartTotal = ref(null)
@@ -489,6 +503,7 @@ const filteredEvaluations = computed(() => {
     if (filters.value.tipo_contrato && evaluation.demographics.tipo_contrato !== filters.value.tipo_contrato) return false
     if (filters.value.puesto && evaluation.demographics.puesto !== filters.value.puesto) return false
     if (filters.value.area && evaluation.demographics.area !== filters.value.area) return false
+    if (filters.value.turno && evaluation.demographics.turno !== filters.value.turno) return false
     return true
   })
 })
@@ -717,6 +732,7 @@ const resetFilters = () => {
     tipo_contrato: '',
     puesto: '',
     area: '',
+    turno: '',
   }
 }
 
