@@ -233,6 +233,8 @@ Route::middleware(['auth'])->group(function () {
                 ->name('diagnostic');
             Route::get('/ejecutivo/{organization}', [\App\Http\Controllers\ReportPdfController::class, 'downloadExecutiveReportWord'])
                 ->name('executive');
+            Route::get('/likert/{organization}', [\App\Http\Controllers\ReportPdfController::class, 'downloadLikertReportWord'])
+                ->name('likert');
             Route::get('/status/{report}', [\App\Http\Controllers\ReportPdfController::class, 'checkReportStatus'])
                 ->name('status');
             Route::get('/download/{report}', [\App\Http\Controllers\ReportPdfController::class, 'downloadCompletedReport'])
