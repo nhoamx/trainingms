@@ -352,6 +352,14 @@ class ReportPdfController extends Controller
     }
 
     /**
+     * Initiate Likert Word report generation (queued) - uses native PHPWord
+     */
+    public function downloadLikertReportWord(Request $request, string $organizationId)
+    {
+        return $this->initiateWordReportGeneration($request, $organizationId, 'likert');
+    }
+
+    /**
      * Common method to initiate Word report generation
      */
     protected function initiateWordReportGeneration(Request $request, string $organizationId, string $reportType)
@@ -366,7 +374,12 @@ class ReportPdfController extends Controller
             }
 
             // Verify organization exists
-            $organization = Organization::findOrFail($organizationId);
+            $organization = Organization::find($organizationId);
+            if (! $organization) {
+                return response()->json([
+                    'error' => 'Organización no encontrada',
+                ], 404);
+            }
 
             // Create report generation record
             $reportGeneration = ReportGeneration::create([
