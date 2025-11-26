@@ -3,12 +3,36 @@
     <div class="max-w-7xl mx-auto p-6">
       <!-- Header -->
       <div class="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">
-          Reporte Clima Laboral - {{ organizationName }}
-        </h2>
-        <p class="mt-1 text-sm text-gray-600">
-          {{ evaluations.length }} evaluaciones completadas
-        </p>
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900">
+              Reporte Clima Laboral - {{ organizationName }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-600">
+              {{ evaluations.length }} evaluaciones completadas
+            </p>
+          </div>
+          <div v-if="evaluations.length > 0" class="flex items-center gap-3">
+            <button
+              @click="downloadWordReport"
+              :disabled="isDownloading"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg v-if="isDownloading" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {{ isDownloading ? 'Generando...' : 'Descargar Word' }}
+            </button>
+          </div>
+        </div>
+        <!-- Download Status Message -->
+        <div v-if="downloadMessage" class="mt-4 p-3 rounded-lg" :class="downloadMessageClass">
+          {{ downloadMessage }}
+        </div>
       </div>
 
       <div v-if="evaluations.length === 0" class="bg-white rounded-lg shadow p-8">
@@ -409,10 +433,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch, nextTick, onUnmounted } from 'vue'
 import Dashboard from '@/Layouts/Dashboard.vue'
 import { Chart, registerables } from 'chart.js'
-import { Link } from '@inertiajs/vue3'
+import { Link, router } from '@inertiajs/vue3'
+import axios from 'axios'
 
 Chart.register(...registerables)
 
@@ -484,6 +509,77 @@ const dimensionChartCanvas = ref(null)
 const chartInstances = ref({}) // keyed instances; we'll use 'Total' and 'Dimension'
 const TOTAL_CHART_KEY = 'Total'
 const DIMENSION_CHART_KEY = 'Dimension'
+
+// Word Report Download State
+const isDownloading = ref(false)
+const downloadMessage = ref('')
+const downloadMessageClass = ref('')
+let pollingInterval = null
+
+const downloadWordReport = async () => {
+  isDownloading.value = true
+  downloadMessage.value = 'Iniciando generación del reporte...'
+  downloadMessageClass.value = 'bg-blue-100 text-blue-800'
+
+  try {
+    const response = await axios.get(`/reportes/word/likert/${props.organizationId}`)
+    
+    if (response.data.success && response.data.report_id) {
+      downloadMessage.value = 'El reporte se está generando. Por favor espere...'
+      pollReportStatus(response.data.report_id)
+    } else {
+      throw new Error(response.data.error || 'Error al iniciar la generación')
+    }
+  } catch (error) {
+    console.error('Error downloading Word report:', error)
+    downloadMessage.value = error.response?.data?.error || error.message || 'Error al generar el reporte'
+    downloadMessageClass.value = 'bg-red-100 text-red-800'
+    isDownloading.value = false
+  }
+}
+
+const pollReportStatus = (reportId) => {
+  pollingInterval = setInterval(async () => {
+    try {
+      const response = await axios.get(`/reportes/word/status/${reportId}`)
+      const { completed, failed, error_message } = response.data
+
+      if (completed) {
+        clearInterval(pollingInterval)
+        pollingInterval = null
+        downloadMessage.value = 'Reporte generado exitosamente. Descargando...'
+        downloadMessageClass.value = 'bg-green-100 text-green-800'
+        
+        // Trigger download
+        window.location.href = `/reportes/word/download/${reportId}`
+        
+        setTimeout(() => {
+          isDownloading.value = false
+          downloadMessage.value = ''
+        }, 3000)
+      } else if (failed) {
+        clearInterval(pollingInterval)
+        pollingInterval = null
+        downloadMessage.value = error_message || 'Error al generar el reporte'
+        downloadMessageClass.value = 'bg-red-100 text-red-800'
+        isDownloading.value = false
+      }
+    } catch (error) {
+      console.error('Error polling report status:', error)
+      clearInterval(pollingInterval)
+      pollingInterval = null
+      downloadMessage.value = 'Error al verificar el estado del reporte'
+      downloadMessageClass.value = 'bg-red-100 text-red-800'
+      isDownloading.value = false
+    }
+  }, 2000)
+}
+
+onUnmounted(() => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+  }
+})
 
 // Helper functions to get names
 const getPuestoName = (puestoId) => {
