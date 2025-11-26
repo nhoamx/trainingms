@@ -143,4 +143,28 @@ class PaperEvaluationFactory extends Factory
             'processed_at' => null,
         ]);
     }
+
+    /**
+     * Indicate the evaluation is for Likert (Workplace Climate)
+     */
+    public function likert(): static
+    {
+        $questions = [];
+        for ($i = 1; $i <= 23; $i++) {
+            $questions[(string) $i] = fake()->randomElement(['A', 'B', 'C', 'D']);
+        }
+
+        return $this->state(fn (array $attributes) => [
+            'evaluation_type_code' => '05',
+            'evaluation_type' => 'likert',
+            'likert_answers' => [
+                'questions' => $questions,
+                'genero' => fake()->randomElement(['masculino', 'femenino']),
+                'turno' => fake()->randomElement(['matutino', 'vespertino', 'nocturno']),
+                'tipo_contrato' => fake()->randomElement(['tiempo_indeterminado', 'por_tiempo_determinado']),
+                'puestos' => (string) fake()->numberBetween(1, 24),
+                'areas' => (string) fake()->numberBetween(1, 17),
+            ],
+        ]);
+    }
 }
