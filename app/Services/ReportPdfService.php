@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Models\PaperEvaluation;
+
 class ReportPdfService
 {
     public function __construct(
         protected PaperEvaluationReportService $paperReportService,
         protected PaperEvaluationScoreService $scoreService,
-        protected ExecutiveReportService $executiveReportService
+        protected ExecutiveReportService $executiveReportService,
+        protected LikertScoreService $likertScoreService
     ) {}
 
     /**
@@ -743,5 +746,367 @@ class ReportPdfService
     public function getExecutiveReportData(string $organizationId): array
     {
         return $this->executiveReportService->getExecutiveReportData($organizationId);
+    }
+
+    /**
+     * Get Likert report data for Word document generation
+     *
+     * @return array{
+     *   evaluations: array<int, array{
+     *     id: string,
+     *     folio: string,
+     *     personal_folio: string,
+     *     evaluee_name: string,
+     *     demographics: array{genero: ?string, tipo_contrato: ?string, puesto: ?string, area: ?string, turno: ?string},
+     *     scores: array{dimensions: array, total_score: int, interpretation: ?string},
+     *     answers: array<int|string, string>
+     *   }>,
+     *   demographics: array{generos: array, tipos_contrato: array, puestos: array, areas: array, turnos: array},
+     *   dimensions: array<string, array{name: string, distribution: array<string, int>, questionCount: int, questions: array}>,
+     *   climaLaboralDistribution: array<string, int>,
+     *   totalPeople: int,
+     *   puestosMap: array<int, string>,
+     *   areasMap: array<int, string>
+     * }
+     */
+    public function getLikertReportWordData(string $organizationId): array
+    {
+        // Get all completed Likert evaluations for this organization
+        $likertEvaluations = PaperEvaluation::where('organization_id', $organizationId)
+            ->where('evaluation_type', 'likert')
+            ->where('processing_status', 'completed')
+            ->get();
+
+        if ($likertEvaluations->isEmpty()) {
+            return [
+                'evaluations' => [],
+                'demographics' => [
+                    'generos' => [],
+                    'tipos_contrato' => [],
+                    'puestos' => [],
+                    'areas' => [],
+                    'turnos' => [],
+                ],
+                'dimensions' => [],
+                'climaLaboralDistribution' => [
+                    'Totalmente de Acuerdo' => 0,
+                    'De Acuerdo' => 0,
+                    'Desacuerdo' => 0,
+                    'Totalmente Desacuerdo' => 0,
+                ],
+                'totalPeople' => 0,
+                'puestosMap' => [],
+                'areasMap' => [],
+            ];
+        }
+
+        // Load configuration
+        $config = config('likert-value');
+        $niveles = $config['niveles'];
+        $preguntas = $config['preguntas'];
+        $valorOpciones = $config['valorOpciones'];
+
+        // Collect unique demographic values
+        $generos = [];
+        $tiposContrato = [];
+        $puestos = [];
+        $areas = [];
+        $turnos = [];
+
+        // Process all evaluations
+        $evaluationsData = [];
+        foreach ($likertEvaluations as $evaluation) {
+            $questions = $evaluation->likert_answers['questions'] ?? [];
+
+            // Get demographic data from DemographicData model (with fallback to likert_answers)
+            $demographics = $this->likertScoreService->getDemographicData($evaluation);
+
+            // Collect demographic values
+            if (isset($demographics['genero'])) {
+                $generos[$demographics['genero']] = true;
+            }
+            if (isset($demographics['tipo_contrato'])) {
+                $tiposContrato[$demographics['tipo_contrato']] = true;
+            }
+            if (isset($demographics['puesto'])) {
+                $puestos[$demographics['puesto']] = true;
+            }
+            if (isset($demographics['area'])) {
+                $areas[$demographics['area']] = true;
+            }
+            if (isset($demographics['turno'])) {
+                $turnos[$demographics['turno']] = true;
+            }
+
+            // Compute scores
+            $scores = $this->likertScoreService->calculateLikertScores($evaluation);
+
+            // Build evaluation data
+            $evaluationsData[] = [
+                'id' => $evaluation->id,
+                'folio' => $evaluation->folio,
+                'personal_folio' => $evaluation->personal_folio,
+                'evaluee_name' => $evaluation->evaluee_name,
+                'demographics' => [
+                    'genero' => $demographics['genero'] ?? null,
+                    'tipo_contrato' => $demographics['tipo_contrato'] ?? null,
+                    'puesto' => $demographics['puesto'] ?? null,
+                    'area' => $demographics['area'] ?? null,
+                    'turno' => $demographics['turno'] ?? null,
+                ],
+                'scores' => $scores,
+                'answers' => $questions,
+            ];
+        }
+
+        // Calculate distribution of people by Clima Laboral level
+        $climaLaboralDistribution = [
+            'Totalmente de Acuerdo' => 0,
+            'De Acuerdo' => 0,
+            'Desacuerdo' => 0,
+            'Totalmente Desacuerdo' => 0,
+        ];
+
+        foreach ($evaluationsData as $evalData) {
+            $interpretation = $evalData['scores']['interpretation'] ?? null;
+            if ($interpretation && isset($climaLaboralDistribution[$interpretation])) {
+                $climaLaboralDistribution[$interpretation]++;
+            }
+        }
+
+        // Build dimension summaries
+        $dimensionSummaries = [];
+        foreach ($niveles as $dimensionName => $dimensionConfig) {
+            $questionNumbers = $dimensionConfig['preguntas'];
+            $questionCount = count($questionNumbers);
+            $questionScores = [];
+
+            // Distribution of people by level for this dimension
+            $dimensionDistribution = [
+                'Totalmente de Acuerdo' => 0,
+                'De Acuerdo' => 0,
+                'Desacuerdo' => 0,
+                'Totalmente Desacuerdo' => 0,
+            ];
+
+            // Calculate score for each person in this dimension
+            foreach ($evaluationsData as $evalData) {
+                $personScore = 0;
+                foreach ($questionNumbers as $qNum) {
+                    $answer = $evalData['answers'][$qNum] ?? null;
+                    if ($answer) {
+                        $personScore += $valorOpciones[$answer] ?? 0;
+                    }
+                }
+
+                // Get interpretation for this person's dimension score
+                $interpretation = $this->getLikertInterpretation($personScore, $config['valorNiveles'][$dimensionName]);
+                if ($interpretation && isset($dimensionDistribution[$interpretation])) {
+                    $dimensionDistribution[$interpretation]++;
+                }
+            }
+
+            // Calculate average scores per question for display
+            foreach ($questionNumbers as $qNum) {
+                $qScore = 0;
+                $qCount = 0;
+                foreach ($evaluationsData as $evalData) {
+                    $answer = $evalData['answers'][$qNum] ?? null;
+                    if ($answer) {
+                        $qScore += $valorOpciones[$answer] ?? 0;
+                        $qCount++;
+                    }
+                }
+                $avgScore = $qCount > 0 ? $qScore / $qCount : 0;
+                $questionScores[$qNum] = [
+                    'question' => $preguntas[$qNum] ?? "Pregunta {$qNum}",
+                    'score' => round($avgScore, 2),
+                ];
+            }
+
+            $dimensionSummaries[$dimensionName] = [
+                'name' => $dimensionName,
+                'distribution' => $dimensionDistribution,
+                'questionCount' => $questionCount,
+                'questions' => $questionScores,
+            ];
+        }
+
+        return [
+            'evaluations' => $evaluationsData,
+            'demographics' => [
+                'generos' => array_keys($generos),
+                'tipos_contrato' => array_keys($tiposContrato),
+                'puestos' => array_keys($puestos),
+                'areas' => array_keys($areas),
+                'turnos' => array_keys($turnos),
+            ],
+            'dimensions' => $dimensionSummaries,
+            'climaLaboralDistribution' => $climaLaboralDistribution,
+            'totalPeople' => count($evaluationsData),
+            'puestosMap' => $config['puestos'],
+            'areasMap' => $config['areas'],
+        ];
+    }
+
+    /**
+     * Filter evaluations by demographic criteria and recalculate distributions
+     *
+     * @param  array<string, mixed>  $likertData  Full Likert data from getLikertReportWordData
+     * @param  string  $filterType  Type of filter: 'turno', 'area', 'puesto', 'genero'
+     * @param  string  $filterValue  Value to filter by
+     * @return array{
+     *   filterLabel: string,
+     *   evaluations: array,
+     *   dimensions: array<string, array{name: string, distribution: array<string, int>, questionNumbers: array<int>}>,
+     *   climaLaboralDistribution: array<string, int>,
+     *   totalPeople: int
+     * }
+     */
+    public function filterEvaluationsAndRecalculate(array $likertData, string $filterType, string $filterValue): array
+    {
+        $config = config('likert-value');
+        $niveles = $config['niveles'];
+        $valorOpciones = $config['valorOpciones'];
+
+        // Filter evaluations
+        $filteredEvaluations = array_filter($likertData['evaluations'], function ($eval) use ($filterType, $filterValue) {
+            $demographics = $eval['demographics'] ?? [];
+            $value = $demographics[$filterType] ?? null;
+
+            if ($value === null) {
+                return false;
+            }
+
+            // Case-insensitive comparison
+            return strtolower(trim((string) $value)) === strtolower(trim($filterValue));
+        });
+
+        $filteredEvaluations = array_values($filteredEvaluations);
+
+        if (empty($filteredEvaluations)) {
+            return [
+                'filterLabel' => $this->buildFilterLabel($filterType, $filterValue),
+                'evaluations' => [],
+                'dimensions' => [],
+                'climaLaboralDistribution' => [
+                    'Totalmente de Acuerdo' => 0,
+                    'De Acuerdo' => 0,
+                    'Desacuerdo' => 0,
+                    'Totalmente Desacuerdo' => 0,
+                ],
+                'totalPeople' => 0,
+            ];
+        }
+
+        // Recalculate Clima Laboral distribution
+        $climaLaboralDistribution = [
+            'Totalmente de Acuerdo' => 0,
+            'De Acuerdo' => 0,
+            'Desacuerdo' => 0,
+            'Totalmente Desacuerdo' => 0,
+        ];
+
+        foreach ($filteredEvaluations as $evalData) {
+            $interpretation = $evalData['scores']['interpretation'] ?? null;
+            if ($interpretation && isset($climaLaboralDistribution[$interpretation])) {
+                $climaLaboralDistribution[$interpretation]++;
+            }
+        }
+
+        // Recalculate dimension distributions
+        $dimensionSummaries = [];
+        foreach ($niveles as $dimensionName => $dimensionConfig) {
+            $questionNumbers = $dimensionConfig['preguntas'];
+
+            $dimensionDistribution = [
+                'Totalmente de Acuerdo' => 0,
+                'De Acuerdo' => 0,
+                'Desacuerdo' => 0,
+                'Totalmente Desacuerdo' => 0,
+            ];
+
+            foreach ($filteredEvaluations as $evalData) {
+                $personScore = 0;
+                foreach ($questionNumbers as $qNum) {
+                    $answer = $evalData['answers'][$qNum] ?? null;
+                    if ($answer) {
+                        $personScore += $valorOpciones[$answer] ?? 0;
+                    }
+                }
+
+                $interpretation = $this->getLikertInterpretation($personScore, $config['valorNiveles'][$dimensionName]);
+                if ($interpretation && isset($dimensionDistribution[$interpretation])) {
+                    $dimensionDistribution[$interpretation]++;
+                }
+            }
+
+            $dimensionSummaries[$dimensionName] = [
+                'name' => $dimensionName,
+                'distribution' => $dimensionDistribution,
+                'questionNumbers' => $questionNumbers,
+            ];
+        }
+
+        return [
+            'filterLabel' => $this->buildFilterLabel($filterType, $filterValue),
+            'evaluations' => $filteredEvaluations,
+            'dimensions' => $dimensionSummaries,
+            'climaLaboralDistribution' => $climaLaboralDistribution,
+            'totalPeople' => count($filteredEvaluations),
+        ];
+    }
+
+    /**
+     * Build a human-readable filter label
+     */
+    protected function buildFilterLabel(string $filterType, string $filterValue): string
+    {
+        $typeLabels = [
+            'turno' => 'Turno',
+            'area' => 'Área',
+            'puesto' => 'Puesto',
+            'genero' => 'Género',
+        ];
+
+        $typeLabel = $typeLabels[$filterType] ?? ucfirst($filterType);
+
+        return "{$typeLabel}: {$filterValue}";
+    }
+
+    /**
+     * Get all unique values for a demographic field from Likert data
+     *
+     * @param  array<string, mixed>  $likertData
+     * @return array<string>
+     */
+    public function getUniqueDemographicValues(array $likertData, string $fieldName): array
+    {
+        $values = [];
+
+        foreach ($likertData['evaluations'] as $eval) {
+            $value = $eval['demographics'][$fieldName] ?? null;
+            if ($value !== null && trim((string) $value) !== '') {
+                $values[trim((string) $value)] = true;
+            }
+        }
+
+        return array_keys($values);
+    }
+
+    /**
+     * Get interpretation label for a Likert score
+     *
+     * @param  array<string, array{min: float, max: float}>  $ranges
+     */
+    protected function getLikertInterpretation(float $score, array $ranges): ?string
+    {
+        foreach ($ranges as $label => $range) {
+            if ($score >= $range['min'] && $score <= $range['max']) {
+                return $label;
+            }
+        }
+
+        return null;
     }
 }
