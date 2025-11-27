@@ -92,6 +92,7 @@ class PaperEvaluation extends Model
             '03' => 'referencia_v',
             '04' => 'cisneros',
             '05' => 'likert',
+            '06' => 'likert',  // Likert Planta 3 - se guarda como 'likert' en DB
             default => throw new \InvalidArgumentException("Invalid evaluation type code: {$code}"),
         };
     }

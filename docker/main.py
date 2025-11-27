@@ -137,72 +137,90 @@ def get_referencia_iii_complete_answers(image_file, detector, folio):
 
 def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=400):
     """
-    Obtiene las respuestas completas de Likert incluyendo:
+    Obtiene las respuestas completas de Likert (template 05 y 06) automáticamente.
+    Soporta tanto Likert estándar (05) como Likert Planta 3 (06).
+    
+    Estructura común:
     - 23 preguntas con opciones A/B/C/D
     - Demografía: género, turno, tipo de contrato
-    - Listas verticales: puestos (24 items) y áreas (17 items)
+    - Listas verticales: puestos y áreas (cantidad varía según template)
     
     Args:
-        min_fill_threshold: Umbral mínimo de píxeles para considerar una burbuja marcada (default 800)
+        folio: Incluye el template type en los primeros 2 dígitos (05 o 06)
+        min_fill_threshold: Umbral mínimo de píxeles para considerar una burbuja marcada (default 400)
     """
     import logging
     try:
+        # Detectar template type desde el folio (primeros 2 dígitos)
+        template_type = folio[:2]
+        is_planta_3 = template_type == '06'
+        
+        # Construir mapeos dinámicos según template
+        config_prefix = 'likert_planta_3' if is_planta_3 else 'likert'
+        
+        logging.info(f"Procesando template {template_type} ({config_prefix})")
         complete_answers = {}
         
         # 1. Procesar preguntas principales Likert (1-23, A/B/C/D)
-        logging.info("Procesando preguntas Likert (1-23)...")
-        if hasattr(config, 'likert'):
-            likert_answers = detector.detect_bubbles(image_file, config.likert, min_fill_threshold=min_fill_threshold)
+        logging.info(f"  Sección 1: Preguntas Likert (1-23) usando config '{config_prefix}'...")
+        questions_config = getattr(config, config_prefix, None)
+        if questions_config is not None:
+            likert_answers = detector.detect_bubbles(image_file, questions_config, min_fill_threshold=min_fill_threshold)
             
             # REGLA ESPECIAL LIKERT: Si una pregunta tiene más de 1 respuesta o está vacía (None),
             # marcarla como 'A' (Totalmente de Acuerdo)
             for question_num in range(1, 24):  # Preguntas 1-23
                 q_key = str(question_num)
-                if q_key in likert_answers:
-                    if likert_answers[q_key] is None:
-                        logging.info(f"  Pregunta {q_key}: sin respuesta o respuesta múltiple detectada → Asignando 'A' (Totalmente de Acuerdo)")
-                        likert_answers[q_key] = 'A'
+                if q_key in likert_answers and likert_answers[q_key] is None:
+                    logging.info(f"    Pregunta {q_key}: sin respuesta → Asignando 'A'")
+                    likert_answers[q_key] = 'A'
             
-            complete_answers['likert'] = likert_answers
+            # Guardar bajo la clave correcta según el template
+            complete_answers[config_prefix] = likert_answers
+            logging.info(f"  ✓ Preguntas detectadas: {len(likert_answers)}")
         else:
-            logging.warning("No se encontró configuración 'likert', omitiendo sección")
+            logging.warning(f"  ✗ No se encontró config.{config_prefix}, omitiendo preguntas")
         
-        # 2. Procesar demografía simple
-        simple_demographics = [
-            ('likert_genero', 'genero'),
-            ('likert_turno', 'turno'),
-            ('likert_tipo_contrato', 'tipo_contrato'),
+        # 2. Procesar demografía simple (3 secciones: género, turno, tipo de contrato)
+        logging.info(f"  Sección 2: Demografía usando prefijo '{config_prefix}'...")
+        demographic_mapping = [
+            ('genero', 'genero'),
+            ('turno', 'turno'),
+            ('tipo_contrato', 'tipo_contrato'),
         ]
         
-        for config_attr, result_key in simple_demographics:
-            logging.info(f"Procesando {result_key}... (config_attr={config_attr})")
+        for config_suffix, result_key in demographic_mapping:
+            config_attr = f'{config_prefix}_{config_suffix}'
+            logging.info(f"    Detectando {result_key} (config_attr={config_attr})...")
+            
             if hasattr(config, config_attr):
                 section_config = getattr(config, config_attr)
-                logging.info(f"  Config encontrado para {config_attr}: {section_config}")
                 section_answer = detector.detect_bubbles(image_file, {result_key: section_config}, min_fill_threshold=min_fill_threshold)
-                logging.info(f"  Respuesta detectada: {section_answer}")
-                complete_answers[result_key] = section_answer.get(result_key)
-                logging.info(f"  Guardado en complete_answers['{result_key}']: {complete_answers[result_key]}")
+                detected_value = section_answer.get(result_key)
+                complete_answers[result_key] = detected_value
+                logging.info(f"      ✓ Detectado: {detected_value}")
             else:
-                logging.warning(f"No se encontró config.{config_attr}")
                 complete_answers[result_key] = None
+                logging.warning(f"      ✗ No se encontró config.{config_attr}")
         
         # 3. Procesar listas verticales (puestos y áreas)
-        # Espaciado vertical entre burbujas (ajustar según layout real)
-        VERTICAL_SPACING_PUESTOS = 60  # Espaciado vertical entre puestos consecutivos
-        VERTICAL_SPACING_AREAS = 60    # Espaciado vertical entre áreas consecutivas
+        # El número de items varía según template: 05 usa 24 puestos/17 áreas, 06 usa 19 puestos/10 áreas
+        logging.info(f"  Sección 3: Listas verticales usando prefijo '{config_prefix}'...")
         
-        # Procesar Puestos (24 items) - ahora con todas las coordenadas individuales
-        logging.info("Intentando procesar puestos...")
-        if hasattr(config, 'likert_puestos'):
-            logging.info(f"  Config likert_puestos encontrado con {len(config.likert_puestos)} items")
+        # Procesar Puestos
+        puestos_config_attr = f'{config_prefix}_puestos'
+        logging.info(f"    Detectando puestos (config_attr={puestos_config_attr})...")
+        if hasattr(config, puestos_config_attr):
+            puestos_config = getattr(config, puestos_config_attr)
+            num_puestos = len(puestos_config)
+            logging.info(f"      Config encontrado con {num_puestos} items")
             puesto_detectado = None
             
-            # Iterar sobre todas las coordenadas (claves '1' a '24')
-            for i in range(1, 25):  # 1 a 24
+            # Iterar sobre todas las coordenadas (claves '1' a N)
+            for i in range(1, num_puestos + 1):
                 key = str(i)
-                if key in config.likert_puestos:
-                    x, y, w, h = config.likert_puestos[key]
+                if key in puestos_config:
+                    x, y, w, h = puestos_config[key]
                     
                     # Detectar si la burbuja está marcada
                     temp_config = {'puesto': {'temp': (x, y, w, h)}}
@@ -210,26 +228,32 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
                     
                     if temp_answer.get('puesto') == 'temp':
                         puesto_detectado = i  # Número 1-based
-                        logging.info(f"  Puesto {i} DETECTADO en ({x}, {y})")
-                        break  # Solo esperamos un puesto marcado
+                        logging.info(f"      ✓ Puesto {i} DETECTADO")
+                        break
             
             complete_answers['puestos'] = puesto_detectado
-            logging.info(f"Puesto seleccionado: {puesto_detectado}")
+            if puesto_detectado:
+                logging.info(f"    Puesto seleccionado: {puesto_detectado}")
+            else:
+                logging.info(f"    Ningún puesto seleccionado (null)")
         else:
-            logging.warning("No se encontró config.likert_puestos")
             complete_answers['puestos'] = None
+            logging.warning(f"      ✗ No se encontró config.{puestos_config_attr}")
         
-        # Procesar Áreas (17 items) - ahora con todas las coordenadas individuales
-        logging.info("Intentando procesar áreas...")
-        if hasattr(config, 'likert_areas'):
-            logging.info(f"  Config likert_areas encontrado con {len(config.likert_areas)} items")
+        # Procesar Áreas
+        areas_config_attr = f'{config_prefix}_areas'
+        logging.info(f"    Detectando áreas (config_attr={areas_config_attr})...")
+        if hasattr(config, areas_config_attr):
+            areas_config = getattr(config, areas_config_attr)
+            num_areas = len(areas_config)
+            logging.info(f"      Config encontrado con {num_areas} items")
             area_detectada = None
             
-            # Iterar sobre todas las coordenadas (claves '1' a '17')
-            for i in range(1, 18):  # 1 a 17
+            # Iterar sobre todas las coordenadas (claves '1' a N)
+            for i in range(1, num_areas + 1):
                 key = str(i)
-                if key in config.likert_areas:
-                    x, y, w, h = config.likert_areas[key]
+                if key in areas_config:
+                    x, y, w, h = areas_config[key]
                     
                     # Detectar si la burbuja está marcada
                     temp_config = {'area': {'temp': (x, y, w, h)}}
@@ -237,14 +261,17 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
                     
                     if temp_answer.get('area') == 'temp':
                         area_detectada = i  # Número 1-based
-                        logging.info(f"  Área {i} DETECTADA en ({x}, {y})")
-                        break  # Solo esperamos un área marcada
+                        logging.info(f"      ✓ Área {i} DETECTADA")
+                        break
             
             complete_answers['areas'] = area_detectada
-            logging.info(f"Área seleccionada: {area_detectada}")
+            if area_detectada:
+                logging.info(f"    Área seleccionada: {area_detectada}")
+            else:
+                logging.info(f"    Ningún área seleccionada (null)")
         else:
-            logging.warning("No se encontró config.likert_areas")
             complete_answers['areas'] = None
+            logging.warning(f"      ✗ No se encontró config.{areas_config_attr}")
         
         # Guardar el JSON completo
         json_filename = f"{folio}.json"
@@ -252,11 +279,11 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
         with open(json_output_path, 'w') as json_file:
             json.dump(complete_answers, json_file, indent=4)
         
-        logging.info(f"Resultados completos de Likert guardados en: {json_output_path}")
-        logging.info(f"Secciones detectadas: {list(complete_answers.keys())}")
+        logging.info(f"✓ Resultados de {config_prefix} guardados en: {json_output_path}")
+        logging.info(f"  Secciones detectadas: {list(complete_answers.keys())}")
         
     except Exception as e:
-        logging.error(f"Error procesando Likert completo en {image_file}: {e}")
+        logging.error(f"Error procesando Likert en {image_file}: {e}")
         import traceback
         logging.error(traceback.format_exc())
 
@@ -699,6 +726,7 @@ REFERENCE_IMAGES = {
     '03': '/app/reference-referencia-v.png',      # Referencia V
     '04': '/app/reference-referencia-i.png',      # Escala Cisneros (usar Ref I como fallback)
     '05': '/app/reference-referencia-iii.png',    # Clima laboral (Likert) - similar layout a Ref III
+    '06': '/app/reference-referencia-likert-planta-3.png',  # Likert Planta 3
 }
 
 def get_reference_image_for_template(template_type):
@@ -799,8 +827,8 @@ for image_file in aligned_image_files:
     # Detectar el folio a partir de la imagen alineada
     folio = detect_folio(image_file, detector)
 
-    # Validar que el folio inicie con 01, 02, 03, 04 (template types)
-    valid_prefixes = ['01', '02', '03', '04', '05']
+    # Validar que el folio inicie con 01, 02, 03, 04, 05, 06 (template types)
+    valid_prefixes = ['01', '02', '03', '04', '05', '06']
     is_valid = any(folio.startswith(prefix) for prefix in valid_prefixes)
     
     if not is_valid:
@@ -892,6 +920,24 @@ for image_file in aligned_image_files:
                 bubble_configs_list.append(getattr(config, attr))
         
         logging.info(f"Folio {folio} → Clima Laboral (Likert) COMPLETO")
+        get_likert_complete_answers(new_image_path, detector, folio)
+    elif template_type == "06":
+        # Referencia 06 - Likert Planta 3
+        # Agregar configuraciones de Likert Planta 3 a la visualización
+        if hasattr(config, 'likert_planta_3'):
+            bubble_configs_list.append(config.likert_planta_3)
+        
+        # Agregar demografía simple para Planta 3
+        for attr in ['likert_planta_3_genero', 'likert_planta_3_turno', 'likert_planta_3_tipo_contrato']:
+            if hasattr(config, attr):
+                bubble_configs_list.append(getattr(config, attr))
+        
+        # Agregar listas (solo first bubble, la iteración la hace get_likert_complete_answers)
+        for attr in ['likert_planta_3_puestos', 'likert_planta_3_areas']:
+            if hasattr(config, attr):
+                bubble_configs_list.append(getattr(config, attr))
+        
+        logging.info(f"Folio {folio} → Likert Planta 3 COMPLETO")
         get_likert_complete_answers(new_image_path, detector, folio)
     else:
         logging.warning(f"Template type '{template_type}' no reconocido, usando evaluación por defecto")
