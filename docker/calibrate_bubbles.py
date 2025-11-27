@@ -240,6 +240,14 @@ HTML_TEMPLATE = """
                     <option value="likert-turno">Likert 23 - Turno (3 opciones)</option>
                     <option value="likert-tipo-contrato">Likert 23 - Tipo de contrato (4 opciones)</option>
                 </optgroup>
+                <optgroup label="Likert Planta 3">
+                    <option value="likert-planta-3">Likert Planta 3 - Preguntas (1-23, A/B/C/D)</option>
+                    <option value="likert-planta-3-genero">Likert Planta 3 - Género (2 opciones)</option>
+                    <option value="likert-planta-3-tipo-contrato">Likert Planta 3 - Tipo de contrato (2 opciones)</option>
+                    <option value="likert-planta-3-turno">Likert Planta 3 - Turno (5 opciones)</option>
+                    <option value="likert-planta-3-puestos">Likert Planta 3 - Puestos (19 items)</option>
+                    <option value="likert-planta-3-areas">Likert Planta 3 - Áreas (10 items)</option>
+                </optgroup>
                 <optgroup label="Referencia III - Secciones">
                     <option value="referencia-iii">Ref III - Generales (1-64, A/B/C/D/E)</option>
                     <option value="referencia-iii-cond-customer">Ref III - Condición Servicio Cliente (SÍ/NO)</option>
@@ -664,6 +672,26 @@ HTML_TEMPLATE = """
             } else if (section === 'likert-tipo-contrato') {
                 const options = ['Por obra o proyecto', 'Por tiempo determinado', 'Tiempo indeterminado', 'Honorarios'];
                 itemText = bubbleCount < options.length ? options[bubbleCount] : 'Completo';
+            } else if (section === 'likert-planta-3') {
+                const questionIndex = Math.floor(bubbleCount / 4);
+                const optionIndex = bubbleCount % 4;
+                const options = ['A', 'B', 'C', 'D'];
+                itemText = `Pregunta ${startQuestion + questionIndex}, ${options[optionIndex]}`;
+            } else if (section === 'likert-planta-3-puestos') {
+                itemText = `Puesto ${bubbleCount + 1} de 19`;
+                if (bubbleCount >= 19) itemText = 'Completo (19 puestos)';
+            } else if (section === 'likert-planta-3-areas') {
+                itemText = `Área ${bubbleCount + 1} de 10`;
+                if (bubbleCount >= 10) itemText = 'Completo (10 áreas)';
+            } else if (section === 'likert-planta-3-genero') {
+                const options = ['Masculino', 'Femenino'];
+                itemText = bubbleCount < options.length ? options[bubbleCount] : 'Completo';
+            } else if (section === 'likert-planta-3-turno') {
+                const options = ['Turno 1', 'Turno 2', 'Turno 3', 'Turno 4', 'Turno 5'];
+                itemText = bubbleCount < options.length ? options[bubbleCount] : 'Completo';
+            } else if (section === 'likert-planta-3-tipo-contrato') {
+                const options = ['Opción 1', 'Opción 2'];
+                itemText = bubbleCount < options.length ? options[bubbleCount] : 'Completo';
             } else if (section === 'referencia-iii') {
                 const questionIndex = Math.floor(bubbleCount / 5);
                 const optionIndex = bubbleCount % 5;
@@ -918,6 +946,18 @@ def generate_config_code():
         return generate_referencia_v_simple_code(bubbles, 'likert_turno', ['Matutino', 'Vespertino', 'Nocturno'])
     elif current_section == 'likert-tipo-contrato':
         return generate_referencia_v_simple_code(bubbles, 'likert_tipo_contrato', ['Por obra o proyecto', 'Por tiempo determinado', 'Tiempo indeterminado', 'Honorarios'])
+    elif current_section == 'likert-planta-3':
+        return generate_likert_planta_3_code(bubbles)
+    elif current_section == 'likert-planta-3-puestos':
+        return generate_single_list_first_code(bubbles, 'likert_planta_3_puestos', 'Likert Planta 3 Puestos', total_items=19)
+    elif current_section == 'likert-planta-3-areas':
+        return generate_single_list_first_code(bubbles, 'likert_planta_3_areas', 'Likert Planta 3 Áreas', total_items=10)
+    elif current_section == 'likert-planta-3-genero':
+        return generate_referencia_v_simple_code(bubbles, 'likert_planta_3_genero', ['Masculino', 'Femenino'])
+    elif current_section == 'likert-planta-3-turno':
+        return generate_referencia_v_simple_code(bubbles, 'likert_planta_3_turno', ['Turno 1', 'Turno 2', 'Turno 3', 'Turno 4', 'Turno 5'])
+    elif current_section == 'likert-planta-3-tipo-contrato':
+        return generate_referencia_v_simple_code(bubbles, 'likert_planta_3_tipo_contrato', ['Opción 1', 'Opción 2'])
     else:
         return generate_custom_code(bubbles)
 
@@ -1110,6 +1150,25 @@ def generate_referencia_iii_management_code(bubbles):
 def generate_likert_23_code(bubbles):
     """Generate code for Likert evaluation (23 questions, A/B/C/D)."""
     code = "likert = {\n"
+    options = ['A', 'B', 'C', 'D']
+    for q_idx in range(23):
+        question_num = current_question + q_idx
+        bubble_idx = q_idx * 4
+        if bubble_idx >= len(bubbles):
+            break
+        code += f"    '{question_num}': {{\n"
+        for opt_idx, option in enumerate(options):
+            idx = bubble_idx + opt_idx
+            if idx < len(bubbles):
+                x, y, w, h = bubbles[idx]
+                code += f"        '{option}': ({x}, {y}, {w}, {h}),\n"
+        code += "    },\n"
+    code += "}\n"
+    return code
+
+def generate_likert_planta_3_code(bubbles):
+    """Generate code for Likert Planta 3 evaluation (23 questions, A/B/C/D)."""
+    code = "likert_planta_3 = {\n"
     options = ['A', 'B', 'C', 'D']
     for q_idx in range(23):
         question_num = current_question + q_idx

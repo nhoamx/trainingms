@@ -285,7 +285,7 @@ class ProcessPaperEvaluation implements ShouldQueue
             $organization = $this->findOrCreateOrganization($folioData['organization_code']);
 
             // Extract structured data based on evaluation type
-            $structuredData = $this->extractStructuredData($rawData, $folioData['evaluation_type']);
+            $structuredData = $this->extractStructuredData($rawData, $folioData['evaluation_type'], $folioData['evaluation_type_code']);
 
             // Check if evaluation already exists to preserve evaluee_name
             $existingEvaluation = PaperEvaluation::where('folio', $folio)->first();
@@ -356,7 +356,7 @@ class ProcessPaperEvaluation implements ShouldQueue
     /**
      * Extract structured data based on evaluation type
      */
-    protected function extractStructuredData(array $rawData, string $evaluationType): array
+    protected function extractStructuredData(array $rawData, string $evaluationType, string $evaluationTypeCode = ''): array
     {
         $structuredData = [];
 
@@ -394,8 +394,22 @@ class ProcessPaperEvaluation implements ShouldQueue
 
             case 'likert':
                 // Likert - Workplace climate evaluation (23 questions + demographics)
+                // Code 05 = standard Likert, Code 06 = Likert Planta 3
+                $questionsKey = $evaluationTypeCode === '06' ? 'likert_planta_3' : 'likert';
                 $structuredData['likert_answers'] = [
-                    'questions' => $rawData['likert'] ?? null,
+                    'questions' => $rawData[$questionsKey] ?? null,
+                    'genero' => $rawData['genero'] ?? null,
+                    'turno' => $rawData['turno'] ?? null,
+                    'tipo_contrato' => $rawData['tipo_contrato'] ?? null,
+                    'puestos' => $rawData['puestos'] ?? null,
+                    'areas' => $rawData['areas'] ?? null,
+                ];
+                break;
+
+            case 'likert_planta_3':
+                // Likert Planta 3 - Workplace climate evaluation (23 questions + demographics)
+                $structuredData['likert_answers'] = [
+                    'questions' => $rawData['likert_planta_3'] ?? null,
                     'genero' => $rawData['genero'] ?? null,
                     'turno' => $rawData['turno'] ?? null,
                     'tipo_contrato' => $rawData['tipo_contrato'] ?? null,
@@ -484,7 +498,9 @@ class ProcessPaperEvaluation implements ShouldQueue
     protected function saveDemographicData(PaperEvaluation $paperEvaluation, array $demographicData): void
     {
         try {
+            Log::info('Demographic Data: '.json_encode($demographicData));
             $extractedData = $this->extractDemographicInfo($demographicData);
+            Log::info('extractedData: '.json_encode($extractedData));
 
             // Delete existing demographic data to avoid duplicates
             $paperEvaluation->demographicData?->delete();
@@ -522,7 +538,8 @@ class ProcessPaperEvaluation implements ShouldQueue
     protected function extractDemographicInfo(array $demographicData): array
     {
         // Check if this is Likert data (has 'questions' key indicating it's from likert_answers)
-        if (isset($demographicData['questions'])) {
+        // Use array_key_exists instead of isset because isset returns false for null values
+        if (array_key_exists('questions', $demographicData)) {
             return $this->extractFromLikert($demographicData);
         }
 
@@ -733,7 +750,10 @@ class ProcessPaperEvaluation implements ShouldQueue
             return null;
         }
 
-        $map = [
+        $lowerValue = strtolower($value);
+
+        // Map for standard Likert (05) - Spanish descriptions
+        $mapLikert = [
             'por_obra_o_proyecto' => 'Por obra o proyecto',
             'por_tiempo_determinado_temporal' => 'Por tiempo determinado (temporal)',
             'tiempo_indeterminado' => 'Tiempo indeterminado',
@@ -743,7 +763,24 @@ class ProcessPaperEvaluation implements ShouldQueue
             'sindicalizado' => 'Sindicalizado',
         ];
 
-        return $map[strtolower($value)] ?? $value;
+        // Map for Likert Planta 3 (06) - opcion_N format
+        $mapPlanta3 = [
+            'opcion_1' => 'Opción 1',
+            'opcion_2' => 'Opción 2',
+        ];
+
+        // Try Planta 3 format first (opcion_N)
+        if (isset($mapPlanta3[$lowerValue])) {
+            return $mapPlanta3[$lowerValue];
+        }
+
+        // Then try standard Likert format
+        if (isset($mapLikert[$lowerValue])) {
+            return $mapLikert[$lowerValue];
+        }
+
+        // Return original value as fallback
+        return $value;
     }
 
     /**
@@ -755,9 +792,36 @@ class ProcessPaperEvaluation implements ShouldQueue
             return null;
         }
 
-        $map = config('likert-value.puestos');
+        // Get Likert standard position map
+        $mapLikert = config('likert-value.puestos', []);
 
-        return $map[strtolower($value)] ?? $value;
+        // Try direct lookup first (for text values)
+        if (isset($mapLikert[strtolower($value)])) {
+            return $mapLikert[strtolower($value)];
+        }
+
+        // For numeric indices (1-19 from Planta 3), map to config values
+        // Get Planta 3 position config
+        $mapPlanta3 = config('likert-value.puestos_planta_3', []);
+
+        if (is_numeric($value) && isset($mapPlanta3[$value])) {
+            return $mapPlanta3[$value];
+        }
+
+        // Also check old likert_puestos config by numeric index
+        if (is_numeric($value)) {
+            $puestoNumber = (int) $value;
+            $puestos = config('likert-value.puestos', []);
+
+            // Try to find by position in array
+            $puestosArray = array_values($puestos);
+            if (isset($puestosArray[$puestoNumber - 1])) {
+                return $puestosArray[$puestoNumber - 1];
+            }
+        }
+
+        // Return original value as fallback
+        return $value;
     }
 
     /**
@@ -769,9 +833,36 @@ class ProcessPaperEvaluation implements ShouldQueue
             return null;
         }
 
-        $map = config('likert-value.areas');
+        // Get Likert standard areas map
+        $mapLikert = config('likert-value.areas', []);
 
-        return $map[strtolower($value)] ?? $value;
+        // Try direct lookup first (for text values)
+        if (isset($mapLikert[strtolower($value)])) {
+            return $mapLikert[strtolower($value)];
+        }
+
+        // For numeric indices (1-10 from Planta 3), map to config values
+        // Get Planta 3 areas config
+        $mapPlanta3 = config('likert-value.areas_planta_3', []);
+
+        if (is_numeric($value) && isset($mapPlanta3[$value])) {
+            return $mapPlanta3[$value];
+        }
+
+        // Also check old likert_areas config by numeric index
+        if (is_numeric($value)) {
+            $areaNumber = (int) $value;
+            $areas = config('likert-value.areas', []);
+
+            // Try to find by position in array
+            $areasArray = array_values($areas);
+            if (isset($areasArray[$areaNumber - 1])) {
+                return $areasArray[$areaNumber - 1];
+            }
+        }
+
+        // Return original value as fallback
+        return $value;
     }
 
     /**
@@ -800,7 +891,10 @@ class ProcessPaperEvaluation implements ShouldQueue
             return null;
         }
 
-        $map = [
+        $lowerValue = strtolower($value);
+
+        // Map for standard Likert (05) - Detailed shift names
+        $mapLikert = [
             'fijo_nocturno_(entre_las_20:00_y_6:00_hrs)' => 'Fijo nocturno (entre las 20:00 y 6:00 hrs)',
             'fijo_diurno_(entre_las_6:00_y_20:00_hrs)' => 'Fijo diurno (entre las 6:00 y 20:00 hrs)',
             'fijo_mixto_(combinacion_de_nocturno_y_diurno)' => 'Fijo mixto (combinación de nocturno y diurno)',
@@ -810,7 +904,27 @@ class ProcessPaperEvaluation implements ShouldQueue
             'mixto' => 'Mixto',
         ];
 
-        return $map[strtolower($value)] ?? $value;
+        // Map for Likert Planta 3 (06) - turno_N format
+        $mapPlanta3 = [
+            'turno_1' => 'Turno 1',
+            'turno_2' => 'Turno 2',
+            'turno_3' => 'Turno 3',
+            'turno_4' => 'Turno 4',
+            'turno_5' => 'Turno 5',
+        ];
+
+        // Try Planta 3 format first (turno_N)
+        if (isset($mapPlanta3[$lowerValue])) {
+            return $mapPlanta3[$lowerValue];
+        }
+
+        // Then try standard Likert format
+        if (isset($mapLikert[$lowerValue])) {
+            return $mapLikert[$lowerValue];
+        }
+
+        // Return original value as fallback
+        return $value;
     }
 
     /**
