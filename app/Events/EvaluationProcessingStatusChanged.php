@@ -21,15 +21,35 @@ class EvaluationProcessingStatusChanged implements ShouldBroadcastNow
 
     public $userId;
 
+    public $batchId;
+
+    public $currentIndex;
+
+    public $totalFiles;
+
+    public $fileName;
+
     /**
      * Create a new event instance.
      */
-    public function __construct($status, $message, $finished = false, ?string $userId = null)
-    {
+    public function __construct(
+        $status,
+        $message,
+        $finished = false,
+        ?string $userId = null,
+        ?string $batchId = null,
+        int $currentIndex = 0,
+        int $totalFiles = 1,
+        string $fileName = ''
+    ) {
         $this->status = $status;
         $this->message = $message;
         $this->finished = $finished;
         $this->userId = $userId;
+        $this->batchId = $batchId;
+        $this->currentIndex = $currentIndex;
+        $this->totalFiles = $totalFiles;
+        $this->fileName = $fileName;
     }
 
     /**

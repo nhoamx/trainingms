@@ -24,16 +24,35 @@ class ProcessPaperEvaluation implements ShouldQueue
 
     protected ?string $initiatorUserId;
 
+    protected ?string $batchId;
+
+    protected int $currentIndex;
+
+    protected int $totalFiles;
+
+    protected string $fileName;
+
     public int $timeout = 1200;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $fullPath, string $containerName, ?string $initiatorUserId = null)
-    {
+    public function __construct(
+        string $fullPath,
+        string $containerName,
+        ?string $initiatorUserId = null,
+        ?string $batchId = null,
+        int $currentIndex = 0,
+        int $totalFiles = 1,
+        string $fileName = ''
+    ) {
         $this->fullPath = $fullPath;
         $this->containerName = $containerName;
         $this->initiatorUserId = $initiatorUserId;
+        $this->batchId = $batchId;
+        $this->currentIndex = $currentIndex;
+        $this->totalFiles = $totalFiles;
+        $this->fileName = $fileName;
     }
 
     /**
@@ -41,53 +60,28 @@ class ProcessPaperEvaluation implements ShouldQueue
      */
     public function handle(): void
     {
-        broadcast(new EvaluationProcessingStatusChanged(
-            'running',
-            'Copiando PDF al contenedor...',
-            false,
-            $this->initiatorUserId
-        ));
+        $this->broadcastStatus('running', 'Copiando PDF al contenedor...');
 
         try {
             // 1. Copy PDF to Docker container
             $this->copyPdfToContainer();
 
-            broadcast(new EvaluationProcessingStatusChanged(
-                'running',
-                'Ejecutando análisis OCR...',
-                false,
-                $this->initiatorUserId
-            ));
+            $this->broadcastStatus('running', 'Ejecutando análisis OCR...');
 
             // 2. Execute OCR processing
             $this->executeOcrProcessing();
 
-            broadcast(new EvaluationProcessingStatusChanged(
-                'running',
-                'Esperando resultados del análisis...',
-                false,
-                $this->initiatorUserId
-            ));
+            $this->broadcastStatus('running', 'Esperando resultados del análisis...');
 
             // 3. Process JSON results and store in new structure
             $this->processJsonResults();
 
-            broadcast(new EvaluationProcessingStatusChanged(
-                'running',
-                'Guardando resultados en la base de datos...',
-                false,
-                $this->initiatorUserId
-            ));
+            $this->broadcastStatus('running', 'Guardando resultados en la base de datos...');
 
             // 4. Cleanup uploaded files
             $this->cleanupFiles();
 
-            broadcast(new EvaluationProcessingStatusChanged(
-                'finished',
-                'El procesamiento ha finalizado exitosamente',
-                true,
-                $this->initiatorUserId
-            ));
+            $this->broadcastStatus('finished', 'El procesamiento ha finalizado exitosamente', true);
 
         } catch (\Exception $e) {
             Log::error('ProcessPaperEvaluation - Error: '.$e->getMessage(), [
@@ -95,15 +89,27 @@ class ProcessPaperEvaluation implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            broadcast(new EvaluationProcessingStatusChanged(
-                'error',
-                'Error durante el procesamiento: '.$e->getMessage(),
-                false,
-                $this->initiatorUserId
-            ));
+            $this->broadcastStatus('error', 'Error durante el procesamiento: '.$e->getMessage());
 
             throw $e;
         }
+    }
+
+    /**
+     * Broadcast status update with batch information
+     */
+    protected function broadcastStatus(string $status, string $message, bool $finished = false): void
+    {
+        broadcast(new EvaluationProcessingStatusChanged(
+            $status,
+            $message,
+            $finished,
+            $this->initiatorUserId,
+            $this->batchId,
+            $this->currentIndex,
+            $this->totalFiles,
+            $this->fileName
+        ));
     }
 
     /**
@@ -475,18 +481,15 @@ class ProcessPaperEvaluation implements ShouldQueue
     }
 
     /**
-     * Cleanup uploaded files
+     * Cleanup uploaded files - only delete the specific file processed
      */
     protected function cleanupFiles(): void
     {
-        $evaluationsPath = storage_path('app/public/evaluations');
-
         try {
-            $files = File::files($evaluationsPath);
-            foreach ($files as $file) {
-                File::delete($file);
+            if (File::exists($this->fullPath)) {
+                File::delete($this->fullPath);
+                Log::info('Cleanup completed successfully for file: '.$this->fullPath);
             }
-            Log::info('Cleanup completed successfully');
         } catch (\Exception $e) {
             Log::error('Error during cleanup: '.$e->getMessage());
         }
