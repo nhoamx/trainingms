@@ -6,8 +6,10 @@ use App\Jobs\ProcessPaperEvaluation;
 use App\Models\Evaluation;
 use App\Models\Organization;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class EvaluationController extends Controller
@@ -36,32 +38,59 @@ class EvaluationController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Validar que se envíe un archivo y que sea un PDF de hasta 10MB
+        // 1. Validar que se envíen archivos PDF (máximo 20 para evitar sobrecarga)
         $validated = $request->validate([
-            'file' => 'required|file|mimes:pdf', // 10240 KB = 10 MB
+            'files' => 'required|array|min:1|max:20',
+            'files.*' => 'file|mimes:pdf|max:10240', // 10MB max por archivo
         ]);
 
-        // 2. Guardar el archivo en el disco 'public' en la carpeta "evaluations"
-        $path = $request->file('file')->store('evaluations', 'public');
-
-        // Obtener el path completo del archivo almacenado
-        $fullPath = storage_path('app/public/'.$path);
-
-        // Nombre o ID del contenedor (según salida de `docker ps`)
-        $containerName = 'training-and-ms';
-
-        // 3. Despachar el nuevo job para procesamiento mejorado
         $userId = optional($request->user())->id;
-        ProcessPaperEvaluation::dispatch($fullPath, $containerName, $userId);
+        $containerName = 'training-and-ms';
+        $batchId = Str::uuid()->toString();
+        $uploadedFiles = $request->file('files');
+        $totalFiles = count($uploadedFiles);
 
-        // Redirigir al dashboard del admin con un mensaje de éxito
-        return redirect()
-            ->route('dashboard')
-            ->with('flash', [
-                'type' => 'success',
-                'title' => 'Evaluación cargada exitosamente',
-                'message' => 'El archivo PDF ha sido cargado y está siendo procesado. Los resultados estarán disponibles en breve.',
-            ]);
+        // 2. Guardar todos los archivos y crear array de jobs
+        $jobs = [];
+        $fileNames = [];
+
+        foreach ($uploadedFiles as $index => $file) {
+            $originalName = $file->getClientOriginalName();
+
+            // Ignorar duplicados por nombre
+            if (in_array($originalName, $fileNames)) {
+                continue;
+            }
+            $fileNames[] = $originalName;
+
+            // Guardar con nombre único (UUID)
+            $uniqueName = Str::uuid().'_'.$originalName;
+            $path = $file->storeAs('evaluations', $uniqueName, 'public');
+            $fullPath = storage_path('app/public/'.$path);
+
+            // Crear job con metadata del lote
+            $jobs[] = new ProcessPaperEvaluation(
+                $fullPath,
+                $containerName,
+                $userId,
+                $batchId,
+                $index + 1,
+                $totalFiles,
+                $originalName
+            );
+        }
+
+        // 3. Despachar jobs en cadena (secuencial)
+        if (! empty($jobs)) {
+            Bus::chain($jobs)->dispatch();
+        }
+
+        // 4. Retornar a la misma página con datos del lote para tracking
+        return back()->with('batch', [
+            'batchId' => $batchId,
+            'totalFiles' => count($jobs),
+            'fileNames' => $fileNames,
+        ]);
     }
 
     public function show(Evaluation $evaluation)
