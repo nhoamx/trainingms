@@ -12,7 +12,7 @@
               {{ evaluations.length }} evaluaciones completadas
             </p>
           </div>
-          <div v-if="evaluations.length > 0" class="flex items-center gap-3">
+          <div v-if="evaluations.length > 0 && (isAdmin || isSuperAdmin)" class="flex items-center gap-3">
             <button
               @click="downloadWordReport"
               :disabled="isDownloading"
@@ -492,6 +492,14 @@ const props = defineProps({
   areasMap: {
     type: Object,
     default: () => ({}),
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false,
+  },
+  isSuperAdmin: {
+    type: Boolean,
+    default: false,
   },
 })
 
