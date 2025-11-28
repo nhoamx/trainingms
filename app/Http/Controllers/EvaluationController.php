@@ -38,9 +38,9 @@ class EvaluationController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Validar que se envíen archivos PDF
+        // 1. Validar que se envíen archivos PDF (máximo 20 para evitar sobrecarga)
         $validated = $request->validate([
-            'files' => 'required|array|min:1',
+            'files' => 'required|array|min:1|max:20',
             'files.*' => 'file|mimes:pdf|max:10240', // 10MB max por archivo
         ]);
 

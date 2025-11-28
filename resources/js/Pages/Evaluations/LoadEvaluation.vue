@@ -6,6 +6,7 @@ import Card from "../../Components/Card.vue";
 import { DocumentIcon, CheckCircleIcon, ExclamationCircleIcon, ArrowPathIcon, XMarkIcon, ClockIcon } from '@heroicons/vue/24/solid';
 
 const page = usePage();
+const STORAGE_KEY = 'evaluation_batch_state';
 
 const form = useForm({
     files: [],
@@ -22,6 +23,64 @@ const processingComplete = ref(false);
 const successCount = ref(0);
 const errorCount = ref(0);
 let channel = null;
+
+// Guardar estado en localStorage
+function saveStateToStorage() {
+    const state = {
+        batchId: batchId.value,
+        totalFiles: totalFiles.value,
+        currentFileIndex: currentFileIndex.value,
+        fileStatuses: fileStatuses.value,
+        isProcessing: isProcessing.value,
+        showStatusPanel: showStatusPanel.value,
+        processingComplete: processingComplete.value,
+        successCount: successCount.value,
+        errorCount: errorCount.value,
+        savedAt: Date.now()
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// Restaurar estado desde localStorage
+function restoreStateFromStorage() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) return false;
+        
+        const state = JSON.parse(saved);
+        
+        // Ignorar estados guardados hace más de 24 horas
+        const maxAge = 24 * 60 * 60 * 1000;
+        if (Date.now() - state.savedAt > maxAge) {
+            clearStateFromStorage();
+            return false;
+        }
+        
+        // Solo restaurar si hay un lote activo (no completado)
+        if (state.batchId && !state.processingComplete) {
+            batchId.value = state.batchId;
+            totalFiles.value = state.totalFiles;
+            currentFileIndex.value = state.currentFileIndex;
+            fileStatuses.value = state.fileStatuses;
+            isProcessing.value = state.isProcessing;
+            showStatusPanel.value = state.showStatusPanel;
+            processingComplete.value = state.processingComplete;
+            successCount.value = state.successCount;
+            errorCount.value = state.errorCount;
+            return true;
+        }
+        
+        return false;
+    } catch (e) {
+        console.error('Error restoring state from localStorage:', e);
+        return false;
+    }
+}
+
+// Limpiar estado de localStorage
+function clearStateFromStorage() {
+    localStorage.removeItem(STORAGE_KEY);
+}
 
 // Progreso del lote
 const batchProgress = computed(() => {
@@ -49,11 +108,18 @@ function handleDrop(e) {
     addFiles(newFiles);
 }
 
+const MAX_FILES = 20;
+
 function addFiles(newFiles) {
     // Filtrar duplicados por nombre
     const existingNames = form.files.map(f => f.name);
     const uniqueFiles = newFiles.filter(f => !existingNames.includes(f.name));
-    form.files = [...form.files, ...uniqueFiles];
+    
+    // Limitar a máximo 20 archivos
+    const availableSlots = MAX_FILES - form.files.length;
+    const filesToAdd = uniqueFiles.slice(0, availableSlots);
+    
+    form.files = [...form.files, ...filesToAdd];
 }
 
 function removeFile(index) {
@@ -90,6 +156,8 @@ const submit = () => {
                 batchId.value = batch.batchId;
                 totalFiles.value = batch.totalFiles;
                 currentFileIndex.value = 0;
+                // Guardar estado inicial en localStorage
+                saveStateToStorage();
             }
             form.reset('files');
         },
@@ -100,6 +168,7 @@ const submit = () => {
                 status: 'error',
                 message: 'Error al subir archivos'
             }));
+            clearStateFromStorage();
         }
     });
 };
@@ -107,6 +176,9 @@ const submit = () => {
 // Setup Echo listener for real-time updates
 onMounted(() => {
     const userId = page.props.auth?.user?.id;
+    
+    // Restaurar estado guardado si existe
+    restoreStateFromStorage();
     
     if (window.Echo && userId) {
         channel = window.Echo.private(`evaluation-processing.${userId}`)
@@ -139,6 +211,9 @@ onMounted(() => {
                     }
                 }
                 
+                // Guardar estado en localStorage después de cada actualización
+                saveStateToStorage();
+                
                 // Verificar si todo el lote terminó
                 const allDone = fileStatuses.value.every(f => 
                     f.status === 'finished' || f.status === 'error'
@@ -147,6 +222,8 @@ onMounted(() => {
                 if (allDone) {
                     isProcessing.value = false;
                     processingComplete.value = true;
+                    // Limpiar localStorage cuando el lote termine
+                    clearStateFromStorage();
                 }
             });
     }
@@ -188,6 +265,7 @@ const getFileStatusColor = (status) => {
 };
 
 const goToResults = () => {
+    clearStateFromStorage();
     window.location.href = route('dashboard');
 };
 
@@ -200,6 +278,7 @@ const resetForm = () => {
     currentFileIndex.value = 0;
     successCount.value = 0;
     errorCount.value = 0;
+    clearStateFromStorage();
 };
 </script>
 
@@ -233,13 +312,13 @@ const resetForm = () => {
                                         class="sr-only"
                                         accept="application/pdf"
                                         multiple
-                                        :disabled="isProcessing"
+                                        :disabled="isProcessing || form.files.length >= MAX_FILES"
                                         @change="handleFileChange"
                                     />
                                 </label>
                                 <p class="pl-1">o arrastra y suelta</p>
                             </div>
-                            <p class="text-xs/5 text-gray-600">PDF, hasta 10MB por archivo</p>
+                            <p class="text-xs/5 text-gray-600">PDF, hasta 10MB por archivo (máximo {{ MAX_FILES }} archivos)</p>
                         </div>
                     </div>
                 </div>
