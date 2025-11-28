@@ -30,7 +30,7 @@ class ResultsController extends Controller
     /**
      * Show Likert report for an organization
      */
-    public function showLikertReport(Organization $organization)
+    public function showLikertReport(Organization $organization, Request $request)
     {
         // Get all completed Likert evaluations for this organization
         $likertEvaluations = PaperEvaluation::where('organization_id', $organization->id)
@@ -39,6 +39,8 @@ class ResultsController extends Controller
             ->get();
 
         if ($likertEvaluations->isEmpty()) {
+            $user = $request->user();
+
             return Inertia::render('Reports/LikertOrganizationReport', [
                 'organizationId' => $organization->id,
                 'organizationName' => $organization->name,
@@ -53,6 +55,8 @@ class ResultsController extends Controller
                 ],
                 'dimensions' => [],
                 'totalScore' => null,
+                'isAdmin' => $user && $user->hasRole('admin'),
+                'isSuperAdmin' => $user && $user->hasRole('super-admin'),
             ]);
         }
 
@@ -189,6 +193,8 @@ class ResultsController extends Controller
             ];
         }
 
+        $user = $request->user();
+
         return Inertia::render('Reports/LikertOrganizationReport', [
             'organizationId' => $organization->id,
             'organizationName' => $organization->name,
@@ -206,6 +212,8 @@ class ResultsController extends Controller
             'dimensions' => $dimensionSummaries,
             'climaLaboralDistribution' => $climaLaboralDistribution,
             'totalPeople' => count($evaluationsData),
+            'isAdmin' => $user && $user->hasRole('admin'),
+            'isSuperAdmin' => $user && $user->hasRole('super-admin'),
         ]);
     }
 
