@@ -719,6 +719,108 @@ from alinear_con_marcadores import detectar_marcadores_4_esquinas, alinear_image
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
+def detect_valid_folio_quick(image_path, detector):
+    """
+    Intenta detectar un folio válido (que inicie con 01-06) de forma rápida.
+    Retorna el folio si es válido, None si no lo es.
+    """
+    valid_prefixes = ['01', '02', '03', '04', '05', '06']
+    try:
+        folio_data = detector.detect_bubbles(image_path, config.folio_configuration, validate_single_answer=False)
+        folio = "".join(str(value) for value in folio_data.values() if value is not None)
+        
+        if folio and len(folio) >= 2:
+            if any(folio.startswith(prefix) for prefix in valid_prefixes):
+                return folio
+    except Exception as e:
+        logging.debug(f"Error detectando folio: {e}")
+    
+    return None
+
+def auto_rotate_landscape_image(image_path, detector):
+    """
+    Detecta si una imagen está en orientación landscape (horizontal) y la rota
+    automáticamente a portrait (vertical) en la dirección correcta.
+    
+    Lógica:
+    1. Si la imagen ya es portrait (height >= width), no hacer nada
+    2. Si es landscape, rotar 90° a la izquierda (counterclockwise)
+    3. Intentar detectar folio válido
+    4. Si no detecta folio válido, rotar 90° a la derecha (clockwise desde original)
+    5. Si detecta folio en cualquier dirección, guardar esa orientación
+    
+    Returns:
+        bool: True si se rotó la imagen, False si no fue necesario
+    """
+    img = cv2.imread(image_path)
+    if img is None:
+        logging.error(f"No se pudo leer la imagen: {image_path}")
+        return False
+    
+    height, width = img.shape[:2]
+    
+    # Si ya es portrait, no hacer nada
+    if height >= width:
+        logging.info(f"Imagen ya está en portrait ({width}x{height}), no requiere rotación")
+        return False
+    
+    logging.info(f"Imagen en landscape ({width}x{height}), intentando auto-rotación...")
+    
+    # Crear archivo temporal para probar rotaciones
+    temp_path = image_path.replace(".png", "_temp_rotation.png")
+    
+    # Intento 1: Rotar 90° a la izquierda (counterclockwise)
+    logging.info("  Intentando rotación 90° counterclockwise (izquierda)...")
+    rotated_ccw = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    cv2.imwrite(temp_path, rotated_ccw)
+    
+    folio = detect_valid_folio_quick(temp_path, detector)
+    if folio:
+        logging.info(f"  ✓ Folio válido detectado con rotación izquierda: {folio}")
+        # Guardar la imagen rotada en la ruta original
+        cv2.imwrite(image_path, rotated_ccw)
+        # Limpiar archivo temporal
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        return True
+    
+    # Intento 2: Rotar 90° a la derecha (clockwise)
+    logging.info("  Intentando rotación 90° clockwise (derecha)...")
+    rotated_cw = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+    cv2.imwrite(temp_path, rotated_cw)
+    
+    folio = detect_valid_folio_quick(temp_path, detector)
+    if folio:
+        logging.info(f"  ✓ Folio válido detectado con rotación derecha: {folio}")
+        # Guardar la imagen rotada en la ruta original
+        cv2.imwrite(image_path, rotated_cw)
+        # Limpiar archivo temporal
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        return True
+    
+    # Si ninguna rotación funciona, usar counterclockwise como fallback
+    logging.warning("  ⚠ No se detectó folio válido en ninguna rotación, usando counterclockwise como fallback")
+    cv2.imwrite(image_path, rotated_ccw)
+    
+    # Limpiar archivo temporal
+    if os.path.exists(temp_path):
+        os.remove(temp_path)
+    
+    return True
+
+# --- Auto-rotar imágenes landscape antes de procesarlas ---
+print("Verificando orientación de imágenes...")
+rotated_count = 0
+for image_file in image_files:
+    if auto_rotate_landscape_image(image_file, detector):
+        rotated_count += 1
+
+if rotated_count > 0:
+    print(f"{rotated_count} imágenes fueron rotadas de landscape a portrait.")
+else:
+    print("Todas las imágenes ya estaban en orientación portrait.")
+
 # Mapeo de template types a archivos de referencia
 REFERENCE_IMAGES = {
     '01': '/app/reference-referencia-i.png',      # Referencia I
