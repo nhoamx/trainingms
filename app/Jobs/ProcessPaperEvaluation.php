@@ -163,7 +163,7 @@ class ProcessPaperEvaluation implements ShouldQueue
     protected function processJsonResults(): void
     {
         $outputFolder = base_path('docker/output');
-        $maxAttempts = 120; // Wait up to 20 minutes (120 attempts * 10 seconds)
+        $maxAttempts = 30; // Wait up to 5 minutes (30 attempts * 10 seconds)
         $attemptDelay = 10; // Wait 10 seconds between attempts
         $attempt = 0;
         $processedFiles = []; // Track already processed files
