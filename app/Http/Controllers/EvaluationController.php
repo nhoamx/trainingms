@@ -6,7 +6,6 @@ use App\Jobs\ProcessPaperEvaluation;
 use App\Models\Evaluation;
 use App\Models\Organization;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -80,9 +79,9 @@ class EvaluationController extends Controller
             );
         }
 
-        // 3. Despachar jobs en cadena (secuencial)
-        if (! empty($jobs)) {
-            Bus::chain($jobs)->dispatch();
+        // 3. Despachar cada job independientemente (si uno falla, los demás continúan)
+        foreach ($jobs as $job) {
+            dispatch($job);
         }
 
         // 4. Retornar a la misma página con datos del lote para tracking
