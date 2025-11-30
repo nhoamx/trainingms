@@ -32,7 +32,7 @@ class ProcessPaperEvaluation implements ShouldQueue
 
     protected string $fileName;
 
-    public int $timeout = 1200;
+    public int $timeout = 3600; // 1 hora para PDFs grandes
 
     /**
      * Create a new job instance.
