@@ -10,7 +10,6 @@
         "barryvdh/laravel-dompdf": "^3.1",
         "inertiajs/inertia-laravel": "2.0",
         "laravel/framework": "^11.31",
-        "laravel/horizon": "^5.33",
         "laravel/nightwatch": "^1.13",
         "laravel/reverb": "^1.0",
         "laravel/telescope": "^5.5",
@@ -78,6 +77,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "audit": {
+            "ignore": ["PKSA-365x-2zjk-pt47"]
         }
     },
     "minimum-stability": "stable",
