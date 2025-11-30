@@ -360,8 +360,9 @@ const getGenderFromGroup = (group) => {
 // Computed filtered evaluations
 const filteredEvaluationGroups = computed(() => {
     return props.evaluationGroups.filter(group => {
+        const folio = String(group.personal_folio || '')
         const matchesSearch = !filters.value.search || 
-            group.personal_folio.toLowerCase().includes(filters.value.search.toLowerCase())
+            folio.toLowerCase().includes(filters.value.search.toLowerCase())
         
         const matchesGender = !filters.value.gender || 
             getGenderFromGroup(group) === filters.value.gender
