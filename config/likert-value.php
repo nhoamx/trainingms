@@ -315,19 +315,19 @@ return [
         'Clima Laboral' => [
             'Totalmente Desacuerdo' => [
                 'min' => 23,
-                'max' => 40.5,
+                'max' => 40.25,
             ],
             'Desacuerdo' => [
-                'min' => 40.6,
-                'max' => 58,
+                'min' => 40.26,
+                'max' => 57.75,
             ],
             'De Acuerdo' => [
-                'min' => 59,
-                'max' => 75.5,
+                'min' => 57.76,
+                'max' => 75,
             ],
             'Totalmente de Acuerdo' => [
-                'min' => 75.6,
-                'max' => 93,
+                'min' => 75.1,
+                'max' => 92,
             ],
         ],
     ],
