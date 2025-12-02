@@ -40,7 +40,7 @@ class EvaluationController extends Controller
         // 1. Validar que se envíen archivos PDF (máximo 20 para evitar sobrecarga)
         $validated = $request->validate([
             'files' => 'required|array|min:1|max:20',
-            'files.*' => 'file|mimes:pdf|max:2048', // 10MB max por archivo
+            'files.*' => 'file|mimes:pdf|max:20480', // 20MB max por archivo
         ]);
 
         $userId = optional($request->user())->id;
