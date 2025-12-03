@@ -29,8 +29,8 @@
                 </div>
             </div>
 
-            <!-- Scanned Form Image -->
-            <div v-if="evaluation.scanned_image_url" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
+            <!-- Scanned Form Image (Admin/SuperAdmin only) -->
+            <div v-if="evaluation.scanned_image_url && isAdmin" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
                 <h2 class="text-xl font-bold text-gray-900 mb-4">Formulario Escaneado</h2>
                 <div class="flex justify-center items-center bg-gray-50 rounded-lg p-4 min-h-64">
                     <button
