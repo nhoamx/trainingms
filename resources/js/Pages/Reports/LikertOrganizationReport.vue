@@ -228,7 +228,15 @@
 
               <!-- Mapa de Calor - Todas las Preguntas -->
               <div>
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Mapa de Calor - Todas las Preguntas</h4>
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="text-md font-semibold text-gray-900">Mapa de Calor - Todas las Preguntas</h4>
+                  <p class="text-xs text-gray-500 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Clic en el número de pregunta para ordenar
+                  </p>
+                </div>
                 <div class="overflow-x-auto">
                   <table class="min-w-full border-collapse border border-gray-300">
                     <thead>
@@ -255,18 +263,31 @@
                           <th 
                             v-for="qNum in Object.keys(dim.questions)" 
                             :key="`q-header-${qNum}`"
-                            class="border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 text-center"
+                            class="border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 text-center cursor-pointer hover:bg-gray-200 select-none"
+                            @click="toggleSort(qNum)"
+                            :title="`Ordenar por pregunta ${qNum}`"
                           >
-                            {{ qNum }}
+                            <div class="flex items-center justify-center gap-1">
+                              {{ qNum }}
+                              <span v-if="sortColumn === qNum" class="text-blue-600">
+                                {{ sortDirection === 'desc' ? '▼' : '▲' }}
+                              </span>
+                            </div>
                           </th>
                         </template>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="evaluation in filteredEvaluations" :key="`eval-${evaluation.folio}`">
+                      <tr v-for="evaluation in sortedFilteredEvaluations" :key="`eval-${evaluation.folio}`">
                         <!-- Personal folio column -->
-                        <td class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-900 sticky left-0 bg-white z-10">
-                          {{ evaluation.personal_folio }}
+                        <td class="border border-gray-300 px-2 py-2 text-xs font-semibold sticky left-0 bg-white z-10">
+                          <a
+                            :href="route('organization.results.likert', { organization: organizationId, personalFolio: evaluation.personal_folio })"
+                            target="_blank"
+                            class="text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            {{ evaluation.personal_folio }}
+                          </a>
                         </td>
                         <!-- Answer cells for each question -->
                         <template v-for="(dim, dimName) in filteredDimensions" :key="`eval-dim-${evaluation.folio}-${dimName}`">
@@ -336,7 +357,15 @@
 
               <!-- Mapa de Calor para esta Dimensión -->
               <div>
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Mapa de Calor</h4>
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="text-md font-semibold text-gray-900">Mapa de Calor</h4>
+                  <p class="text-xs text-gray-500 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Clic en el número de pregunta para ordenar
+                  </p>
+                </div>
                 <div class="overflow-x-auto">
                   <table class="min-w-full border-collapse border border-gray-300">
                     <thead>
@@ -348,17 +377,30 @@
                         <th 
                           v-for="qNum in Object.keys(filteredDimensions[activeTab]?.questions || {})" 
                           :key="`dim-q-header-${qNum}`"
-                          class="border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 text-center"
+                          class="border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 text-center cursor-pointer hover:bg-gray-200 select-none"
+                          @click="toggleSort(qNum)"
+                          :title="`Ordenar por pregunta ${qNum}`"
                         >
-                          {{ qNum }}
+                          <div class="flex items-center justify-center gap-1">
+                            {{ qNum }}
+                            <span v-if="sortColumn === qNum" class="text-blue-600">
+                              {{ sortDirection === 'desc' ? '▼' : '▲' }}
+                            </span>
+                          </div>
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="evaluation in filteredEvaluations" :key="`dim-eval-${evaluation.folio}`">
+                      <tr v-for="evaluation in sortedFilteredEvaluations" :key="`dim-eval-${evaluation.folio}`">
                         <!-- Personal folio column -->
-                        <td class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-900 sticky left-0 bg-white z-10">
-                          {{ evaluation.personal_folio }}
+                        <td class="border border-gray-300 px-2 py-2 text-xs font-semibold sticky left-0 bg-white z-10">
+                          <a
+                            :href="route('organization.results.likert', { organization: organizationId, personalFolio: evaluation.personal_folio })"
+                            target="_blank"
+                            class="text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            {{ evaluation.personal_folio }}
+                          </a>
                         </td>
                         <!-- Answer cells for this dimension's questions -->
                         <td 
@@ -383,8 +425,8 @@
   
   <!-- Modal de Folios por nivel -->
   <div v-if="showFoliosModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click="closeFoliosModal">
-    <div class="bg-white rounded-lg shadow-2xl w-full max-w-xl max-h-[80vh] overflow-hidden" @click.stop>
-      <div class="flex items-center justify-between p-4 border-b">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-xl max-h-[80vh] flex flex-col" @click.stop>
+      <div class="flex items-center justify-between p-4 border-b flex-shrink-0">
         <h3 class="text-lg font-semibold">{{ foliosModalTitle }}</h3>
         <button @click="closeFoliosModal" class="text-gray-500 hover:text-gray-700">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -392,7 +434,7 @@
           </svg>
         </button>
       </div>
-      <div class="p-4 overflow-auto">
+      <div class="p-4 overflow-y-auto flex-1">
         <table class="min-w-full text-sm">
           <thead>
             <tr class="text-left text-gray-600">
@@ -425,7 +467,7 @@
           </tbody>
         </table>
       </div>
-      <div class="p-4 border-t flex justify-end">
+      <div class="p-4 border-t flex justify-end flex-shrink-0">
         <button @click="closeFoliosModal" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Cerrar</button>
       </div>
     </div>
@@ -517,6 +559,10 @@ const dimensionChartCanvas = ref(null)
 const chartInstances = ref({}) // keyed instances; we'll use 'Total' and 'Dimension'
 const TOTAL_CHART_KEY = 'Total'
 const DIMENSION_CHART_KEY = 'Dimension'
+
+// Sorting state for heatmap
+const sortColumn = ref(null) // Question number to sort by, or null for default (folio asc)
+const sortDirection = ref('desc') // 'asc' or 'desc'
 
 // Word Report Download State
 const isDownloading = ref(false)
@@ -611,6 +657,49 @@ const filteredEvaluations = computed(() => {
     return true
   })
 })
+
+// Sorted and filtered evaluations for heatmap display
+const sortedFilteredEvaluations = computed(() => {
+  const evaluations = [...filteredEvaluations.value]
+  
+  if (sortColumn.value !== null) {
+    // Sort by specific question answer value
+    const valorOpciones = { A: 4, B: 3, C: 2, D: 1 }
+    evaluations.sort((a, b) => {
+      const aVal = valorOpciones[a.answers[sortColumn.value]] || 0
+      const bVal = valorOpciones[b.answers[sortColumn.value]] || 0
+      return sortDirection.value === 'desc' ? bVal - aVal : aVal - bVal
+    })
+  } else {
+    // Default sort: by personal_folio ascending (0001 first)
+    evaluations.sort((a, b) => {
+      const folioA = String(a.personal_folio || '')
+      const folioB = String(b.personal_folio || '')
+      return folioA.localeCompare(folioB, undefined, { numeric: true })
+    })
+  }
+  
+  return evaluations
+})
+
+// Toggle sort by column
+const toggleSort = (questionNumber) => {
+  const qNum = String(questionNumber)
+  if (sortColumn.value === qNum) {
+    // Toggle direction or reset
+    if (sortDirection.value === 'desc') {
+      sortDirection.value = 'asc'
+    } else {
+      // Reset to default (folio order)
+      sortColumn.value = null
+      sortDirection.value = 'desc'
+    }
+  } else {
+    // New column, start with desc (highest first)
+    sortColumn.value = qNum
+    sortDirection.value = 'desc'
+  }
+}
 
 // Recompute dimensions distribution based on filtered evaluations
 const filteredDimensions = computed(() => {
