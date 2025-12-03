@@ -82,6 +82,33 @@ class PaperEvaluation extends Model
     }
 
     /**
+     * Get custom fields for this evaluation
+     */
+    public function customFields(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(EvaluationCustomField::class);
+    }
+
+    /**
+     * Get a specific custom field value by key
+     */
+    public function getCustomField(string $key): ?string
+    {
+        return $this->customFields()->where('key', $key)->value('value');
+    }
+
+    /**
+     * Set or update a custom field
+     */
+    public function setCustomField(string $key, string $keyLabel, ?string $value): EvaluationCustomField
+    {
+        return $this->customFields()->updateOrCreate(
+            ['key' => $key],
+            ['key_label' => $keyLabel, 'value' => $value]
+        );
+    }
+
+    /**
      * Derive evaluation type from folio code
      */
     public static function getEvaluationTypeFromCode(string $code): string
@@ -279,9 +306,9 @@ class PaperEvaluation extends Model
     }
 
     /**
-     * Get custom fields data
+     * Get custom fields data from raw_data (for quiz custom fields)
      */
-    public function getCustomFieldsAttribute(): ?array
+    public function getQuizCustomFieldsAttribute(): ?array
     {
         return $this->raw_data['custom_fields'] ?? null;
     }

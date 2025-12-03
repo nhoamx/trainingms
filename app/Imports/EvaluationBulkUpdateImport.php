@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Models\DemographicData;
+use App\Models\EvaluationCustomField;
 use App\Models\PaperEvaluation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +21,33 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
     protected int $organizationId;
 
     protected ?string $source;
+
+    /**
+     * Known fields that map to existing database columns.
+     * key = possible Excel header (snake_case), value = mapping info
+     */
+    protected array $knownFields = [
+        // Personal folio identifiers
+        'folio_personal' => ['type' => 'identifier'],
+        'folio' => ['type' => 'identifier'],
+        'numero' => ['type' => 'identifier'],
+
+        // Name field
+        'nombre' => ['type' => 'evaluee_name'],
+        'nombre_completo' => ['type' => 'evaluee_name'],
+
+        // Demographic fields (stored in DemographicData model or demographic_data JSON)
+        'puesto' => ['type' => 'demographic', 'field' => 'position'],
+        'departamento' => ['type' => 'demographic', 'field' => 'department'],
+        'area' => ['type' => 'demographic', 'field' => 'department'],
+        'edad' => ['type' => 'demographic', 'field' => 'age'],
+        'genero' => ['type' => 'demographic', 'field' => 'gender'],
+        'turno' => ['type' => 'demographic', 'field' => 'work_schedule'],
+        'tipo_de_empleado' => ['type' => 'demographic', 'field' => 'contract_type'],
+
+        // Skip these columns (metadata, not data)
+        'no' => ['type' => 'skip'],
+    ];
 
     /**
      * @param  int  $organizationId  ID de la organización para filtrar evaluaciones
@@ -41,13 +69,23 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
         Log::info('Organization ID: '.$this->organizationId);
         Log::info('Source filter: '.($this->source ?? 'all'));
 
+        // Get headers from first row to identify custom fields
+        if ($rows->isEmpty()) {
+            Log::warning('No rows to process');
+
+            return;
+        }
+
+        $headers = $rows->first()->keys()->toArray();
+        Log::info('Excel headers detected', ['headers' => $headers]);
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2; // +2 because index is 0-based and we have a header row
 
             try {
                 Log::info("Processing row {$rowNumber}", ['raw_row' => $row->toArray()]);
 
-                // Normalize the keys to lowercase and trim whitespace
+                // Normalize values - trim whitespace
                 $row = $row->map(function ($value) {
                     return is_string($value) ? trim($value) : $value;
                 });
@@ -59,17 +97,8 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                $personalFolio = $row['folio_personal'] ?? null;
-                $nombre = $row['nombre'] ?? null;
-                $puesto = $row['puesto'] ?? null;
-                $area = $row['area'] ?? null;
-
-                Log::info("Row {$rowNumber} extracted data", [
-                    'personal_folio' => $personalFolio,
-                    'nombre' => $nombre,
-                    'puesto' => $puesto,
-                    'area' => $area,
-                ]);
+                // Find personal folio from various possible column names
+                $personalFolio = $this->extractPersonalFolio($row);
 
                 // Validar que al menos tengamos el folio personal
                 if (empty($personalFolio)) {
@@ -80,11 +109,13 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
+                Log::info("Row {$rowNumber} personal folio: {$personalFolio}");
+
                 // Get all evaluations with this personal folio for this organization
                 $query = PaperEvaluation::where('personal_folio', $personalFolio)
                     ->where('organization_id', $this->organizationId)
                     ->where('processing_status', 'completed')
-                    ->with('demographicData'); // Eager load DemographicData relationship
+                    ->with(['demographicData', 'customFields']);
 
                 // Filter by source if specified
                 if ($this->source) {
@@ -111,94 +142,9 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                 $updated = false;
 
                 foreach ($evaluations as $evaluation) {
-                    Log::info('Processing evaluation', [
-                        'row' => $rowNumber,
-                        'evaluation_type' => $evaluation->evaluation_type,
-                        'has_demographic_data_model' => $evaluation->demographicData !== null,
-                    ]);
-
-                    // Update evaluee_name if provided
-                    if (! empty($nombre) && $nombre !== $evaluation->evaluee_name) {
-                        $evaluation->evaluee_name = $nombre;
+                    $evaluationUpdated = $this->processEvaluation($evaluation, $row, $headers, $rowNumber);
+                    if ($evaluationUpdated) {
                         $updated = true;
-                        Log::info("Updated evaluee_name for row {$rowNumber}");
-                    }
-
-                    // Check if this evaluation has DemographicData model (for Likert evaluations)
-                    if ($evaluation->demographicData) {
-                        Log::info("Row {$rowNumber} has DemographicData model", [
-                            'current_position' => $evaluation->demographicData->position,
-                            'new_position' => $puesto,
-                            'current_department' => $evaluation->demographicData->department,
-                            'new_department' => $area,
-                        ]);
-
-                        // Update DemographicData model
-                        if (! empty($puesto) && $puesto !== $evaluation->demographicData->position) {
-                            $evaluation->demographicData->position = $puesto;
-                            $evaluation->demographicData->save();
-                            $updated = true;
-                            Log::info("Updated DemographicData position for row {$rowNumber}");
-                        }
-
-                        if (! empty($area) && $area !== $evaluation->demographicData->department) {
-                            $evaluation->demographicData->department = $area;
-                            $evaluation->demographicData->save();
-                            $updated = true;
-                            Log::info("Updated DemographicData department for row {$rowNumber}");
-                        }
-                    }
-
-                    // Update demographic data if it's a Referencia V evaluation
-                    if ($evaluation->evaluation_type === 'referencia_v') {
-                        $demographicData = $evaluation->demographic_data ?? [];
-
-                        // Determine format (paper or online)
-                        $isPaperFormat = ! isset($demographicData['datos_laborales']);
-
-                        if ($isPaperFormat) {
-                            // Paper format: update direct fields (as arrays with fila1, fila2)
-                            if (! empty($puesto)) {
-                                // Store as array with fila1 and fila2 (keeping existing fila2 if any)
-                                $existingPuesto = $demographicData['ocupacion'] ?? [];
-                                $demographicData['ocupacion'] = [
-                                    'fila1' => $puesto,
-                                    'fila2' => is_array($existingPuesto) ? ($existingPuesto['fila2'] ?? null) : null,
-                                ];
-                                $updated = true;
-                            }
-
-                            if (! empty($area)) {
-                                // Store as array with fila1 and fila2 (keeping existing fila2 if any)
-                                $existingArea = $demographicData['departamento'] ?? [];
-                                $demographicData['departamento'] = [
-                                    'fila1' => $area,
-                                    'fila2' => is_array($existingArea) ? ($existingArea['fila2'] ?? null) : null,
-                                ];
-                                $updated = true;
-                            }
-                        } else {
-                            // Online format: update nested datos_laborales
-                            if (! isset($demographicData['datos_laborales'])) {
-                                $demographicData['datos_laborales'] = [];
-                            }
-
-                            if (! empty($puesto)) {
-                                $demographicData['datos_laborales']['ocupacion_puesto'] = $puesto;
-                                $updated = true;
-                            }
-
-                            if (! empty($area)) {
-                                $demographicData['datos_laborales']['departamento_seccion_area'] = $area;
-                                $updated = true;
-                            }
-                        }
-
-                        $evaluation->demographic_data = $demographicData;
-                    }
-
-                    if ($updated) {
-                        $evaluation->save();
                     }
                 }
 
@@ -223,6 +169,186 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
             'skipped' => $this->skippedCount,
             'errors' => count($this->errors),
         ]);
+    }
+
+    /**
+     * Extract personal folio from row using various possible column names
+     */
+    protected function extractPersonalFolio(Collection $row): ?string
+    {
+        // Try different possible column names for personal folio
+        $possibleKeys = ['folio_personal', 'folio', 'numero'];
+
+        foreach ($possibleKeys as $key) {
+            if (isset($row[$key]) && ! empty($row[$key])) {
+                $value = $row[$key];
+                // Pad to 4 digits if numeric
+                if (is_numeric($value)) {
+                    return str_pad((string) intval($value), 4, '0', STR_PAD_LEFT);
+                }
+
+                return (string) $value;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Process a single evaluation with the row data
+     */
+    protected function processEvaluation(PaperEvaluation $evaluation, Collection $row, array $headers, int $rowNumber): bool
+    {
+        $updated = false;
+
+        Log::info('Processing evaluation', [
+            'row' => $rowNumber,
+            'evaluation_type' => $evaluation->evaluation_type,
+            'has_demographic_data_model' => $evaluation->demographicData !== null,
+        ]);
+
+        // Process each column in the row
+        foreach ($row as $columnKey => $value) {
+            if (empty($value) && $value !== '0') {
+                continue;
+            }
+
+            $normalizedKey = $this->normalizeKey($columnKey);
+            $fieldInfo = $this->knownFields[$normalizedKey] ?? null;
+
+            if ($fieldInfo) {
+                // Handle known fields
+                switch ($fieldInfo['type']) {
+                    case 'identifier':
+                    case 'skip':
+                        // Skip identifiers and metadata columns
+                        continue 2;
+
+                    case 'evaluee_name':
+                        if ($value !== $evaluation->evaluee_name) {
+                            $evaluation->evaluee_name = $value;
+                            $evaluation->save();
+                            $updated = true;
+                            Log::info("Updated evaluee_name for row {$rowNumber}");
+                        }
+                        break;
+
+                    case 'demographic':
+                        $demographicUpdated = $this->updateDemographicField(
+                            $evaluation,
+                            $fieldInfo['field'],
+                            $value,
+                            $rowNumber
+                        );
+                        if ($demographicUpdated) {
+                            $updated = true;
+                        }
+                        break;
+                }
+            } else {
+                // Unknown field - treat as custom field
+                $customFieldUpdated = $this->updateCustomField(
+                    $evaluation,
+                    $columnKey, // Original header label
+                    $value,
+                    $rowNumber
+                );
+                if ($customFieldUpdated) {
+                    $updated = true;
+                }
+            }
+        }
+
+        return $updated;
+    }
+
+    /**
+     * Normalize a column key to snake_case for comparison
+     */
+    protected function normalizeKey(string $key): string
+    {
+        return EvaluationCustomField::labelToKey($key);
+    }
+
+    /**
+     * Update a demographic field
+     */
+    protected function updateDemographicField(PaperEvaluation $evaluation, string $field, $value, int $rowNumber): bool
+    {
+        $updated = false;
+
+        // Handle DemographicData model (for Likert evaluations)
+        if ($evaluation->demographicData) {
+            $currentValue = $evaluation->demographicData->{$field} ?? null;
+
+            if ($value !== $currentValue) {
+                $evaluation->demographicData->{$field} = $value;
+                $evaluation->demographicData->save();
+                $updated = true;
+                Log::info("Updated DemographicData.{$field} for row {$rowNumber}");
+            }
+        }
+
+        // Handle referencia_v JSON demographic_data
+        if ($evaluation->evaluation_type === 'referencia_v') {
+            $demographicData = $evaluation->demographic_data ?? [];
+            $isPaperFormat = ! isset($demographicData['datos_laborales']);
+
+            $fieldMap = [
+                'position' => $isPaperFormat ? 'ocupacion' : 'ocupacion_puesto',
+                'department' => $isPaperFormat ? 'departamento' : 'departamento_seccion_area',
+            ];
+
+            if (isset($fieldMap[$field])) {
+                $jsonField = $fieldMap[$field];
+
+                if ($isPaperFormat) {
+                    $existing = $demographicData[$jsonField] ?? [];
+                    $demographicData[$jsonField] = [
+                        'fila1' => $value,
+                        'fila2' => is_array($existing) ? ($existing['fila2'] ?? null) : null,
+                    ];
+                } else {
+                    if (! isset($demographicData['datos_laborales'])) {
+                        $demographicData['datos_laborales'] = [];
+                    }
+                    $demographicData['datos_laborales'][$jsonField] = $value;
+                }
+
+                $evaluation->demographic_data = $demographicData;
+                $evaluation->save();
+                $updated = true;
+                Log::info("Updated demographic_data.{$jsonField} for row {$rowNumber}");
+            }
+        }
+
+        return $updated;
+    }
+
+    /**
+     * Update or create a custom field
+     */
+    protected function updateCustomField(PaperEvaluation $evaluation, string $originalLabel, $value, int $rowNumber): bool
+    {
+        $key = EvaluationCustomField::labelToKey($originalLabel);
+
+        // Check if this custom field already exists with the same value
+        $existingField = $evaluation->customFields()->where('key', $key)->first();
+
+        if ($existingField && $existingField->value === (string) $value) {
+            return false; // No change needed
+        }
+
+        // Update or create the custom field
+        $evaluation->setCustomField($key, $originalLabel, (string) $value);
+
+        Log::info("Updated/created custom field '{$key}' for row {$rowNumber}", [
+            'key' => $key,
+            'label' => $originalLabel,
+            'value' => $value,
+        ]);
+
+        return true;
     }
 
     /**
