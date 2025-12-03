@@ -14,17 +14,17 @@ return new class extends Migration
         Schema::create('evaluation_custom_fields', function (Blueprint $table) {
             $table->id();
             $table->foreignUuid('paper_evaluation_id')->constrained()->cascadeOnDelete();
-            $table->string('key', 100)->comment('Snake case key: supervisor, codigo_linea, etc.');
+            $table->string('field_key', 100)->comment('Snake case key: supervisor, codigo_linea, etc.');
             $table->string('key_label', 150)->comment('Original label from Excel header');
             $table->string('value', 500)->nullable();
             $table->timestamps();
 
             // Index for efficient filtering
-            $table->index(['paper_evaluation_id', 'key']);
-            $table->index(['key', 'value']);
+            $table->index(['paper_evaluation_id', 'field_key']);
+            $table->index(['field_key', 'value']);
 
             // Unique constraint to prevent duplicate keys per evaluation
-            $table->unique(['paper_evaluation_id', 'key']);
+            $table->unique(['paper_evaluation_id', 'field_key']);
         });
     }
 

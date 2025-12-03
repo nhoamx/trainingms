@@ -18,7 +18,7 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
 
     protected array $errors = [];
 
-    protected int $organizationId;
+    protected string $organizationId;
 
     protected ?string $source;
 
@@ -30,7 +30,7 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
         // Personal folio identifiers
         'folio_personal' => ['type' => 'identifier'],
         'folio' => ['type' => 'identifier'],
-        'numero' => ['type' => 'identifier'],
+        // 'numero' => ['type' => 'identifier'],
 
         // Name field
         'nombre' => ['type' => 'evaluee_name'],
@@ -50,10 +50,10 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
     ];
 
     /**
-     * @param  int  $organizationId  ID de la organización para filtrar evaluaciones
+     * @param  string  $organizationId  UUID de la organización para filtrar evaluaciones
      * @param  string|null  $source  Tipo de fuente ('paper', 'online', o null para ambos)
      */
-    public function __construct(int $organizationId, ?string $source = null)
+    public function __construct(string $organizationId, ?string $source = null)
     {
         $this->organizationId = $organizationId;
         $this->source = $source;
@@ -330,20 +330,20 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
      */
     protected function updateCustomField(PaperEvaluation $evaluation, string $originalLabel, $value, int $rowNumber): bool
     {
-        $key = EvaluationCustomField::labelToKey($originalLabel);
+        $fieldKey = EvaluationCustomField::labelToKey($originalLabel);
 
         // Check if this custom field already exists with the same value
-        $existingField = $evaluation->customFields()->where('key', $key)->first();
+        $existingField = $evaluation->customFields()->where('field_key', $fieldKey)->first();
 
         if ($existingField && $existingField->value === (string) $value) {
             return false; // No change needed
         }
 
         // Update or create the custom field
-        $evaluation->setCustomField($key, $originalLabel, (string) $value);
+        $evaluation->setCustomField($fieldKey, $originalLabel, (string) $value);
 
-        Log::info("Updated/created custom field '{$key}' for row {$rowNumber}", [
-            'key' => $key,
+        Log::info("Updated/created custom field '{$fieldKey}' for row {$rowNumber}", [
+            'field_key' => $fieldKey,
             'label' => $originalLabel,
             'value' => $value,
         ]);

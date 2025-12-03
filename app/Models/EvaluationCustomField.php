@@ -14,7 +14,7 @@ class EvaluationCustomField extends Model
 
     protected $fillable = [
         'paper_evaluation_id',
-        'key',
+        'field_key',
         'key_label',
         'value',
     ];
@@ -51,7 +51,7 @@ class EvaluationCustomField extends Model
      */
     public function scopeByKey($query, string $key)
     {
-        return $query->where('key', $key);
+        return $query->where('field_key', $key);
     }
 
     /**
@@ -59,6 +59,6 @@ class EvaluationCustomField extends Model
      */
     public function scopeByKeyValue($query, string $key, string $value)
     {
-        return $query->where('key', $key)->where('value', $value);
+        return $query->where('field_key', $key)->where('value', $value);
     }
 }

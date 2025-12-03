@@ -92,18 +92,18 @@ class PaperEvaluation extends Model
     /**
      * Get a specific custom field value by key
      */
-    public function getCustomField(string $key): ?string
+    public function getCustomField(string $fieldKey): ?string
     {
-        return $this->customFields()->where('key', $key)->value('value');
+        return $this->customFields()->where('field_key', $fieldKey)->value('value');
     }
 
     /**
      * Set or update a custom field
      */
-    public function setCustomField(string $key, string $keyLabel, ?string $value): EvaluationCustomField
+    public function setCustomField(string $fieldKey, string $keyLabel, ?string $value): EvaluationCustomField
     {
         return $this->customFields()->updateOrCreate(
-            ['key' => $key],
+            ['field_key' => $fieldKey],
             ['key_label' => $keyLabel, 'value' => $value]
         );
     }

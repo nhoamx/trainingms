@@ -32,7 +32,7 @@ class EvaluationCustomFieldFactory extends Factory
 
         return [
             'paper_evaluation_id' => PaperEvaluation::factory(),
-            'key' => $labels[$label],
+            'field_key' => $labels[$label],
             'key_label' => $label,
             'value' => fake()->name(),
         ];
@@ -44,7 +44,7 @@ class EvaluationCustomFieldFactory extends Factory
     public function supervisor(): static
     {
         return $this->state(fn (array $attributes) => [
-            'key' => 'supervisor',
+            'field_key' => 'supervisor',
             'key_label' => 'Supervisor',
             'value' => fake()->name(),
         ]);
@@ -56,7 +56,7 @@ class EvaluationCustomFieldFactory extends Factory
     public function gerente(): static
     {
         return $this->state(fn (array $attributes) => [
-            'key' => 'gerente',
+            'field_key' => 'gerente',
             'key_label' => 'Gerente',
             'value' => fake()->name(),
         ]);
@@ -68,7 +68,7 @@ class EvaluationCustomFieldFactory extends Factory
     public function codigoLinea(): static
     {
         return $this->state(fn (array $attributes) => [
-            'key' => 'codigo_linea',
+            'field_key' => 'codigo_linea',
             'key_label' => 'CodigoLinea',
             'value' => fake()->randomNumber(4, true),
         ]);
