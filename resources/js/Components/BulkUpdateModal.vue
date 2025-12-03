@@ -42,6 +42,54 @@
                     </div>
                 </div>
 
+                <!-- Seleccionar Tipo de Evaluación -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Tipo de Evaluación
+                    </label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button
+                            type="button"
+                            @click="selectedSource = null"
+                            :class="[
+                                'px-4 py-3 rounded-md text-sm font-medium border transition-colors',
+                                selectedSource === null
+                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            ]"
+                        >
+                            Todas
+                        </button>
+                        <button
+                            type="button"
+                            @click="selectedSource = 'paper'"
+                            :class="[
+                                'px-4 py-3 rounded-md text-sm font-medium border transition-colors',
+                                selectedSource === 'paper'
+                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            ]"
+                        >
+                            Física (Papel)
+                        </button>
+                        <button
+                            type="button"
+                            @click="selectedSource = 'online'"
+                            :class="[
+                                'px-4 py-3 rounded-md text-sm font-medium border transition-colors',
+                                selectedSource === 'online'
+                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            ]"
+                        >
+                            En Línea
+                        </button>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500">
+                        Selecciona el tipo de evaluaciones que deseas actualizar. Si eliges "Todas", se actualizarán tanto las evaluaciones físicas como las en línea.
+                    </p>
+                </div>
+
                 <!-- Descargar Plantilla -->
                 <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -216,6 +264,7 @@ const downloading = ref(false)
 const uploading = ref(false)
 const isDragging = ref(false)
 const selectedFile = ref(null)
+const selectedSource = ref(null) // null = all, 'paper' = physical, 'online' = online
 const uploadError = ref(null)
 const successMessage = ref(null)
 const updateErrors = ref([])
@@ -244,6 +293,17 @@ watch(() => page.props.flash, (flash) => {
         }
     }
 }, { deep: true })
+
+// Reset state when modal closes
+watch(() => props.show, (isOpen) => {
+    if (!isOpen) {
+        selectedFile.value = null
+        selectedSource.value = null
+        uploadError.value = null
+        successMessage.value = null
+        updateErrors.value = []
+    }
+})
 
 const downloadTemplate = () => {
     downloading.value = true
@@ -312,11 +372,18 @@ const uploadFile = () => {
     updateErrors.value = []
     uploading.value = true
     
+    const formData = {
+        file: selectedFile.value
+    }
+    
+    // Only add source if it's selected (not null)
+    if (selectedSource.value) {
+        formData.source = selectedSource.value
+    }
+    
     router.post(
         route('organization.results.bulk-update', { organization: props.organizationId }),
-        {
-            file: selectedFile.value
-        },
+        formData,
         {
             preserveScroll: true,
             onError: (errors) => {

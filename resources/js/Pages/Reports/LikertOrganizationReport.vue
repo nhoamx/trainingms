@@ -245,6 +245,9 @@
                         <th class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 sticky left-0 bg-gray-100 z-10">
                           Folio
                         </th>
+                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 text-center bg-gray-100">
+                          Clima Laboral
+                        </th>
                         <template v-for="(dim, dimName) in filteredDimensions" :key="`dim-header-${dimName}`">
                           <th 
                             :colspan="dim.questionCount" 
@@ -258,6 +261,18 @@
                       <tr class="bg-gray-50">
                         <th class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 sticky left-0 bg-gray-50 z-10">
                           #
+                        </th>
+                        <th 
+                          class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 text-center bg-gray-50 cursor-pointer hover:bg-gray-200 select-none"
+                          @click="toggleSort('clima_laboral')"
+                          title="Ordenar por Clima Laboral"
+                        >
+                          <div class="flex items-center justify-center gap-1">
+                            Total
+                            <span v-if="sortColumn === 'clima_laboral'" class="text-blue-600">
+                              {{ sortDirection === 'desc' ? '▼' : '▲' }}
+                            </span>
+                          </div>
                         </th>
                         <template v-for="(dim, dimName) in filteredDimensions" :key="`questions-${dimName}`">
                           <th 
@@ -288,6 +303,13 @@
                           >
                             {{ evaluation.personal_folio }}
                           </a>
+                        </td>
+                        <!-- Clima Laboral (Total Score) column -->
+                        <td 
+                          class="border border-gray-300 px-2 py-2 text-center text-xs font-bold"
+                          :class="getClimaLaboralColorClass(evaluation.scores?.total_score)"
+                        >
+                          {{ evaluation.scores?.total_score ?? '-' }}
                         </td>
                         <!-- Answer cells for each question -->
                         <template v-for="(dim, dimName) in filteredDimensions" :key="`eval-dim-${evaluation.folio}-${dimName}`">
@@ -439,17 +461,26 @@
           <thead>
             <tr class="text-left text-gray-600">
               <th class="py-2 pr-4">Folio</th>
-              <th class="py-2">Nombre</th>
+              <th class="py-2 pr-4">Nombre</th>
+              <th class="py-2 pr-4 text-center">Clima Laboral</th>
               <th class="py-2"></th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="foliosModalItems.length === 0">
-              <td colspan="3" class="py-4 text-gray-500">No hay folios para este nivel.</td>
+              <td colspan="4" class="py-4 text-gray-500">No hay folios para este nivel.</td>
             </tr>
             <tr v-for="item in foliosModalItems" :key="item.folio" class="border-t">
               <td class="py-2 pr-4 font-medium">{{ item.folio }}</td>
-              <td class="py-2">{{ item.name || 'Sin nombre' }}</td>
+              <td class="py-2 pr-4">{{ item.name || 'Sin nombre' }}</td>
+              <td class="py-2 pr-4 text-center">
+                <span 
+                  class="inline-block px-2 py-1 rounded text-xs font-bold"
+                  :class="getClimaLaboralColorClass(item.totalScore)"
+                >
+                  {{ item.totalScore ?? '-' }}
+                </span>
+              </td>
               <td class="py-2">
                 <a
                   :href="route('organization.results.likert', { organization: organizationId, personalFolio: item.folio })"
@@ -662,7 +693,14 @@ const filteredEvaluations = computed(() => {
 const sortedFilteredEvaluations = computed(() => {
   const evaluations = [...filteredEvaluations.value]
   
-  if (sortColumn.value !== null) {
+  if (sortColumn.value === 'clima_laboral') {
+    // Sort by Clima Laboral total score
+    evaluations.sort((a, b) => {
+      const aVal = a.scores?.total_score ?? 0
+      const bVal = b.scores?.total_score ?? 0
+      return sortDirection.value === 'desc' ? bVal - aVal : aVal - bVal
+    })
+  } else if (sortColumn.value !== null) {
     // Sort by specific question answer value
     const valorOpciones = { A: 4, B: 3, C: 2, D: 1 }
     evaluations.sort((a, b) => {
@@ -940,6 +978,33 @@ const getAnswerNumericValue = (answer) => {
   return valueMap[answer] || '-'
 }
 
+// Helper: Get interpretation level for Clima Laboral total score
+const getClimaLaboralLevel = (score) => {
+  if (score === null || score === undefined) return null
+  if (score >= 75.1) return 'Totalmente de Acuerdo'
+  if (score >= 57.76) return 'De Acuerdo'
+  if (score >= 40.26) return 'Desacuerdo'
+  return 'Totalmente Desacuerdo'
+}
+
+// Helper: Get Tailwind color class for Clima Laboral total score
+const getClimaLaboralColorClass = (score) => {
+  const level = getClimaLaboralLevel(score)
+  
+  switch(level) {
+    case 'Totalmente de Acuerdo':
+      return 'bg-blue-400 text-black'  // Azul cielo
+    case 'De Acuerdo':
+      return 'bg-green-600 text-white'  // Verde mayate
+    case 'Desacuerdo':
+      return 'bg-yellow-500 text-black'  // Amarillo mostaza
+    case 'Totalmente Desacuerdo':
+      return 'bg-red-600 text-white'  // Rojo
+    default:
+      return 'bg-gray-200 text-gray-500'  // Sin respuesta
+  }
+}
+
 // Helper: Get Tailwind color class for answer value
 const getAnswerColorClass = (answer) => {
   const value = getAnswerNumericValue(answer)
@@ -1194,9 +1259,15 @@ const getFoliosForDimensionLevel = (dimensionName, level) => {
       if (ans) score += (valorOpciones[ans] || 0)
     })
     if (score >= range.min && score <= range.max) {
-      items.push({ folio: evalData.personal_folio, name: evalData.evaluee_name || '' })
+      items.push({ 
+        folio: evalData.personal_folio, 
+        name: evalData.evaluee_name || '',
+        totalScore: evalData.scores?.total_score ?? null
+      })
     }
   })
+  // Sort by totalScore ascending (lowest first)
+  items.sort((a, b) => (a.totalScore ?? 0) - (b.totalScore ?? 0))
   return items
 }
 
@@ -1205,9 +1276,15 @@ const getFoliosForClimaLevel = (level) => {
   filteredEvaluations.value.forEach(evalData => {
     const interpretation = evalData.scores?.interpretation
     if (interpretation === level) {
-      items.push({ folio: evalData.personal_folio, name: evalData.evaluee_name || '' })
+      items.push({ 
+        folio: evalData.personal_folio, 
+        name: evalData.evaluee_name || '',
+        totalScore: evalData.scores?.total_score ?? null
+      })
     }
   })
+  // Sort by totalScore ascending (lowest first)
+  items.sort((a, b) => (a.totalScore ?? 0) - (b.totalScore ?? 0))
   return items
 }
 

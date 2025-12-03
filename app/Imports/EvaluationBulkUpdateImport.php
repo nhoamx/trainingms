@@ -17,20 +17,36 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
 
     protected array $errors = [];
 
+    protected int $organizationId;
+
+    protected ?string $source;
+
+    /**
+     * @param  int  $organizationId  ID de la organización para filtrar evaluaciones
+     * @param  string|null  $source  Tipo de fuente ('paper', 'online', o null para ambos)
+     */
+    public function __construct(int $organizationId, ?string $source = null)
+    {
+        $this->organizationId = $organizationId;
+        $this->source = $source;
+    }
+
     /**
      * Procesar las filas del archivo Excel
      */
     public function collection(Collection $rows)
     {
         Log::info('=== BULK UPDATE IMPORT STARTED ===');
-        Log::info('Total rows to process: ' . $rows->count());
-        
+        Log::info('Total rows to process: '.$rows->count());
+        Log::info('Organization ID: '.$this->organizationId);
+        Log::info('Source filter: '.($this->source ?? 'all'));
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2; // +2 because index is 0-based and we have a header row
 
             try {
                 Log::info("Processing row {$rowNumber}", ['raw_row' => $row->toArray()]);
-                
+
                 // Normalize the keys to lowercase and trim whitespace
                 $row = $row->map(function ($value) {
                     return is_string($value) ? trim($value) : $value;
@@ -39,6 +55,7 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                 // Skip completely empty rows
                 if ($row->filter()->isEmpty()) {
                     Log::info("Row {$rowNumber} is completely empty, skipping");
+
                     continue;
                 }
 
@@ -46,12 +63,12 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                 $nombre = $row['nombre'] ?? null;
                 $puesto = $row['puesto'] ?? null;
                 $area = $row['area'] ?? null;
-                
+
                 Log::info("Row {$rowNumber} extracted data", [
                     'personal_folio' => $personalFolio,
                     'nombre' => $nombre,
                     'puesto' => $puesto,
-                    'area' => $area
+                    'area' => $area,
                 ]);
 
                 // Validar que al menos tengamos el folio personal
@@ -63,16 +80,24 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                // Get all evaluations with this personal folio
-                $evaluations = PaperEvaluation::where('personal_folio', $personalFolio)
-                    ->whereIn('source', ['paper', 'online'])
+                // Get all evaluations with this personal folio for this organization
+                $query = PaperEvaluation::where('personal_folio', $personalFolio)
+                    ->where('organization_id', $this->organizationId)
                     ->where('processing_status', 'completed')
-                    ->with('demographicData') // Eager load DemographicData relationship
-                    ->get();
+                    ->with('demographicData'); // Eager load DemographicData relationship
+
+                // Filter by source if specified
+                if ($this->source) {
+                    $query->where('source', $this->source);
+                } else {
+                    $query->whereIn('source', ['paper', 'online']);
+                }
+
+                $evaluations = $query->get();
 
                 Log::info("Row {$rowNumber} found evaluations", [
                     'count' => $evaluations->count(),
-                    'evaluation_types' => $evaluations->pluck('evaluation_type')->toArray()
+                    'evaluation_types' => $evaluations->pluck('evaluation_type')->toArray(),
                 ]);
 
                 if ($evaluations->isEmpty()) {
@@ -86,12 +111,12 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                 $updated = false;
 
                 foreach ($evaluations as $evaluation) {
-                    Log::info("Processing evaluation", [
+                    Log::info('Processing evaluation', [
                         'row' => $rowNumber,
                         'evaluation_type' => $evaluation->evaluation_type,
-                        'has_demographic_data_model' => $evaluation->demographicData !== null
+                        'has_demographic_data_model' => $evaluation->demographicData !== null,
                     ]);
-                    
+
                     // Update evaluee_name if provided
                     if (! empty($nombre) && $nombre !== $evaluation->evaluee_name) {
                         $evaluation->evaluee_name = $nombre;
@@ -105,9 +130,9 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                             'current_position' => $evaluation->demographicData->position,
                             'new_position' => $puesto,
                             'current_department' => $evaluation->demographicData->department,
-                            'new_department' => $area
+                            'new_department' => $area,
                         ]);
-                        
+
                         // Update DemographicData model
                         if (! empty($puesto) && $puesto !== $evaluation->demographicData->position) {
                             $evaluation->demographicData->position = $puesto;
@@ -186,17 +211,17 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                 }
             } catch (\Exception $e) {
                 Log::error("Error processing row {$rowNumber}: ".$e->getMessage(), [
-                    'exception' => $e->getTraceAsString()
+                    'exception' => $e->getTraceAsString(),
                 ]);
                 $this->errors[] = "Fila {$rowNumber}: Error al procesar - {$e->getMessage()}";
                 $this->skippedCount++;
             }
         }
-        
+
         Log::info('=== BULK UPDATE IMPORT FINISHED ===', [
             'updated' => $this->updatedCount,
             'skipped' => $this->skippedCount,
-            'errors' => count($this->errors)
+            'errors' => count($this->errors),
         ]);
     }
 

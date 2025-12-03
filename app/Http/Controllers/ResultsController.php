@@ -1077,10 +1077,13 @@ class ResultsController extends Controller
 
         $request->validate([
             'file' => 'required|file|mimes:xlsx,xls|max:10240', // Max 10MB
+            'source' => 'nullable|in:paper,online',
         ]);
 
+        $source = $request->input('source'); // null means both
+
         try {
-            $import = new EvaluationBulkUpdateImport;
+            $import = new EvaluationBulkUpdateImport($organization->id, $source);
             Excel::import($import, $request->file('file'));
 
             $updatedCount = $import->getUpdatedCount();
