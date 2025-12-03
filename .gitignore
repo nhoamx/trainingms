@@ -27,7 +27,10 @@ yarn-error.log
 /docker/outputs_aligned/*
 /docker/input/*
 /docker/output_with_markers/*
+/docker/reprocess_input/*
+/docker/reprocess_output/*
 /docker/.idea
 /docker/log.log
+/docker/reprocessing.log
 /docker/__pycache__/
 .DS_Store
