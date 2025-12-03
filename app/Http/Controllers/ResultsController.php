@@ -887,6 +887,8 @@ class ResultsController extends Controller
             }
         }
 
+        $isAdmin = auth()->user()->hasRole(['admin', 'super-admin']);
+
         return Inertia::render('Results/LikertDetail', [
             'organization' => $organization->only('id', 'name'),
             'personalFolio' => $personalFolio,
@@ -896,12 +898,12 @@ class ResultsController extends Controller
                 'evaluee_name' => $likert->evaluee_name,
                 'created_at' => $likert->created_at->format('Y-m-d H:i:s'),
                 'personal_folio' => $personalFolio,
-                'scanned_image_url' => asset('storage/folios/'.$likert->folio.'.png'),
+                'scanned_image_url' => $isAdmin ? asset('storage/folios/'.$likert->folio.'.png') : null,
             ],
             'scores' => $scores,
             'demographic' => $demographic,
             'questions' => $questionsList,
-            'isAdmin' => auth()->user()->hasRole(['admin', 'super-admin']),
+            'isAdmin' => $isAdmin,
         ]);
     }
 
