@@ -15,7 +15,7 @@ class ReprocessOrganizationEvaluations extends Command
     protected $signature = 'evaluations:reprocess 
         {organization : ID of the organization to reprocess}
         {--type= : Filter by evaluation type (likert, referencia_i, referencia_iii, referencia_v, cisneros)}
-        {--climate= : Filter by climate level(s). Use comma-separated values: ta,da,d,td (Totalmente Acuerdo, De Acuerdo, Desacuerdo, Totalmente Desacuerdo)}
+        {--climate= : Filter by climate level(s). Use comma-separated values: ta,da,d,td,e (e=empty/score 0)}
         {--dry-run : Show what would be processed without making changes}
         {--limit= : Limit the number of evaluations to process}';
 
@@ -87,10 +87,17 @@ class ReprocessOrganizationEvaluations extends Command
                     $climate = '-';
                     $score = '-';
 
-                    if ($e->evaluation_type === 'likert' && ! empty($e->likert_answers['questions'])) {
-                        $scores = $likertService->calculateLikertScores($e);
-                        $score = $scores['total_score'];
-                        $climate = $this->getClimateShortCode($scores['interpretation']);
+                    if ($e->evaluation_type === 'likert') {
+                        $hasEmptyAnswers = empty($e->likert_answers['questions']) || $this->hasAllEmptyAnswers($e);
+
+                        if ($hasEmptyAnswers) {
+                            $climate = 'EMPTY';
+                            $score = 0;
+                        } else {
+                            $scores = $likertService->calculateLikertScores($e);
+                            $score = $scores['total_score'];
+                            $climate = $score == 0 ? 'EMPTY' : $this->getClimateShortCode($scores['interpretation']);
+                        }
                     }
 
                     return [
@@ -211,6 +218,9 @@ class ReprocessOrganizationEvaluations extends Command
             'td' => 'Totalmente Desacuerdo',
         ];
 
+        // Check if 'e' (empty) is requested
+        $includeEmpty = in_array('e', $codes) || in_array('empty', $codes);
+
         $allowedInterpretations = [];
         foreach ($codes as $code) {
             if (isset($codeToInterpretation[$code])) {
@@ -218,29 +228,65 @@ class ReprocessOrganizationEvaluations extends Command
             }
         }
 
-        if (empty($allowedInterpretations)) {
-            $this->warn('Invalid climate level codes. Use: ta (Totalmente Acuerdo), da (De Acuerdo), d (Desacuerdo), td (Totalmente Desacuerdo)');
+        if (empty($allowedInterpretations) && ! $includeEmpty) {
+            $this->warn('Invalid climate level codes. Use: ta (Totalmente Acuerdo), da (De Acuerdo), d (Desacuerdo), td (Totalmente Desacuerdo), e (empty/score 0)');
 
             return collect();
         }
 
-        $this->info('Filtering by climate levels: '.implode(', ', $allowedInterpretations));
+        $filterDescriptions = $allowedInterpretations;
+        if ($includeEmpty) {
+            $filterDescriptions[] = 'Empty/Score 0';
+        }
+        $this->info('Filtering by climate levels: '.implode(', ', $filterDescriptions));
 
-        return $evaluations->filter(function ($evaluation) use ($likertService, $allowedInterpretations) {
+        return $evaluations->filter(function ($evaluation) use ($likertService, $allowedInterpretations, $includeEmpty) {
             // Only filter likert evaluations
             if ($evaluation->evaluation_type !== 'likert') {
                 return false;
             }
 
-            // Skip if no likert answers
-            if (empty($evaluation->likert_answers['questions'])) {
+            // Check for empty evaluations (no answers or score 0)
+            $hasEmptyAnswers = empty($evaluation->likert_answers['questions']) || $this->hasAllEmptyAnswers($evaluation);
+
+            if ($hasEmptyAnswers) {
+                return $includeEmpty;
+            }
+
+            // If no interpretation filters, only return based on empty check
+            if (empty($allowedInterpretations)) {
                 return false;
             }
 
             $scores = $likertService->calculateLikertScores($evaluation);
 
+            // Also include evaluations with score 0 if includeEmpty is true
+            if ($includeEmpty && $scores['total_score'] == 0) {
+                return true;
+            }
+
             return in_array($scores['interpretation'], $allowedInterpretations);
         });
+    }
+
+    /**
+     * Check if all answers in a likert evaluation are empty
+     */
+    protected function hasAllEmptyAnswers(PaperEvaluation $evaluation): bool
+    {
+        $questions = $evaluation->likert_answers['questions'] ?? [];
+
+        if (empty($questions)) {
+            return true;
+        }
+
+        foreach ($questions as $answer) {
+            if (! empty($answer) && $answer !== null) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

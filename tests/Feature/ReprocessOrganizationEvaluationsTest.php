@@ -293,7 +293,119 @@ class ReprocessOrganizationEvaluationsTest extends TestCase
             '--climate' => 'invalid',
             '--dry-run' => true,
         ])
-            ->expectsOutput('Invalid climate level codes. Use: ta (Totalmente Acuerdo), da (De Acuerdo), d (Desacuerdo), td (Totalmente Desacuerdo)')
+            ->expectsOutput('Invalid climate level codes. Use: ta (Totalmente Acuerdo), da (De Acuerdo), d (Desacuerdo), td (Totalmente Desacuerdo), e (empty/score 0)')
+            ->assertExitCode(0);
+    }
+
+    public function test_command_filters_empty_evaluations_with_e_code(): void
+    {
+        $organization = Organization::factory()->create([
+            'folio_organization' => '993',
+        ]);
+
+        // Evaluation with all empty answers (score 0)
+        PaperEvaluation::factory()->likert()->create([
+            'organization_id' => $organization->id,
+            'folio' => '059930001',
+            'organization_code' => '993',
+            'personal_folio' => '0001',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'likert_answers' => [
+                'questions' => array_fill(1, 23, null),
+            ],
+        ]);
+
+        // Evaluation with no questions at all
+        PaperEvaluation::factory()->likert()->create([
+            'organization_id' => $organization->id,
+            'folio' => '059930002',
+            'organization_code' => '993',
+            'personal_folio' => '0002',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'likert_answers' => [
+                'questions' => [],
+            ],
+        ]);
+
+        // Evaluation with valid answers (should be excluded)
+        PaperEvaluation::factory()->likert()->create([
+            'organization_id' => $organization->id,
+            'folio' => '059930003',
+            'organization_code' => '993',
+            'personal_folio' => '0003',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'likert_answers' => [
+                'questions' => array_fill(1, 23, 'A'),
+            ],
+        ]);
+
+        // Filter only empty evaluations
+        $this->artisan('evaluations:reprocess', [
+            'organization' => $organization->id,
+            '--climate' => 'e',
+            '--dry-run' => true,
+        ])
+            ->expectsOutput('Filtering by climate levels: Empty/Score 0')
+            ->expectsOutput('Found 2 evaluations to reprocess.')
+            ->assertExitCode(0);
+    }
+
+    public function test_command_filters_empty_combined_with_climate_levels(): void
+    {
+        $organization = Organization::factory()->create([
+            'folio_organization' => '994',
+        ]);
+
+        // Evaluation with empty answers
+        PaperEvaluation::factory()->likert()->create([
+            'organization_id' => $organization->id,
+            'folio' => '059940001',
+            'organization_code' => '994',
+            'personal_folio' => '0001',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'likert_answers' => [
+                'questions' => array_fill(1, 23, null),
+            ],
+        ]);
+
+        // Evaluation with TD score (all D answers)
+        PaperEvaluation::factory()->likert()->create([
+            'organization_id' => $organization->id,
+            'folio' => '059940002',
+            'organization_code' => '994',
+            'personal_folio' => '0002',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'likert_answers' => [
+                'questions' => array_fill(1, 23, 'D'),
+            ],
+        ]);
+
+        // Evaluation with TA score (all A answers) - should be excluded
+        PaperEvaluation::factory()->likert()->create([
+            'organization_id' => $organization->id,
+            'folio' => '059940003',
+            'organization_code' => '994',
+            'personal_folio' => '0003',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'likert_answers' => [
+                'questions' => array_fill(1, 23, 'A'),
+            ],
+        ]);
+
+        // Filter empty and TD evaluations
+        $this->artisan('evaluations:reprocess', [
+            'organization' => $organization->id,
+            '--climate' => 'td,e',
+            '--dry-run' => true,
+        ])
+            ->expectsOutput('Filtering by climate levels: Totalmente Desacuerdo, Empty/Score 0')
+            ->expectsOutput('Found 2 evaluations to reprocess.')
             ->assertExitCode(0);
     }
 }
