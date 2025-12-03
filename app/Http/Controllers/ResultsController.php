@@ -7,6 +7,7 @@ use App\Imports\EvaluationBulkUpdateImport;
 use App\Models\Category;
 use App\Models\DemographicData;
 use App\Models\Evaluation;
+use App\Models\EvaluationCustomField;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\Question;
@@ -53,12 +54,35 @@ class ResultsController extends Controller
                     'areas' => [],
                     'turnos' => [],
                 ],
+                'customFieldFilters' => [],
                 'dimensions' => [],
                 'totalScore' => null,
                 'isAdmin' => $user && $user->hasRole('admin'),
                 'isSuperAdmin' => $user && $user->hasRole('super-admin'),
             ]);
         }
+
+        // Get evaluation IDs for efficient custom field query
+        $evaluationIds = $likertEvaluations->pluck('id');
+
+        // Get custom field filters efficiently with a single query
+        $customFieldValues = EvaluationCustomField::whereIn('paper_evaluation_id', $evaluationIds)
+            ->select('field_key', 'key_label', 'value')
+            ->distinct()
+            ->get()
+            ->groupBy('field_key')
+            ->map(function ($fields) {
+                return [
+                    'label' => $fields->first()->key_label,
+                    'values' => $fields->pluck('value')->unique()->filter()->values()->all(),
+                ];
+            })
+            ->all();
+
+        // Get custom fields indexed by evaluation ID for quick lookup
+        $customFieldsByEvaluation = EvaluationCustomField::whereIn('paper_evaluation_id', $evaluationIds)
+            ->get()
+            ->groupBy('paper_evaluation_id');
 
         // Load configuration
         $config = config('likert-value');
@@ -101,6 +125,16 @@ class ResultsController extends Controller
             // Compute scores
             $scores = $this->likertScoreService->calculateLikertScores($evaluation);
 
+            // Get custom fields as key-value pairs from pre-loaded data
+            $evaluationCustomFields = [];
+            $evalCustomFields = $customFieldsByEvaluation->get($evaluation->id, collect());
+            foreach ($evalCustomFields as $customField) {
+                $evaluationCustomFields[$customField->field_key] = [
+                    'label' => $customField->key_label,
+                    'value' => $customField->value,
+                ];
+            }
+
             // Build evaluation data
             $evaluationsData[] = [
                 'id' => $evaluation->id,
@@ -114,6 +148,7 @@ class ResultsController extends Controller
                     'area' => $demographics['area'] ?? null,
                     'turno' => $demographics['turno'] ?? null,
                 ],
+                'customFields' => $evaluationCustomFields,
                 'scores' => $scores,
                 'answers' => $questions,
             ];
@@ -207,6 +242,7 @@ class ResultsController extends Controller
                 'areas' => array_keys($areas),
                 'turnos' => array_keys($turnos),
             ],
+            'customFieldFilters' => $customFieldValues,
             'puestosMap' => $config['puestos'],
             'areasMap' => $config['areas'],
             'dimensions' => $dimensionSummaries,
@@ -851,7 +887,8 @@ class ResultsController extends Controller
         $this->authorize('view-organization-results', $organization);
 
         // Get Likert evaluation for this personal folio
-        $likert = PaperEvaluation::where('organization_id', $organization->id)
+        $likert = PaperEvaluation::with('customFields')
+            ->where('organization_id', $organization->id)
             ->where('personal_folio', $personalFolio)
             ->where('evaluation_type', 'likert')
             ->where('processing_status', 'completed')
@@ -889,6 +926,15 @@ class ResultsController extends Controller
 
         $isAdmin = auth()->user()->hasRole(['admin', 'super-admin']);
 
+        // Get custom fields as key-value pairs
+        $customFields = [];
+        foreach ($likert->customFields as $customField) {
+            $customFields[$customField->field_key] = [
+                'label' => $customField->key_label,
+                'value' => $customField->value,
+            ];
+        }
+
         return Inertia::render('Results/LikertDetail', [
             'organization' => $organization->only('id', 'name'),
             'personalFolio' => $personalFolio,
@@ -902,6 +948,7 @@ class ResultsController extends Controller
             ],
             'scores' => $scores,
             'demographic' => $demographic,
+            'customFields' => $customFields,
             'questions' => $questionsList,
             'isAdmin' => $isAdmin,
         ]);

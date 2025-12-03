@@ -45,7 +45,7 @@
         <!-- Filtros Demográficos -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Filtros</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Género -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Género</label>
@@ -104,6 +104,23 @@
                 <option value="">Todos</option>
                 <option v-for="t in demographics.turnos" :key="t" :value="t">{{ t }}</option>
               </select>
+            </div>
+          </div>
+
+          <!-- Custom Field Filters -->
+          <div v-if="Object.keys(customFieldFilters).length > 0" class="mt-4 pt-4 border-t border-gray-200">
+            <h4 class="text-sm font-medium text-gray-700 mb-3">Campos Adicionales</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div v-for="(fieldData, fieldKey) in customFieldFilters" :key="fieldKey">
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ fieldData.label }}</label>
+                <select 
+                  v-model="customFilters[fieldKey]"
+                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option value="">Todos</option>
+                  <option v-for="val in fieldData.values" :key="val" :value="val">{{ val }}</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -574,6 +591,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  customFieldFilters: {
+    type: Object,
+    default: () => ({}),
+  },
 })
 
 const activeTab = ref('Total')
@@ -584,6 +605,14 @@ const filters = ref({
   area: '',
   turno: '',
 })
+
+// Initialize custom field filters based on available custom fields
+const customFilters = ref(
+  Object.keys(props.customFieldFilters || {}).reduce((acc, key) => {
+    acc[key] = ''
+    return acc
+  }, {})
+)
 
 const pieChartTotal = ref(null)
 const dimensionChartCanvas = ref(null)
@@ -685,6 +714,12 @@ const filteredEvaluations = computed(() => {
     if (filters.value.puesto && evaluation.demographics.puesto !== filters.value.puesto) return false
     if (filters.value.area && evaluation.demographics.area !== filters.value.area) return false
     if (filters.value.turno && evaluation.demographics.turno !== filters.value.turno) return false
+    
+    // Custom field filters
+    for (const [key, value] of Object.entries(customFilters.value)) {
+      if (value && evaluation.customFields?.[key]?.value !== value) return false
+    }
+    
     return true
   })
 })
@@ -965,6 +1000,10 @@ const resetFilters = () => {
     area: '',
     turno: '',
   }
+  // Reset custom filters
+  Object.keys(customFilters.value).forEach(key => {
+    customFilters.value[key] = ''
+  })
 }
 
 // Helper: Convert letter answer to numeric value

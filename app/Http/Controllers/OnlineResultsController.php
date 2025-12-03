@@ -76,8 +76,8 @@ class OnlineResultsController extends Controller
         // Preparar respuestas de Cisneros
         $cisnerosAnswers = $evaluation->cisneros_answers ?? [];
 
-        // Preparar custom fields
-        $customFields = $evaluation->custom_fields ?? [];
+        // Preparar custom fields (from quiz, stored in raw_data)
+        $customFields = $evaluation->quiz_custom_fields ?? [];
 
         // Preparar imágenes del INE
         $ineImages = [];

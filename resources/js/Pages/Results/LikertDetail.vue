@@ -160,6 +160,18 @@
                                 <span class="text-gray-600">Área:</span>
                                 <span class="font-medium">{{ demographic.area || 'No especificado' }}</span>
                             </div>
+                            <!-- Custom Fields -->
+                            <template v-if="Object.keys(customFields).length > 0">
+                                <div class="border-t border-gray-200 pt-2 mt-2"></div>
+                                <div 
+                                    v-for="(field, key) in customFields" 
+                                    :key="key"
+                                    class="flex justify-between"
+                                >
+                                    <span class="text-gray-600">{{ field.label }}:</span>
+                                    <span class="font-medium">{{ field.value || 'No especificado' }}</span>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -491,6 +503,10 @@ const props = defineProps({
     evaluation: Object,
     scores: Object,
     demographic: Object,
+    customFields: {
+        type: Object,
+        default: () => ({}),
+    },
     questions: Array,
     isAdmin: Boolean,
 })
