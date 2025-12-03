@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\DemographicData;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
+use App\Services\LikertScoreService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +15,7 @@ class ReprocessOrganizationEvaluations extends Command
     protected $signature = 'evaluations:reprocess 
         {organization : ID of the organization to reprocess}
         {--type= : Filter by evaluation type (likert, referencia_i, referencia_iii, referencia_v, cisneros)}
+        {--climate= : Filter by climate level(s). Use comma-separated values: ta,da,d,td (Totalmente Acuerdo, De Acuerdo, Desacuerdo, Totalmente Desacuerdo)}
         {--dry-run : Show what would be processed without making changes}
         {--limit= : Limit the number of evaluations to process}';
 
@@ -25,6 +27,7 @@ class ReprocessOrganizationEvaluations extends Command
     {
         $organizationId = $this->argument('organization');
         $evaluationType = $this->option('type');
+        $climateLevels = $this->option('climate');
         $dryRun = $this->option('dry-run');
         $limit = $this->option('limit');
 
@@ -61,18 +64,44 @@ class ReprocessOrganizationEvaluations extends Command
             return self::SUCCESS;
         }
 
+        // Filter by climate level if specified (only applies to likert evaluations)
+        if ($climateLevels) {
+            $evaluations = $this->filterByClimateLevel($evaluations, $climateLevels);
+
+            if ($evaluations->isEmpty()) {
+                $this->warn('No evaluations found matching the specified climate level(s).');
+
+                return self::SUCCESS;
+            }
+        }
+
         $this->info("Found {$evaluations->count()} evaluations to reprocess.");
 
         if ($dryRun) {
             $this->info('DRY RUN - No changes will be made.');
+            $likertService = app(LikertScoreService::class);
+
             $this->table(
-                ['Folio', 'Type', 'Personal Folio', 'Has Image'],
-                $evaluations->map(fn ($e) => [
-                    $e->folio,
-                    $e->evaluation_type,
-                    $e->personal_folio,
-                    $this->hasStoredImage($e->folio) ? '✓' : '✗',
-                ])->toArray()
+                ['Folio', 'Type', 'Personal Folio', 'Climate', 'Score', 'Has Image'],
+                $evaluations->map(function ($e) use ($likertService) {
+                    $climate = '-';
+                    $score = '-';
+
+                    if ($e->evaluation_type === 'likert' && ! empty($e->likert_answers['questions'])) {
+                        $scores = $likertService->calculateLikertScores($e);
+                        $score = $scores['total_score'];
+                        $climate = $this->getClimateShortCode($scores['interpretation']);
+                    }
+
+                    return [
+                        $e->folio,
+                        $e->evaluation_type,
+                        $e->personal_folio,
+                        $climate,
+                        $score,
+                        $this->hasStoredImage($e->folio) ? '✓' : '✗',
+                    ];
+                })->toArray()
             );
 
             return self::SUCCESS;
@@ -159,6 +188,78 @@ class ReprocessOrganizationEvaluations extends Command
         );
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Filter evaluations by climate level interpretation
+     *
+     * @param  \Illuminate\Support\Collection  $evaluations
+     * @param  string  $climateLevels  Comma-separated codes: ta,da,d,td
+     */
+    protected function filterByClimateLevel($evaluations, string $climateLevels): \Illuminate\Support\Collection
+    {
+        $likertService = app(LikertScoreService::class);
+
+        // Parse climate level codes
+        $codes = array_map('trim', explode(',', strtolower($climateLevels)));
+
+        // Map codes to full interpretation names
+        $codeToInterpretation = [
+            'ta' => 'Totalmente de Acuerdo',
+            'da' => 'De Acuerdo',
+            'd' => 'Desacuerdo',
+            'td' => 'Totalmente Desacuerdo',
+        ];
+
+        $allowedInterpretations = [];
+        foreach ($codes as $code) {
+            if (isset($codeToInterpretation[$code])) {
+                $allowedInterpretations[] = $codeToInterpretation[$code];
+            }
+        }
+
+        if (empty($allowedInterpretations)) {
+            $this->warn('Invalid climate level codes. Use: ta (Totalmente Acuerdo), da (De Acuerdo), d (Desacuerdo), td (Totalmente Desacuerdo)');
+
+            return collect();
+        }
+
+        $this->info('Filtering by climate levels: '.implode(', ', $allowedInterpretations));
+
+        return $evaluations->filter(function ($evaluation) use ($likertService, $allowedInterpretations) {
+            // Only filter likert evaluations
+            if ($evaluation->evaluation_type !== 'likert') {
+                return false;
+            }
+
+            // Skip if no likert answers
+            if (empty($evaluation->likert_answers['questions'])) {
+                return false;
+            }
+
+            $scores = $likertService->calculateLikertScores($evaluation);
+
+            return in_array($scores['interpretation'], $allowedInterpretations);
+        });
+    }
+
+    /**
+     * Get short code for climate interpretation
+     */
+    protected function getClimateShortCode(?string $interpretation): string
+    {
+        if (! $interpretation) {
+            return '-';
+        }
+
+        $map = [
+            'Totalmente de Acuerdo' => 'TA',
+            'De Acuerdo' => 'DA',
+            'Desacuerdo' => 'D',
+            'Totalmente Desacuerdo' => 'TD',
+        ];
+
+        return $map[$interpretation] ?? $interpretation;
     }
 
     protected function hasStoredImage(string $folio): bool
