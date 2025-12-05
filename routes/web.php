@@ -204,6 +204,9 @@ Route::middleware(['auth'])->group(function () {
         ->name('organization.results.bulk-update')
         ->middleware('can:view-organization-results,organization');
 
+    Route::get('/bulk-import/{bulkImportJob}/status', [ResultsController::class, 'bulkImportStatus'])
+        ->name('bulk-import.status');
+
     Route::get('/{organizationId}/respuestas/{personalId}', [GlobalResponseController::class, 'showPersonResponses'])
         ->name('responses.personal');
 

@@ -50,13 +50,32 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
     ];
 
     /**
+     * Callback to report progress
+     *
+     * @var callable|null
+     */
+    protected $progressCallback = null;
+
+    /**
      * @param  string  $organizationId  UUID de la organización para filtrar evaluaciones
      * @param  string|null  $source  Tipo de fuente ('paper', 'online', o null para ambos)
+     * @param  callable|null  $progressCallback  Optional callback to report progress (processedRows, totalRows)
      */
-    public function __construct(string $organizationId, ?string $source = null)
+    public function __construct(string $organizationId, ?string $source = null, ?callable $progressCallback = null)
     {
         $this->organizationId = $organizationId;
         $this->source = $source;
+        $this->progressCallback = $progressCallback;
+    }
+
+    /**
+     * Report progress if callback is set
+     */
+    protected function reportProgress(int $processedRows, int $totalRows): void
+    {
+        if ($this->progressCallback) {
+            call_user_func($this->progressCallback, $processedRows, $totalRows, $this->updatedCount, $this->skippedCount);
+        }
     }
 
     /**
@@ -155,12 +174,18 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                     $this->skippedCount++;
                     Log::info("Row {$rowNumber} skipped - no changes made");
                 }
+
+                // Report progress every row
+                $this->reportProgress($index + 1, $rows->count());
             } catch (\Exception $e) {
                 Log::error("Error processing row {$rowNumber}: ".$e->getMessage(), [
                     'exception' => $e->getTraceAsString(),
                 ]);
                 $this->errors[] = "Fila {$rowNumber}: Error al procesar - {$e->getMessage()}";
                 $this->skippedCount++;
+
+                // Report progress even on error
+                $this->reportProgress($index + 1, $rows->count());
             }
         }
 

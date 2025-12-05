@@ -12,3 +12,8 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 Broadcast::channel('evaluation-processing.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
+
+// Authorize per-user bulk import progress channel
+Broadcast::channel('bulk-import.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});
