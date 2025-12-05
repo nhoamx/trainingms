@@ -32,5 +32,7 @@ yarn-error.log
 /docker/.idea
 /docker/log.log
 /docker/reprocessing.log
+/docker/markers.log
 /docker/__pycache__/
+public/.user.ini
 .DS_Store
