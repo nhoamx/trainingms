@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Exports\EvaluationTemplateExport;
-use App\Imports\EvaluationBulkUpdateImport;
+use App\Jobs\ProcessBulkEvaluationImport;
+use App\Models\BulkImportJob;
 use App\Models\Category;
 use App\Models\DemographicData;
 use App\Models\Evaluation;
 use App\Models\EvaluationCustomField;
+use App\Models\FolioBatch;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\Question;
@@ -97,6 +99,9 @@ class ResultsController extends Controller
         $areas = [];
         $turnos = [];
 
+        // Store answers separately for dimension calculations (not sent to frontend)
+        $answersForCalculation = [];
+
         // Process all evaluations
         $evaluationsData = [];
         foreach ($likertEvaluations as $evaluation) {
@@ -135,7 +140,7 @@ class ResultsController extends Controller
                 ];
             }
 
-            // Build evaluation data
+            // Build evaluation data (without raw answers to save memory)
             $evaluationsData[] = [
                 'id' => $evaluation->id,
                 'folio' => $evaluation->folio,
@@ -150,8 +155,10 @@ class ResultsController extends Controller
                 ],
                 'customFields' => $evaluationCustomFields,
                 'scores' => $scores,
-                'answers' => $questions,
             ];
+
+            // Store answers separately for dimension calculations (not sent to frontend)
+            $answersForCalculation[$evaluation->id] = $questions;
         }
 
         // Calculate distribution of people by Clima Laboral level
@@ -188,8 +195,9 @@ class ResultsController extends Controller
             // Calculate score for each person in this dimension
             foreach ($evaluationsData as $evalData) {
                 $personScore = 0;
+                $evalAnswers = $answersForCalculation[$evalData['id']] ?? [];
                 foreach ($questionNumbers as $qNum) {
-                    $answer = $evalData['answers'][$qNum] ?? null;
+                    $answer = $evalAnswers[$qNum] ?? null;
                     if ($answer) {
                         $personScore += $valorOpciones[$answer] ?? 0;
                     }
@@ -207,7 +215,8 @@ class ResultsController extends Controller
                 $qScore = 0;
                 $qCount = 0;
                 foreach ($evaluationsData as $evalData) {
-                    $answer = $evalData['answers'][$qNum] ?? null;
+                    $evalAnswers = $answersForCalculation[$evalData['id']] ?? [];
+                    $answer = $evalAnswers[$qNum] ?? null;
                     if ($answer) {
                         $qScore += $valorOpciones[$answer] ?? 0;
                         $qCount++;
@@ -227,6 +236,11 @@ class ResultsController extends Controller
                 'questions' => $questionScores,
             ];
         }
+
+        // Free memory from answers data before sending response
+        unset($answersForCalculation);
+        unset($likertEvaluations);
+        unset($customFieldsByEvaluation);
 
         $user = $request->user();
 
@@ -586,9 +600,32 @@ class ResultsController extends Controller
 
         $withMissingData = $evaluationGroups->filter(fn ($group) => ! empty($group['missing_data']))->count();
 
+        // Calculate missing folios from FolioBatches
+        $existingFolios = $evaluationGroups->pluck('personal_folio')->map(fn ($f) => (int) $f)->toArray();
+        $folioBatches = FolioBatch::where('organization_id', $organization->id)->get();
+
+        $missingFolios = [];
+        foreach ($folioBatches as $batch) {
+            $batchMissing = [];
+            for ($i = $batch->start_number; $i <= $batch->end_number; $i++) {
+                if (! in_array($i, $existingFolios)) {
+                    $batchMissing[] = str_pad($i, 4, '0', STR_PAD_LEFT);
+                }
+            }
+            if (! empty($batchMissing)) {
+                $missingFolios[] = [
+                    'batch_name' => $batch->name,
+                    'batch_type' => $batch->type,
+                    'folios' => $batchMissing,
+                    'count' => count($batchMissing),
+                ];
+            }
+        }
+
         return Inertia::render('Results/List', [
             'organization' => $organization->only('id', 'name'),
             'evaluationGroups' => $evaluationGroups,
+            'missingFolios' => $missingFolios,
             'summary' => [
                 'total_evaluations' => $totalEvaluations,
                 'missing_referencia_iii' => $missingReferenciaIII,
@@ -1112,89 +1149,87 @@ class ResultsController extends Controller
     }
 
     /**
-     * Procesar archivo de actualización masiva
+     * Procesar archivo de actualización masiva (dispatch to background job)
      */
     public function bulkUpdate(Request $request, Organization $organization)
     {
         $this->authorize('view-organization-results', $organization);
-
-        Log::info('=== BULK UPDATE REQUEST RECEIVED ===', [
-            'organization_id' => $organization->id,
-            'file_name' => $request->file('file')->getClientOriginalName(),
-            'file_size' => $request->file('file')->getSize(),
-        ]);
 
         $request->validate([
             'file' => 'required|file|mimes:xlsx,xls|max:10240', // Max 10MB
             'source' => 'nullable|in:paper,online',
         ]);
 
+        $file = $request->file('file');
         $source = $request->input('source'); // null means both
 
+        Log::info('=== BULK UPDATE REQUEST RECEIVED ===', [
+            'organization_id' => $organization->id,
+            'file_name' => $file->getClientOriginalName(),
+            'file_size' => $file->getSize(),
+        ]);
+
         try {
-            $import = new EvaluationBulkUpdateImport($organization->id, $source);
-            Excel::import($import, $request->file('file'));
+            // Store file temporarily
+            $filePath = $file->store('bulk-imports', 'local');
 
-            $updatedCount = $import->getUpdatedCount();
-            $skippedCount = $import->getSkippedCount();
-            $errors = $import->getErrors();
-
-            Log::info('=== BULK UPDATE COMPLETED ===', [
-                'updated' => $updatedCount,
-                'skipped' => $skippedCount,
-                'errors_count' => count($errors),
+            // Create bulk import job record
+            $bulkImportJob = BulkImportJob::create([
+                'organization_id' => $organization->id,
+                'user_id' => $request->user()->id,
+                'file_name' => $file->getClientOriginalName(),
+                'file_path' => $filePath,
+                'source' => $source,
+                'status' => 'pending',
             ]);
 
-            // Preparar mensaje de respuesta
-            $message = "Proceso completado: {$updatedCount} folios actualizados";
+            // Dispatch job to queue
+            ProcessBulkEvaluationImport::dispatch($bulkImportJob);
 
-            if ($skippedCount > 0) {
-                $message .= ", {$skippedCount} folios omitidos";
-            }
-
-            // Si hay errores, incluirlos en la respuesta
-            if (! empty($errors)) {
-                Log::warning('Bulk update had errors', ['errors' => $errors]);
-
-                return back()->with([
-                    'success' => $updatedCount > 0,
-                    'message' => $message,
-                    'bulk_errors' => $errors, // Changed from 'errors' to 'bulk_errors'
-                ]);
-            }
+            Log::info('Bulk import job dispatched', [
+                'bulk_import_job_id' => $bulkImportJob->id,
+                'file_path' => $filePath,
+            ]);
 
             return back()->with([
                 'success' => true,
-                'message' => $message,
-            ]);
-        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-            $failures = $e->failures();
-            $errors = [];
-
-            foreach ($failures as $failure) {
-                $errors[] = "Fila {$failure->row()}: ".implode(', ', $failure->errors());
-            }
-
-            Log::error('Bulk update validation exception', [
-                'errors' => $errors,
-                'exception' => $e->getMessage(),
-            ]);
-
-            return back()->with([
-                'success' => false,
-                'message' => 'Error de validación en el archivo',
-                'bulk_errors' => $errors, // Changed from 'errors' to 'bulk_errors'
+                'message' => 'El archivo se está procesando en segundo plano. Recibirás una notificación cuando termine.',
+                'bulk_import_job_id' => $bulkImportJob->id,
             ]);
         } catch (\Exception $e) {
-            Log::error('Bulk update general exception', [
+            Log::error('Bulk update dispatch exception', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
             return back()->with([
                 'success' => false,
-                'message' => 'Error al procesar el archivo: '.$e->getMessage(),
+                'message' => 'Error al iniciar el procesamiento: '.$e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Get status of a bulk import job
+     */
+    public function bulkImportStatus(BulkImportJob $bulkImportJob)
+    {
+        // Verify user owns this job
+        if ($bulkImportJob->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        return response()->json([
+            'id' => $bulkImportJob->id,
+            'status' => $bulkImportJob->status,
+            'total_rows' => $bulkImportJob->total_rows,
+            'processed_rows' => $bulkImportJob->processed_rows,
+            'updated_count' => $bulkImportJob->updated_count,
+            'skipped_count' => $bulkImportJob->skipped_count,
+            'progress_percentage' => $bulkImportJob->getProgressPercentage(),
+            'errors' => $bulkImportJob->errors ?? [],
+            'error_message' => $bulkImportJob->error_message,
+            'file_name' => $bulkImportJob->file_name,
+        ]);
     }
 }

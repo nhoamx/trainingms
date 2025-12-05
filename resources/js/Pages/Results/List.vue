@@ -65,6 +65,82 @@
                         </div>
                     </div>
 
+                    <!-- Missing Folios Accordion -->
+                    <div v-if="missingFolios && missingFolios.length > 0" class="p-6 border-b border-gray-200">
+                        <div class="bg-red-50 border border-red-200 rounded-lg overflow-hidden">
+                            <button 
+                                @click="showMissingFolios = !showMissingFolios"
+                                class="w-full flex items-center justify-between p-4 text-left hover:bg-red-100 transition-colors"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <div class="flex-shrink-0">
+                                        <svg class="h-6 w-6 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-red-800">
+                                            Faltan {{ totalMissingFoliosCount }} folios por procesar
+                                        </h3>
+                                        <p class="text-xs text-red-600 mt-0.5">
+                                            Estos folios fueron creados pero no tienen evaluaciones registradas
+                                        </p>
+                                    </div>
+                                </div>
+                                <svg 
+                                    class="h-5 w-5 text-red-500 transition-transform duration-200" 
+                                    :class="{ 'rotate-180': showMissingFolios }"
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    fill="none" 
+                                    viewBox="0 0 24 24" 
+                                    stroke="currentColor"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            
+                            <div v-show="showMissingFolios" class="border-t border-red-200 p-4 space-y-4">
+                                <div v-for="batch in missingFolios" :key="batch.batch_name" class="bg-white rounded-lg p-4 border border-red-100">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <span 
+                                            class="px-2 py-1 text-xs font-semibold rounded-full"
+                                            :class="batch.batch_type === 'presencial' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'"
+                                        >
+                                            {{ batch.batch_type === 'presencial' ? 'Presencial' : 'En línea' }}
+                                        </span>
+                                        <h4 class="text-sm font-medium text-gray-900">{{ batch.batch_name }}</h4>
+                                        <span class="text-xs text-red-600 font-medium">
+                                            ({{ batch.count }} {{ batch.count === 1 ? 'folio' : 'folios' }})
+                                        </span>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <span 
+                                            v-for="folio in batch.folios.slice(0, showAllFolios[batch.batch_name] ? batch.folios.length : 20)" 
+                                            :key="folio"
+                                            class="px-2 py-1 text-xs font-mono bg-red-100 text-red-700 rounded border border-red-200"
+                                        >
+                                            {{ folio }}
+                                        </span>
+                                        <button 
+                                            v-if="batch.folios.length > 20 && !showAllFolios[batch.batch_name]"
+                                            @click="showAllFolios[batch.batch_name] = true"
+                                            class="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800 hover:underline"
+                                        >
+                                            + {{ batch.folios.length - 20 }} más...
+                                        </button>
+                                        <button 
+                                            v-if="batch.folios.length > 20 && showAllFolios[batch.batch_name]"
+                                            @click="showAllFolios[batch.batch_name] = false"
+                                            class="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800 hover:underline"
+                                        >
+                                            Ver menos
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Filters -->
                     <div class="p-6 border-b border-gray-200 bg-gray-50">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -259,7 +335,7 @@
 import { Head, Link } from '@inertiajs/vue3'
 import Dashboard from "../../Layouts/Dashboard.vue"
 import BulkUpdateModal from "../../Components/BulkUpdateModal.vue"
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 
 const props = defineProps({
     organization: {
@@ -270,6 +346,10 @@ const props = defineProps({
         type: Array,
         required: true
     },
+    missingFolios: {
+        type: Array,
+        default: () => []
+    },
     summary: {
         type: Object,
         required: true
@@ -278,6 +358,15 @@ const props = defineProps({
 
 // Modal state
 const showBulkUpdateModal = ref(false)
+
+// Missing folios accordion state
+const showMissingFolios = ref(false)
+const showAllFolios = reactive({})
+
+// Total missing folios count
+const totalMissingFoliosCount = computed(() => {
+    return props.missingFolios.reduce((total, batch) => total + batch.count, 0)
+})
 
 // Filters
 const filters = ref({

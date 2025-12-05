@@ -159,30 +159,47 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
         config_prefix = 'likert_planta_3' if is_planta_3 else 'likert'
         
         logging.info(f"Procesando template {template_type} ({config_prefix})")
+        markers_logger.info(f"  === get_likert_complete_answers INICIO ===")
+        markers_logger.info(f"  Imagen: {os.path.basename(image_file)}")
+        markers_logger.info(f"  Folio: {folio}")
+        markers_logger.info(f"  Template: {template_type} ({'Planta 3' if is_planta_3 else 'Estándar'})")
+        markers_logger.info(f"  Config prefix: {config_prefix}")
+        markers_logger.info(f"  Min fill threshold: {min_fill_threshold}")
+        
         complete_answers = {}
         
         # 1. Procesar preguntas principales Likert (1-23, A/B/C/D)
         logging.info(f"  Sección 1: Preguntas Likert (1-23) usando config '{config_prefix}'...")
+        markers_logger.info(f"  SECCIÓN 1: Preguntas Likert (1-23)")
         questions_config = getattr(config, config_prefix, None)
         if questions_config is not None:
+            markers_logger.info(f"    Config encontrado con {len(questions_config)} preguntas")
             likert_answers = detector.detect_bubbles(image_file, questions_config, min_fill_threshold=min_fill_threshold)
-
+            markers_logger.info(f"    Respuestas detectadas:")
+            
             # REGLA ESPECIAL LIKERT: Si una pregunta tiene más de 1 respuesta o está vacía (None),
             # marcarla como 'A' (Totalmente de Acuerdo)
             for question_num in range(1, 24):  # Preguntas 1-23
                 q_key = str(question_num)
+                original_answer = likert_answers.get(q_key)
                 if q_key in likert_answers and likert_answers[q_key] is None:
                     logging.info(f"    Pregunta {q_key}: sin respuesta → Asignando 'A'")
+                    markers_logger.info(f"      Q{q_key}: None → 'A' (regla especial)")
                     likert_answers[q_key] = 'A'
+                else:
+                    markers_logger.info(f"      Q{q_key}: {original_answer}")
                     
             # Guardar bajo la clave correcta según el template
             complete_answers[config_prefix] = likert_answers
             logging.info(f"  ✓ Preguntas detectadas: {len(likert_answers)}")
+            markers_logger.info(f"    Total preguntas: {len(likert_answers)}")
         else:
             logging.warning(f"  ✗ No se encontró config.{config_prefix}, omitiendo preguntas")
+            markers_logger.warning(f"    Config NO encontrado: config.{config_prefix}")
         
         # 2. Procesar demografía simple (3 secciones: género, turno, tipo de contrato)
         logging.info(f"  Sección 2: Demografía usando prefijo '{config_prefix}'...")
+        markers_logger.info(f"  SECCIÓN 2: Demografía")
         demographic_mapping = [
             ('genero', 'genero'),
             ('turno', 'turno'),
@@ -199,13 +216,16 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
                 detected_value = section_answer.get(result_key)
                 complete_answers[result_key] = detected_value
                 logging.info(f"      ✓ Detectado: {detected_value}")
+                markers_logger.info(f"    {result_key}: {detected_value}")
             else:
                 complete_answers[result_key] = None
                 logging.warning(f"      ✗ No se encontró config.{config_attr}")
+                markers_logger.warning(f"    {result_key}: Config NO encontrado ({config_attr})")
         
         # 3. Procesar listas verticales (puestos y áreas)
         # El número de items varía según template: 05 usa 24 puestos/17 áreas, 06 usa 19 puestos/10 áreas
         logging.info(f"  Sección 3: Listas verticales usando prefijo '{config_prefix}'...")
+        markers_logger.info(f"  SECCIÓN 3: Listas verticales (puestos/áreas)")
         
         # Procesar Puestos
         puestos_config_attr = f'{config_prefix}_puestos'
@@ -214,6 +234,7 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
             puestos_config = getattr(config, puestos_config_attr)
             num_puestos = len(puestos_config)
             logging.info(f"      Config encontrado con {num_puestos} items")
+            markers_logger.info(f"    Puestos: buscando en {num_puestos} posiciones")
             puesto_detectado = None
             
             # Iterar sobre todas las coordenadas (claves '1' a N)
@@ -229,6 +250,7 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
                     if temp_answer.get('puesto') == 'temp':
                         puesto_detectado = i  # Número 1-based
                         logging.info(f"      ✓ Puesto {i} DETECTADO")
+                        markers_logger.info(f"      Puesto {i} MARCADO (pos: {x},{y},{w},{h})")
                         break
             
             complete_answers['puestos'] = puesto_detectado
@@ -236,9 +258,11 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
                 logging.info(f"    Puesto seleccionado: {puesto_detectado}")
             else:
                 logging.info(f"    Ningún puesto seleccionado (null)")
+                markers_logger.info(f"      Ningún puesto detectado")
         else:
             complete_answers['puestos'] = None
             logging.warning(f"      ✗ No se encontró config.{puestos_config_attr}")
+            markers_logger.warning(f"    Puestos: Config NO encontrado ({puestos_config_attr})")
         
         # Procesar Áreas
         areas_config_attr = f'{config_prefix}_areas'
@@ -247,6 +271,7 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
             areas_config = getattr(config, areas_config_attr)
             num_areas = len(areas_config)
             logging.info(f"      Config encontrado con {num_areas} items")
+            markers_logger.info(f"    Áreas: buscando en {num_areas} posiciones")
             area_detectada = None
             
             # Iterar sobre todas las coordenadas (claves '1' a N)
@@ -262,6 +287,7 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
                     if temp_answer.get('area') == 'temp':
                         area_detectada = i  # Número 1-based
                         logging.info(f"      ✓ Área {i} DETECTADA")
+                        markers_logger.info(f"      Área {i} MARCADA (pos: {x},{y},{w},{h})")
                         break
             
             complete_answers['areas'] = area_detectada
@@ -269,15 +295,20 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
                 logging.info(f"    Área seleccionada: {area_detectada}")
             else:
                 logging.info(f"    Ningún área seleccionada (null)")
+                markers_logger.info(f"      Ningún área detectada")
         else:
             complete_answers['areas'] = None
             logging.warning(f"      ✗ No se encontró config.{areas_config_attr}")
+            markers_logger.warning(f"    Áreas: Config NO encontrado ({areas_config_attr})")
         
         # Guardar el JSON completo
         json_filename = f"{folio}.json"
         json_output_path = os.path.join(output_json_folder, json_filename)
         with open(json_output_path, 'w') as json_file:
             json.dump(complete_answers, json_file, indent=4)
+        
+        markers_logger.info(f"  JSON guardado: {json_filename}")
+        markers_logger.info(f"  === get_likert_complete_answers FIN ===" )
         
         logging.info(f"✓ Resultados de {config_prefix} guardados en: {json_output_path}")
         logging.info(f"  Secciones detectadas: {list(complete_answers.keys())}")
@@ -714,10 +745,17 @@ detector = BubbleDetector()
 print("Procesando imágenes y detectando folios...")
 import cv2
 import logging
-from alinear_con_marcadores import detectar_marcadores_4_esquinas, alinear_imagen, IDEAL_POSITIONS, LABELS
+from alinear_con_marcadores import detectar_marcadores_4_esquinas, alinear_imagen, IDEAL_POSITIONS, LABELS, markers_logger
+from datetime import datetime
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+
+# Log de inicio de ejecución en markers.log
+markers_logger.info("=" * 80)
+markers_logger.info(f"NUEVA EJECUCIÓN: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+markers_logger.info(f"Total imágenes a procesar: {len(image_files)}")
+markers_logger.info("=" * 80)
 
 def detect_valid_folio_quick(image_path, detector):
     """
@@ -895,7 +933,7 @@ for image_file in image_files:
             img_raw = cv2.imread(image_file)
             pre_debug_path = os.path.join(output_with_markers_folder, f"{os.path.splitext(os.path.basename(image_file))[0]}_prealign_markers.png")
             # Guardará líneas de recorte y marcadores detectados sobre la imagen original
-            _ = detectar_marcadores_4_esquinas(img_raw, debug_path=pre_debug_path)
+            _ = detectar_marcadores_4_esquinas(img_raw, debug_path=pre_debug_path, image_name=f"{os.path.basename(image_file)}_PRE")
             logging.info(f"Pre-alineación: debug de marcadores guardado en {pre_debug_path}")
         except Exception as e:
             logging.warning(f"No se pudieron detectar marcadores en imagen original (pre-alineación): {e}")
@@ -905,12 +943,12 @@ for image_file in image_files:
         
         # --- Paso 2: Cargar referencia específica para ese template ---
         ref_img = get_reference_image_for_template(template_type)
-        ref_marcadores = detectar_marcadores_4_esquinas(ref_img, debug_path=None)
+        ref_marcadores = detectar_marcadores_4_esquinas(ref_img, debug_path=None, image_name=f"REFERENCIA_{template_type}")
         ref_esquinas = ref_marcadores  # Usar los 4 marcadores directamente
         
         # --- Paso 3: Alinear la imagen con la referencia específica ---
         img = cv2.imread(image_file)
-        img_marcadores = detectar_marcadores_4_esquinas(img, debug_path=None)
+        img_marcadores = detectar_marcadores_4_esquinas(img, debug_path=None, image_name=f"{os.path.basename(image_file)}_ALIGN")
         img_esquinas = img_marcadores  # Usar los 4 marcadores directamente
         alineada = alinear_imagen(img, ref_esquinas, img_esquinas, (ref_img.shape[1], ref_img.shape[0]))
         aligned_filename = os.path.basename(image_file).replace(".png", "_aligned.png")
@@ -918,16 +956,30 @@ for image_file in image_files:
         cv2.imwrite(aligned_save_path, alineada)
         logging.info(f"Imagen alineada guardada: {aligned_filename}")
         aligned_image_files.append(aligned_save_path)
+        
+        # Log detallado de la transformación aplicada
+        markers_logger.info("  TRANSFORMACIÓN APLICADA:")
+        markers_logger.info(f"    Referencia esquinas: {ref_esquinas}")
+        markers_logger.info(f"    Imagen esquinas: {img_esquinas}")
+        markers_logger.info(f"    Tamaño salida: {ref_img.shape[1]}x{ref_img.shape[0]}")
+        
     except Exception as e:
         logging.warning(f"No se pudo alinear {image_file}: {e}. Se omite esta imagen.")
+        markers_logger.error(f"ERROR ALINEACIÓN {os.path.basename(image_file)}: {e}")
         continue
 
 # --- El resto del pipeline usa las imágenes alineadas ---
+markers_logger.info("=" * 80)
+markers_logger.info("FASE 2: DETECCIÓN DE FOLIOS Y RESPUESTAS")
+markers_logger.info("=" * 80)
+
 for image_file in aligned_image_files:
     logging.info(f"Procesando imagen alineada: {image_file}")
+    markers_logger.info(f"\n>>> PROCESANDO: {os.path.basename(image_file)}")
 
     # Detectar el folio a partir de la imagen alineada
     folio = detect_folio(image_file, detector)
+    markers_logger.info(f"    Folio detectado: '{folio}'")
 
     # Validar que el folio inicie con 01, 02, 03, 04, 05, 06 (template types)
     valid_prefixes = ['01', '02', '03', '04', '05', '06']
@@ -935,9 +987,11 @@ for image_file in aligned_image_files:
     
     if not is_valid:
         logging.warning(f"Imagen {image_file} skipeada: folio '{folio}' no inicia con template válido {', '.join(valid_prefixes)}.")
+        markers_logger.warning(f"    SKIP: Folio inválido '{folio}'")
         continue
     
     logging.info(f"Folio válido detectado: {folio}")
+    markers_logger.info(f"    Folio VÁLIDO: {folio} (template: {folio[:2]})")
 
     # Guardar la imagen alineada con el folio en output_images
     new_image_path = os.path.join(output_folder, f"{folio}.png")
@@ -960,6 +1014,7 @@ for image_file in aligned_image_files:
 
     # Seleccionar la configuración de evaluación según el template type (primeros 2 dígitos)
     template_type = folio[:2]
+    markers_logger.info(f"    Template type: {template_type}")
     bubble_configs_list = []
     
     # SIEMPRE agregar el folio al inicio para visualización
@@ -1025,6 +1080,8 @@ for image_file in aligned_image_files:
         get_likert_complete_answers(new_image_path, detector, folio)
     elif template_type == "06":
         # Referencia 06 - Likert Planta 3
+        markers_logger.info(f"    Procesando como LIKERT PLANTA 3 (template 06)")
+        
         # Agregar configuraciones de Likert Planta 3 a la visualización
         if hasattr(config, 'likert_planta_3'):
             bubble_configs_list.append(config.likert_planta_3)
@@ -1040,13 +1097,21 @@ for image_file in aligned_image_files:
                 bubble_configs_list.append(getattr(config, attr))
         
         logging.info(f"Folio {folio} → Likert Planta 3 COMPLETO")
+        markers_logger.info(f"    Llamando get_likert_complete_answers para {folio}")
         get_likert_complete_answers(new_image_path, detector, folio)
+        markers_logger.info(f"    COMPLETADO: {folio}")
     else:
         logging.warning(f"Template type '{template_type}' no reconocido, usando evaluación por defecto")
+        markers_logger.warning(f"    Template DESCONOCIDO: {template_type}")
         evaluation_config = config.referencia_iii
         bubble_configs_list.append(evaluation_config)
         get_main_answers_legacy(new_image_path, detector, evaluation_config, folio)
     
     # Generar imagen con marcadores y burbujas
     logging.info(f"Generando imagen con marcadores para folio {folio}... ({len(bubble_configs_list)} configuraciones)")
+    markers_logger.info(f"    Generando imagen con {len(bubble_configs_list)} configuraciones de burbujas")
     save_image_with_markers(new_image_path, folio, marker_positions=None, bubble_configs=bubble_configs_list, template_type=template_type)
+
+markers_logger.info("=" * 80)
+markers_logger.info("PROCESAMIENTO COMPLETADO")
+markers_logger.info("=" * 80)
