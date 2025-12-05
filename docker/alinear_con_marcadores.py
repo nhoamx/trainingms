@@ -2,8 +2,32 @@ import cv2
 import numpy as np
 import sys
 import os
+import logging
+from datetime import datetime
 
 # USO: python alinear_con_marcadores.py imagen_a_alinear.png referencia.png salida.png
+
+# === Configurar logging dedicado para marcadores ===
+markers_logger = logging.getLogger('markers')
+markers_logger.setLevel(logging.DEBUG)
+
+# Crear handler para archivo markers.log
+markers_log_path = os.path.join(os.path.dirname(__file__), 'markers.log')
+# Limpiar el archivo al inicio de cada ejecución
+if os.path.exists(markers_log_path):
+    open(markers_log_path, 'w').close()
+
+file_handler = logging.FileHandler(markers_log_path, mode='a', encoding='utf-8')
+file_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+file_handler.setFormatter(formatter)
+markers_logger.addHandler(file_handler)
+
+# También mostrar en consola
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(formatter)
+markers_logger.addHandler(console_handler)
 
 # === Posiciones ideales (en píxeles) para imagen de 2481x3510 ===
 # Modifica estos valores según tu formato
@@ -75,21 +99,32 @@ def ajustar_coordenadas_marcadores(marcadores, offset_y):
         marcadores_ajustados.append((x, y + offset_y))
     return marcadores_ajustados
 
-def detectar_marcadores_4_esquinas(imagen, umbral=150, min_area=3000, debug_path=None):
+def detectar_marcadores_4_esquinas(imagen, umbral=150, min_area=3000, debug_path=None, image_name=None):
     """
     Detecta solo los 4 marcadores de las esquinas (TL, TR, BL, BR).
     """
+    # Identificador para logs
+    img_id = image_name or f"img_{id(imagen)}"
+    
+    markers_logger.info("=" * 60)
+    markers_logger.info(f"DETECTANDO MARCADORES: {img_id}")
+    markers_logger.info(f"  Dimensiones imagen: {imagen.shape[1]}x{imagen.shape[0]}")
+    markers_logger.info(f"  Umbral: {umbral}, Min área: {min_area}")
+    
     # Recortar la imagen
     imagen_recortada, offset_y = recortar_imagen(imagen)
+    markers_logger.debug(f"  Imagen recortada: {imagen_recortada.shape[1]}x{imagen_recortada.shape[0]}, offset_y={offset_y}")
     
     # Detectar en la imagen recortada
     gris = cv2.cvtColor(imagen_recortada, cv2.COLOR_BGR2GRAY)
     _, binaria = cv2.threshold(gris, umbral, 255, cv2.THRESH_BINARY_INV)
     contornos, _ = cv2.findContours(binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    print(f"Contornos detectados en imagen recortada: {len(contornos)}")
+    markers_logger.debug(f"  Contornos totales detectados: {len(contornos)}")
     
     marcadores = []
     areas = []
+    all_candidates = []  # Para logging detallado
+    
     for c in contornos:
         area = cv2.contourArea(c)
         if area > min_area:
@@ -99,40 +134,69 @@ def detectar_marcadores_4_esquinas(imagen, umbral=150, min_area=3000, debug_path
                 cy = int(M["m01"] / M["m00"])
                 marcadores.append((cx, cy))
                 areas.append(area)
+                all_candidates.append({'pos': (cx, cy), 'area': area})
     
-    print(f"Marcadores filtrados por área en imagen recortada: {len(marcadores)}")
+    markers_logger.info(f"  Candidatos filtrados por área (>{min_area}): {len(marcadores)}")
+    
+    # Log de todos los candidatos ordenados por área
+    all_candidates_sorted = sorted(all_candidates, key=lambda x: x['area'], reverse=True)
+    for i, cand in enumerate(all_candidates_sorted[:10]):  # Top 10
+        markers_logger.debug(f"    Candidato {i+1}: pos={cand['pos']}, área={cand['area']:.0f}")
     
     # Buscar los centros detectados más cercanos a las posiciones ideales (solo 4 esquinas)
     if len(marcadores) < 4:
+        markers_logger.error(f"  ERROR: Solo se detectaron {len(marcadores)} marcadores (mínimo 4)")
         raise Exception(f"No se detectaron al menos 4 marcadores esquina, se detectaron {len(marcadores)}")
     
     # Ajustar las posiciones ideales para la imagen recortada
     ideal_positions_ajustadas = {}
+    scale_x = imagen_recortada.shape[1] / 2550
+    scale_y = imagen_recortada.shape[0] / (3300 - CROP_TOP - CROP_BOTTOM)
+    
+    markers_logger.debug(f"  Escalas: scale_x={scale_x:.4f}, scale_y={scale_y:.4f}")
+    
     for label, (ideal_x, ideal_y) in IDEAL_POSITIONS_4_CORNERS.items():
-        # Escalar las posiciones ideales a las dimensiones de la imagen recortada
-        # Dimensiones base: 2550 x 3300 px (Letter a 300 DPI)
-        scale_x = imagen_recortada.shape[1] / 2550
-        scale_y = imagen_recortada.shape[0] / (3300 - CROP_TOP - CROP_BOTTOM)
-        
         scaled_x = int(ideal_x * scale_x)
-        # Ajustar la Y considerando el recorte superior
         scaled_y = int((ideal_y - CROP_TOP) * scale_y)
-        
         ideal_positions_ajustadas[label] = (scaled_x, scaled_y)
+        markers_logger.debug(f"    Ideal {label}: original=({ideal_x},{ideal_y}) -> ajustado=({scaled_x},{scaled_y})")
     
     # Para cada posición ideal, buscar el marcador detectado más cercano (sin repetir)
     ordered = []
     marcadores_restantes = marcadores.copy()
+    
+    markers_logger.info("  ASIGNACIÓN DE MARCADORES:")
     for label in LABELS_4_CORNERS:
         ideal = np.array(ideal_positions_ajustadas[label])
-        # Buscar el más cercano
+        
+        # Calcular distancias a todos los marcadores restantes
         dists = [np.linalg.norm(ideal - np.array(pt)) for pt in marcadores_restantes]
+        
+        # Log de las 3 opciones más cercanas
+        dist_with_idx = [(d, i, marcadores_restantes[i]) for i, d in enumerate(dists)]
+        dist_with_idx.sort(key=lambda x: x[0])
+        
+        markers_logger.debug(f"    {label} - Ideal ajustado: {tuple(ideal)}")
+        for d, idx, pt in dist_with_idx[:3]:
+            area_idx = marcadores.index(pt) if pt in marcadores else -1
+            area_val = areas[area_idx] if area_idx >= 0 else 0
+            markers_logger.debug(f"      Opción: pos={pt}, dist={d:.1f}, área={area_val:.0f}")
+        
         idx_min = int(np.argmin(dists))
-        ordered.append(marcadores_restantes[idx_min])
+        selected = marcadores_restantes[idx_min]
+        min_dist = dists[idx_min]
+        
+        markers_logger.info(f"    {label}: seleccionado={selected}, distancia={min_dist:.1f}")
+        
+        ordered.append(selected)
         marcadores_restantes.pop(idx_min)
     
     # Ajustar coordenadas a la imagen original
     ordered_original = ajustar_coordenadas_marcadores(ordered, offset_y)
+    
+    markers_logger.info("  RESULTADO FINAL (coordenadas en imagen original):")
+    for i, label in enumerate(LABELS_4_CORNERS):
+        markers_logger.info(f"    {label}: {ordered_original[i]}")
     
     print("Marcadores 4 esquinas seleccionados (x, y):", list(zip(LABELS_4_CORNERS, ordered_original)))
     
