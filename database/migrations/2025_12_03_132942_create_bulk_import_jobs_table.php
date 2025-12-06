@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('bulk_import_jobs', function (Blueprint $table) {
             $table->id();
             $table->foreignUuid('organization_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
             $table->string('file_name');
             $table->string('file_path');
             $table->string('source')->nullable(); // 'paper', 'online', or null for both
