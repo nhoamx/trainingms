@@ -602,7 +602,7 @@ class ResultsController extends Controller
 
         // Calculate missing folios based on gaps in uploaded evaluations
         // Get all paper evaluations for the organization (unique personal folios)
-        $existingFolios = $evaluationGroups->pluck('personal_folio')->map(fn ($f) => (int) $f)->sort()->values()->unique()->toArray();
+        $existingFolios = $evaluationGroups->pluck('personal_folio')->map(fn ($f) => (int) $f)->unique()->sort()->values()->toArray();
         
         $missingFolios = [];
         
@@ -626,23 +626,34 @@ class ResultsController extends Controller
             $folioBatches = FolioBatch::where('organization_id', $organization->id)->get();
             
             if (!empty($gaps)) {
-                // Build a map of batch ranges for efficient lookup
+                // Pre-build batch lookup structure for O(batches + gaps) complexity
+                $batchLookup = [];
+                foreach ($folioBatches as $batch) {
+                    $batchLookup[] = [
+                        'id' => $batch->id,
+                        'name' => $batch->name,
+                        'type' => $batch->type,
+                        'start' => $batch->start_number,
+                        'end' => $batch->end_number,
+                    ];
+                }
+                
                 $batchMap = [];
                 $ungroupedGaps = [];
                 
                 foreach ($gaps as $gap) {
                     $assignedToBatch = false;
                     
-                    foreach ($folioBatches as $batch) {
-                        if ($gap >= $batch->start_number && $gap <= $batch->end_number) {
-                            if (!isset($batchMap[$batch->id])) {
-                                $batchMap[$batch->id] = [
-                                    'batch_name' => $batch->name,
-                                    'batch_type' => $batch->type,
+                    foreach ($batchLookup as $batch) {
+                        if ($gap >= $batch['start'] && $gap <= $batch['end']) {
+                            if (!isset($batchMap[$batch['id']])) {
+                                $batchMap[$batch['id']] = [
+                                    'batch_name' => $batch['name'],
+                                    'batch_type' => $batch['type'],
                                     'folios' => [],
                                 ];
                             }
-                            $batchMap[$batch->id]['folios'][] = str_pad($gap, 4, '0', STR_PAD_LEFT);
+                            $batchMap[$batch['id']]['folios'][] = str_pad($gap, 4, '0', STR_PAD_LEFT);
                             $assignedToBatch = true;
                             break;
                         }
