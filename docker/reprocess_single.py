@@ -104,6 +104,15 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
     questions_config = getattr(config, config_prefix, None)
     if questions_config is not None:
         likert_answers = detector.detect_bubbles(image_file, questions_config, min_fill_threshold=min_fill_threshold)
+        
+        # REGLA ESPECIAL LIKERT: Si una pregunta tiene más de 1 respuesta o está vacía (None),
+        # marcarla como 'A' (Totalmente de Acuerdo)
+        for question_num in range(1, 24):  # Preguntas 1-23
+            q_key = str(question_num)
+            if q_key in likert_answers and likert_answers[q_key] is None:
+                logging.info(f"    Pregunta {q_key}: sin respuesta → Asignando 'A'")
+                likert_answers[q_key] = 'A'
+        
         complete_answers[config_prefix] = likert_answers
     
     # 2. Demografía simple
