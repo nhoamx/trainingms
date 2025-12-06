@@ -80,10 +80,10 @@
                                     </div>
                                     <div>
                                         <h3 class="text-sm font-semibold text-red-800">
-                                            Faltan {{ totalMissingFoliosCount }} folios por procesar
+                                            Hay {{ totalMissingFoliosCount }} {{ totalMissingFoliosCount === 1 ? 'folio faltante' : 'folios faltantes' }} en la secuencia
                                         </h3>
                                         <p class="text-xs text-red-600 mt-0.5">
-                                            Estos folios fueron creados pero no tienen evaluaciones registradas
+                                            Estos folios representan gaps en la secuencia de evaluaciones procesadas
                                         </p>
                                     </div>
                                 </div>
