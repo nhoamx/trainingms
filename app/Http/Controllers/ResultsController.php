@@ -600,25 +600,89 @@ class ResultsController extends Controller
 
         $withMissingData = $evaluationGroups->filter(fn ($group) => ! empty($group['missing_data']))->count();
 
-        // Calculate missing folios from FolioBatches
-        $existingFolios = $evaluationGroups->pluck('personal_folio')->map(fn ($f) => (int) $f)->toArray();
-        $folioBatches = FolioBatch::where('organization_id', $organization->id)->get();
-
+        // Calculate missing folios based on gaps in uploaded evaluations
+        // Get all paper evaluations for the organization (unique personal folios)
+        $existingFolios = $evaluationGroups->pluck('personal_folio')->map(fn ($f) => (int) $f)->unique()->sort()->values()->toArray();
+        
         $missingFolios = [];
-        foreach ($folioBatches as $batch) {
-            $batchMissing = [];
-            for ($i = $batch->start_number; $i <= $batch->end_number; $i++) {
-                if (! in_array($i, $existingFolios)) {
-                    $batchMissing[] = str_pad($i, 4, '0', STR_PAD_LEFT);
+        
+        // Only calculate gaps if there are at least 2 evaluations
+        if (count($existingFolios) >= 2) {
+            $minFolio = min($existingFolios);
+            $maxFolio = max($existingFolios);
+            
+            // Convert to associative array for O(1) lookups
+            $existingFoliosLookup = array_flip($existingFolios);
+            
+            // Find gaps in the sequence between min and max
+            $gaps = [];
+            for ($i = $minFolio + 1; $i < $maxFolio; $i++) {
+                if (!isset($existingFoliosLookup[$i])) {
+                    $gaps[] = $i;
                 }
             }
-            if (! empty($batchMissing)) {
-                $missingFolios[] = [
-                    'batch_name' => $batch->name,
-                    'batch_type' => $batch->type,
-                    'folios' => $batchMissing,
-                    'count' => count($batchMissing),
-                ];
+            
+            // Group gaps by folio batch to maintain batch context
+            $folioBatches = FolioBatch::where('organization_id', $organization->id)->get();
+            
+            if (!empty($gaps)) {
+                // Pre-build batch lookup structure for O(batches + gaps) complexity
+                $batchLookup = [];
+                foreach ($folioBatches as $batch) {
+                    $batchLookup[] = [
+                        'id' => $batch->id,
+                        'name' => $batch->name,
+                        'type' => $batch->type,
+                        'start' => $batch->start_number,
+                        'end' => $batch->end_number,
+                    ];
+                }
+                
+                $batchMap = [];
+                $ungroupedGaps = [];
+                
+                foreach ($gaps as $gap) {
+                    $assignedToBatch = false;
+                    
+                    foreach ($batchLookup as $batch) {
+                        if ($gap >= $batch['start'] && $gap <= $batch['end']) {
+                            if (!isset($batchMap[$batch['id']])) {
+                                $batchMap[$batch['id']] = [
+                                    'batch_name' => $batch['name'],
+                                    'batch_type' => $batch['type'],
+                                    'folios' => [],
+                                ];
+                            }
+                            $batchMap[$batch['id']]['folios'][] = str_pad($gap, 4, '0', STR_PAD_LEFT);
+                            $assignedToBatch = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!$assignedToBatch) {
+                        $ungroupedGaps[] = str_pad($gap, 4, '0', STR_PAD_LEFT);
+                    }
+                }
+                
+                // Convert batch map to array with counts
+                foreach ($batchMap as $batchData) {
+                    $missingFolios[] = [
+                        'batch_name' => $batchData['batch_name'],
+                        'batch_type' => $batchData['batch_type'],
+                        'folios' => $batchData['folios'],
+                        'count' => count($batchData['folios']),
+                    ];
+                }
+                
+                // Add ungrouped gaps if any
+                if (!empty($ungroupedGaps)) {
+                    $missingFolios[] = [
+                        'batch_name' => 'Sin lote asignado',
+                        'batch_type' => 'presencial',
+                        'folios' => $ungroupedGaps,
+                        'count' => count($ungroupedGaps),
+                    ];
+                }
             }
         }
 
