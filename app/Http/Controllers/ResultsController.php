@@ -345,7 +345,7 @@ class ResultsController extends Controller
         ]);
     }
 
-    public function listResults(Organization $organization)
+    public function listResults(Organization $organization, Request $request)
     {
         $this->authorize('view-organization-results', $organization);
 
