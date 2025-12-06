@@ -686,6 +686,8 @@ class ResultsController extends Controller
             }
         }
 
+        $user = $request->user();
+
         return Inertia::render('Results/List', [
             'organization' => $organization->only('id', 'name'),
             'evaluationGroups' => $evaluationGroups,
@@ -696,7 +698,141 @@ class ResultsController extends Controller
                 'missing_referencia_v' => $missingReferenciaV,
                 'with_missing_data' => $withMissingData,
             ],
+            'isAdmin' => $user && $user->hasRole('admin'),
+            'isSuperAdmin' => $user && $user->hasRole('super-admin'),
         ]);
+    }
+
+    /**
+     * Download missing gap folios as CSV
+     */
+    public function downloadGapFolios(Organization $organization, Request $request)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        $user = $request->user();
+        
+        // Only admin and super-admin can download gap folios
+        if (!$user || !$user->hasRole(['admin', 'super-admin'])) {
+            abort(403, 'Solo administradores pueden descargar la lista de folios faltantes');
+        }
+
+        // Calculate missing folios (same logic as listResults)
+        $evaluationGroups = PaperEvaluation::where('organization_id', $organization->id)
+            ->whereIn('source', ['paper', 'online'])
+            ->where('processing_status', 'completed')
+            ->get()
+            ->groupBy('personal_folio');
+
+        $existingFolios = $evaluationGroups->keys()->map(fn ($f) => (int) $f)->unique()->sort()->values()->toArray();
+        
+        $missingFolios = [];
+        
+        if (count($existingFolios) >= 2) {
+            $minFolio = min($existingFolios);
+            $maxFolio = max($existingFolios);
+            
+            $existingFoliosLookup = array_flip($existingFolios);
+            
+            $gaps = [];
+            for ($i = $minFolio + 1; $i < $maxFolio; $i++) {
+                if (!isset($existingFoliosLookup[$i])) {
+                    $gaps[] = $i;
+                }
+            }
+            
+            $folioBatches = FolioBatch::where('organization_id', $organization->id)->get();
+            
+            if (!empty($gaps)) {
+                $batchLookup = [];
+                foreach ($folioBatches as $batch) {
+                    $batchLookup[] = [
+                        'id' => $batch->id,
+                        'name' => $batch->name,
+                        'type' => $batch->type,
+                        'start' => $batch->start_number,
+                        'end' => $batch->end_number,
+                    ];
+                }
+                
+                $batchMap = [];
+                $ungroupedGaps = [];
+                
+                foreach ($gaps as $gap) {
+                    $assignedToBatch = false;
+                    
+                    foreach ($batchLookup as $batch) {
+                        if ($gap >= $batch['start'] && $gap <= $batch['end']) {
+                            if (!isset($batchMap[$batch['id']])) {
+                                $batchMap[$batch['id']] = [
+                                    'batch_name' => $batch['name'],
+                                    'batch_type' => $batch['type'],
+                                    'folios' => [],
+                                ];
+                            }
+                            $batchMap[$batch['id']]['folios'][] = str_pad($gap, 4, '0', STR_PAD_LEFT);
+                            $assignedToBatch = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!$assignedToBatch) {
+                        $ungroupedGaps[] = str_pad($gap, 4, '0', STR_PAD_LEFT);
+                    }
+                }
+                
+                foreach ($batchMap as $batchData) {
+                    $missingFolios[] = [
+                        'batch_name' => $batchData['batch_name'],
+                        'batch_type' => $batchData['batch_type'],
+                        'folios' => $batchData['folios'],
+                        'count' => count($batchData['folios']),
+                    ];
+                }
+                
+                if (!empty($ungroupedGaps)) {
+                    $missingFolios[] = [
+                        'batch_name' => 'Sin lote asignado',
+                        'batch_type' => 'presencial',
+                        'folios' => $ungroupedGaps,
+                        'count' => count($ungroupedGaps),
+                    ];
+                }
+            }
+        }
+
+        // Generate CSV
+        $filename = 'folios_faltantes_' . $organization->name . '_' . now()->format('Y-m-d') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($missingFolios) {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for Excel UTF-8 compatibility
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // Header row
+            fputcsv($file, ['Lote', 'Tipo', 'Folio Faltante']);
+            
+            // Data rows
+            foreach ($missingFolios as $batch) {
+                foreach ($batch['folios'] as $folio) {
+                    fputcsv($file, [
+                        $batch['batch_name'],
+                        $batch['batch_type'] === 'presencial' ? 'Presencial' : 'En línea',
+                        $folio
+                    ]);
+                }
+            }
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     public function showDetailedResults(Organization $organization, string $personalFolio)
