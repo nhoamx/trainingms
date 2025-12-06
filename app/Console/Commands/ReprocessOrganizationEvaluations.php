@@ -17,6 +17,7 @@ class ReprocessOrganizationEvaluations extends Command
         {--type= : Filter by evaluation type (likert, referencia_i, referencia_iii, referencia_v, cisneros)}
         {--climate= : Filter by climate level(s). Use comma-separated values: ta,da,d,td,e (e=empty/score 0)}
         {--dry-run : Show what would be processed without making changes}
+        {--keep-output : Keep reprocess output files in the container instead of deleting them}
         {--limit= : Limit the number of evaluations to process}';
 
     protected $description = 'Reprocess paper evaluations for an organization using existing aligned images';
@@ -136,14 +137,18 @@ class ReprocessOrganizationEvaluations extends Command
         $successCount = 0;
         $failCount = 0;
         $skippedCount = 0;
+        $failedFolios = [];
+        $skippedFolios = [];
         $totalTime = 0;
         $processingTimes = [];
         $startTotalTime = microtime(true);
 
+        $keepOutput = $this->option('keep-output');
+
         foreach ($evaluations as $evaluation) {
             try {
                 $startTime = microtime(true);
-                $result = $this->reprocessEvaluation($evaluation);
+                $result = $this->reprocessEvaluation($evaluation, $keepOutput);
                 $elapsedTime = microtime(true) - $startTime;
 
                 if ($result === 'success') {
@@ -152,12 +157,15 @@ class ReprocessOrganizationEvaluations extends Command
                     $totalTime += $elapsedTime;
                 } elseif ($result === 'skipped') {
                     $skippedCount++;
+                    $skippedFolios[] = $evaluation->folio;
                 } else {
                     $failCount++;
+                    $failedFolios[] = $evaluation->folio;
                     $totalTime += $elapsedTime;
                 }
             } catch (\Exception $e) {
                 $failCount++;
+                $failedFolios[] = $evaluation->folio;
                 Log::error("Error reprocessing evaluation {$evaluation->folio}: ".$e->getMessage());
             }
 
@@ -183,6 +191,18 @@ class ReprocessOrganizationEvaluations extends Command
                 ['Skipped (no image)', $skippedCount],
             ]
         );
+
+        if (! empty($failedFolios)) {
+            $this->newLine();
+            $this->error('Failed folios:');
+            $this->line(implode(', ', $failedFolios));
+        }
+
+        if (! empty($skippedFolios)) {
+            $this->newLine();
+            $this->warn('Skipped folios (no image):');
+            $this->line(implode(', ', $skippedFolios));
+        }
 
         $this->newLine();
         $this->table(
@@ -352,7 +372,7 @@ class ReprocessOrganizationEvaluations extends Command
         return $returnCode === 0 && in_array($this->containerName, $output);
     }
 
-    protected function reprocessEvaluation(PaperEvaluation $evaluation): string
+    protected function reprocessEvaluation(PaperEvaluation $evaluation, bool $keepOutput = false): string
     {
         $folio = $evaluation->folio;
         $imagePath = storage_path("app/public/folios/{$folio}.png");
@@ -427,8 +447,10 @@ class ReprocessOrganizationEvaluations extends Command
         // Cleanup temp files
         File::delete($localJsonPath);
 
-        // Cleanup container files
-        exec("docker exec {$this->containerName} rm -f {$containerInputPath} {$containerOutputPath}");
+        // Cleanup container files (unless --keep-output is set)
+        if (! $keepOutput) {
+            exec("docker exec {$this->containerName} rm -f {$containerInputPath} {$containerOutputPath}");
+        }
 
         Log::info("Successfully reprocessed evaluation: {$folio}");
 

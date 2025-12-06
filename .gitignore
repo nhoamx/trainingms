@@ -34,6 +34,5 @@ yarn-error.log
 /docker/reprocessing.log
 /docker/markers.log
 /docker/__pycache__/
-*-bk.png
 public/.user.ini
 .DS_Store
