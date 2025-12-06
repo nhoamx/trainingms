@@ -14,6 +14,7 @@ class MissingFoliosGapDetectionTest extends TestCase
     use DatabaseTransactions;
 
     protected User $user;
+    protected User $adminUser;
     protected Organization $organization;
 
     protected function setUp(): void
@@ -28,6 +29,10 @@ class MissingFoliosGapDetectionTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
         $this->user->assignRole('organization');
+
+        // Create admin user
+        $this->adminUser = User::factory()->create();
+        $this->adminUser->assignRole('admin');
 
         // Create folio batch for the organization
         FolioBatch::create([
@@ -101,6 +106,136 @@ class MissingFoliosGapDetectionTest extends TestCase
             ->where('missingFolios.0.batch_name', 'Lote 1')
             ->has('missingFolios.0.folios', 22)
         );
+    }
+
+    public function test_missing_folios_visible_to_admin(): void
+    {
+        // Create evaluations with a gap
+        for ($i = 1; $i <= 10; $i++) {
+            PaperEvaluation::factory()->create([
+                'organization_id' => $this->organization->id,
+                'personal_folio' => str_pad($i, 4, '0', STR_PAD_LEFT),
+                'evaluation_type' => 'referencia_iii',
+                'source' => 'paper',
+                'processing_status' => 'completed',
+            ]);
+        }
+
+        // Skip 11
+
+        for ($i = 12; $i <= 20; $i++) {
+            PaperEvaluation::factory()->create([
+                'organization_id' => $this->organization->id,
+                'personal_folio' => str_pad($i, 4, '0', STR_PAD_LEFT),
+                'evaluation_type' => 'referencia_iii',
+                'source' => 'paper',
+                'processing_status' => 'completed',
+            ]);
+        }
+
+        $response = $this->actingAs($this->adminUser)
+            ->get(route('organization.results.list', ['organization' => $this->organization->id]));
+
+        $response->assertStatus(200);
+        
+        // Verify admin sees isAdmin flag
+        $response->assertInertia(fn ($page) => $page
+            ->where('isAdmin', true)
+            ->has('missingFolios', 1)
+        );
+    }
+
+    public function test_organization_user_sees_missing_folios_data(): void
+    {
+        // Create evaluations with a gap
+        for ($i = 1; $i <= 10; $i++) {
+            PaperEvaluation::factory()->create([
+                'organization_id' => $this->organization->id,
+                'personal_folio' => str_pad($i, 4, '0', STR_PAD_LEFT),
+                'evaluation_type' => 'referencia_iii',
+                'source' => 'paper',
+                'processing_status' => 'completed',
+            ]);
+        }
+
+        // Skip 11
+
+        for ($i = 12; $i <= 20; $i++) {
+            PaperEvaluation::factory()->create([
+                'organization_id' => $this->organization->id,
+                'personal_folio' => str_pad($i, 4, '0', STR_PAD_LEFT),
+                'evaluation_type' => 'referencia_iii',
+                'source' => 'paper',
+                'processing_status' => 'completed',
+            ]);
+        }
+
+        $response = $this->actingAs($this->user)
+            ->get(route('organization.results.list', ['organization' => $this->organization->id]));
+
+        $response->assertStatus(200);
+        
+        // Organization users see the data but not the isAdmin flag
+        $response->assertInertia(fn ($page) => $page
+            ->where('isAdmin', false)
+            ->has('missingFolios', 1)
+        );
+    }
+
+    public function test_admin_can_download_gap_folios(): void
+    {
+        // Create evaluations with gaps
+        for ($i = 1; $i <= 10; $i++) {
+            PaperEvaluation::factory()->create([
+                'organization_id' => $this->organization->id,
+                'personal_folio' => str_pad($i, 4, '0', STR_PAD_LEFT),
+                'evaluation_type' => 'referencia_iii',
+                'source' => 'paper',
+                'processing_status' => 'completed',
+            ]);
+        }
+
+        // Skip 11
+
+        for ($i = 12; $i <= 15; $i++) {
+            PaperEvaluation::factory()->create([
+                'organization_id' => $this->organization->id,
+                'personal_folio' => str_pad($i, 4, '0', STR_PAD_LEFT),
+                'evaluation_type' => 'referencia_iii',
+                'source' => 'paper',
+                'processing_status' => 'completed',
+            ]);
+        }
+
+        $response = $this->actingAs($this->adminUser)
+            ->get(route('organization.results.download-gap-folios', ['organization' => $this->organization->id]));
+
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        
+        // Verify CSV content contains the missing folio
+        $content = $response->streamedContent();
+        $this->assertStringContainsString('0011', $content);
+    }
+
+    public function test_organization_user_cannot_download_gap_folios(): void
+    {
+        // Create evaluations with gaps
+        for ($i = 1; $i <= 10; $i++) {
+            PaperEvaluation::factory()->create([
+                'organization_id' => $this->organization->id,
+                'personal_folio' => str_pad($i, 4, '0', STR_PAD_LEFT),
+                'evaluation_type' => 'referencia_iii',
+                'source' => 'paper',
+                'processing_status' => 'completed',
+            ]);
+        }
+
+        $response = $this->actingAs($this->user)
+            ->get(route('organization.results.download-gap-folios', ['organization' => $this->organization->id]));
+
+        // Should be forbidden (403)
+        $response->assertStatus(403);
     }
 
     public function test_no_missing_folios_when_sequence_is_continuous(): void
