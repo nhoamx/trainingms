@@ -626,40 +626,44 @@ class ResultsController extends Controller
             $folioBatches = FolioBatch::where('organization_id', $organization->id)->get();
             
             if (!empty($gaps)) {
-                // Group gaps by batch
-                foreach ($folioBatches as $batch) {
-                    $batchGaps = [];
-                    foreach ($gaps as $gap) {
-                        if ($gap >= $batch->start_number && $gap <= $batch->end_number) {
-                            $batchGaps[] = str_pad($gap, 4, '0', STR_PAD_LEFT);
-                        }
-                    }
-                    
-                    if (!empty($batchGaps)) {
-                        $missingFolios[] = [
-                            'batch_name' => $batch->name,
-                            'batch_type' => $batch->type,
-                            'folios' => $batchGaps,
-                            'count' => count($batchGaps),
-                        ];
-                    }
-                }
-                
-                // If there are gaps that don't fit into any batch, create a general group
+                // Build a map of batch ranges for efficient lookup
+                $batchMap = [];
                 $ungroupedGaps = [];
+                
                 foreach ($gaps as $gap) {
-                    $inBatch = false;
+                    $assignedToBatch = false;
+                    
                     foreach ($folioBatches as $batch) {
                         if ($gap >= $batch->start_number && $gap <= $batch->end_number) {
-                            $inBatch = true;
+                            if (!isset($batchMap[$batch->id])) {
+                                $batchMap[$batch->id] = [
+                                    'batch_name' => $batch->name,
+                                    'batch_type' => $batch->type,
+                                    'folios' => [],
+                                ];
+                            }
+                            $batchMap[$batch->id]['folios'][] = str_pad($gap, 4, '0', STR_PAD_LEFT);
+                            $assignedToBatch = true;
                             break;
                         }
                     }
-                    if (!$inBatch) {
+                    
+                    if (!$assignedToBatch) {
                         $ungroupedGaps[] = str_pad($gap, 4, '0', STR_PAD_LEFT);
                     }
                 }
                 
+                // Convert batch map to array with counts
+                foreach ($batchMap as $batchData) {
+                    $missingFolios[] = [
+                        'batch_name' => $batchData['batch_name'],
+                        'batch_type' => $batchData['batch_type'],
+                        'folios' => $batchData['folios'],
+                        'count' => count($batchData['folios']),
+                    ];
+                }
+                
+                // Add ungrouped gaps if any
                 if (!empty($ungroupedGaps)) {
                     $missingFolios[] = [
                         'batch_name' => 'Sin lote asignado',
