@@ -66,7 +66,7 @@
                     </div>
 
                     <!-- Missing Folios Accordion -->
-                    <div v-if="missingFolios && missingFolios.length > 0" class="p-6 border-b border-gray-200">
+                    <div v-if="isAdminOrSuperAdmin && missingFolios && missingFolios.length > 0" class="p-6 border-b border-gray-200">
                         <div class="bg-red-50 border border-red-200 rounded-lg overflow-hidden">
                             <button 
                                 @click="showMissingFolios = !showMissingFolios"
@@ -87,16 +87,28 @@
                                         </p>
                                     </div>
                                 </div>
-                                <svg 
-                                    class="h-5 w-5 text-red-500 transition-transform duration-200" 
-                                    :class="{ 'rotate-180': showMissingFolios }"
-                                    xmlns="http://www.w3.org/2000/svg" 
-                                    fill="none" 
-                                    viewBox="0 0 24 24" 
-                                    stroke="currentColor"
-                                >
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                </svg>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        @click.stop="downloadGapFolios"
+                                        class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700 transition-colors gap-1.5"
+                                        title="Descargar lista de folios faltantes"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        Descargar CSV
+                                    </button>
+                                    <svg 
+                                        class="h-5 w-5 text-red-500 transition-transform duration-200" 
+                                        :class="{ 'rotate-180': showMissingFolios }"
+                                        xmlns="http://www.w3.org/2000/svg" 
+                                        fill="none" 
+                                        viewBox="0 0 24 24" 
+                                        stroke="currentColor"
+                                    >
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
                             </button>
                             
                             <div v-show="showMissingFolios" class="border-t border-red-200 p-4 space-y-4">
@@ -124,14 +136,14 @@
                                         <button 
                                             v-if="batch.folios.length > 20 && !showAllFolios[batch.batch_name]"
                                             @click="showAllFolios[batch.batch_name] = true"
-                                            class="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800 hover:underline"
+                                            class="px-3 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors shadow-sm"
                                         >
-                                            + {{ batch.folios.length - 20 }} más...
+                                            Ver {{ batch.folios.length - 20 }} más...
                                         </button>
                                         <button 
                                             v-if="batch.folios.length > 20 && showAllFolios[batch.batch_name]"
                                             @click="showAllFolios[batch.batch_name] = false"
-                                            class="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800 hover:underline"
+                                            class="px-3 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors shadow-sm"
                                         >
                                             Ver menos
                                         </button>
@@ -353,6 +365,14 @@ const props = defineProps({
     summary: {
         type: Object,
         required: true
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
+    },
+    isSuperAdmin: {
+        type: Boolean,
+        default: false
     }
 })
 
@@ -367,6 +387,18 @@ const showAllFolios = reactive({})
 const totalMissingFoliosCount = computed(() => {
     return props.missingFolios.reduce((total, batch) => total + batch.count, 0)
 })
+
+// Check if user is admin or super-admin
+const isAdminOrSuperAdmin = computed(() => {
+    return props.isAdmin || props.isSuperAdmin
+})
+
+// Download gap folios CSV
+const downloadGapFolios = () => {
+    window.location.href = route('organization.results.download-gap-folios', {
+        organization: props.organization.id
+    })
+}
 
 // Filters
 const filters = ref({
