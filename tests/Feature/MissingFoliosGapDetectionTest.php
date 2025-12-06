@@ -44,9 +44,15 @@ class MissingFoliosGapDetectionTest extends TestCase
 
     public function test_detects_gaps_in_uploaded_folios(): void
     {
-        // Create evaluations: 0001-0039, skip 0040-0045, then 0046-0064, skip 0065-0080, then 0081-0100
+        // Create evaluations with gaps:
+        // Range 1: folios 1-39 (39 folios)
+        // GAP: folios 40-45 (6 folios missing)
+        // Range 2: folios 46-64 (19 folios)
+        // GAP: folios 65-80 (16 folios missing)
+        // Range 3: folios 81-100 (20 folios)
+        // Total: 78 uploaded, 22 missing in gaps
         
-        // First range: 0001-0039
+        // First range: 1-39
         for ($i = 1; $i <= 39; $i++) {
             PaperEvaluation::factory()->create([
                 'organization_id' => $this->organization->id,
@@ -57,9 +63,9 @@ class MissingFoliosGapDetectionTest extends TestCase
             ]);
         }
 
-        // Skip 0040-0045 (6 folios)
+        // Skip 40-45 (6 folios)
 
-        // Second range: 0046-0064
+        // Second range: 46-64
         for ($i = 46; $i <= 64; $i++) {
             PaperEvaluation::factory()->create([
                 'organization_id' => $this->organization->id,
@@ -70,9 +76,9 @@ class MissingFoliosGapDetectionTest extends TestCase
             ]);
         }
 
-        // Skip 0065-0080 (16 folios)
+        // Skip 65-80 (16 folios)
 
-        // Third range: 0081-0100
+        // Third range: 81-100
         for ($i = 81; $i <= 100; $i++) {
             PaperEvaluation::factory()->create([
                 'organization_id' => $this->organization->id,
