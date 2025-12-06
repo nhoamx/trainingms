@@ -611,10 +611,13 @@ class ResultsController extends Controller
             $minFolio = min($existingFolios);
             $maxFolio = max($existingFolios);
             
+            // Convert to associative array for O(1) lookups
+            $existingFoliosLookup = array_flip($existingFolios);
+            
             // Find gaps in the sequence between min and max
             $gaps = [];
             for ($i = $minFolio + 1; $i < $maxFolio; $i++) {
-                if (!in_array($i, $existingFolios)) {
+                if (!isset($existingFoliosLookup[$i])) {
                     $gaps[] = $i;
                 }
             }
