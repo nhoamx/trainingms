@@ -13,6 +13,7 @@ use App\Models\FolioBatch;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\Question;
+use App\Models\User;
 use App\Services\LikertScoreService;
 use App\Services\PaperEvaluationScoreService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -1276,6 +1277,37 @@ class ResultsController extends Controller
     private function isAdminOrSuperAdmin(?User $user): bool
     {
         return $user && $user->hasRole(['admin', 'super-admin']);
+    }
+
+    /**
+     * Delete (cancel) a paper evaluation permanently
+     * This removes the database record and associated image file
+     */
+    public function destroyEvaluation(Organization $organization, PaperEvaluation $evaluation): \Illuminate\Http\RedirectResponse
+    {
+        // Verify the evaluation belongs to this organization
+        if ($evaluation->organization_id !== $organization->id) {
+            return back()->with('error', 'La evaluación no pertenece a esta organización.');
+        }
+
+        $folio = $evaluation->folio;
+
+        // Delete associated image file if exists
+        $imagePath = storage_path("app/public/folios/{$folio}.png");
+        if (file_exists($imagePath)) {
+            unlink($imagePath);
+        }
+
+        // Also delete backup image if exists
+        $backupPath = storage_path("app/public/folios/{$folio}_v1.png");
+        if (file_exists($backupPath)) {
+            unlink($backupPath);
+        }
+
+        // Force delete the evaluation (cascade will handle demographic_data and custom_fields)
+        $evaluation->forceDelete();
+
+        return back()->with('success', "Evaluación {$folio} eliminada correctamente.");
     }
 
     /**

@@ -301,16 +301,30 @@
                                         <span class="text-sm font-semibold text-gray-900">{{ group.total_score }}</span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                        <Link
-                                            :href="getDetailRoute(group)"
-                                            class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                            Ver Detalles
-                                        </Link>
+                                        <div class="flex items-center gap-3">
+                                            <Link
+                                                :href="getDetailRoute(group)"
+                                                class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                                Ver Detalles
+                                            </Link>
+                                            <!-- Cancel Evaluation Button (Admin/Super Admin only) -->
+                                            <button
+                                                v-if="isAdminOrSuperAdmin"
+                                                @click="openCancelModal(group)"
+                                                class="text-red-600 hover:text-red-800 font-medium inline-flex items-center"
+                                                title="Cancelar evaluación"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                                Cancelar
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -340,11 +354,98 @@
             @close="showBulkUpdateModal = false"
             @success="handleBulkUpdateSuccess"
         />
+
+        <!-- Cancel Evaluation Modal -->
+        <div v-if="showCancelModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <!-- Background overlay -->
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="closeCancelModal"></div>
+
+                <!-- Modal panel -->
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                    Cancelar Evaluación
+                                </h3>
+                                <div class="mt-2">
+                                    <p class="text-sm text-gray-500">
+                                        Esta acción eliminará permanentemente la evaluación seleccionada, incluyendo todos los datos demográficos y la imagen asociada.
+                                    </p>
+                                    <p class="text-sm text-red-600 font-medium mt-2">
+                                        ⚠️ Esta acción no se puede deshacer.
+                                    </p>
+                                </div>
+
+                                <!-- Evaluation Selection -->
+                                <div class="mt-4" v-if="cancellingGroup">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Selecciona la evaluación a cancelar:
+                                    </label>
+                                    <div class="space-y-2">
+                                        <label 
+                                            v-for="evaluation in cancellingGroup.evaluations" 
+                                            :key="evaluation.id"
+                                            class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                                            :class="selectedEvaluationToCancel === evaluation.id ? 'border-red-500 bg-red-50' : 'border-gray-200'"
+                                        >
+                                            <input 
+                                                type="radio" 
+                                                :value="evaluation.id" 
+                                                v-model="selectedEvaluationToCancel"
+                                                class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300"
+                                            />
+                                            <div class="ml-3">
+                                                <span class="text-sm font-medium text-gray-900">{{ evaluation.folio }}</span>
+                                                <span 
+                                                    class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full"
+                                                    :class="getBadgeClass(evaluation.evaluation_type)"
+                                                >
+                                                    {{ formatEvaluationType(evaluation.evaluation_type) }}
+                                                </span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-3">
+                        <button 
+                            type="button" 
+                            @click="confirmCancelEvaluation"
+                            :disabled="!selectedEvaluationToCancel || isDeleting"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <svg v-if="isDeleting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            {{ isDeleting ? 'Eliminando...' : 'Eliminar Evaluación' }}
+                        </button>
+                        <button 
+                            type="button" 
+                            @click="closeCancelModal"
+                            :disabled="isDeleting"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </Dashboard>
 </template>
 
 <script setup>
-import { Head, Link } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import Dashboard from "../../Layouts/Dashboard.vue"
 import BulkUpdateModal from "../../Components/BulkUpdateModal.vue"
 import { ref, computed, reactive } from 'vue'
@@ -379,6 +480,12 @@ const props = defineProps({
 // Modal state
 const showBulkUpdateModal = ref(false)
 
+// Cancel evaluation modal state
+const showCancelModal = ref(false)
+const cancellingGroup = ref(null)
+const selectedEvaluationToCancel = ref(null)
+const isDeleting = ref(false)
+
 // Missing folios accordion state
 const showMissingFolios = ref(false)
 const showAllFolios = reactive({})
@@ -392,6 +499,41 @@ const totalMissingFoliosCount = computed(() => {
 const isAdminOrSuperAdmin = computed(() => {
     return props.isAdmin || props.isSuperAdmin
 })
+
+// Open cancel modal
+const openCancelModal = (group) => {
+    cancellingGroup.value = group
+    selectedEvaluationToCancel.value = null
+    showCancelModal.value = true
+}
+
+// Close cancel modal
+const closeCancelModal = () => {
+    showCancelModal.value = false
+    cancellingGroup.value = null
+    selectedEvaluationToCancel.value = null
+}
+
+// Confirm cancel evaluation
+const confirmCancelEvaluation = () => {
+    if (!selectedEvaluationToCancel.value) return
+    
+    isDeleting.value = true
+    
+    router.delete(route('organization.evaluation.destroy', {
+        organization: props.organization.id,
+        evaluation: selectedEvaluationToCancel.value
+    }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            closeCancelModal()
+            isDeleting.value = false
+        },
+        onError: () => {
+            isDeleting.value = false
+        }
+    })
+}
 
 // Download gap folios CSV
 const downloadGapFolios = () => {

@@ -217,6 +217,10 @@ Route::middleware(['auth'])->group(function () {
     // Rutas para Admin y Super Admin
     Route::middleware(['role:admin|super-admin'])->group(function () {
 
+        // Delete (cancel) paper evaluation
+        Route::delete('/organizacion/{organization}/evaluacion/{evaluation}', [ResultsController::class, 'destroyEvaluation'])
+            ->name('organization.evaluation.destroy');
+
         Route::post('/evaluaciones/upload-files', [DashboardController::class, 'uploadFiles'])->name('evaluations.uploadFiles');
 
         Route::get('/reporte', [DashboardController::class, 'reportByOrganization'])
