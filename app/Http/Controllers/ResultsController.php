@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\EvaluationTemplateExport;
+use App\Exports\GapFoliosExport;
 use App\Jobs\ProcessBulkEvaluationImport;
 use App\Models\BulkImportJob;
 use App\Models\Category;
@@ -639,38 +640,9 @@ class ResultsController extends Controller
         // Calculate missing folios using helper method
         $missingFolios = $this->calculateMissingFolios($organization);
 
-        // Generate CSV
-        $filename = 'folios_faltantes_'.$organization->name.'_'.now()->format('Y-m-d').'.csv';
+        $filename = 'folios_faltantes_'.$organization->name.'_'.now()->format('Y-m-d').'.xlsx';
 
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-        ];
-
-        $callback = function () use ($missingFolios) {
-            $file = fopen('php://output', 'w');
-
-            // Add BOM for Excel UTF-8 compatibility
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            // Header row
-            fputcsv($file, ['Lote', 'Tipo', 'Folio Faltante']);
-
-            // Data rows
-            foreach ($missingFolios as $batch) {
-                foreach ($batch['folios'] as $folio) {
-                    fputcsv($file, [
-                        $batch['batch_name'],
-                        $batch['batch_type'] === 'presencial' ? 'Presencial' : 'En línea',
-                        $folio,
-                    ]);
-                }
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return Excel::download(new GapFoliosExport($missingFolios), $filename);
     }
 
     public function showDetailedResults(Organization $organization, string $personalFolio)
