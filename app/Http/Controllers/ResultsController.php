@@ -140,7 +140,7 @@ class ResultsController extends Controller
                 ];
             }
 
-            // Build evaluation data (without raw answers to save memory)
+            // Build evaluation data (include answers for heatmap display)
             $evaluationsData[] = [
                 'id' => $evaluation->id,
                 'folio' => $evaluation->folio,
@@ -155,9 +155,10 @@ class ResultsController extends Controller
                 ],
                 'customFields' => $evaluationCustomFields,
                 'scores' => $scores,
+                'answers' => $questions,
             ];
 
-            // Store answers separately for dimension calculations (not sent to frontend)
+            // Store answers separately for dimension calculations
             $answersForCalculation[$evaluation->id] = $questions;
         }
 
@@ -628,9 +629,9 @@ class ResultsController extends Controller
         $this->authorize('view-organization-results', $organization);
 
         $user = $request->user();
-        
+
         // Only admin and super-admin can download gap folios
-        if (!$this->isAdminOrSuperAdmin($user)) {
+        if (! $this->isAdminOrSuperAdmin($user)) {
             abort(403, 'Solo administradores pueden descargar la lista de folios faltantes');
         }
 
@@ -638,33 +639,33 @@ class ResultsController extends Controller
         $missingFolios = $this->calculateMissingFolios($organization);
 
         // Generate CSV
-        $filename = 'folios_faltantes_' . $organization->name . '_' . now()->format('Y-m-d') . '.csv';
-        
+        $filename = 'folios_faltantes_'.$organization->name.'_'.now()->format('Y-m-d').'.csv';
+
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
-        $callback = function() use ($missingFolios) {
+        $callback = function () use ($missingFolios) {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for Excel UTF-8 compatibility
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+
             // Header row
             fputcsv($file, ['Lote', 'Tipo', 'Folio Faltante']);
-            
+
             // Data rows
             foreach ($missingFolios as $batch) {
                 foreach ($batch['folios'] as $folio) {
                     fputcsv($file, [
                         $batch['batch_name'],
                         $batch['batch_type'] === 'presencial' ? 'Presencial' : 'En línea',
-                        $folio
+                        $folio,
                     ]);
                 }
             }
-            
+
             fclose($file);
         };
 
@@ -1290,29 +1291,29 @@ class ResultsController extends Controller
             ->groupBy('personal_folio');
 
         $existingFolios = $evaluationGroups->keys()->map(fn ($f) => (int) $f)->unique()->sort()->values()->toArray();
-        
+
         $missingFolios = [];
-        
+
         // Only calculate gaps if there are at least 2 evaluations
         if (count($existingFolios) >= 2) {
             $minFolio = min($existingFolios);
             $maxFolio = max($existingFolios);
-            
+
             // Convert to associative array for O(1) lookups
             $existingFoliosLookup = array_flip($existingFolios);
-            
+
             // Find gaps in the sequence between min and max
             $gaps = [];
             for ($i = $minFolio + 1; $i < $maxFolio; $i++) {
-                if (!isset($existingFoliosLookup[$i])) {
+                if (! isset($existingFoliosLookup[$i])) {
                     $gaps[] = $i;
                 }
             }
-            
+
             // Group gaps by folio batch to maintain batch context
             $folioBatches = FolioBatch::where('organization_id', $organization->id)->get();
-            
-            if (!empty($gaps)) {
+
+            if (! empty($gaps)) {
                 // Pre-build batch lookup structure for O(batches + gaps) complexity
                 $batchLookup = [];
                 foreach ($folioBatches as $batch) {
@@ -1324,16 +1325,16 @@ class ResultsController extends Controller
                         'end' => $batch->end_number,
                     ];
                 }
-                
+
                 $batchMap = [];
                 $ungroupedGaps = [];
-                
+
                 foreach ($gaps as $gap) {
                     $assignedToBatch = false;
-                    
+
                     foreach ($batchLookup as $batch) {
                         if ($gap >= $batch['start'] && $gap <= $batch['end']) {
-                            if (!isset($batchMap[$batch['id']])) {
+                            if (! isset($batchMap[$batch['id']])) {
                                 $batchMap[$batch['id']] = [
                                     'batch_name' => $batch['name'],
                                     'batch_type' => $batch['type'],
@@ -1345,12 +1346,12 @@ class ResultsController extends Controller
                             break;
                         }
                     }
-                    
-                    if (!$assignedToBatch) {
+
+                    if (! $assignedToBatch) {
                         $ungroupedGaps[] = str_pad($gap, 4, '0', STR_PAD_LEFT);
                     }
                 }
-                
+
                 // Convert batch map to array with counts
                 foreach ($batchMap as $batchData) {
                     $missingFolios[] = [
@@ -1360,9 +1361,9 @@ class ResultsController extends Controller
                         'count' => count($batchData['folios']),
                     ];
                 }
-                
+
                 // Add ungrouped gaps if any
-                if (!empty($ungroupedGaps)) {
+                if (! empty($ungroupedGaps)) {
                     $missingFolios[] = [
                         'batch_name' => 'Sin lote asignado',
                         'batch_type' => 'presencial',
