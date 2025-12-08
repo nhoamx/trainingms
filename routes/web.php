@@ -208,6 +208,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('organization.results.bulk-update')
         ->middleware('can:view-organization-results,organization');
 
+    // Bulk comments import routes
+    Route::get('/organizacion/{organization}/plantilla-comentarios', [ResultsController::class, 'bulkCommentsTemplate'])
+        ->name('organization.results.comments-template')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::post('/organizacion/{organization}/comentarios-masivos', [ResultsController::class, 'bulkCommentsUpdate'])
+        ->name('organization.results.bulk-comments')
+        ->middleware('can:view-organization-results,organization');
+
     Route::get('/bulk-import/{bulkImportJob}/status', [ResultsController::class, 'bulkImportStatus'])
         ->name('bulk-import.status');
 

@@ -22,6 +22,15 @@
                                     </svg>
                                     Actualizar Masivamente
                                 </button>
+                                <button
+                                    @click="showBulkCommentsModal = true"
+                                    class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium gap-2"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                    </svg>
+                                    Cargar Comentarios
+                                </button>
                                 <div class="text-sm text-gray-600 bg-gray-100 px-4 py-2 rounded-full">
                                     {{ evaluationGroups.length }} folios
                                 </div>
@@ -355,6 +364,14 @@
             @success="handleBulkUpdateSuccess"
         />
 
+        <!-- Bulk Comments Modal -->
+        <BulkCommentsModal
+            :show="showBulkCommentsModal"
+            :organization-id="organization.id"
+            @close="showBulkCommentsModal = false"
+            @success="handleBulkCommentsSuccess"
+        />
+
         <!-- Cancel Evaluation Modal -->
         <div v-if="showCancelModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -448,6 +465,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import Dashboard from "../../Layouts/Dashboard.vue"
 import BulkUpdateModal from "../../Components/BulkUpdateModal.vue"
+import BulkCommentsModal from "../../Components/BulkCommentsModal.vue"
 import { ref, computed, reactive } from 'vue'
 
 const props = defineProps({
@@ -479,6 +497,7 @@ const props = defineProps({
 
 // Modal state
 const showBulkUpdateModal = ref(false)
+const showBulkCommentsModal = ref(false)
 
 // Cancel evaluation modal state
 const showCancelModal = ref(false)
@@ -676,6 +695,11 @@ const getSourceBadgeClass = (source) => {
 }
 
 const handleBulkUpdateSuccess = () => {
+    // Reload the page to show updated data
+    window.location.reload()
+}
+
+const handleBulkCommentsSuccess = () => {
     // Reload the page to show updated data
     window.location.reload()
 }

@@ -90,6 +90,14 @@ class PaperEvaluation extends Model
     }
 
     /**
+     * Get comments for this evaluation
+     */
+    public function comments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(EvaluationComment::class);
+    }
+
+    /**
      * Get a specific custom field value by key
      */
     public function getCustomField(string $fieldKey): ?string

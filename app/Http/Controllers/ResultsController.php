@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\EvaluationCommentsTemplateExport;
 use App\Exports\EvaluationTemplateExport;
 use App\Exports\GapFoliosExport;
+use App\Jobs\ProcessBulkCommentsImport;
 use App\Jobs\ProcessBulkEvaluationImport;
 use App\Models\BulkImportJob;
 use App\Models\Category;
@@ -37,10 +39,11 @@ class ResultsController extends Controller
      */
     public function showLikertReport(Organization $organization, Request $request)
     {
-        // Get all completed Likert evaluations for this organization
+        // Get all completed Likert evaluations for this organization with comments
         $likertEvaluations = PaperEvaluation::where('organization_id', $organization->id)
             ->where('evaluation_type', 'likert')
             ->where('processing_status', 'completed')
+            ->with('comments')
             ->get();
 
         if ($likertEvaluations->isEmpty()) {
@@ -158,6 +161,12 @@ class ResultsController extends Controller
                 'customFields' => $evaluationCustomFields,
                 'scores' => $scores,
                 'answers' => $questions,
+                'comments' => $evaluation->comments->map(function ($comment) {
+                    return [
+                        'factor' => $comment->factor,
+                        'comment' => $comment->comment,
+                    ];
+                })->all(),
             ];
 
             // Store answers separately for dimension calculations
@@ -247,6 +256,18 @@ class ResultsController extends Controller
 
         $user = $request->user();
 
+        // Define available factors for comments
+        $factors = [
+            'Condiciones en el ambiente de trabajo',
+            'Carga de trabajo',
+            'Falta de control sobre el trabajo',
+            'Jornada de trabajo',
+            'Interferencia en la relación trabajo-familia',
+            'Liderazgo',
+            'Relaciones en el trabajo',
+            'Violencia',
+        ];
+
         return Inertia::render('Reports/LikertOrganizationReport', [
             'organizationId' => $organization->id,
             'organizationName' => $organization->name,
@@ -265,6 +286,7 @@ class ResultsController extends Controller
             'dimensions' => $dimensionSummaries,
             'climaLaboralDistribution' => $climaLaboralDistribution,
             'totalPeople' => count($evaluationsData),
+            'factors' => $factors,
             'isAdmin' => $user && $user->hasRole('admin'),
             'isSuperAdmin' => $user && $user->hasRole('super-admin'),
         ]);
@@ -1208,6 +1230,80 @@ class ResultsController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Bulk update dispatch exception', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()->with([
+                'success' => false,
+                'message' => 'Error al iniciar el procesamiento: '.$e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Download template for bulk comments import
+     */
+    public function bulkCommentsTemplate(Organization $organization)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        $filename = 'plantilla_comentarios_'.$organization->name.'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(
+            new EvaluationCommentsTemplateExport($organization),
+            $filename
+        );
+    }
+
+    /**
+     * Process bulk comments import file
+     */
+    public function bulkCommentsUpdate(Request $request, Organization $organization)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:10240', // Max 10MB
+        ]);
+
+        $file = $request->file('file');
+
+        Log::info('=== BULK COMMENTS IMPORT REQUEST RECEIVED ===', [
+            'organization_id' => $organization->id,
+            'file_name' => $file->getClientOriginalName(),
+            'file_size' => $file->getSize(),
+        ]);
+
+        try {
+            // Store file temporarily
+            $filePath = $file->store('bulk-imports', 'local');
+
+            // Create bulk import job record
+            $bulkImportJob = BulkImportJob::create([
+                'organization_id' => $organization->id,
+                'user_id' => $request->user()->id,
+                'file_name' => $file->getClientOriginalName(),
+                'file_path' => $filePath,
+                'source' => null, // Comments are only for Likert evaluations
+                'status' => 'pending',
+            ]);
+
+            // Dispatch job to queue
+            ProcessBulkCommentsImport::dispatch($bulkImportJob);
+
+            Log::info('Bulk comments import job dispatched', [
+                'bulk_import_job_id' => $bulkImportJob->id,
+                'file_path' => $filePath,
+            ]);
+
+            return back()->with([
+                'success' => true,
+                'message' => 'El archivo de comentarios se está procesando en segundo plano. Recibirás una notificación cuando termine.',
+                'bulk_import_job_id' => $bulkImportJob->id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Bulk comments import dispatch exception', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
