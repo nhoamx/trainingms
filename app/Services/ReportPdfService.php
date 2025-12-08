@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Organization;
 use App\Models\PaperEvaluation;
 
 class ReportPdfService
@@ -10,7 +11,8 @@ class ReportPdfService
         protected PaperEvaluationReportService $paperReportService,
         protected PaperEvaluationScoreService $scoreService,
         protected ExecutiveReportService $executiveReportService,
-        protected LikertScoreService $likertScoreService
+        protected LikertScoreService $likertScoreService,
+        protected OrganizationReportCacheService $cacheService
     ) {}
 
     /**
@@ -771,33 +773,50 @@ class ReportPdfService
      */
     public function getLikertReportWordData(string $organizationId): array
     {
-        // Get all completed Likert evaluations for this organization
-        $likertEvaluations = PaperEvaluation::where('organization_id', $organizationId)
+        // Use cached data from OrganizationReportCacheService (same cache as web report)
+        // This significantly improves Word report generation performance
+        $organization = Organization::find($organizationId);
+        
+        if (!$organization) {
+            return $this->getEmptyLikertReportData();
+        }
+
+        // Get cached report data (or compute and cache it)
+        $cachedData = $this->cacheService->rememberLikertReport($organizationId, function () use ($organization) {
+            return $this->computeLikertReportDataForPdf($organization);
+        });
+
+        // If no evaluations, return empty structure
+        if (empty($cachedData['evaluations'])) {
+            return $this->getEmptyLikertReportData();
+        }
+
+        // Add puestosMap and areasMap to cached data for Word report compatibility
+        $config = config('likert-value');
+        $cachedData['puestosMap'] = $config['puestos'];
+        $cachedData['areasMap'] = $config['areas'];
+
+        return $cachedData;
+    }
+
+    /**
+     * Compute Likert report data for PDF/Word reports (optimized with eager loading)
+     * This method is used when cache is empty
+     */
+    private function computeLikertReportDataForPdf(Organization $organization): array
+    {
+        // Optimized query: select only needed columns and eager load relationships efficiently
+        $likertEvaluations = PaperEvaluation::where('organization_id', $organization->id)
             ->where('evaluation_type', 'likert')
             ->where('processing_status', 'completed')
+            ->select(['id', 'folio', 'personal_folio', 'evaluee_name', 'likert_answers', 'organization_id'])
+            ->with([
+                'demographicData:id,paper_evaluation_id,gender,work_schedule,contract_type,position,department',
+            ])
             ->get();
 
         if ($likertEvaluations->isEmpty()) {
-            return [
-                'evaluations' => [],
-                'demographics' => [
-                    'generos' => [],
-                    'tipos_contrato' => [],
-                    'puestos' => [],
-                    'areas' => [],
-                    'turnos' => [],
-                ],
-                'dimensions' => [],
-                'climaLaboralDistribution' => [
-                    'Totalmente de Acuerdo' => 0,
-                    'De Acuerdo' => 0,
-                    'Desacuerdo' => 0,
-                    'Totalmente Desacuerdo' => 0,
-                ],
-                'totalPeople' => 0,
-                'puestosMap' => [],
-                'areasMap' => [],
-            ];
+            return $this->getEmptyLikertReportData();
         }
 
         // Load configuration
@@ -818,8 +837,8 @@ class ReportPdfService
         foreach ($likertEvaluations as $evaluation) {
             $questions = $evaluation->likert_answers['questions'] ?? [];
 
-            // Get demographic data from DemographicData model (with fallback to likert_answers)
-            $demographics = $this->likertScoreService->getDemographicData($evaluation);
+            // Get demographic data using optimized method with eager-loaded data
+            $demographics = $this->likertScoreService->getDemographicDataFromLoaded($evaluation);
 
             // Collect demographic values
             if (isset($demographics['genero'])) {
@@ -838,8 +857,8 @@ class ReportPdfService
                 $turnos[$demographics['turno']] = true;
             }
 
-            // Compute scores
-            $scores = $this->likertScoreService->calculateLikertScores($evaluation);
+            // Compute scores using optimized method
+            $scores = $this->likertScoreService->calculateLikertScoresFromData($questions, $config);
 
             // Build evaluation data
             $evaluationsData[] = [
@@ -858,6 +877,9 @@ class ReportPdfService
                 'answers' => $questions,
             ];
         }
+
+        // Extract unique factors from evaluations (for consistency with web report)
+        $factors = [];
 
         // Calculate distribution of people by Clima Laboral level
         $climaLaboralDistribution = [
@@ -944,8 +966,37 @@ class ReportPdfService
             'dimensions' => $dimensionSummaries,
             'climaLaboralDistribution' => $climaLaboralDistribution,
             'totalPeople' => count($evaluationsData),
-            'puestosMap' => $config['puestos'],
-            'areasMap' => $config['areas'],
+            'factors' => $factors,
+        ];
+    }
+
+    /**
+     * Get empty Likert report data structure
+     */
+    private function getEmptyLikertReportData(): array
+    {
+        $config = config('likert-value');
+        
+        return [
+            'evaluations' => [],
+            'demographics' => [
+                'generos' => [],
+                'tipos_contrato' => [],
+                'puestos' => [],
+                'areas' => [],
+                'turnos' => [],
+            ],
+            'dimensions' => [],
+            'climaLaboralDistribution' => [
+                'Totalmente de Acuerdo' => 0,
+                'De Acuerdo' => 0,
+                'Desacuerdo' => 0,
+                'Totalmente Desacuerdo' => 0,
+            ],
+            'totalPeople' => 0,
+            'factors' => [],
+            'puestosMap' => $config['puestos'] ?? [],
+            'areasMap' => $config['areas'] ?? [],
         ];
     }
 

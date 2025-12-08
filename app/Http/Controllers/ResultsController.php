@@ -2,20 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\EvaluationCommentsTemplateExport;
 use App\Exports\EvaluationTemplateExport;
 use App\Exports\GapFoliosExport;
+use App\Jobs\ProcessBulkCommentsImport;
 use App\Jobs\ProcessBulkEvaluationImport;
 use App\Models\BulkImportJob;
 use App\Models\Category;
 use App\Models\DemographicData;
 use App\Models\Evaluation;
-use App\Models\EvaluationCustomField;
 use App\Models\FolioBatch;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\Question;
 use App\Models\User;
 use App\Services\LikertScoreService;
+use App\Services\OrganizationReportCacheService;
 use App\Services\PaperEvaluationScoreService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -29,7 +31,8 @@ class ResultsController extends Controller
 
     public function __construct(
         protected PaperEvaluationScoreService $scoreService,
-        protected LikertScoreService $likertScoreService
+        protected LikertScoreService $likertScoreService,
+        protected OrganizationReportCacheService $cacheService
     ) {}
 
     /**
@@ -37,15 +40,15 @@ class ResultsController extends Controller
      */
     public function showLikertReport(Organization $organization, Request $request)
     {
-        // Get all completed Likert evaluations for this organization
-        $likertEvaluations = PaperEvaluation::where('organization_id', $organization->id)
-            ->where('evaluation_type', 'likert')
-            ->where('processing_status', 'completed')
-            ->get();
+        $user = $request->user();
 
-        if ($likertEvaluations->isEmpty()) {
-            $user = $request->user();
+        // Get cached report data or compute it
+        $reportData = $this->cacheService->rememberLikertReport($organization->id, function () use ($organization) {
+            return $this->computeLikertReportData($organization);
+        });
 
+        // If no evaluations, return empty report
+        if (empty($reportData['evaluations'])) {
             return Inertia::render('Reports/LikertOrganizationReport', [
                 'organizationId' => $organization->id,
                 'organizationName' => $organization->name,
@@ -61,19 +64,79 @@ class ResultsController extends Controller
                 'customFieldFilters' => [],
                 'dimensions' => [],
                 'totalScore' => null,
+                'factors' => [],
                 'isAdmin' => $user && $user->hasRole('admin'),
                 'isSuperAdmin' => $user && $user->hasRole('super-admin'),
             ]);
         }
 
-        // Get evaluation IDs for efficient custom field query
-        $evaluationIds = $likertEvaluations->pluck('id');
+        // Load configuration for static props
+        $config = config('likert-value');
 
-        // Get custom field filters efficiently with a single query
-        $customFieldValues = EvaluationCustomField::whereIn('paper_evaluation_id', $evaluationIds)
-            ->select('field_key', 'key_label', 'value')
-            ->distinct()
-            ->get()
+        return Inertia::render('Reports/LikertOrganizationReport', [
+            'organizationId' => $organization->id,
+            'organizationName' => $organization->name,
+            'title' => 'Clima Laboral - '.$organization->name,
+            'evaluations' => $reportData['evaluations'],
+            'demographics' => $reportData['demographics'],
+            'customFieldFilters' => $reportData['customFieldFilters'],
+            'puestosMap' => $config['puestos'],
+            'areasMap' => $config['areas'],
+            'dimensions' => $reportData['dimensions'],
+            'climaLaboralDistribution' => $reportData['climaLaboralDistribution'],
+            'totalPeople' => $reportData['totalPeople'],
+            'factors' => $reportData['factors'],
+            'isAdmin' => $user && $user->hasRole('admin'),
+            'isAdmin' => $user && $user->hasRole('admin'),
+            'isSuperAdmin' => $user && $user->hasRole('super-admin'),
+        ]);
+    }
+
+    /**
+     * Compute Likert report data (extracted for caching)
+     *
+     * @return array<string, mixed>
+     */
+    private function computeLikertReportData(Organization $organization): array
+    {
+        // Optimized query: select only needed columns and eager load relationships efficiently
+        $likertEvaluations = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('evaluation_type', 'likert')
+            ->where('processing_status', 'completed')
+            ->select(['id', 'folio', 'personal_folio', 'evaluee_name', 'likert_answers', 'organization_id'])
+            ->with([
+                'comments:id,paper_evaluation_id,factor,comment',
+                'customFields:id,paper_evaluation_id,field_key,key_label,value',
+                'demographicData:id,paper_evaluation_id,gender,work_schedule,contract_type,position,department',
+            ])
+            ->get();
+
+        if ($likertEvaluations->isEmpty()) {
+            return [
+                'evaluations' => [],
+                'demographics' => [
+                    'generos' => [],
+                    'tipos_contrato' => [],
+                    'puestos' => [],
+                    'areas' => [],
+                    'turnos' => [],
+                ],
+                'customFieldFilters' => [],
+                'dimensions' => [],
+                'climaLaboralDistribution' => [
+                    'Totalmente de Acuerdo' => 0,
+                    'De Acuerdo' => 0,
+                    'Desacuerdo' => 0,
+                    'Totalmente Desacuerdo' => 0,
+                ],
+                'totalPeople' => 0,
+                'factors' => [],
+            ];
+        }
+
+        // Get custom field filters from eager loaded data
+        $customFieldValues = $likertEvaluations
+            ->flatMap(fn ($eval) => $eval->customFields)
             ->groupBy('field_key')
             ->map(function ($fields) {
                 return [
@@ -82,11 +145,6 @@ class ResultsController extends Controller
                 ];
             })
             ->all();
-
-        // Get custom fields indexed by evaluation ID for quick lookup
-        $customFieldsByEvaluation = EvaluationCustomField::whereIn('paper_evaluation_id', $evaluationIds)
-            ->get()
-            ->groupBy('paper_evaluation_id');
 
         // Load configuration
         $config = config('likert-value');
@@ -101,7 +159,7 @@ class ResultsController extends Controller
         $areas = [];
         $turnos = [];
 
-        // Store answers separately for dimension calculations (not sent to frontend)
+        // Store answers separately for dimension calculations
         $answersForCalculation = [];
 
         // Process all evaluations
@@ -110,9 +168,10 @@ class ResultsController extends Controller
             $questions = $evaluation->likert_answers['questions'] ?? [];
 
             // Get demographic data from DemographicData model (with fallback to likert_answers)
-            $demographics = $this->likertScoreService->getDemographicData($evaluation);
+            // Now using eager loaded demographicData to avoid N+1 queries
+            $demographics = $this->likertScoreService->getDemographicDataFromLoaded($evaluation);
 
-            // Collect demographic values (already formatted in Spanish from getDemographicData)
+            // Collect demographic values
             if (isset($demographics['genero'])) {
                 $generos[$demographics['genero']] = true;
             }
@@ -129,20 +188,19 @@ class ResultsController extends Controller
                 $turnos[$demographics['turno']] = true;
             }
 
-            // Compute scores
-            $scores = $this->likertScoreService->calculateLikertScores($evaluation);
+            // Compute scores using pre-loaded data
+            $scores = $this->likertScoreService->calculateLikertScoresFromData($questions, $config);
 
-            // Get custom fields as key-value pairs from pre-loaded data
+            // Get custom fields from eager loaded data
             $evaluationCustomFields = [];
-            $evalCustomFields = $customFieldsByEvaluation->get($evaluation->id, collect());
-            foreach ($evalCustomFields as $customField) {
+            foreach ($evaluation->customFields as $customField) {
                 $evaluationCustomFields[$customField->field_key] = [
                     'label' => $customField->key_label,
                     'value' => $customField->value,
                 ];
             }
 
-            // Build evaluation data (include answers for heatmap display)
+            // Build evaluation data
             $evaluationsData[] = [
                 'id' => $evaluation->id,
                 'folio' => $evaluation->folio,
@@ -158,11 +216,26 @@ class ResultsController extends Controller
                 'customFields' => $evaluationCustomFields,
                 'scores' => $scores,
                 'answers' => $questions,
+                'comments' => $evaluation->comments->map(function ($comment) {
+                    return [
+                        'factor' => $comment->factor,
+                        'comment' => $comment->comment,
+                    ];
+                })->all(),
             ];
 
-            // Store answers separately for dimension calculations
             $answersForCalculation[$evaluation->id] = $questions;
         }
+
+        // Extract unique factors from comments (dynamic, not hardcoded)
+        $factors = $likertEvaluations
+            ->flatMap(fn ($eval) => $eval->comments)
+            ->pluck('factor')
+            ->unique()
+            ->filter()
+            ->sort()
+            ->values()
+            ->all();
 
         // Calculate distribution of people by Clima Laboral level
         $climaLaboralDistribution = [
@@ -173,21 +246,19 @@ class ResultsController extends Controller
         ];
 
         foreach ($evaluationsData as $evalData) {
-            $totalScore = $evalData['scores']['total_score'];
             $interpretation = $evalData['scores']['interpretation'];
             if ($interpretation) {
                 $climaLaboralDistribution[$interpretation] = ($climaLaboralDistribution[$interpretation] ?? 0) + 1;
             }
         }
 
-        // Build dimension summaries (count people by level for each dimension)
+        // Build dimension summaries
         $dimensionSummaries = [];
         foreach ($niveles as $dimensionName => $dimensionConfig) {
             $questionNumbers = $dimensionConfig['preguntas'];
             $questionCount = count($questionNumbers);
             $questionScores = [];
 
-            // Distribution of people by level for this dimension
             $dimensionDistribution = [
                 'Totalmente de Acuerdo' => 0,
                 'De Acuerdo' => 0,
@@ -195,7 +266,6 @@ class ResultsController extends Controller
                 'Totalmente Desacuerdo' => 0,
             ];
 
-            // Calculate score for each person in this dimension
             foreach ($evaluationsData as $evalData) {
                 $personScore = 0;
                 $evalAnswers = $answersForCalculation[$evalData['id']] ?? [];
@@ -206,14 +276,12 @@ class ResultsController extends Controller
                     }
                 }
 
-                // Get interpretation for this person's dimension score
                 $interpretation = $this->getInterpretation($personScore, $config['valorNiveles'][$dimensionName]);
                 if ($interpretation) {
                     $dimensionDistribution[$interpretation] = ($dimensionDistribution[$interpretation] ?? 0) + 1;
                 }
             }
 
-            // Calculate average scores per question for display
             foreach ($questionNumbers as $qNum) {
                 $qScore = 0;
                 $qCount = 0;
@@ -240,17 +308,7 @@ class ResultsController extends Controller
             ];
         }
 
-        // Free memory from answers data before sending response
-        unset($answersForCalculation);
-        unset($likertEvaluations);
-        unset($customFieldsByEvaluation);
-
-        $user = $request->user();
-
-        return Inertia::render('Reports/LikertOrganizationReport', [
-            'organizationId' => $organization->id,
-            'organizationName' => $organization->name,
-            'title' => 'Clima Laboral - '.$organization->name,
+        return [
             'evaluations' => $evaluationsData,
             'demographics' => [
                 'generos' => array_keys($generos),
@@ -260,14 +318,11 @@ class ResultsController extends Controller
                 'turnos' => array_keys($turnos),
             ],
             'customFieldFilters' => $customFieldValues,
-            'puestosMap' => $config['puestos'],
-            'areasMap' => $config['areas'],
             'dimensions' => $dimensionSummaries,
             'climaLaboralDistribution' => $climaLaboralDistribution,
             'totalPeople' => count($evaluationsData),
-            'isAdmin' => $user && $user->hasRole('admin'),
-            'isSuperAdmin' => $user && $user->hasRole('super-admin'),
-        ]);
+            'factors' => $factors,
+        ];
     }
 
     /**
@@ -352,21 +407,48 @@ class ResultsController extends Controller
     {
         $this->authorize('view-organization-results', $organization);
 
-        // Group paper evaluations by personal_folio (include both paper and online sources)
+        // Get cached list results data or compute it
+        $cachedData = $this->cacheService->rememberListResults($organization->id, function () use ($organization) {
+            return $this->computeListResultsData($organization);
+        });
+
+        // Get cached missing folios or compute it
+        $missingFolios = $this->cacheService->rememberMissingFolios($organization->id, function () use ($organization) {
+            return $this->calculateMissingFolios($organization);
+        });
+
+        $user = $request->user();
+
+        return Inertia::render('Results/List', [
+            'organization' => $organization->only('id', 'name'),
+            'evaluationGroups' => $cachedData['evaluationGroups'],
+            'missingFolios' => $missingFolios,
+            'summary' => $cachedData['summary'],
+            'isAdmin' => $user && $user->hasRole('admin'),
+            'isSuperAdmin' => $user && $user->hasRole('super-admin'),
+        ]);
+    }
+
+    /**
+     * Compute list results data (extracted for caching)
+     *
+     * @return array<string, mixed>
+     */
+    private function computeListResultsData(Organization $organization): array
+    {
         $evaluationGroups = PaperEvaluation::where('organization_id', $organization->id)
             ->whereIn('source', ['paper', 'online'])
             ->where('processing_status', 'completed')
+            ->with('demographicData')
             ->orderBy('personal_folio')
             ->orderBy('created_at', 'desc')
             ->get()
             ->groupBy('personal_folio')
             ->map(function ($evaluations, $personalFolio) {
                 $evaluationTypes = $evaluations->pluck('evaluation_type')->unique()->values();
-                $source = $evaluations->first()->source; // Get source (paper or online)
+                $source = $evaluations->first()->source;
 
-                // Get the Referencia III evaluation for score and evaluee_name
                 $referenciaIII = $evaluations->firstWhere('evaluation_type', 'referencia_iii');
-                // Get the Likert evaluation for score if Ref III doesn't exist
                 $likert = $evaluations->firstWhere('evaluation_type', 'likert');
 
                 $totalScore = 0;
@@ -377,181 +459,21 @@ class ResultsController extends Controller
                     $totalScore = $scores['total_score'];
                     $evalueeNameFromRef3 = $referenciaIII->evaluee_name;
                 } elseif ($likert) {
-                    // Calculate Likert score if no Ref III
                     $likertScores = $this->likertScoreService->calculateLikertScores($likert);
                     $totalScore = $likertScores['total_score'];
                     $evalueeNameFromRef3 = $likert->evaluee_name;
                 }
 
-                // Check for missing evaluations (only III and V)
                 $hasReferenciaIII = $evaluations->contains('evaluation_type', 'referencia_iii');
                 $hasReferenciaV = $evaluations->contains('evaluation_type', 'referencia_v');
                 $hasLikert = $evaluations->contains('evaluation_type', 'likert');
 
-                // Check for missing or null data
-                $missingData = [];
+                $missingData = $this->checkMissingDataForListResults($evaluations, $hasLikert, $hasReferenciaIII, $hasReferenciaV, $likert);
                 $referenciaV = $evaluations->firstWhere('evaluation_type', 'referencia_v');
-
-                // If it's ONLY Likert evaluation, check Likert-specific data
-                if ($hasLikert && ! $hasReferenciaIII && ! $hasReferenciaV) {
-                    $likertData = $likert->likert_answers ?? [];
-
-                    // Check for unanswered questions (1-23)
-                    $questions = $likertData['questions'] ?? [];
-                    $unansweredQuestions = [];
-                    for ($i = 1; $i <= 23; $i++) {
-                        if (! isset($questions[(string) $i]) || empty($questions[(string) $i])) {
-                            $unansweredQuestions[] = $i;
-                        }
-                    }
-
-                    if (count($unansweredQuestions) > 0) {
-                        if (count($unansweredQuestions) <= 5) {
-                            $missingData[] = 'Preguntas sin responder: '.implode(', ', $unansweredQuestions);
-                        } else {
-                            $missingData[] = count($unansweredQuestions).' preguntas sin responder';
-                        }
-                    }
-
-                    // Check demographic fields, preferring normalized DemographicData model values
-                    $demoModel = $likert->demographicData; // App\Models\DemographicData or null
-
-                    $checks = [
-                        [
-                            'label' => 'Género',
-                            'model' => $demoModel?->gender,
-                            'json' => $likertData['genero'] ?? null,
-                        ],
-                        [
-                            'label' => 'Turno',
-                            'model' => $demoModel?->work_schedule,
-                            'json' => $likertData['turno'] ?? null,
-                        ],
-                        [
-                            'label' => 'Tipo de Contrato',
-                            'model' => $demoModel?->contract_type,
-                            'json' => $likertData['tipo_contrato'] ?? null,
-                        ],
-                        [
-                            'label' => 'Puesto',
-                            'model' => $demoModel?->position,
-                            'json' => $likertData['puestos'] ?? null,
-                        ],
-                        [
-                            'label' => 'Área',
-                            'model' => $demoModel?->department,
-                            'json' => $likertData['areas'] ?? null,
-                        ],
-                    ];
-
-                    foreach ($checks as $c) {
-                        $modelVal = is_string($c['model'] ?? null) ? trim($c['model']) : ($c['model'] ?? null);
-                        $jsonVal = is_string($c['json'] ?? null) ? trim($c['json']) : ($c['json'] ?? null);
-                        if (($modelVal === null || $modelVal === '') && ($jsonVal === null || $jsonVal === '')) {
-                            $missingData[] = $c['label'];
-                        }
-                    }
-                } elseif ($referenciaV) {
-                    // Check Referencia V demographic data
-                    // If demographic_data is null or empty, all fields are missing
-                    if (! $referenciaV->demographic_data || empty($referenciaV->demographic_data)) {
-                        $missingData = ['Todos los datos demográficos'];
-                    } else {
-                        $data = $referenciaV->demographic_data;
-
-                        // Detect if it's paper format (direct fields) or online format (nested datos_laborales)
-                        $isPaperFormat = ! isset($data['datos_laborales']);
-
-                        if ($isPaperFormat) {
-                            // PAPER FORMAT: Check direct fields
-                            $paperFields = [
-                                'edad' => 'Edad',
-                                'sexo' => 'Género',
-                                'estado_civil' => 'Estado Civil',
-                                'ocupacion' => 'Puesto/Ocupación',
-                                'departamento' => 'Departamento',
-                                'tipo_puesto' => 'Tipo de Puesto',
-                                'tipo_contratacion' => 'Tipo de Contratación',
-                                'tipo_jornada' => 'Tipo de Jornada',
-                                'tiempo_puesto_actual' => 'Experiencia en Puesto Actual',
-                            ];
-
-                            foreach ($paperFields as $field => $label) {
-                                $value = $data[$field] ?? null;
-
-                                // Check if empty, null, or array with all null/empty values
-                                if ($value === null || $value === '') {
-                                    $missingData[] = $label;
-                                } elseif (is_array($value)) {
-                                    // For nested arrays like edad: {decenas, unidades} or ocupacion: {fila1, fila2}
-                                    $allEmpty = true;
-                                    foreach ($value as $subValue) {
-                                        if ($subValue !== null && $subValue !== '') {
-                                            $allEmpty = false;
-                                            break;
-                                        }
-                                    }
-                                    if ($allEmpty) {
-                                        $missingData[] = $label;
-                                    }
-                                }
-                            }
-                        } else {
-                            // ONLINE FORMAT: Check basic fields + nested datos_laborales
-                            $basicFields = [
-                                'edad' => 'Edad',
-                                'sexo' => 'Género',
-                                'estado_civil' => 'Estado Civil',
-                                'nivel_estudios' => 'Nivel de Estudios',
-                            ];
-
-                            foreach ($basicFields as $field => $label) {
-                                if (! isset($data[$field]) ||
-                                    $data[$field] === null ||
-                                    $data[$field] === '') {
-                                    $missingData[] = $label;
-                                }
-                            }
-
-                            // Check labor data (nested structure)
-                            if (! isset($data['datos_laborales']) ||
-                                empty($data['datos_laborales'])) {
-                                $missingData[] = 'Todos los Datos Laborales';
-                            } else {
-                                $laborData = $data['datos_laborales'];
-                                $laborFields = [
-                                    'ocupacion_puesto' => 'Puesto',
-                                    'tipo_puesto' => 'Tipo de Puesto',
-                                    'tipo_contratacion' => 'Tipo de Contratación',
-                                    'tipo_jornada' => 'Tipo de Jornada',
-                                    'departamento_seccion_area' => 'Área/Departamento',
-                                ];
-
-                                foreach ($laborFields as $field => $label) {
-                                    if (! isset($laborData[$field]) ||
-                                        $laborData[$field] === null ||
-                                        $laborData[$field] === '') {
-                                        $missingData[] = $label;
-                                    }
-                                }
-
-                                // Check experiencia (nested in experiencia)
-                                if (isset($laborData['experiencia'])) {
-                                    if (empty($laborData['experiencia']['tiempo_puesto_actual'])) {
-                                        $missingData[] = 'Experiencia en Puesto Actual';
-                                    }
-                                } else {
-                                    $missingData[] = 'Experiencia en Puesto Actual';
-                                }
-                            }
-                        }
-                    }
-                }
 
                 return [
                     'personal_folio' => $personalFolio,
                     'evaluation_types' => $evaluationTypes,
-                    // Use evaluee_name from Referencia III (main evaluation) with fallback to first evaluation
                     'evaluee_name' => $evalueeNameFromRef3 ?? $evaluations->first()->evaluee_name,
                     'source' => $source,
                     'total_score' => $totalScore,
@@ -560,9 +482,7 @@ class ResultsController extends Controller
                     'has_referencia_v' => $hasReferenciaV,
                     'has_likert' => $hasLikert,
                     'missing_data' => $missingData,
-                    // Include demographic_data for filtering (gender, age, etc.)
                     'demographic_data' => $referenciaV?->demographic_data,
-                    // Include Likert demographic data from DemographicData model if available
                     'likert_demographic_data' => $likert?->demographicData ? [
                         'gender' => $likert->demographicData->gender,
                         'age' => $likert->demographicData->age,
@@ -584,43 +504,163 @@ class ResultsController extends Controller
                             'folio' => $eval->folio,
                             'evaluation_type' => $eval->evaluation_type,
                         ];
-                    }),
+                    })->values()->all(),
                 ];
             })
-            ->values();
+            ->values()
+            ->all();
 
         // Calculate summary statistics
-        $totalEvaluations = $evaluationGroups->count();
+        $totalEvaluations = count($evaluationGroups);
 
-        // Only count missing Ref III/V for non-Likert-only evaluations
-        $missingReferenciaIII = $evaluationGroups->filter(function ($group) {
+        $missingReferenciaIII = collect($evaluationGroups)->filter(function ($group) {
             return ! $group['has_referencia_iii'] && ! ($group['has_likert'] && ! $group['has_referencia_v']);
         })->count();
 
-        $missingReferenciaV = $evaluationGroups->filter(function ($group) {
+        $missingReferenciaV = collect($evaluationGroups)->filter(function ($group) {
             return ! $group['has_referencia_v'] && ! ($group['has_likert'] && ! $group['has_referencia_iii']);
         })->count();
 
-        $withMissingData = $evaluationGroups->filter(fn ($group) => ! empty($group['missing_data']))->count();
+        $withMissingData = collect($evaluationGroups)->filter(fn ($group) => ! empty($group['missing_data']))->count();
 
-        // Calculate missing folios using helper method
-        $missingFolios = $this->calculateMissingFolios($organization);
-
-        $user = $request->user();
-
-        return Inertia::render('Results/List', [
-            'organization' => $organization->only('id', 'name'),
+        return [
             'evaluationGroups' => $evaluationGroups,
-            'missingFolios' => $missingFolios,
             'summary' => [
                 'total_evaluations' => $totalEvaluations,
                 'missing_referencia_iii' => $missingReferenciaIII,
                 'missing_referencia_v' => $missingReferenciaV,
                 'with_missing_data' => $withMissingData,
             ],
-            'isAdmin' => $user && $user->hasRole('admin'),
-            'isSuperAdmin' => $user && $user->hasRole('super-admin'),
-        ]);
+        ];
+    }
+
+    /**
+     * Check for missing data in evaluation group (extracted for reuse)
+     *
+     * @return array<int, string>
+     */
+    private function checkMissingDataForListResults($evaluations, bool $hasLikert, bool $hasReferenciaIII, bool $hasReferenciaV, $likert): array
+    {
+        $missingData = [];
+        $referenciaV = $evaluations->firstWhere('evaluation_type', 'referencia_v');
+
+        if ($hasLikert && ! $hasReferenciaIII && ! $hasReferenciaV) {
+            $likertData = $likert->likert_answers ?? [];
+            $questions = $likertData['questions'] ?? [];
+            $unansweredQuestions = [];
+
+            for ($i = 1; $i <= 23; $i++) {
+                if (! isset($questions[(string) $i]) || empty($questions[(string) $i])) {
+                    $unansweredQuestions[] = $i;
+                }
+            }
+
+            if (count($unansweredQuestions) > 0) {
+                if (count($unansweredQuestions) <= 5) {
+                    $missingData[] = 'Preguntas sin responder: '.implode(', ', $unansweredQuestions);
+                } else {
+                    $missingData[] = count($unansweredQuestions).' preguntas sin responder';
+                }
+            }
+
+            $demoModel = $likert->demographicData;
+            $checks = [
+                ['label' => 'Género', 'model' => $demoModel?->gender, 'json' => $likertData['genero'] ?? null],
+                ['label' => 'Turno', 'model' => $demoModel?->work_schedule, 'json' => $likertData['turno'] ?? null],
+                ['label' => 'Tipo de Contrato', 'model' => $demoModel?->contract_type, 'json' => $likertData['tipo_contrato'] ?? null],
+                ['label' => 'Puesto', 'model' => $demoModel?->position, 'json' => $likertData['puestos'] ?? null],
+                ['label' => 'Área', 'model' => $demoModel?->department, 'json' => $likertData['areas'] ?? null],
+            ];
+
+            foreach ($checks as $c) {
+                $modelVal = is_string($c['model'] ?? null) ? trim($c['model']) : ($c['model'] ?? null);
+                $jsonVal = is_string($c['json'] ?? null) ? trim($c['json']) : ($c['json'] ?? null);
+                if (($modelVal === null || $modelVal === '') && ($jsonVal === null || $jsonVal === '')) {
+                    $missingData[] = $c['label'];
+                }
+            }
+        } elseif ($referenciaV) {
+            if (! $referenciaV->demographic_data || empty($referenciaV->demographic_data)) {
+                $missingData = ['Todos los datos demográficos'];
+            } else {
+                $data = $referenciaV->demographic_data;
+                $isPaperFormat = ! isset($data['datos_laborales']);
+
+                if ($isPaperFormat) {
+                    $paperFields = [
+                        'edad' => 'Edad',
+                        'sexo' => 'Género',
+                        'estado_civil' => 'Estado Civil',
+                        'ocupacion' => 'Puesto/Ocupación',
+                        'departamento' => 'Departamento',
+                        'tipo_puesto' => 'Tipo de Puesto',
+                        'tipo_contratacion' => 'Tipo de Contratación',
+                        'tipo_jornada' => 'Tipo de Jornada',
+                        'tiempo_puesto_actual' => 'Experiencia en Puesto Actual',
+                    ];
+
+                    foreach ($paperFields as $field => $label) {
+                        $value = $data[$field] ?? null;
+                        if ($value === null || $value === '') {
+                            $missingData[] = $label;
+                        } elseif (is_array($value)) {
+                            $allEmpty = true;
+                            foreach ($value as $subValue) {
+                                if ($subValue !== null && $subValue !== '') {
+                                    $allEmpty = false;
+                                    break;
+                                }
+                            }
+                            if ($allEmpty) {
+                                $missingData[] = $label;
+                            }
+                        }
+                    }
+                } else {
+                    $basicFields = [
+                        'edad' => 'Edad',
+                        'sexo' => 'Género',
+                        'estado_civil' => 'Estado Civil',
+                        'nivel_estudios' => 'Nivel de Estudios',
+                    ];
+
+                    foreach ($basicFields as $field => $label) {
+                        if (! isset($data[$field]) || $data[$field] === null || $data[$field] === '') {
+                            $missingData[] = $label;
+                        }
+                    }
+
+                    if (! isset($data['datos_laborales']) || empty($data['datos_laborales'])) {
+                        $missingData[] = 'Todos los Datos Laborales';
+                    } else {
+                        $laborData = $data['datos_laborales'];
+                        $laborFields = [
+                            'ocupacion_puesto' => 'Puesto',
+                            'tipo_puesto' => 'Tipo de Puesto',
+                            'tipo_contratacion' => 'Tipo de Contratación',
+                            'tipo_jornada' => 'Tipo de Jornada',
+                            'departamento_seccion_area' => 'Área/Departamento',
+                        ];
+
+                        foreach ($laborFields as $field => $label) {
+                            if (! isset($laborData[$field]) || $laborData[$field] === null || $laborData[$field] === '') {
+                                $missingData[] = $label;
+                            }
+                        }
+
+                        if (isset($laborData['experiencia'])) {
+                            if (empty($laborData['experiencia']['tiempo_puesto_actual'])) {
+                                $missingData[] = 'Experiencia en Puesto Actual';
+                            }
+                        } else {
+                            $missingData[] = 'Experiencia en Puesto Actual';
+                        }
+                    }
+                }
+            }
+        }
+
+        return $missingData;
     }
 
     /**
@@ -1208,6 +1248,80 @@ class ResultsController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Bulk update dispatch exception', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()->with([
+                'success' => false,
+                'message' => 'Error al iniciar el procesamiento: '.$e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Download template for bulk comments import
+     */
+    public function bulkCommentsTemplate(Organization $organization)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        $filename = 'plantilla_comentarios_'.$organization->name.'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(
+            new EvaluationCommentsTemplateExport($organization),
+            $filename
+        );
+    }
+
+    /**
+     * Process bulk comments import file
+     */
+    public function bulkCommentsUpdate(Request $request, Organization $organization)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:10240', // Max 10MB
+        ]);
+
+        $file = $request->file('file');
+
+        Log::info('=== BULK COMMENTS IMPORT REQUEST RECEIVED ===', [
+            'organization_id' => $organization->id,
+            'file_name' => $file->getClientOriginalName(),
+            'file_size' => $file->getSize(),
+        ]);
+
+        try {
+            // Store file temporarily
+            $filePath = $file->store('bulk-imports', 'local');
+
+            // Create bulk import job record
+            $bulkImportJob = BulkImportJob::create([
+                'organization_id' => $organization->id,
+                'user_id' => $request->user()->id,
+                'file_name' => $file->getClientOriginalName(),
+                'file_path' => $filePath,
+                'source' => null, // Comments are only for Likert evaluations
+                'status' => 'pending',
+            ]);
+
+            // Dispatch job to queue
+            ProcessBulkCommentsImport::dispatch($bulkImportJob);
+
+            Log::info('Bulk comments import job dispatched', [
+                'bulk_import_job_id' => $bulkImportJob->id,
+                'file_path' => $filePath,
+            ]);
+
+            return back()->with([
+                'success' => true,
+                'message' => 'El archivo de comentarios se está procesando en segundo plano. Recibirás una notificación cuando termine.',
+                'bulk_import_job_id' => $bulkImportJob->id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Bulk comments import dispatch exception', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

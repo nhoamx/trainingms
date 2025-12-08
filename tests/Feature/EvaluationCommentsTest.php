@@ -1,0 +1,197 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\EvaluationComment;
+use App\Models\Organization;
+use App\Models\PaperEvaluation;
+use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\TestCase;
+
+class EvaluationCommentsTest extends TestCase
+{
+    use DatabaseTransactions;
+
+    public function test_evaluation_comment_can_be_created(): void
+    {
+        $organization = Organization::factory()->create();
+        $evaluation = PaperEvaluation::factory()
+            ->for($organization)
+            ->likert()
+            ->create();
+
+        $comment = EvaluationComment::create([
+            'paper_evaluation_id' => $evaluation->id,
+            'factor' => 'Condiciones en el ambiente de trabajo',
+            'comment' => 'Test comment for workplace conditions',
+        ]);
+
+        $this->assertDatabaseHas('evaluation_comments', [
+            'id' => $comment->id,
+            'paper_evaluation_id' => $evaluation->id,
+            'factor' => 'Condiciones en el ambiente de trabajo',
+        ]);
+    }
+
+    public function test_paper_evaluation_has_comments_relationship(): void
+    {
+        $organization = Organization::factory()->create();
+        $evaluation = PaperEvaluation::factory()
+            ->for($organization)
+            ->likert()
+            ->create();
+
+        EvaluationComment::factory()
+            ->for($evaluation, 'paperEvaluation')
+            ->create(['factor' => 'Liderazgo']);
+
+        EvaluationComment::factory()
+            ->for($evaluation, 'paperEvaluation')
+            ->create(['factor' => 'Violencia']);
+
+        $this->assertCount(2, $evaluation->fresh()->comments);
+    }
+
+    public function test_comments_are_deleted_when_evaluation_is_deleted(): void
+    {
+        $organization = Organization::factory()->create();
+        $evaluation = PaperEvaluation::factory()
+            ->for($organization)
+            ->likert()
+            ->create();
+
+        $comment = EvaluationComment::factory()
+            ->for($evaluation, 'paperEvaluation')
+            ->create();
+
+        $commentId = $comment->id;
+        $evaluation->forceDelete();
+
+        $this->assertDatabaseMissing('evaluation_comments', [
+            'id' => $commentId,
+        ]);
+    }
+
+    public function test_bulk_comments_template_route_is_accessible_with_authorization(): void
+    {
+        // Seed roles
+        $this->artisan('db:seed', ['--class' => 'RolesSeeder']);
+
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+        $user->assignRole('organization');
+
+        $response = $this->actingAs($user)
+            ->get(route('organization.results.comments-template', $organization));
+
+        $response->assertStatus(200);
+        $response->assertDownload();
+    }
+
+    public function test_bulk_comments_upload_requires_valid_file(): void
+    {
+        // Seed roles
+        $this->artisan('db:seed', ['--class' => 'RolesSeeder']);
+
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+        $user->assignRole('organization');
+
+        $response = $this->actingAs($user)
+            ->post(route('organization.results.bulk-comments', $organization), [
+                'file' => 'not-a-file',
+            ]);
+
+        $response->assertSessionHasErrors('file');
+    }
+
+    public function test_folio_padding_is_handled_correctly(): void
+    {
+        $organization = Organization::factory()->create();
+
+        // Create evaluations with padded folios
+        PaperEvaluation::factory()
+            ->for($organization)
+            ->likert()
+            ->create(['personal_folio' => '0001']);
+
+        PaperEvaluation::factory()
+            ->for($organization)
+            ->likert()
+            ->create(['personal_folio' => '0060']);
+
+        PaperEvaluation::factory()
+            ->for($organization)
+            ->likert()
+            ->create(['personal_folio' => '0100']);
+
+        // Verify we can find them with numeric input (1, 60, 100)
+        $eval1 = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('personal_folio', str_pad('1', 4, '0', STR_PAD_LEFT))
+            ->first();
+
+        $eval60 = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('personal_folio', str_pad('60', 4, '0', STR_PAD_LEFT))
+            ->first();
+
+        $eval100 = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('personal_folio', str_pad('100', 4, '0', STR_PAD_LEFT))
+            ->first();
+
+        $this->assertNotNull($eval1);
+        $this->assertEquals('0001', $eval1->personal_folio);
+
+        $this->assertNotNull($eval60);
+        $this->assertEquals('0060', $eval60->personal_folio);
+
+        $this->assertNotNull($eval100);
+        $this->assertEquals('0100', $eval100->personal_folio);
+    }
+
+    public function test_accepts_flexible_column_names(): void
+    {
+        $organization = Organization::factory()->create();
+        $evaluation = PaperEvaluation::factory()
+            ->for($organization)
+            ->likert()
+            ->create(['personal_folio' => '0001']);
+
+        // Test the import class directly with different column names
+        $import = new \App\Imports\EvaluationBulkCommentsImport($organization->id);
+
+        // Test with 'comentarios' (plural)
+        $rowPlural = collect([
+            'folio' => '1',
+            'comentarios' => 'Test comment with plural',
+            'factor' => 'Liderazgo',
+        ]);
+
+        $result = $import->collection(collect([$rowPlural]));
+
+        $this->assertDatabaseHas('evaluation_comments', [
+            'paper_evaluation_id' => $evaluation->id,
+            'comment' => 'Test comment with plural',
+            'factor' => 'Liderazgo',
+        ]);
+
+        // Test with 'comentario' (singular)
+        $rowSingular = collect([
+            'folio' => '1',
+            'comentario' => 'Test comment with singular',
+            'factor' => 'Violencia',
+        ]);
+
+        $import->collection(collect([$rowSingular]));
+
+        $this->assertDatabaseHas('evaluation_comments', [
+            'paper_evaluation_id' => $evaluation->id,
+            'comment' => 'Test comment with singular',
+            'factor' => 'Violencia',
+        ]);
+    }
+}

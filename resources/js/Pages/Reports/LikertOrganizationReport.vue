@@ -105,6 +105,18 @@
                 <option v-for="t in demographics.turnos" :key="t" :value="t">{{ t }}</option>
               </select>
             </div>
+
+            <!-- Factor (for comments) -->
+            <div v-if="factors.length > 0">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Factor (Comentarios)</label>
+              <select 
+                v-model="filters.factor"
+                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="">Todos</option>
+                <option v-for="f in factors" :key="f" :value="f">{{ f }}</option>
+              </select>
+            </div>
           </div>
 
           <!-- Custom Field Filters -->
@@ -458,6 +470,29 @@
             </div>
           </div>
         </div>
+
+        <!-- Comments Section -->
+        <div v-if="filteredComments.length > 0" class="bg-white rounded-lg shadow p-6 mt-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            Comentarios por Factor
+            <span class="text-sm font-normal text-gray-600 ml-2">({{ filteredComments.length }} comentarios)</span>
+          </h3>
+          
+          <div class="space-y-4">
+            <div v-for="(commentsGroup, factor) in groupedComments" :key="factor" class="border-l-4 border-blue-500 pl-4">
+              <h4 class="font-medium text-gray-900 mb-2">{{ factor }}</h4>
+              <div class="space-y-2">
+                <div v-for="(comment, index) in commentsGroup" :key="`${factor}-${index}`" class="bg-gray-50 rounded p-3">
+                  <p class="text-sm text-gray-700">{{ comment.comment }}</p>
+                  <p class="text-xs text-gray-500 mt-1">
+                    Folio: {{ comment.folio }} 
+                    <span v-if="comment.name" class="ml-2">- {{ comment.name }}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </Dashboard>
@@ -595,6 +630,10 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  factors: {
+    type: Array,
+    default: () => [],
+  },
 })
 
 const activeTab = ref('Total')
@@ -604,6 +643,7 @@ const filters = ref({
   puesto: '',
   area: '',
   turno: '',
+  factor: '',
 })
 
 // Initialize custom field filters based on available custom fields
@@ -715,6 +755,12 @@ const filteredEvaluations = computed(() => {
     if (filters.value.area && evaluation.demographics.area !== filters.value.area) return false
     if (filters.value.turno && evaluation.demographics.turno !== filters.value.turno) return false
     
+    // Factor filter (filter evaluations that have a comment for the selected factor)
+    if (filters.value.factor) {
+      const hasFactorComment = evaluation.comments?.some(comment => comment.factor === filters.value.factor)
+      if (!hasFactorComment) return false
+    }
+    
     // Custom field filters
     for (const [key, value] of Object.entries(customFilters.value)) {
       if (value && evaluation.customFields?.[key]?.value !== value) return false
@@ -753,6 +799,36 @@ const sortedFilteredEvaluations = computed(() => {
   }
   
   return evaluations
+})
+
+// Get all comments from filtered evaluations
+const filteredComments = computed(() => {
+  const comments = []
+  filteredEvaluations.value.forEach(evaluation => {
+    if (evaluation.comments && evaluation.comments.length > 0) {
+      evaluation.comments.forEach(comment => {
+        comments.push({
+          folio: evaluation.personal_folio,
+          name: evaluation.evaluee_name,
+          factor: comment.factor,
+          comment: comment.comment,
+        })
+      })
+    }
+  })
+  return comments
+})
+
+// Group comments by factor
+const groupedComments = computed(() => {
+  const groups = {}
+  filteredComments.value.forEach(comment => {
+    if (!groups[comment.factor]) {
+      groups[comment.factor] = []
+    }
+    groups[comment.factor].push(comment)
+  })
+  return groups
 })
 
 // Toggle sort by column
