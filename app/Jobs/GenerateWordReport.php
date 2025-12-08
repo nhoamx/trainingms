@@ -405,32 +405,14 @@ class GenerateWordReport implements ShouldQueue
         );
         $section->addTextBreak(1);
 
-        // Get all question numbers from dimensions
+        // Get all question numbers from dimensions for native table
         $allQuestions = [];
         foreach ($fullLikertData['dimensions'] as $dimData) {
             $questionKeys = array_keys($dimData['questions'] ?? []);
             $allQuestions = array_merge($allQuestions, $questionKeys);
         }
 
-        // Generate heat map images
-        $heatMapImages = $chartImageService->generateDimensionHeatMapImages(
-            $evaluations,
-            $allQuestions,
-            $tempDir,
-            'heatmap_all_'.$imageSuffix,
-            'Mapa de Calor - Todas las Preguntas'
-        );
-
-        foreach ($heatMapImages as $heatMapPath) {
-            $this->tempImagePaths[] = $heatMapPath;
-            $section->addImage($heatMapPath, [
-                'width' => 650,
-                'alignment' => Jc::CENTER,
-            ]);
-            $section->addTextBreak(1);
-        }
-
-        // Also add native table heat map
+        // Add native Word table heat map (no images - eliminates ~3,500 image generations)
         $this->addHeatMapTableNative($section, $evaluations, $fullLikertData['dimensions']);
     }
 
@@ -492,32 +474,14 @@ class GenerateWordReport implements ShouldQueue
         }
         $section->addTextBreak(1);
 
-        // Dimension-specific heat map
+        // Dimension-specific heat map (native Word table only - no images)
         $section->addText(
             'Mapa de Calor - '.$dimName,
             ['bold' => true, 'size' => 11, 'color' => '1e40af']
         );
         $section->addTextBreak(1);
 
-        // Generate heat map images for this dimension only
-        $heatMapImages = $chartImageService->generateDimensionHeatMapImages(
-            $evaluations,
-            $questionNumbers,
-            $tempDir,
-            'heatmap_'.$safeDimName.'_'.$imageSuffix,
-            'Preguntas: '.implode(', ', $questionNumbers)
-        );
-
-        foreach ($heatMapImages as $heatMapPath) {
-            $this->tempImagePaths[] = $heatMapPath;
-            $section->addImage($heatMapPath, [
-                'width' => 550,
-                'alignment' => Jc::CENTER,
-            ]);
-            $section->addTextBreak(1);
-        }
-
-        // Also add native table for this dimension
+        // Add native Word table for this dimension (eliminates generation of ~3,500 images per report)
         $this->addDimensionHeatMapTableNative($section, $evaluations, $questionNumbers);
     }
 

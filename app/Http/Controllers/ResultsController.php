@@ -135,12 +135,19 @@ class ResultsController extends Controller
         }
 
         // Get custom field filters from eager loaded data
+        $customFieldLabels = config('custom_field_labels');
         $customFieldValues = $likertEvaluations
             ->flatMap(fn ($eval) => $eval->customFields)
             ->groupBy('field_key')
-            ->map(function ($fields) {
+            ->map(function ($fields) use ($customFieldLabels) {
+                $fieldKey = $fields->first()->field_key;
+                $dbLabel = $fields->first()->key_label;
+                
+                // Use label from config if exists, otherwise use database label
+                $label = $customFieldLabels[$fieldKey] ?? $dbLabel;
+                
                 return [
-                    'label' => $fields->first()->key_label,
+                    'label' => $label,
                     'values' => $fields->pluck('value')->unique()->filter()->values()->all(),
                 ];
             })
@@ -194,8 +201,14 @@ class ResultsController extends Controller
             // Get custom fields from eager loaded data
             $evaluationCustomFields = [];
             foreach ($evaluation->customFields as $customField) {
-                $evaluationCustomFields[$customField->field_key] = [
-                    'label' => $customField->key_label,
+                $fieldKey = $customField->field_key;
+                $dbLabel = $customField->key_label;
+                
+                // Use label from config if exists, otherwise use database label
+                $label = $customFieldLabels[$fieldKey] ?? $dbLabel;
+                
+                $evaluationCustomFields[$fieldKey] = [
+                    'label' => $label,
                     'value' => $customField->value,
                 ];
             }
@@ -1014,10 +1027,17 @@ class ResultsController extends Controller
         $isAdmin = auth()->user()->hasRole(['admin', 'super-admin']);
 
         // Get custom fields as key-value pairs
+        $customFieldLabels = config('custom_field_labels');
         $customFields = [];
         foreach ($likert->customFields as $customField) {
-            $customFields[$customField->field_key] = [
-                'label' => $customField->key_label,
+            $fieldKey = $customField->field_key;
+            $dbLabel = $customField->key_label;
+            
+            // Use label from config if exists, otherwise use database label
+            $label = $customFieldLabels[$fieldKey] ?? $dbLabel;
+            
+            $customFields[$fieldKey] = [
+                'label' => $label,
                 'value' => $customField->value,
             ];
         }

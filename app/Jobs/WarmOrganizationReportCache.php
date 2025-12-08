@@ -136,12 +136,19 @@ class WarmOrganizationReportCache implements ShouldQueue
         }
 
         // Get custom field filters
+        $customFieldLabels = config('custom_field_labels');
         $customFieldValues = $likertEvaluations
             ->flatMap(fn ($eval) => $eval->customFields)
             ->groupBy('field_key')
-            ->map(function ($fields) {
+            ->map(function ($fields) use ($customFieldLabels) {
+                $fieldKey = $fields->first()->field_key;
+                $dbLabel = $fields->first()->key_label;
+                
+                // Use label from config if exists, otherwise use database label
+                $label = $customFieldLabels[$fieldKey] ?? $dbLabel;
+                
                 return [
-                    'label' => $fields->first()->key_label,
+                    'label' => $label,
                     'values' => $fields->pluck('value')->unique()->filter()->values()->all(),
                 ];
             })
@@ -194,8 +201,14 @@ class WarmOrganizationReportCache implements ShouldQueue
             // Get custom fields
             $evaluationCustomFields = [];
             foreach ($evaluation->customFields as $customField) {
-                $evaluationCustomFields[$customField->field_key] = [
-                    'label' => $customField->key_label,
+                $fieldKey = $customField->field_key;
+                $dbLabel = $customField->key_label;
+                
+                // Use label from config if exists, otherwise use database label
+                $label = $customFieldLabels[$fieldKey] ?? $dbLabel;
+                
+                $evaluationCustomFields[$fieldKey] = [
+                    'label' => $label,
                     'value' => $customField->value,
                 ];
             }
