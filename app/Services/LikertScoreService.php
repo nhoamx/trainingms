@@ -130,6 +130,85 @@ class LikertScoreService
     }
 
     /**
+     * Get demographic data from already eager-loaded relationship (optimized for bulk processing)
+     * Avoids N+1 queries by using the pre-loaded relationshipLoaded
+     */
+    public function getDemographicDataFromLoaded(PaperEvaluation $evaluation): array
+    {
+        // Check if demographicData relationship is already loaded
+        if ($evaluation->relationLoaded('demographicData') && $evaluation->demographicData) {
+            $demographicData = $evaluation->demographicData;
+
+            return [
+                'genero' => $this->capitalizeGender($demographicData->gender),
+                'turno' => $this->capitalizeShift($demographicData->work_schedule),
+                'tipo_contrato' => $this->capitalizeContractType($demographicData->contract_type),
+                'puesto' => $demographicData->position,
+                'area' => $demographicData->department,
+            ];
+        }
+
+        // Fallback to likert_answers JSON if DemographicData not loaded
+        $likertAnswers = $evaluation->likert_answers ?? [];
+
+        return [
+            'genero' => $this->formatGender($likertAnswers['genero'] ?? null),
+            'turno' => $this->formatShift($likertAnswers['turno'] ?? null),
+            'tipo_contrato' => $this->formatContractType($likertAnswers['tipo_contrato'] ?? null),
+            'puesto' => $likertAnswers['puestos'] ?? null,
+            'area' => $likertAnswers['areas'] ?? null,
+        ];
+    }
+
+    /**
+     * Calculate Likert scores from raw data (optimized for bulk processing)
+     * Avoids loading config multiple times by accepting it as parameter
+     */
+    public function calculateLikertScoresFromData(array $questions, array $config): array
+    {
+        if (empty($questions)) {
+            return [
+                'dimensions' => [],
+                'total_score' => 0,
+                'interpretation' => null,
+            ];
+        }
+
+        $scores = [];
+        $totalScore = 0;
+
+        // Calculate score for each dimension
+        foreach ($config['niveles'] as $dimension => $data) {
+            $dimensionScore = 0;
+
+            foreach ($data['preguntas'] as $questionNum) {
+                $answer = $questions[(string) $questionNum] ?? null;
+                $dimensionScore += $config['valorOpciones'][$answer] ?? 0;
+            }
+
+            // Get interpretation for this dimension
+            $interpretation = $this->getInterpretation($dimensionScore, $config['valorNiveles'][$dimension]);
+
+            $scores[$dimension] = [
+                'score' => $dimensionScore,
+                'interpretation' => $interpretation,
+                'questions' => $data['preguntas'],
+            ];
+
+            $totalScore += $dimensionScore;
+        }
+
+        // Get interpretation for total climate score
+        $generalInterpretation = $this->getInterpretation($totalScore, $config['valorNiveles']['Clima Laboral']);
+
+        return [
+            'dimensions' => $scores,
+            'total_score' => $totalScore,
+            'interpretation' => $generalInterpretation,
+        ];
+    }
+
+    /**
      * Format gender value
      */
     protected function formatGender(?string $gender): ?string

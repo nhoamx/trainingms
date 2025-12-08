@@ -2,6 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\DemographicData;
+use App\Models\EvaluationComment;
+use App\Models\EvaluationCustomField;
+use App\Models\PaperEvaluation;
+use App\Observers\DemographicDataObserver;
+use App\Observers\EvaluationCommentObserver;
+use App\Observers\EvaluationCustomFieldObserver;
+use App\Observers\PaperEvaluationObserver;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -18,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Registrar el servicio para reportes de categoría
         $this->app->singleton(\App\Services\CategoryReportService::class);
+
+        // Registrar el servicio de caché para reportes de organización
+        $this->app->singleton(\App\Services\OrganizationReportCacheService::class);
     }
 
     /**
@@ -28,5 +39,11 @@ class AppServiceProvider extends ServiceProvider
         if (app()->environment('production')) {
             URL::forceScheme('https');
         }
+
+        // Register observers for cache invalidation
+        PaperEvaluation::observe(PaperEvaluationObserver::class);
+        DemographicData::observe(DemographicDataObserver::class);
+        EvaluationCustomField::observe(EvaluationCustomFieldObserver::class);
+        EvaluationComment::observe(EvaluationCommentObserver::class);
     }
 }
