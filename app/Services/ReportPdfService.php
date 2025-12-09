@@ -1160,4 +1160,45 @@ class ReportPdfService
 
         return null;
     }
+
+    /**
+     * Calculate demographic distributions from Likert data
+     *
+     * @param  array<string, mixed>  $likertData
+     * @return array<string, array<string, int>>
+     */
+    public function calculateDemographicDistributions(array $likertData): array
+    {
+        $genderDistribution = [];
+        $contractDistribution = [];
+        $positionDistribution = [];
+        $shiftDistribution = [];
+
+        foreach ($likertData['evaluations'] as $eval) {
+            $demographics = $eval['demographics'] ?? [];
+
+            // Gender
+            $gender = $demographics['genero'] ?? 'No especificado';
+            $genderDistribution[$gender] = ($genderDistribution[$gender] ?? 0) + 1;
+
+            // Contract type
+            $contract = $demographics['tipo_contrato'] ?? 'No especificado';
+            $contractDistribution[$contract] = ($contractDistribution[$contract] ?? 0) + 1;
+
+            // Position
+            $position = $demographics['puesto'] ?? 'No especificado';
+            $positionDistribution[$position] = ($positionDistribution[$position] ?? 0) + 1;
+
+            // Shift/Turno
+            $shift = $demographics['turno'] ?? 'No especificado';
+            $shiftDistribution[$shift] = ($shiftDistribution[$shift] ?? 0) + 1;
+        }
+
+        return [
+            'gender' => $genderDistribution,
+            'contract' => $contractDistribution,
+            'position' => $positionDistribution,
+            'shift' => $shiftDistribution,
+        ];
+    }
 }

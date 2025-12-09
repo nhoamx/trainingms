@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Concurrency;
 use Illuminate\Support\Facades\Log;
 use Spatie\Browsershot\Browsershot;
 
@@ -10,6 +11,12 @@ class LikertChartImageService
     protected const MAX_TABLE_HEIGHT_PX = 1000;
 
     protected const ROWS_PER_HEATMAP_PAGE = 40;
+
+    /**
+     * Maximum number of concurrent chart generations
+     * Optimized for typical server resources (4-6 cores)
+     */
+    protected const MAX_CONCURRENT_CHARTS = 4;
 
     /**
      * Standardized colors for Likert levels
@@ -63,6 +70,31 @@ class LikertChartImageService
             return file_exists($outputPath);
         } catch (\Exception $e) {
             Log::error('Error generating Likert bar chart image', [
+                'error' => $e->getMessage(),
+                'output_path' => $outputPath,
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Generate vertical bar chart image for demographic data
+     *
+     * @param  array<string, int>  $distribution
+     */
+    public function generateVerticalBarChartImage(array $distribution, string $outputPath, ?string $title = null): bool
+    {
+        try {
+            $html = $this->renderVerticalBarChartHtml($distribution, $title);
+
+            $this->configureBrowsershot($html)
+                ->windowSize(700, 500)
+                ->save($outputPath);
+
+            return file_exists($outputPath);
+        } catch (\Exception $e) {
+            Log::error('Error generating demographic vertical bar chart image', [
                 'error' => $e->getMessage(),
                 'output_path' => $outputPath,
             ]);
@@ -209,7 +241,6 @@ class LikertChartImageService
 <head>
     <meta charset="UTF-8">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -223,35 +254,125 @@ class LikertChartImageService
             font-size: 16px;
             margin: 0 0 10px 0;
         }
+        .chart-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
         .chart-container {
-            width: 560px;
-            height: 460px;
+            width: 520px;
+            height: 340px;
             display: flex;
             justify-content: center;
             align-items: center;
+            margin-bottom: 20px;
         }
         canvas {
             max-width: 100%;
             max-height: 100%;
         }
+        .legend-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 0 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid #d1d5db;
+            flex-shrink: 0;
+        }
+        .legend-label {
+            flex: 1;
+            font-weight: 600;
+            color: #374151;
+        }
+        .legend-stats {
+            display: flex;
+            gap: 10px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .legend-count {
+            font-weight: 500;
+        }
+        .legend-percentage {
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
     {$titleHtml}
-    <div class="chart-container">
-        <canvas id="pieChart"></canvas>
+    <div class="chart-wrapper">
+        <div class="chart-container">
+            <canvas id="pieChart"></canvas>
+        </div>
+        <div class="legend-container" id="customLegend"></div>
     </div>
     <script>
-        Chart.register(ChartDataLabels);
+        // Datos
+        const labels = {$labelsJson};
+        const data = {$dataJson};
+        const colors = {$colorsJson};
+        const total = data.reduce((a, b) => a + b, 0);
+        
+        // Generar leyenda personalizada
+        const legendContainer = document.getElementById('customLegend');
+        labels.forEach((label, index) => {
+            const value = data[index];
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+            
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            
+            const colorBox = document.createElement('div');
+            colorBox.className = 'legend-color';
+            colorBox.style.backgroundColor = colors[index];
+            
+            const labelSpan = document.createElement('div');
+            labelSpan.className = 'legend-label';
+            labelSpan.textContent = label;
+            
+            const statsDiv = document.createElement('div');
+            statsDiv.className = 'legend-stats';
+            
+            const countSpan = document.createElement('span');
+            countSpan.className = 'legend-count';
+            countSpan.textContent = value + ' personas';
+            
+            const percentSpan = document.createElement('span');
+            percentSpan.className = 'legend-percentage';
+            percentSpan.textContent = percentage + '%';
+            
+            statsDiv.appendChild(countSpan);
+            statsDiv.appendChild(percentSpan);
+            
+            legendItem.appendChild(colorBox);
+            legendItem.appendChild(labelSpan);
+            legendItem.appendChild(statsDiv);
+            
+            legendContainer.appendChild(legendItem);
+        });
         
         const ctx = document.getElementById('pieChart').getContext('2d');
         new Chart(ctx, {
             type: 'pie',
             data: {
-                labels: {$labelsJson},
+                labels: labels,
                 datasets: [{
-                    data: {$dataJson},
-                    backgroundColor: {$colorsJson},
+                    data: data,
+                    backgroundColor: colors,
                     borderWidth: 2,
                     borderColor: '#ffffff'
                 }]
@@ -261,22 +382,15 @@ class LikertChartImageService
                 maintainAspectRatio: true,
                 plugins: {
                     legend: {
-                        position: 'bottom',
-                        labels: {
-                            font: { size: 12 },
-                            padding: 15
-                        }
+                        display: false
                     },
-                    datalabels: {
-                        color: '#fff',
-                        font: {
-                            weight: 'bold',
-                            size: 14
-                        },
-                        formatter: (value, context) => {
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return value > 0 ? value + ' (' + percentage + '%)' : '';
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed;
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return context.label + ': ' + value + ' (' + percentage + '%)';
+                            }
                         }
                     }
                 }
@@ -315,7 +429,6 @@ HTML;
 <head>
     <meta charset="UTF-8">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -329,33 +442,125 @@ HTML;
             font-size: 16px;
             margin: 0 0 10px 0;
         }
+        .chart-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
         .chart-container {
-            width: 660px;
-            height: 380px;
+            width: 620px;
+            height: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
         }
         canvas {
             max-width: 100%;
             max-height: 100%;
         }
+        .legend-container {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 0 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid #d1d5db;
+            flex-shrink: 0;
+        }
+        .legend-label {
+            flex: 1;
+            font-weight: 600;
+            color: #374151;
+        }
+        .legend-stats {
+            display: flex;
+            gap: 10px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .legend-count {
+            font-weight: 500;
+        }
+        .legend-percentage {
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
     {$titleHtml}
-    <div class="chart-container">
-        <canvas id="barChart"></canvas>
+    <div class="chart-wrapper">
+        <div class="chart-container">
+            <canvas id="barChart"></canvas>
+        </div>
+        <div class="legend-container" id="customLegend"></div>
     </div>
     <script>
-        Chart.register(ChartDataLabels);
+        // Datos
+        const labels = {$labelsJson};
+        const data = {$dataJson};
+        const colors = {$colorsJson};
+        const total = data.reduce((a, b) => a + b, 0);
         
-        const total = {$total};
+        // Generar leyenda personalizada en dos columnas
+        const legendContainer = document.getElementById('customLegend');
+        labels.forEach((label, index) => {
+            const value = data[index];
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+            
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            
+            const colorBox = document.createElement('div');
+            colorBox.className = 'legend-color';
+            colorBox.style.backgroundColor = colors[index];
+            
+            const labelSpan = document.createElement('div');
+            labelSpan.className = 'legend-label';
+            labelSpan.textContent = label;
+            
+            const statsDiv = document.createElement('div');
+            statsDiv.className = 'legend-stats';
+            
+            const countSpan = document.createElement('span');
+            countSpan.className = 'legend-count';
+            countSpan.textContent = value + ' personas';
+            
+            const percentSpan = document.createElement('span');
+            percentSpan.className = 'legend-percentage';
+            percentSpan.textContent = percentage + '%';
+            
+            statsDiv.appendChild(countSpan);
+            statsDiv.appendChild(percentSpan);
+            
+            legendItem.appendChild(colorBox);
+            legendItem.appendChild(labelSpan);
+            legendItem.appendChild(statsDiv);
+            
+            legendContainer.appendChild(legendItem);
+        });
+        
         const ctx = document.getElementById('barChart').getContext('2d');
         new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: {$labelsJson},
+                labels: labels,
                 datasets: [{
-                    data: {$dataJson},
-                    backgroundColor: {$colorsJson},
+                    data: data,
+                    backgroundColor: colors,
                     borderWidth: 1,
                     borderColor: '#ffffff'
                 }]
@@ -368,17 +573,13 @@ HTML;
                     legend: {
                         display: false
                     },
-                    datalabels: {
-                        anchor: 'end',
-                        align: 'end',
-                        color: '#333',
-                        font: {
-                            weight: 'bold',
-                            size: 12
-                        },
-                        formatter: (value) => {
-                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                            return value + ' (' + percentage + '%)';
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.x;
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return context.label + ': ' + value + ' (' + percentage + '%)';
+                            }
                         }
                     }
                 },
@@ -388,11 +589,247 @@ HTML;
                         grid: {
                             display: true,
                             color: '#e5e7eb'
+                        },
+                        ticks: {
+                            display: false
                         }
                     },
                     y: {
                         grid: {
                             display: false
+                        },
+                        ticks: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Render vertical bar chart HTML for demographic data
+     *
+     * @param  array<string, int>  $distribution
+     */
+    protected function renderVerticalBarChartHtml(array $distribution, ?string $title = null): string
+    {
+        $labels = array_keys($distribution);
+        $data = array_values($distribution);
+        $total = array_sum($data);
+
+        // Use distinct colors for demographic data
+        $demographicColors = [
+            '#3b82f6', // blue-500
+            '#10b981', // green-500
+            '#f59e0b', // amber-500
+            '#ef4444', // red-500
+            '#8b5cf6', // violet-500
+            '#ec4899', // pink-500
+            '#14b8a6', // teal-500
+            '#f97316', // orange-500
+        ];
+
+        $backgroundColors = [];
+        foreach ($labels as $index => $label) {
+            $backgroundColors[] = $demographicColors[$index % count($demographicColors)];
+        }
+
+        $labelsJson = json_encode($labels);
+        $dataJson = json_encode($data);
+        $colorsJson = json_encode($backgroundColors);
+        $titleHtml = $title ? "<h2 class=\"chart-title\">{$title}</h2>" : '';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: white;
+            font-family: Arial, sans-serif;
+        }
+        .chart-title {
+            text-align: center;
+            color: #1e40af;
+            font-size: 16px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+        }
+        .chart-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .chart-container {
+            width: 620px;
+            height: 320px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .legend-container {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px 20px;
+            padding: 0 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            border: 1px solid #d1d5db;
+            flex-shrink: 0;
+        }
+        .legend-label {
+            flex: 1;
+            font-weight: 600;
+            color: #374151;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .legend-stats {
+            display: flex;
+            gap: 8px;
+            font-size: 11px;
+            color: #6b7280;
+            flex-shrink: 0;
+        }
+        .legend-count {
+            font-weight: 500;
+        }
+        .legend-percentage {
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    {$titleHtml}
+    <div class="chart-wrapper">
+        <div class="chart-container">
+            <canvas id="verticalBarChart"></canvas>
+        </div>
+        <div class="legend-container" id="customLegend"></div>
+    </div>
+    <script>
+        // Datos
+        const labels = {$labelsJson};
+        const data = {$dataJson};
+        const colors = {$colorsJson};
+        const total = data.reduce((a, b) => a + b, 0);
+        
+        // Generar leyenda personalizada
+        const legendContainer = document.getElementById('customLegend');
+        labels.forEach((label, index) => {
+            const value = data[index];
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+            
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            
+            const colorBox = document.createElement('div');
+            colorBox.className = 'legend-color';
+            colorBox.style.backgroundColor = colors[index];
+            
+            const labelSpan = document.createElement('div');
+            labelSpan.className = 'legend-label';
+            labelSpan.textContent = label;
+            labelSpan.title = label; // Tooltip for long labels
+            
+            const statsDiv = document.createElement('div');
+            statsDiv.className = 'legend-stats';
+            
+            const countSpan = document.createElement('span');
+            countSpan.className = 'legend-count';
+            countSpan.textContent = value;
+            
+            const percentSpan = document.createElement('span');
+            percentSpan.className = 'legend-percentage';
+            percentSpan.textContent = percentage + '%';
+            
+            statsDiv.appendChild(countSpan);
+            statsDiv.appendChild(percentSpan);
+            
+            legendItem.appendChild(colorBox);
+            legendItem.appendChild(labelSpan);
+            legendItem.appendChild(statsDiv);
+            
+            legendContainer.appendChild(legendItem);
+        });
+        
+        const ctx = document.getElementById('verticalBarChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                    borderColor: '#ffffff',
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return context.label + ': ' + value + ' personas (' + percentage + '%)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            display: true,
+                            color: '#e5e7eb'
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            color: '#6b7280'
                         }
                     }
                 }
@@ -657,6 +1094,82 @@ HTML;
         $value = $values[strtoupper($answer ?? '')] ?? 0;
 
         return 'color-'.$value;
+    }
+
+    /**
+     * Generate multiple chart images in parallel batches
+     *
+     * @param  array<array{type: string, distribution: array<string, int>, outputPath: string, title: ?string}>  $chartDefinitions
+     * @return array<string, bool> Map of outputPath => success
+     */
+    public function generateChartsBatch(array $chartDefinitions): array
+    {
+        if (empty($chartDefinitions)) {
+            return [];
+        }
+
+        $results = [];
+        $batches = array_chunk($chartDefinitions, self::MAX_CONCURRENT_CHARTS);
+
+        foreach ($batches as $batch) {
+            $closures = [];
+
+            foreach ($batch as $chartDef) {
+                $type = $chartDef['type'];
+                $distribution = $chartDef['distribution'];
+                $outputPath = $chartDef['outputPath'];
+                $title = $chartDef['title'] ?? null;
+
+                $closures[$outputPath] = function () use ($type, $distribution, $outputPath, $title): bool {
+                    try {
+                        $service = new self;
+
+                        if ($type === 'pie') {
+                            return $service->generatePieChartImage($distribution, $outputPath, $title);
+                        } elseif ($type === 'bar') {
+                            return $service->generateBarChartImage($distribution, $outputPath, $title);
+                        } elseif ($type === 'vertical-bar') {
+                            return $service->generateVerticalBarChartImage($distribution, $outputPath, $title);
+                        }
+
+                        return false;
+                    } catch (\Exception $e) {
+                        Log::error('Error in parallel chart generation', [
+                            'type' => $type,
+                            'outputPath' => $outputPath,
+                            'error' => $e->getMessage(),
+                        ]);
+
+                        return false;
+                    }
+                };
+            }
+
+            try {
+                $batchResults = Concurrency::run($closures);
+
+                foreach ($batchResults as $outputPath => $success) {
+                    $results[$outputPath] = $success;
+                }
+            } catch (\Exception $e) {
+                Log::error('Error running parallel chart batch', [
+                    'error' => $e->getMessage(),
+                    'batch_size' => count($batch),
+                ]);
+
+                foreach ($batch as $chartDef) {
+                    $results[$chartDef['outputPath']] = false;
+                }
+            }
+        }
+
+        Log::info('Parallel chart batch generation completed', [
+            'total_charts' => count($chartDefinitions),
+            'successful' => count(array_filter($results)),
+            'failed' => count(array_filter($results, fn ($v) => ! $v)),
+        ]);
+
+        return $results;
     }
 
     /**

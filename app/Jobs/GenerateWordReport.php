@@ -154,6 +154,7 @@ class GenerateWordReport implements ShouldQueue
 
     /**
      * Generate Likert Word document natively using PHPWord
+     * Uses parallel image generation for improved performance
      */
     protected function generateLikertWordNative(Organization $organization, ReportPdfService $reportPdfService): string
     {
@@ -170,7 +171,21 @@ class GenerateWordReport implements ShouldQueue
             mkdir($tempDir, 0755, true);
         }
 
-        // Create PHPWord document
+        // Step 1: Collect all sections data
+        $sectionsData = $this->collectAllSectionsData($likertData, $reportPdfService);
+
+        // Step 2: Pre-generate all chart images in parallel
+        Log::info('Starting parallel chart generation', [
+            'sections_count' => count($sectionsData),
+        ]);
+
+        $chartPaths = $this->preGenerateAllCharts($sectionsData, $chartImageService, $tempDir, $reportPdfService, $likertData);
+
+        Log::info('Parallel chart generation completed', [
+            'charts_generated' => count($chartPaths),
+        ]);
+
+        // Step 3: Create PHPWord document with pre-generated images
         $phpWord = new PhpWord;
 
         // Set default font
@@ -191,73 +206,23 @@ class GenerateWordReport implements ShouldQueue
         // Header
         $this->addLikertHeader($section, $organization, $likertData);
 
-        // 1. TOTAL Section (all evaluations)
-        $this->addFilteredReportSection(
-            $section,
-            $likertData,
-            $likertData['evaluations'],
-            $likertData['climaLaboralDistribution'],
-            $likertData['dimensions'],
-            'TOTAL - Todas las Evaluaciones',
-            $likertData['totalPeople'],
-            $chartImageService,
-            $tempDir,
-            false // No page break for first section
-        );
-
-        // 2. Turno Matutino Section
-        $matutinoData = $reportPdfService->filterEvaluationsAndRecalculate($likertData, 'turno', 'Matutino');
-        if ($matutinoData['totalPeople'] > 0) {
-            $this->addFilteredReportSection(
+        // Add each section using pre-generated images
+        $isFirstSection = true;
+        foreach ($sectionsData as $sectionData) {
+            $this->addFilteredReportSectionWithPregenerated(
                 $section,
                 $likertData,
-                $matutinoData['evaluations'],
-                $matutinoData['climaLaboralDistribution'],
-                $matutinoData['dimensions'],
-                'TURNO MATUTINO',
-                $matutinoData['totalPeople'],
-                $chartImageService,
-                $tempDir
+                $sectionData['evaluations'],
+                $sectionData['climaLaboralDistribution'],
+                $sectionData['dimensions'],
+                $sectionData['title'],
+                $sectionData['totalPeople'],
+                $chartPaths,
+                $sectionData['imageSuffix'],
+                ! $isFirstSection,
+                $isFirstSection
             );
-        }
-
-        // 3. Turno Nocturno Section
-        $nocturnoData = $reportPdfService->filterEvaluationsAndRecalculate($likertData, 'turno', 'Nocturno');
-        if ($nocturnoData['totalPeople'] > 0) {
-            $this->addFilteredReportSection(
-                $section,
-                $likertData,
-                $nocturnoData['evaluations'],
-                $nocturnoData['climaLaboralDistribution'],
-                $nocturnoData['dimensions'],
-                'TURNO NOCTURNO',
-                $nocturnoData['totalPeople'],
-                $chartImageService,
-                $tempDir
-            );
-        }
-
-        // 4. Per-Area Sections
-        $uniqueAreas = $reportPdfService->getUniqueDemographicValues($likertData, 'area');
-        foreach ($uniqueAreas as $areaValue) {
-            if (empty($areaValue)) {
-                continue;
-            }
-
-            $areaData = $reportPdfService->filterEvaluationsAndRecalculate($likertData, 'area', $areaValue);
-            if ($areaData['totalPeople'] > 0) {
-                $this->addFilteredReportSection(
-                    $section,
-                    $likertData,
-                    $areaData['evaluations'],
-                    $areaData['climaLaboralDistribution'],
-                    $areaData['dimensions'],
-                    'ÁREA: '.strtoupper($areaValue),
-                    $areaData['totalPeople'],
-                    $chartImageService,
-                    $tempDir
-                );
-            }
+            $isFirstSection = false;
         }
 
         // Footer
@@ -283,7 +248,482 @@ class GenerateWordReport implements ShouldQueue
     }
 
     /**
+     * Collect all sections data before generating charts
+     *
+     * @return array<int, array{title: string, totalPeople: int, evaluations: array, climaLaboralDistribution: array, dimensions: array, imageSuffix: string}>
+     */
+    protected function collectAllSectionsData(array $likertData, ReportPdfService $reportPdfService): array
+    {
+        $sections = [];
+
+        // 1. TOTAL Section
+        $sections[] = [
+            'title' => 'TOTAL - Todas las Evaluaciones',
+            'totalPeople' => $likertData['totalPeople'],
+            'evaluations' => $likertData['evaluations'],
+            'climaLaboralDistribution' => $likertData['climaLaboralDistribution'],
+            'dimensions' => $likertData['dimensions'],
+            'imageSuffix' => md5('TOTAL'.time().mt_rand()),
+        ];
+
+        // 2. Turno Matutino
+        $matutinoData = $reportPdfService->filterEvaluationsAndRecalculate($likertData, 'turno', 'Matutino');
+        if ($matutinoData['totalPeople'] > 0) {
+            $sections[] = [
+                'title' => 'TURNO MATUTINO',
+                'totalPeople' => $matutinoData['totalPeople'],
+                'evaluations' => $matutinoData['evaluations'],
+                'climaLaboralDistribution' => $matutinoData['climaLaboralDistribution'],
+                'dimensions' => $matutinoData['dimensions'],
+                'imageSuffix' => md5('MATUTINO'.time().mt_rand()),
+            ];
+        }
+
+        // 3. Turno Nocturno
+        $nocturnoData = $reportPdfService->filterEvaluationsAndRecalculate($likertData, 'turno', 'Nocturno');
+        if ($nocturnoData['totalPeople'] > 0) {
+            $sections[] = [
+                'title' => 'TURNO NOCTURNO',
+                'totalPeople' => $nocturnoData['totalPeople'],
+                'evaluations' => $nocturnoData['evaluations'],
+                'climaLaboralDistribution' => $nocturnoData['climaLaboralDistribution'],
+                'dimensions' => $nocturnoData['dimensions'],
+                'imageSuffix' => md5('NOCTURNO'.time().mt_rand()),
+            ];
+        }
+
+        // 4. Per-Area Sections
+        $uniqueAreas = $reportPdfService->getUniqueDemographicValues($likertData, 'area');
+        foreach ($uniqueAreas as $areaValue) {
+            if (empty($areaValue)) {
+                continue;
+            }
+
+            $areaData = $reportPdfService->filterEvaluationsAndRecalculate($likertData, 'area', $areaValue);
+            if ($areaData['totalPeople'] > 0) {
+                $sections[] = [
+                    'title' => 'ÁREA: '.strtoupper($areaValue),
+                    'totalPeople' => $areaData['totalPeople'],
+                    'evaluations' => $areaData['evaluations'],
+                    'climaLaboralDistribution' => $areaData['climaLaboralDistribution'],
+                    'dimensions' => $areaData['dimensions'],
+                    'imageSuffix' => md5('AREA_'.$areaValue.time().mt_rand()),
+                ];
+            }
+        }
+
+        return $sections;
+    }
+
+    /**
+     * Pre-generate all charts for all sections in parallel
+     *
+     * @param  array<int, array>  $sectionsData
+     * @return array<string, string> Map of chart key => file path
+     */
+    protected function preGenerateAllCharts(array $sectionsData, LikertChartImageService $chartImageService, string $tempDir, ReportPdfService $reportPdfService, array $likertData): array
+    {
+        $chartDefinitions = [];
+
+        // Add demographic charts for TOTAL section only (first section)
+        if (! empty($sectionsData)) {
+            $firstSection = $sectionsData[0];
+            $imageSuffix = $firstSection['imageSuffix'];
+            
+            // Calculate demographic distributions
+            $demographicDistributions = $reportPdfService->calculateDemographicDistributions($likertData);
+            
+            // Gender distribution
+            if (! empty($demographicDistributions['gender'])) {
+                $chartDefinitions[] = [
+                    'type' => 'vertical-bar',
+                    'distribution' => $demographicDistributions['gender'],
+                    'outputPath' => $tempDir.'/demo_gender_'.$imageSuffix.'.png',
+                    'title' => 'Distribución por Género',
+                ];
+            }
+            
+            // Contract type distribution
+            if (! empty($demographicDistributions['contract'])) {
+                $chartDefinitions[] = [
+                    'type' => 'vertical-bar',
+                    'distribution' => $demographicDistributions['contract'],
+                    'outputPath' => $tempDir.'/demo_contract_'.$imageSuffix.'.png',
+                    'title' => 'Distribución por Tipo de Contrato',
+                ];
+            }
+            
+            // Position distribution
+            if (! empty($demographicDistributions['position'])) {
+                $chartDefinitions[] = [
+                    'type' => 'vertical-bar',
+                    'distribution' => $demographicDistributions['position'],
+                    'outputPath' => $tempDir.'/demo_position_'.$imageSuffix.'.png',
+                    'title' => 'Distribución por Puesto',
+                ];
+            }
+            
+            // Shift distribution
+            if (! empty($demographicDistributions['shift'])) {
+                $chartDefinitions[] = [
+                    'type' => 'vertical-bar',
+                    'distribution' => $demographicDistributions['shift'],
+                    'outputPath' => $tempDir.'/demo_shift_'.$imageSuffix.'.png',
+                    'title' => 'Distribución por Turno',
+                ];
+            }
+        }
+
+        foreach ($sectionsData as $sectionData) {
+            $imageSuffix = $sectionData['imageSuffix'];
+
+            // Clima Laboral charts
+            $pieClimaPath = $tempDir.'/pie_clima_'.$imageSuffix.'.png';
+            $barClimaPath = $tempDir.'/bar_clima_'.$imageSuffix.'.png';
+
+            $chartDefinitions[] = [
+                'type' => 'pie',
+                'distribution' => $sectionData['climaLaboralDistribution'],
+                'outputPath' => $pieClimaPath,
+                'title' => 'Distribución de Clima Laboral',
+            ];
+
+            $chartDefinitions[] = [
+                'type' => 'bar',
+                'distribution' => $sectionData['climaLaboralDistribution'],
+                'outputPath' => $barClimaPath,
+                'title' => 'Conteo por Nivel',
+            ];
+
+            // Dimension charts
+            foreach ($sectionData['dimensions'] as $dimName => $dimData) {
+                $safeDimName = preg_replace('/[^a-zA-Z0-9]/', '_', $dimName);
+                $distribution = $dimData['distribution'] ?? [];
+
+                $pieDimPath = $tempDir.'/pie_'.$safeDimName.'_'.$imageSuffix.'.png';
+                $barDimPath = $tempDir.'/bar_'.$safeDimName.'_'.$imageSuffix.'.png';
+
+                $chartDefinitions[] = [
+                    'type' => 'pie',
+                    'distribution' => $distribution,
+                    'outputPath' => $pieDimPath,
+                    'title' => $dimName,
+                ];
+
+                $chartDefinitions[] = [
+                    'type' => 'bar',
+                    'distribution' => $distribution,
+                    'outputPath' => $barDimPath,
+                    'title' => 'Distribución - '.$dimName,
+                ];
+            }
+        }
+
+        // Generate all charts in parallel batches
+        $results = $chartImageService->generateChartsBatch($chartDefinitions);
+
+        // Build path map and track for cleanup
+        $pathMap = [];
+        foreach ($results as $outputPath => $success) {
+            if ($success && file_exists($outputPath)) {
+                $pathMap[$outputPath] = $outputPath;
+                $this->tempImagePaths[] = $outputPath;
+            }
+        }
+
+        return $pathMap;
+    }
+
+    /**
+     * Add a complete filtered report section using pre-generated images
+     *
+     * @param  array<string, mixed>  $fullLikertData
+     * @param  array<int, array>  $evaluations
+     * @param  array<string, int>  $climaLaboralDistribution
+     * @param  array<string, array>  $dimensionSummaries
+     * @param  array<string, string>  $chartPaths
+     */
+    protected function addFilteredReportSectionWithPregenerated(
+        \PhpOffice\PhpWord\Element\Section $section,
+        array $fullLikertData,
+        array $evaluations,
+        array $climaLaboralDistribution,
+        array $dimensionSummaries,
+        string $sectionTitle,
+        int $totalPeople,
+        array $chartPaths,
+        string $imageSuffix,
+        bool $addPageBreak = true,
+        bool $isFirstSection = false
+    ): void {
+        $tempDir = storage_path('app/temp');
+
+        if ($addPageBreak) {
+            $section->addPageBreak();
+        }
+
+        // Section title
+        $section->addText(
+            $sectionTitle,
+            ['bold' => true, 'size' => 18, 'color' => '1e40af'],
+            ['alignment' => Jc::CENTER]
+        );
+        $section->addText(
+            "{$totalPeople} evaluaciones",
+            ['size' => 12, 'italic' => true, 'color' => '666666'],
+            ['alignment' => Jc::CENTER]
+        );
+        $section->addTextBreak(1);
+
+        // Add demographic charts only for first section (TOTAL)
+        if ($isFirstSection) {
+            $this->addDemographicCharts($section, $chartPaths, $tempDir, $imageSuffix);
+        }
+
+        // Clima Laboral section with pre-generated charts
+        $this->addClimaLaboralSectionWithPregeneratedCharts(
+            $section,
+            $climaLaboralDistribution,
+            $evaluations,
+            $fullLikertData,
+            $chartPaths,
+            $tempDir,
+            $imageSuffix
+        );
+
+        // Each dimension section with pre-generated charts
+        foreach ($dimensionSummaries as $dimName => $dimData) {
+            $this->addDimensionSectionWithPregeneratedCharts(
+                $section,
+                $dimName,
+                $dimData,
+                $evaluations,
+                $chartPaths,
+                $tempDir,
+                $imageSuffix
+            );
+        }
+    }
+
+    /**
+     * Add Clima Laboral section using pre-generated chart images
+     *
+     * @param  array<string, int>  $distribution
+     * @param  array<int, array>  $evaluations
+     * @param  array<string, mixed>  $fullLikertData
+     * @param  array<string, string>  $chartPaths
+     */
+    protected function addClimaLaboralSectionWithPregeneratedCharts(
+        \PhpOffice\PhpWord\Element\Section $section,
+        array $distribution,
+        array $evaluations,
+        array $fullLikertData,
+        array $chartPaths,
+        string $tempDir,
+        string $imageSuffix
+    ): void {
+        $section->addTitle('Clima Laboral General', 2);
+        $section->addTextBreak(1);
+
+        // Distribution table
+        $this->addDistributionTable($section, $distribution);
+        $section->addTextBreak(1);
+
+        // Pie chart (pre-generated)
+        $pieChartPath = $tempDir.'/pie_clima_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$pieChartPath]) && file_exists($pieChartPath)) {
+            $section->addImage($pieChartPath, [
+                'width' => 350,
+                'height' => 300,
+                'alignment' => Jc::CENTER,
+            ]);
+        }
+        $section->addTextBreak(1);
+
+        // Bar chart (pre-generated)
+        $barChartPath = $tempDir.'/bar_clima_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$barChartPath]) && file_exists($barChartPath)) {
+            $section->addImage($barChartPath, [
+                'width' => 400,
+                'height' => 280,
+                'alignment' => Jc::CENTER,
+            ]);
+        }
+        $section->addTextBreak(1);
+
+        // Heat map for all questions
+        $section->addText(
+            'Mapa de Calor - Todas las Preguntas',
+            ['bold' => true, 'size' => 12, 'color' => '1e40af']
+        );
+        $section->addText(
+            'Valores: 4 = Totalmente de Acuerdo (azul), 3 = De Acuerdo (verde), 2 = Desacuerdo (amarillo), 1 = Totalmente Desacuerdo (rojo)',
+            ['size' => 9, 'italic' => true, 'color' => '666666']
+        );
+        $section->addTextBreak(1);
+
+        // Add native Word table heat map
+        $this->addHeatMapTableNative($section, $evaluations, $fullLikertData['dimensions']);
+    }
+
+    /**
+     * Add dimension section using pre-generated chart images
+     *
+     * @param  array<string, mixed>  $dimData
+     * @param  array<int, array>  $evaluations
+     * @param  array<string, string>  $chartPaths
+     */
+    protected function addDimensionSectionWithPregeneratedCharts(
+        \PhpOffice\PhpWord\Element\Section $section,
+        string $dimName,
+        array $dimData,
+        array $evaluations,
+        array $chartPaths,
+        string $tempDir,
+        string $imageSuffix
+    ): void {
+        $section->addPageBreak();
+        $section->addTitle($dimName, 2);
+
+        $questionNumbers = $dimData['questionNumbers'] ?? [];
+        $section->addText(
+            count($questionNumbers).' preguntas: '.implode(', ', $questionNumbers),
+            ['size' => 9, 'italic' => true, 'color' => '666666']
+        );
+        $section->addTextBreak(1);
+
+        $distribution = $dimData['distribution'] ?? [];
+
+        // Distribution table
+        $this->addDistributionTable($section, $distribution);
+        $section->addTextBreak(1);
+
+        // Create safe filename from dimension name
+        $safeDimName = preg_replace('/[^a-zA-Z0-9]/', '_', $dimName);
+
+        // Pie chart (pre-generated)
+        $pieChartPath = $tempDir.'/pie_'.$safeDimName.'_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$pieChartPath]) && file_exists($pieChartPath)) {
+            $section->addImage($pieChartPath, [
+                'width' => 350,
+                'height' => 300,
+                'alignment' => Jc::CENTER,
+            ]);
+        }
+        $section->addTextBreak(1);
+
+        // Bar chart (pre-generated)
+        $barChartPath = $tempDir.'/bar_'.$safeDimName.'_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$barChartPath]) && file_exists($barChartPath)) {
+            $section->addImage($barChartPath, [
+                'width' => 400,
+                'height' => 280,
+                'alignment' => Jc::CENTER,
+            ]);
+        }
+        $section->addTextBreak(1);
+
+        // Dimension-specific heat map (native Word table)
+        $section->addText(
+            'Mapa de Calor - '.$dimName,
+            ['bold' => true, 'size' => 11, 'color' => '1e40af']
+        );
+        $section->addTextBreak(1);
+
+        $this->addDimensionHeatMapTableNative($section, $evaluations, $questionNumbers);
+    }
+
+    /**
+     * Add demographic charts section to Word document
+     *
+     * @param  array<string, string>  $chartPaths
+     */
+    protected function addDemographicCharts(
+        \PhpOffice\PhpWord\Element\Section $section,
+        array $chartPaths,
+        string $tempDir,
+        string $imageSuffix
+    ): void {
+        $section->addTitle('Datos Demográficos', 2);
+        $section->addTextBreak(1);
+
+        $section->addText(
+            'Distribución de participantes según características demográficas',
+            ['size' => 11, 'italic' => true, 'color' => '666666']
+        );
+        $section->addTextBreak(1);
+
+        // Gender distribution chart
+        $genderChartPath = $tempDir.'/demo_gender_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$genderChartPath]) && file_exists($genderChartPath)) {
+            $section->addText(
+                'Distribución por Género',
+                ['bold' => true, 'size' => 11, 'color' => '1e40af']
+            );
+            $section->addTextBreak(0.5);
+            $section->addImage($genderChartPath, [
+                'width' => 400,
+                'height' => 300,
+                'alignment' => Jc::CENTER,
+            ]);
+            $section->addTextBreak(1);
+        }
+
+        // Contract type distribution chart
+        $contractChartPath = $tempDir.'/demo_contract_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$contractChartPath]) && file_exists($contractChartPath)) {
+            $section->addText(
+                'Distribución por Tipo de Contrato',
+                ['bold' => true, 'size' => 11, 'color' => '1e40af']
+            );
+            $section->addTextBreak(0.5);
+            $section->addImage($contractChartPath, [
+                'width' => 400,
+                'height' => 300,
+                'alignment' => Jc::CENTER,
+            ]);
+            $section->addTextBreak(1);
+        }
+
+        // Position distribution chart
+        $positionChartPath = $tempDir.'/demo_position_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$positionChartPath]) && file_exists($positionChartPath)) {
+            $section->addText(
+                'Distribución por Puesto',
+                ['bold' => true, 'size' => 11, 'color' => '1e40af']
+            );
+            $section->addTextBreak(0.5);
+            $section->addImage($positionChartPath, [
+                'width' => 400,
+                'height' => 300,
+                'alignment' => Jc::CENTER,
+            ]);
+            $section->addTextBreak(1);
+        }
+
+        // Shift distribution chart
+        $shiftChartPath = $tempDir.'/demo_shift_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$shiftChartPath]) && file_exists($shiftChartPath)) {
+            $section->addText(
+                'Distribución por Turno',
+                ['bold' => true, 'size' => 11, 'color' => '1e40af']
+            );
+            $section->addTextBreak(0.5);
+            $section->addImage($shiftChartPath, [
+                'width' => 400,
+                'height' => 300,
+                'alignment' => Jc::CENTER,
+            ]);
+            $section->addTextBreak(1);
+        }
+
+        $section->addTextBreak(1);
+    }
+
+    /**
      * Add a complete filtered report section (Clima Laboral + all dimensions)
+     *
+     * @deprecated Use addFilteredReportSectionWithPregenerated instead
      *
      * @param  array<string, mixed>  $fullLikertData  Full data with all dimensions config
      * @param  array<int, array>  $evaluations  Filtered evaluations

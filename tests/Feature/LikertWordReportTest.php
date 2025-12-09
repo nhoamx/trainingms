@@ -225,4 +225,118 @@ class LikertWordReportTest extends TestCase
 
         $response->assertStatus(404);
     }
+
+    public function test_generate_charts_batch_returns_empty_for_empty_input(): void
+    {
+        $service = app(LikertChartImageService::class);
+        $results = $service->generateChartsBatch([]);
+
+        $this->assertIsArray($results);
+        $this->assertEmpty($results);
+    }
+
+    public function test_generate_charts_batch_accepts_valid_chart_definitions(): void
+    {
+        $service = app(LikertChartImageService::class);
+
+        $tempDir = storage_path('app/temp');
+        if (! file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        $testPath = $tempDir.'/test_batch_chart_'.uniqid().'.png';
+
+        $chartDefinitions = [
+            [
+                'type' => 'pie',
+                'distribution' => [
+                    'Totalmente de Acuerdo' => 5,
+                    'De Acuerdo' => 3,
+                    'Desacuerdo' => 1,
+                    'Totalmente Desacuerdo' => 1,
+                ],
+                'outputPath' => $testPath,
+                'title' => 'Test Chart',
+            ],
+        ];
+
+        $results = $service->generateChartsBatch($chartDefinitions);
+
+        $this->assertIsArray($results);
+        $this->assertArrayHasKey($testPath, $results);
+
+        // Cleanup
+        if (file_exists($testPath)) {
+            unlink($testPath);
+        }
+    }
+
+    public function test_calculate_demographic_distributions_returns_correct_structure(): void
+    {
+        // Create evaluations with demographic data
+        $evaluations = PaperEvaluation::factory()
+            ->likert()
+            ->count(5)
+            ->create([
+                'organization_id' => $this->organization->id,
+            ]);
+
+        // Add demographic data to each evaluation
+        foreach ($evaluations as $index => $evaluation) {
+            $evaluation->demographicData()->create([
+                'gender' => $index % 2 === 0 ? 'Masculino' : 'Femenino',
+                'work_schedule' => $index % 3 === 0 ? 'Matutino' : 'Nocturno',
+                'contract_type' => $index % 2 === 0 ? 'Permanente' : 'Temporal',
+                'position' => 'Puesto '.$index,
+                'department' => 'Departamento '.$index,
+            ]);
+        }
+
+        $service = app(ReportPdfService::class);
+        $likertData = $service->getLikertReportWordData($this->organization->id);
+
+        $distributions = $service->calculateDemographicDistributions($likertData);
+
+        $this->assertIsArray($distributions);
+        $this->assertArrayHasKey('gender', $distributions);
+        $this->assertArrayHasKey('contract', $distributions);
+        $this->assertArrayHasKey('position', $distributions);
+        $this->assertArrayHasKey('shift', $distributions);
+
+        // Verify counts
+        $this->assertGreaterThan(0, count($distributions['gender']));
+        $this->assertGreaterThan(0, count($distributions['contract']));
+    }
+
+    public function test_generate_vertical_bar_chart_creates_image(): void
+    {
+        $service = app(LikertChartImageService::class);
+
+        $tempDir = storage_path('app/temp');
+        if (! file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        $testPath = $tempDir.'/test_vertical_bar_'.uniqid().'.png';
+
+        $distribution = [
+            'Masculino' => 15,
+            'Femenino' => 12,
+            'No especificado' => 3,
+        ];
+
+        $result = $service->generateVerticalBarChartImage($distribution, $testPath, 'Distribución por Género');
+
+        $this->assertTrue($result);
+        $this->assertFileExists($testPath);
+
+        // Verify file has content
+        $fileSize = filesize($testPath);
+        $this->assertGreaterThan(0, $fileSize);
+
+        // Cleanup
+        if (file_exists($testPath)) {
+            unlink($testPath);
+        }
+    }
 }
