@@ -42,39 +42,6 @@
       </div>
 
       <div v-else>
-        <!-- Puntaje Total por Pregunta (No afectado por filtros) -->
-        <div class="bg-white rounded-lg shadow p-6 mb-6">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900">Puntaje Total por Pregunta</h3>
-              <p class="text-sm text-gray-500 mt-1">
-                Suma de puntajes de todos los {{ evaluations.length }} participantes (máximo = {{ evaluations.length * 4 }} por pregunta)
-              </p>
-            </div>
-            <div class="flex items-center gap-4 text-xs">
-              <div class="flex items-center gap-1.5">
-                <span class="w-3 h-3 rounded bg-green-600"></span>
-                <span class="text-gray-600">≥75%</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-3 h-3 rounded bg-lime-500"></span>
-                <span class="text-gray-600">50-74%</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-3 h-3 rounded bg-yellow-500"></span>
-                <span class="text-gray-600">25-49%</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-3 h-3 rounded bg-red-600"></span>
-                <span class="text-gray-600">&lt;25%</span>
-              </div>
-            </div>
-          </div>
-          <div class="relative h-80">
-            <canvas ref="questionScoresChart"></canvas>
-          </div>
-        </div>
-
         <!-- Filtros Demográficos -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Filtros</h3>
@@ -180,40 +147,101 @@
           </div>
         </div>
 
-        <!-- Tabs -->
+        <!-- Puntaje Total por Pregunta (Ahora afectado por filtros) -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Puntaje Total por Pregunta</h3>
+              <p class="text-sm text-gray-500 mt-1">
+                Suma de puntajes de {{ filteredTotalPeople }} participantes (máximo = {{ filteredTotalPeople * 4 }} por pregunta)
+              </p>
+            </div>
+            <div class="flex items-center gap-4 text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-green-600"></span>
+                <span class="text-gray-600">≥75%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-lime-500"></span>
+                <span class="text-gray-600">50-74%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-yellow-500"></span>
+                <span class="text-gray-600">25-49%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-red-600"></span>
+                <span class="text-gray-600">&lt;25%</span>
+              </div>
+            </div>
+          </div>
+          <div class="relative h-80">
+            <canvas ref="questionScoresChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Tabs Principales: Cuantitativos / Cualitativos -->
         <div class="bg-white rounded-lg shadow mb-6">
           <div class="border-b border-gray-200">
             <nav class="flex flex-wrap -mb-px">
               <button
-                @click="activeTab = 'Total'"
+                @click="mainTabType = 'cuantitativos'"
                 :class="[
                   'px-6 py-3 text-sm font-medium border-b-2 transition-colors',
-                  activeTab === 'Total'
+                  mainTabType === 'cuantitativos'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 ]"
               >
-                Organización
+                Cuantitativos
               </button>
               <button
-                v-for="dimensionName in Object.keys(dimensions)"
-                :key="dimensionName"
-                @click="activeTab = dimensionName"
+                @click="mainTabType = 'cualitativos'"
                 :class="[
                   'px-6 py-3 text-sm font-medium border-b-2 transition-colors',
-                  activeTab === dimensionName
+                  mainTabType === 'cualitativos'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 ]"
               >
-                {{ dimensionName }}
+                Cualitativos
               </button>
             </nav>
           </div>
 
-          <!-- Tab Content -->
-          <div class="p-6">
-            <!-- Total Tab -->
+          <!-- Cuantitativos Tab Content -->
+          <div v-if="mainTabType === 'cuantitativos'" class="p-6">
+            <!-- Sub-tabs: Organización + Dimensiones -->
+            <div class="border-b border-gray-200 mb-6">
+              <nav class="flex flex-wrap -mb-px">
+                <button
+                  @click="activeTab = 'Total'"
+                  :class="[
+                    'px-6 py-3 text-sm font-medium border-b-2 transition-colors',
+                    activeTab === 'Total'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ]"
+                >
+                  Organización
+                </button>
+                <button
+                  v-for="dimensionName in Object.keys(dimensions)"
+                  :key="dimensionName"
+                  @click="activeTab = dimensionName"
+                  :class="[
+                    'px-6 py-3 text-sm font-medium border-b-2 transition-colors',
+                    activeTab === dimensionName
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ]"
+                >
+                  {{ dimensionName }}
+                </button>
+              </nav>
+            </div>
+
+            <!-- Tab Content - Organización -->
             <div v-if="activeTab === 'Total'">
               <!-- Clima Laboral -->
               <div class="mb-6 rounded-lg p-6" :class="getLevelColor(getMostCommonInterpretation).bgSolid">
@@ -288,41 +316,11 @@
                 </div>
               </div>
 
-              <!-- Sub-tabs for Total: Mapa de Calor / Comentarios -->
-              <div class="mb-4 border-b border-gray-200">
-                <nav class="flex -mb-px">
-                  <button
-                    @click="totalSubTab = 'mapa'"
-                    :class="[
-                      'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
-                      totalSubTab === 'mapa'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    ]"
-                  >
-                    Mapa de Calor
-                  </button>
-                  <button
-                    @click="totalSubTab = 'comentarios'"
-                    :class="[
-                      'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
-                      totalSubTab === 'comentarios'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    ]"
-                  >
-                    Comentarios
-                  </button>
-                </nav>
-              </div>
-
-              <!-- Mapa de Calor Sub-tab -->
-              <div v-if="totalSubTab === 'mapa'">
-              <!-- Mapa de Calor - Todas las Preguntas -->
+              <!-- Mapa de Calor -->
               <div>
                 <div class="flex items-center justify-between mb-4">
                   <div>
-                    <h4 class="text-md font-semibold text-gray-900">Mapa de Calor - Por factor</h4>
+                    <h4 class="text-md font-semibold text-gray-900">{{ heatmapTitle }}</h4>
                     <p class="text-xs text-gray-500 mt-1">
                       Mostrando {{ Math.min((totalHeatmapCurrentPage - 1) * totalHeatmapRowsPerPage + 1, sortedFilteredEvaluations.length) }}-{{ Math.min(totalHeatmapCurrentPage * totalHeatmapRowsPerPage, sortedFilteredEvaluations.length) }} de {{ sortedFilteredEvaluations.length }} evaluaciones
                     </p>
@@ -466,35 +464,6 @@
                   </div>
                 </div>
               </div>
-              </div>
-
-              <!-- Comentarios Sub-tab -->
-              <div v-else-if="totalSubTab === 'comentarios'">
-                <div v-if="filteredComments.length === 0" class="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
-                  No hay comentarios disponibles con los filtros actuales.
-                </div>
-                <div v-else>
-                  <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                    Comentarios por Factor
-                    <span class="text-sm font-normal text-gray-600 ml-2">({{ filteredComments.length }} comentarios)</span>
-                  </h3>
-                  
-                  <div class="space-y-4">
-                    <div v-for="(commentsGroup, factor) in groupedComments" :key="factor" class="border-l-4 border-blue-500 pl-4">
-                      <h4 class="font-medium text-gray-900 mb-2">{{ factor }}</h4>
-                      <div class="space-y-2">
-                        <div v-for="(comment, index) in commentsGroup" :key="`${factor}-${index}`" class="bg-gray-50 rounded p-3">
-                          <p class="text-sm text-gray-700">{{ comment.comment }}</p>
-                          <p class="text-xs text-gray-500 mt-1">
-                            Folio: {{ comment.folio }} 
-                            <span v-if="comment.name" class="ml-2">- {{ comment.name }}</span>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <!-- Dimension Tabs -->
@@ -545,41 +514,11 @@
                 </div>
               </div>
 
-              <!-- Sub-tabs for Dimension: Mapa de Calor / Comentarios -->
-              <div class="mb-4 border-b border-gray-200">
-                <nav class="flex -mb-px">
-                  <button
-                    @click="dimensionSubTab = 'mapa'"
-                    :class="[
-                      'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
-                      dimensionSubTab === 'mapa'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    ]"
-                  >
-                    Mapa de Calor
-                  </button>
-                  <button
-                    @click="dimensionSubTab = 'comentarios'"
-                    :class="[
-                      'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
-                      dimensionSubTab === 'comentarios'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    ]"
-                  >
-                    Comentarios
-                  </button>
-                </nav>
-              </div>
-
-              <!-- Mapa de Calor Sub-tab for Dimension -->
-              <div v-if="dimensionSubTab === 'mapa'">
               <!-- Mapa de Calor para esta Dimensión -->
               <div>
                 <div class="flex items-center justify-between mb-4">
                   <div>
-                    <h4 class="text-md font-semibold text-gray-900">Mapa de Calor</h4>
+                    <h4 class="text-md font-semibold text-gray-900">{{ heatmapTitle }}</h4>
                     <p class="text-xs text-gray-500 mt-1">
                       Mostrando {{ Math.min((dimensionHeatmapCurrentPage - 1) * dimensionHeatmapRowsPerPage + 1, sortedFilteredEvaluations.length) }}-{{ Math.min(dimensionHeatmapCurrentPage * dimensionHeatmapRowsPerPage, sortedFilteredEvaluations.length) }} de {{ sortedFilteredEvaluations.length }} evaluaciones
                     </p>
@@ -683,31 +622,30 @@
                   </div>
                 </div>
               </div>
-              </div>
+            </div>
+          </div>
 
-              <!-- Comentarios Sub-tab for Dimension -->
-              <div v-else-if="dimensionSubTab === 'comentarios'">
-                <div v-if="filteredComments.length === 0" class="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
-                  No hay comentarios disponibles con los filtros actuales.
-                </div>
-                <div v-else>
-                  <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                    Comentarios por Factor
-                    <span class="text-sm font-normal text-gray-600 ml-2">({{ filteredComments.length }} comentarios)</span>
-                  </h3>
-                  
-                  <div class="space-y-4">
-                    <div v-for="(commentsGroup, factor) in groupedComments" :key="factor" class="border-l-4 border-blue-500 pl-4">
-                      <h4 class="font-medium text-gray-900 mb-2">{{ factor }}</h4>
-                      <div class="space-y-2">
-                        <div v-for="(comment, index) in commentsGroup" :key="`${factor}-${index}`" class="bg-gray-50 rounded p-3">
-                          <p class="text-sm text-gray-700">{{ comment.comment }}</p>
-                          <p class="text-xs text-gray-500 mt-1">
-                            Folio: {{ comment.folio }} 
-                            <span v-if="comment.name" class="ml-2">- {{ comment.name }}</span>
-                          </p>
-                        </div>
-                      </div>
+          <!-- Cualitativos Tab Content -->
+          <div v-else-if="mainTabType === 'cualitativos'" class="p-6">
+            <div v-if="filteredComments.length === 0" class="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
+              No hay comentarios disponibles con los filtros actuales.
+            </div>
+            <div v-else>
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                Comentarios por Factor
+                <span class="text-sm font-normal text-gray-600 ml-2">({{ filteredComments.length }} comentarios)</span>
+              </h3>
+              
+              <div class="space-y-4">
+                <div v-for="(commentsGroup, factor) in groupedComments" :key="factor" class="border-l-4 border-blue-500 pl-4">
+                  <h4 class="font-medium text-gray-900 mb-2">{{ factor }}</h4>
+                  <div class="space-y-2">
+                    <div v-for="(comment, index) in commentsGroup" :key="`${factor}-${index}`" class="bg-gray-50 rounded p-3">
+                      <p class="text-sm text-gray-700">{{ comment.comment }}</p>
+                      <p class="text-xs text-gray-500 mt-1">
+                        Folio: {{ comment.folio }} 
+                        <span v-if="comment.name" class="ml-2">- {{ comment.name }}</span>
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -858,9 +796,8 @@ const props = defineProps({
   },
 })
 
+const mainTabType = ref('cuantitativos') // 'cuantitativos' | 'cualitativos'
 const activeTab = ref('Total')
-const totalSubTab = ref('mapa')
-const dimensionSubTab = ref('mapa')
 const filters = ref({
   genero: '',
   tipo_contrato: '',
@@ -1101,8 +1038,8 @@ const toggleSort = (questionNumber) => {
   }
 }
 
-// Reset pagination when filters change
-watch([filters, customFilters], () => {
+// Reset pagination when filters or main tab type change
+watch([filters, customFilters, mainTabType], () => {
   totalHeatmapCurrentPage.value = 1
   dimensionHeatmapCurrentPage.value = 1
 })
@@ -1273,10 +1210,10 @@ const filteredTotalPeople = computed(() => {
   return filteredEvaluations.value.length
 })
 
-// Calculate total scores per question (NOT affected by filters - uses all evaluations)
+// Calculate total scores per question (affected by filters - uses filtered evaluations)
 const questionScoreTotals = computed(() => {
   const valorOpciones = { A: 4, B: 3, C: 2, D: 1 }
-  const totalParticipants = props.evaluations.length
+  const totalParticipants = filteredEvaluations.value.length
   const maxScorePerQuestion = totalParticipants * 4
   
   const scores = []
@@ -1285,7 +1222,7 @@ const questionScoreTotals = computed(() => {
   for (let q = 1; q <= 23; q++) {
     let totalScore = 0
     
-    props.evaluations.forEach(evalData => {
+    filteredEvaluations.value.forEach(evalData => {
       const answer = evalData.answers[q] || evalData.answers[String(q)]
       if (answer) {
         totalScore += valorOpciones[answer.toUpperCase()] || 0
@@ -1834,6 +1771,15 @@ watch([activeTab, filteredDimensions], () => {
 
 // Compute the list of folios for a given level in the current dimension
 const valorOpciones = { A: 4, B: 3, C: 2, D: 1 }
+
+// Computed property para título dinámico del mapa de calor
+const heatmapTitle = computed(() => {
+  if (filters.value.factor) {
+    console.log('Entro al filltro')
+    return `Mapa de Calor: ${filters.value.factor}`
+  }
+  return 'Mapa de Calor'
+})
 
 const getFoliosForDimensionLevel = (dimensionName, level) => {
   const ranges = getLevelRanges(dimensionName)
