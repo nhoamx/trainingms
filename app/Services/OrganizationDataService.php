@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DemographicData;
 use App\Models\Organization;
+use App\Models\PaperEvaluation;
 
 class OrganizationDataService
 {
@@ -16,7 +17,7 @@ class OrganizationDataService
     public function getCompanyData(Organization $organization): array
     {
         return [
-            'logo' => asset('storage/' . $organization->logo),
+            'logo' => $organization->logo,
             'general' => [
                 'name' => $organization->name,
                 'razon_social' => $organization->razon_social,
@@ -78,6 +79,57 @@ class OrganizationDataService
     }
 
     /**
+     * Obtiene datos demográficos detallados para filtrado
+     *
+     * @param  Organization  $organization  La organización
+     * @return array Datos demográficos detallados para filtrado
+     */
+    public function getDemographicDetails(Organization $organization): array
+    {
+        // Obtener todas las evaluaciones de la organización con datos demográficos
+        $evaluations = PaperEvaluation::where('organization_id', $organization->id)
+            ->with('demographicData')
+            ->get();
+
+        // Extraer valores únicos de cada campo demográfico
+        $genders = [];
+        $contractTypes = [];
+        $positions = [];
+        $areas = [];
+        $shifts = [];
+
+        foreach ($evaluations as $evaluation) {
+            $demo = $evaluation->demographicData;
+            if ($demo) {
+                if ($demo->gender) {
+                    $genders[$demo->gender] = true;
+                }
+                if ($demo->contract_type) {
+                    $contractTypes[$demo->contract_type] = true;
+                }
+                if ($demo->position) {
+                    $positions[$demo->position] = true;
+                }
+                if ($demo->department) {
+                    $areas[$demo->department] = true;
+                }
+                if ($demo->work_schedule) {
+                    $shifts[$demo->work_schedule] = true;
+                }
+            }
+        }
+
+        return [
+            'genders' => array_keys($genders),
+            'contract_types' => array_keys($contractTypes),
+            'positions' => array_keys($positions),
+            'areas' => array_keys($areas),
+            'shifts' => array_keys($shifts),
+            'total_evaluations' => $evaluations->count(),
+        ];
+    }
+
+    /**
      * Obtiene todos los datos del dashboard de la organización
      *
      * @param  Organization  $organization  La organización
@@ -89,10 +141,11 @@ class OrganizationDataService
             'organization' => [
                 'id' => $organization->id,
                 'name' => $organization->name,
-                'logo' => asset('storage/' . $organization->logo),
+                'logo' => $organization->logo,
             ],
             'company_data' => $this->getCompanyData($organization),
             'demographic_summary' => $this->getDemographicSummary($organization),
+            'demographic_details' => $this->getDemographicDetails($organization),
         ];
     }
 

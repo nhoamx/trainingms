@@ -101,7 +101,16 @@ class OrganizationDashboardTest extends TestCase
                     ->has('logo')
                 )
                 ->has('demographic_summary')
+                ->has('demographic_details', fn ($details) => $details
+                    ->has('genders')
+                    ->has('contract_types')
+                    ->has('positions')
+                    ->has('areas')
+                    ->has('shifts')
+                    ->has('total_evaluations')
+                )
             )
+            ->has('evaluations')
         );
     }
 }
