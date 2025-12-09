@@ -321,13 +321,38 @@
               <!-- Mapa de Calor - Todas las Preguntas -->
               <div>
                 <div class="flex items-center justify-between mb-4">
-                  <h4 class="text-md font-semibold text-gray-900">Mapa de Calor - Todas las Preguntas</h4>
-                  <p class="text-xs text-gray-500 flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Clic en el número de pregunta para ordenar
-                  </p>
+                  <div>
+                    <h4 class="text-md font-semibold text-gray-900">Mapa de Calor - Todas las Preguntas</h4>
+                    <p class="text-xs text-gray-500 mt-1">
+                      Mostrando {{ Math.min((totalHeatmapCurrentPage - 1) * totalHeatmapRowsPerPage + 1, sortedFilteredEvaluations.length) }}-{{ Math.min(totalHeatmapCurrentPage * totalHeatmapRowsPerPage, sortedFilteredEvaluations.length) }} de {{ sortedFilteredEvaluations.length }} evaluaciones
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <button
+                      @click="exportHeatmapToExcel('total')"
+                      :disabled="isExportingHeatmap"
+                      class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <svg v-if="isExportingHeatmap" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      {{ isExportingHeatmap ? 'Descargando...' : 'Descargar CSV' }}
+                    </button>
+                    <p class="text-xs text-gray-500 flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Clic en el número de pregunta para ordenar
+                    </p>
+                  </div>
+                </div>
+                <!-- Export message -->
+                <div v-if="exportMessage" class="mb-4 p-3 rounded-lg" :class="exportMessageClass">
+                  {{ exportMessage }}
                 </div>
                 <div class="overflow-x-auto">
                   <table class="min-w-full border-collapse border border-gray-300">
@@ -385,7 +410,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="evaluation in sortedFilteredEvaluations" :key="`eval-${evaluation.folio}`">
+                      <tr v-for="evaluation in paginatedTotalHeatmapEvaluations" :key="`eval-${evaluation.folio}`">
                         <!-- Personal folio column -->
                         <td class="border border-gray-300 px-2 py-2 text-xs font-semibold sticky left-0 bg-white z-10">
                           <a
@@ -417,6 +442,28 @@
                       </tr>
                     </tbody>
                   </table>
+                </div>
+                <!-- Pagination Controls -->
+                <div v-if="sortedFilteredEvaluations.length > totalHeatmapRowsPerPage" class="mt-4 flex items-center justify-between">
+                  <div class="text-sm text-gray-600">
+                    Página {{ totalHeatmapCurrentPage }} de {{ Math.ceil(sortedFilteredEvaluations.length / totalHeatmapRowsPerPage) }}
+                  </div>
+                  <div class="flex gap-2">
+                    <button
+                      @click="totalHeatmapCurrentPage = Math.max(1, totalHeatmapCurrentPage - 1)"
+                      :disabled="totalHeatmapCurrentPage === 1"
+                      class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      @click="totalHeatmapCurrentPage = Math.min(Math.ceil(sortedFilteredEvaluations.length / totalHeatmapRowsPerPage), totalHeatmapCurrentPage + 1)"
+                      :disabled="totalHeatmapCurrentPage === Math.ceil(sortedFilteredEvaluations.length / totalHeatmapRowsPerPage)"
+                      class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
                 </div>
               </div>
               </div>
@@ -531,13 +578,38 @@
               <!-- Mapa de Calor para esta Dimensión -->
               <div>
                 <div class="flex items-center justify-between mb-4">
-                  <h4 class="text-md font-semibold text-gray-900">Mapa de Calor</h4>
-                  <p class="text-xs text-gray-500 flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Clic en el número de pregunta para ordenar
-                  </p>
+                  <div>
+                    <h4 class="text-md font-semibold text-gray-900">Mapa de Calor</h4>
+                    <p class="text-xs text-gray-500 mt-1">
+                      Mostrando {{ Math.min((dimensionHeatmapCurrentPage - 1) * dimensionHeatmapRowsPerPage + 1, sortedFilteredEvaluations.length) }}-{{ Math.min(dimensionHeatmapCurrentPage * dimensionHeatmapRowsPerPage, sortedFilteredEvaluations.length) }} de {{ sortedFilteredEvaluations.length }} evaluaciones
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <button
+                      @click="exportHeatmapToExcel('dimension')"
+                      :disabled="isExportingHeatmap"
+                      class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <svg v-if="isExportingHeatmap" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      {{ isExportingHeatmap ? 'Descargando...' : 'Descargar CSV' }}
+                    </button>
+                    <p class="text-xs text-gray-500 flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Clic en el número de pregunta para ordenar
+                    </p>
+                  </div>
+                </div>
+                <!-- Export message -->
+                <div v-if="exportMessage" class="mb-4 p-3 rounded-lg" :class="exportMessageClass">
+                  {{ exportMessage }}
                 </div>
                 <div class="overflow-x-auto">
                   <table class="min-w-full border-collapse border border-gray-300">
@@ -564,7 +636,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="evaluation in sortedFilteredEvaluations" :key="`dim-eval-${evaluation.folio}`">
+                      <tr v-for="evaluation in paginatedDimensionHeatmapEvaluations" :key="`dim-eval-${evaluation.folio}`">
                         <!-- Personal folio column -->
                         <td class="border border-gray-300 px-2 py-2 text-xs font-semibold sticky left-0 bg-white z-10">
                           <a
@@ -587,6 +659,28 @@
                       </tr>
                     </tbody>
                   </table>
+                </div>
+                <!-- Pagination Controls -->
+                <div v-if="sortedFilteredEvaluations.length > dimensionHeatmapRowsPerPage" class="mt-4 flex items-center justify-between">
+                  <div class="text-sm text-gray-600">
+                    Página {{ dimensionHeatmapCurrentPage }} de {{ Math.ceil(sortedFilteredEvaluations.length / dimensionHeatmapRowsPerPage) }}
+                  </div>
+                  <div class="flex gap-2">
+                    <button
+                      @click="dimensionHeatmapCurrentPage = Math.max(1, dimensionHeatmapCurrentPage - 1)"
+                      :disabled="dimensionHeatmapCurrentPage === 1"
+                      class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      @click="dimensionHeatmapCurrentPage = Math.min(Math.ceil(sortedFilteredEvaluations.length / dimensionHeatmapRowsPerPage), dimensionHeatmapCurrentPage + 1)"
+                      :disabled="dimensionHeatmapCurrentPage === Math.ceil(sortedFilteredEvaluations.length / dimensionHeatmapRowsPerPage)"
+                      class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
                 </div>
               </div>
               </div>
@@ -796,6 +890,17 @@ const QUESTION_SCORES_CHART_KEY = 'QuestionScores'
 const sortColumn = ref(null) // Question number to sort by, or null for default (folio asc)
 const sortDirection = ref('desc') // 'asc' or 'desc'
 
+// Pagination state for heatmaps
+const totalHeatmapRowsPerPage = ref(50)
+const totalHeatmapCurrentPage = ref(1)
+const dimensionHeatmapRowsPerPage = ref(50)
+const dimensionHeatmapCurrentPage = ref(1)
+
+// Excel download state
+const isExportingHeatmap = ref(false)
+const exportMessage = ref('')
+const exportMessageClass = ref('')
+
 // Word Report Download State
 const isDownloading = ref(false)
 const downloadMessage = ref('')
@@ -933,6 +1038,20 @@ const sortedFilteredEvaluations = computed(() => {
   return evaluations
 })
 
+// Paginated evaluations for Total heatmap
+const paginatedTotalHeatmapEvaluations = computed(() => {
+  const start = (totalHeatmapCurrentPage.value - 1) * totalHeatmapRowsPerPage.value
+  const end = start + totalHeatmapRowsPerPage.value
+  return sortedFilteredEvaluations.value.slice(start, end)
+})
+
+// Paginated evaluations for Dimension heatmap
+const paginatedDimensionHeatmapEvaluations = computed(() => {
+  const start = (dimensionHeatmapCurrentPage.value - 1) * dimensionHeatmapRowsPerPage.value
+  const end = start + dimensionHeatmapRowsPerPage.value
+  return sortedFilteredEvaluations.value.slice(start, end)
+})
+
 // Get all comments from filtered evaluations
 const filteredComments = computed(() => {
   const comments = []
@@ -979,6 +1098,81 @@ const toggleSort = (questionNumber) => {
     // New column, start with desc (highest first)
     sortColumn.value = qNum
     sortDirection.value = 'desc'
+  }
+}
+
+// Reset pagination when filters change
+watch([filters, customFilters], () => {
+  totalHeatmapCurrentPage.value = 1
+  dimensionHeatmapCurrentPage.value = 1
+})
+
+// Export heatmap to Excel
+const exportHeatmapToExcel = async (heatmapType = 'total') => {
+  isExportingHeatmap.value = true
+  exportMessage.value = 'Preparando descarga...'
+  exportMessageClass.value = 'bg-blue-100 text-blue-800'
+
+  try {
+    const evaluationsToExport = sortedFilteredEvaluations.value
+    const dimensions = filteredDimensions.value
+    
+    // Build CSV content
+    let csv = ''
+    
+    // Header row - Folio + Clima Laboral + Dimension headers
+    let headerRow = 'Folio,Clima Laboral'
+    Object.entries(dimensions).forEach(([dimName, dim]) => {
+      for (let i = 0; i < dim.questionCount; i++) {
+        headerRow += ','
+      }
+    })
+    csv += headerRow + '\n'
+    
+    // Sub-header row - Question numbers
+    let subHeaderRow = ','
+    Object.entries(dimensions).forEach(([dimName, dim]) => {
+      const qNums = Object.keys(dim.questions)
+      subHeaderRow += qNums.join(',') + ','
+    })
+    csv += subHeaderRow + '\n'
+    
+    // Data rows
+    evaluationsToExport.forEach(evalItem => {
+      let row = `"${evalItem.personal_folio}",${evalItem.scores?.total_score ?? '-'}`
+      
+      Object.entries(dimensions).forEach(([dimName, dim]) => {
+        const qNums = Object.keys(dim.questions)
+        qNums.forEach(qNum => {
+          const answer = getAnswerNumericValue(evalItem.answers[qNum])
+          row += `,${answer}`
+        })
+      })
+      
+      csv += row + '\n'
+    })
+    
+    // Create blob and download
+    const timestamp = new Date().toISOString().slice(0, 10)
+    const filename = `mapa-calor-clima-laboral-${organizationName.value.replace(/\s+/g, '-')}-${timestamp}.csv`
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+    link.click()
+    
+    exportMessage.value = `Mapa de calor descargado: ${evaluationsToExport.length} filas`
+    exportMessageClass.value = 'bg-green-100 text-green-800'
+    
+    setTimeout(() => {
+      exportMessage.value = ''
+    }, 5000)
+  } catch (error) {
+    console.error('Error exporting heatmap:', error)
+    exportMessage.value = 'Error al descargar el mapa de calor'
+    exportMessageClass.value = 'bg-red-100 text-red-800'
+  } finally {
+    isExportingHeatmap.value = false
   }
 }
 
