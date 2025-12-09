@@ -12,6 +12,7 @@ use App\Http\Controllers\PeopleListController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\ResultsController;
 use App\Http\Controllers\UserController;
+use App\Http\Middleware\UserDashboardAccess;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -76,7 +77,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports/dimension-report-summary', [\App\Http\Controllers\DimensionItemSummaryController::class, 'byOrganization'])
         ->name('reports.dimension.summary');
 
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(UserDashboardAccess::class)
+    ->name('dashboard');
 
     // API route for raw answer distribution by category
     Route::get('/dashboard/report/category-answer-distribution/{categoryId}', [DashboardController::class, 'getCategoryAnswerDistribution'])
