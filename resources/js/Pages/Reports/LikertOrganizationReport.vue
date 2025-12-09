@@ -193,7 +193,7 @@
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 ]"
               >
-                Total
+                Organización
               </button>
               <button
                 v-for="dimensionName in Object.keys(dimensions)"
@@ -263,7 +263,7 @@
 
               <!-- Lista de Dimensiones con Distribución de Personas -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Dimensión</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Factor</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div 
                     v-for="(dim, dimName) in filteredDimensions" 
@@ -322,7 +322,7 @@
               <div>
                 <div class="flex items-center justify-between mb-4">
                   <div>
-                    <h4 class="text-md font-semibold text-gray-900">Mapa de Calor - Todas las Preguntas</h4>
+                    <h4 class="text-md font-semibold text-gray-900">Mapa de Calor - Por factor</h4>
                     <p class="text-xs text-gray-500 mt-1">
                       Mostrando {{ Math.min((totalHeatmapCurrentPage - 1) * totalHeatmapRowsPerPage + 1, sortedFilteredEvaluations.length) }}-{{ Math.min(totalHeatmapCurrentPage * totalHeatmapRowsPerPage, sortedFilteredEvaluations.length) }} de {{ sortedFilteredEvaluations.length }} evaluaciones
                     </p>
