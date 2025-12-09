@@ -353,10 +353,10 @@ class GenerateWordReport implements ShouldQueue
                 ];
             }
             
-            // Position distribution
+            // Position distribution (horizontal bar - many categories)
             if (! empty($demographicDistributions['position'])) {
                 $chartDefinitions[] = [
-                    'type' => 'vertical-bar',
+                    'type' => 'demographic-horizontal-bar',
                     'distribution' => $demographicDistributions['position'],
                     'outputPath' => $tempDir.'/demo_position_'.$imageSuffix.'.png',
                     'title' => 'Distribución por Puesto',
@@ -370,6 +370,16 @@ class GenerateWordReport implements ShouldQueue
                     'distribution' => $demographicDistributions['shift'],
                     'outputPath' => $tempDir.'/demo_shift_'.$imageSuffix.'.png',
                     'title' => 'Distribución por Turno',
+                ];
+            }
+
+            // Area distribution (horizontal bar - many categories)
+            if (! empty($demographicDistributions['area'])) {
+                $chartDefinitions[] = [
+                    'type' => 'demographic-horizontal-bar',
+                    'distribution' => $demographicDistributions['area'],
+                    'outputPath' => $tempDir.'/demo_area_'.$imageSuffix.'.png',
+                    'title' => 'Distribución por Área',
                 ];
             }
 
@@ -425,6 +435,20 @@ class GenerateWordReport implements ShouldQueue
                     'outputPath' => $tempDir.'/question_scores_'.$imageSuffix.'.png',
                     'title' => 'Puntaje Total por Pregunta',
                 ];
+            }
+
+            // Dimension distribution charts (one per factor)
+            $dimensionDistributions = $reportPdfService->calculateDimensionDistributions($likertData);
+            if (! empty($dimensionDistributions)) {
+                foreach ($dimensionDistributions as $dimensionName => $levelDistribution) {
+                    $safeDimName = preg_replace('/[^a-zA-Z0-9]/', '_', $dimensionName);
+                    $chartDefinitions[] = [
+                        'type' => 'factor-distribution',
+                        'distribution' => $levelDistribution,
+                        'outputPath' => $tempDir.'/factor_'.$safeDimName.'_'.$imageSuffix.'.png',
+                        'title' => $dimensionName,
+                    ];
+                }
             }
         }
 
@@ -739,17 +763,18 @@ class GenerateWordReport implements ShouldQueue
             $section->addTextBreak(1);
         }
 
-        // Position distribution chart
+        // Position distribution chart (horizontal bar for many categories)
         $positionChartPath = $tempDir.'/demo_position_'.$imageSuffix.'.png';
         if (isset($chartPaths[$positionChartPath]) && file_exists($positionChartPath)) {
+            $section->addPageBreak();
             $section->addText(
                 'Distribución por Puesto',
                 ['bold' => true, 'size' => 11, 'color' => '1e40af']
             );
             $section->addTextBreak(0.5);
             $section->addImage($positionChartPath, [
-                'width' => 400,
-                'height' => 300,
+                'width' => 550,
+                'height' => 450,
                 'alignment' => Jc::CENTER,
             ]);
             $section->addTextBreak(1);
@@ -766,6 +791,23 @@ class GenerateWordReport implements ShouldQueue
             $section->addImage($shiftChartPath, [
                 'width' => 400,
                 'height' => 300,
+                'alignment' => Jc::CENTER,
+            ]);
+            $section->addTextBreak(1);
+        }
+
+        // Area distribution chart (horizontal bar for many categories)
+        $areaChartPath = $tempDir.'/demo_area_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$areaChartPath]) && file_exists($areaChartPath)) {
+            $section->addPageBreak();
+            $section->addText(
+                'Distribución por Área',
+                ['bold' => true, 'size' => 11, 'color' => '1e40af']
+            );
+            $section->addTextBreak(0.5);
+            $section->addImage($areaChartPath, [
+                'width' => 550,
+                'height' => 450,
                 'alignment' => Jc::CENTER,
             ]);
             $section->addTextBreak(1);
@@ -870,6 +912,47 @@ class GenerateWordReport implements ShouldQueue
                 'alignment' => Jc::CENTER,
             ]);
             $section->addTextBreak(1);
+        }
+
+        // Add page break before factor distribution charts
+        $section->addPageBreak();
+
+        // Factor distribution section
+        $section->addTitle('Distribución de Personas por Factor', 2);
+        $section->addTextBreak(1);
+
+        $section->addText(
+            'Cantidad de personas clasificadas en cada nivel de acuerdo para cada factor evaluado',
+            ['size' => 11, 'italic' => true, 'color' => '666666']
+        );
+        $section->addTextBreak(1);
+
+        // Individual factor distribution charts (vertical bars)
+        $niveles = config('likert-value.niveles', []);
+        $factorCount = 0;
+        foreach ($niveles as $dimensionName => $dimConfig) {
+            $safeDimName = preg_replace('/[^a-zA-Z0-9]/', '_', $dimensionName);
+            $factorChartPath = $tempDir.'/factor_'.$safeDimName.'_'.$imageSuffix.'.png';
+            
+            if (isset($chartPaths[$factorChartPath]) && file_exists($factorChartPath)) {
+                // Add page break every 2 charts (after the first 2)
+                if ($factorCount > 0 && $factorCount % 2 === 0) {
+                    $section->addPageBreak();
+                }
+                
+                $section->addText(
+                    $dimensionName,
+                    ['bold' => true, 'size' => 11, 'color' => '1e40af']
+                );
+                $section->addTextBreak(0.5);
+                $section->addImage($factorChartPath, [
+                    'width' => 450,
+                    'height' => 280,
+                    'alignment' => Jc::CENTER,
+                ]);
+                $section->addTextBreak(1);
+                $factorCount++;
+            }
         }
 
         $section->addTextBreak(1);

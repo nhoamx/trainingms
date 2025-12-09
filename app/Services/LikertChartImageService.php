@@ -104,6 +104,39 @@ class LikertChartImageService
     }
 
     /**
+     * Generate horizontal bar chart image for demographic distributions with many categories
+     * Ideal for Area and Puesto distributions
+     *
+     * @param  array<string, int>  $distribution
+     */
+    public function generateDemographicHorizontalBarChartImage(array $distribution, string $outputPath, ?string $title = null): bool
+    {
+        try {
+            // Sort by count descending
+            arsort($distribution);
+
+            // Calculate height based on number of categories (min 400, max 1000)
+            $categoryCount = count($distribution);
+            $height = min(1000, max(400, 80 + ($categoryCount * 35)));
+
+            $html = $this->renderDemographicHorizontalBarChartHtml($distribution, $title);
+
+            $this->configureBrowsershot($html)
+                ->windowSize(900, $height)
+                ->save($outputPath);
+
+            return file_exists($outputPath);
+        } catch (\Exception $e) {
+            Log::error('Error generating demographic horizontal bar chart image', [
+                'error' => $e->getMessage(),
+                'output_path' => $outputPath,
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
      * Generate grouped bar chart image for gender cross-tabulation
      *
      * @param  array<string, array<string, int>>  $crossData  Format: ['Category' => ['Masculino' => 5, 'Femenino' => 3]]
@@ -120,6 +153,62 @@ class LikertChartImageService
             return file_exists($outputPath);
         } catch (\Exception $e) {
             Log::error('Error generating gender cross chart image', [
+                'error' => $e->getMessage(),
+                'output_path' => $outputPath,
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Generate stacked horizontal bar chart for dimension distributions
+     * Shows how many people are in each level for each dimension
+     *
+     * @param  array<string, array<string, int>>  $dimensionDistributions  Format: ['Dimension' => ['Level' => count]]
+     */
+    public function generateDimensionDistributionChartImage(array $dimensionDistributions, string $outputPath, ?string $title = null): bool
+    {
+        try {
+            // Calculate height based on number of dimensions (min 400, max 800)
+            $dimensionCount = count($dimensionDistributions);
+            $height = min(800, max(400, 100 + ($dimensionCount * 50)));
+
+            $html = $this->renderDimensionDistributionChartHtml($dimensionDistributions, $title);
+
+            $this->configureBrowsershot($html)
+                ->windowSize(950, $height)
+                ->save($outputPath);
+
+            return file_exists($outputPath);
+        } catch (\Exception $e) {
+            Log::error('Error generating dimension distribution chart image', [
+                'error' => $e->getMessage(),
+                'output_path' => $outputPath,
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Generate vertical bar chart for a single factor (dimension) distribution
+     * Shows count of people in each level for one factor
+     *
+     * @param  array<string, int>  $levelDistribution  Format: ['Level' => count]
+     */
+    public function generateFactorDistributionChartImage(array $levelDistribution, string $outputPath, ?string $title = null): bool
+    {
+        try {
+            $html = $this->renderFactorDistributionChartHtml($levelDistribution, $title);
+
+            $this->configureBrowsershot($html)
+                ->windowSize(700, 450)
+                ->save($outputPath);
+
+            return file_exists($outputPath);
+        } catch (\Exception $e) {
+            Log::error('Error generating factor distribution chart image', [
                 'error' => $e->getMessage(),
                 'output_path' => $outputPath,
             ]);
@@ -883,7 +972,617 @@ HTML;
                         }
                     }
                 }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const value = dataset.data[index];
+                            if (value > 0) {
+                                ctx.save();
+                                ctx.fillStyle = '#374151';
+                                ctx.font = 'bold 12px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(value.toString(), bar.x, bar.y - 5);
+                                ctx.restore();
+                            }
+                        });
+                    });
+                }
+            }]
+        });
+    </script>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Render horizontal bar chart HTML for demographic distributions with many categories
+     *
+     * @param  array<string, int>  $distribution
+     */
+    protected function renderDemographicHorizontalBarChartHtml(array $distribution, ?string $title = null): string
+    {
+        // Sort by count descending
+        arsort($distribution);
+
+        $labels = array_keys($distribution);
+        $data = array_values($distribution);
+        $total = array_sum($data);
+
+        // Use distinct colors for demographic data
+        $demographicColors = [
+            '#3b82f6', // blue-500
+            '#10b981', // green-500
+            '#f59e0b', // amber-500
+            '#ef4444', // red-500
+            '#8b5cf6', // violet-500
+            '#ec4899', // pink-500
+            '#14b8a6', // teal-500
+            '#f97316', // orange-500
+            '#6366f1', // indigo-500
+            '#84cc16', // lime-500
+            '#06b6d4', // cyan-500
+            '#a855f7', // purple-500
+        ];
+
+        $backgroundColors = [];
+        foreach ($labels as $index => $label) {
+            $backgroundColors[] = $demographicColors[$index % count($demographicColors)];
+        }
+
+        $labelsJson = json_encode($labels);
+        $dataJson = json_encode($data);
+        $colorsJson = json_encode($backgroundColors);
+        $titleHtml = $title ? "<h2 class=\"chart-title\">{$title}</h2>" : '';
+
+        // Calculate height based on number of categories
+        $categoryCount = count($labels);
+        $chartHeight = max(300, $categoryCount * 30);
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: white;
+            font-family: Arial, sans-serif;
+        }
+        .chart-title {
+            text-align: center;
+            color: #1e40af;
+            font-size: 16px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+        }
+        .chart-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .chart-container {
+            width: 850px;
+            height: {$chartHeight}px;
+        }
+        canvas {
+            max-width: 100%;
+        }
+        .total-label {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    {$titleHtml}
+    <div class="chart-wrapper">
+        <div class="chart-container">
+            <canvas id="horizontalBarChart"></canvas>
+        </div>
+        <div class="total-label">Total: {$total} personas</div>
+    </div>
+    <script>
+        const labels = {$labelsJson};
+        const data = {$dataJson};
+        const colors = {$colorsJson};
+        const total = data.reduce((a, b) => a + b, 0);
+        
+        const ctx = document.getElementById('horizontalBarChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                    borderColor: '#ffffff',
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.x;
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return value + ' personas (' + percentage + '%)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            display: true,
+                            color: '#e5e7eb'
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            color: '#6b7280'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Número de Personas',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            },
+                            color: '#374151'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11,
+                                weight: '500'
+                            },
+                            color: '#374151',
+                            padding: 8
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const value = dataset.data[index];
+                            if (value > 0) {
+                                ctx.save();
+                                ctx.fillStyle = '#374151';
+                                ctx.font = 'bold 11px Arial';
+                                ctx.textAlign = 'left';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(value.toString(), bar.x + 5, bar.y);
+                                ctx.restore();
+                            }
+                        });
+                    });
+                }
+            }]
+        });
+    </script>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Render stacked horizontal bar chart HTML for dimension distributions
+     * Shows each dimension as a horizontal bar with stacked levels
+     *
+     * @param  array<string, array<string, int>>  $dimensionDistributions  Format: ['Dimension' => ['Level' => count]]
+     */
+    protected function renderDimensionDistributionChartHtml(array $dimensionDistributions, ?string $title = null): string
+    {
+        // Dimensions are the Y-axis labels
+        $dimensions = array_keys($dimensionDistributions);
+
+        // Levels in correct order (Totalmente Desacuerdo to Totalmente de Acuerdo)
+        $levels = ['Totalmente Desacuerdo', 'Desacuerdo', 'De Acuerdo', 'Totalmente de Acuerdo'];
+
+        // Level colors (matching the Likert scale)
+        $levelColors = [
+            'Totalmente Desacuerdo' => '#3b82f6', // blue-500
+            'Desacuerdo' => '#22c55e',            // green-500
+            'De Acuerdo' => '#eab308',            // yellow-500
+            'Totalmente de Acuerdo' => '#ef4444', // red-500
+        ];
+
+        // Build datasets for each level
+        $datasets = [];
+        foreach ($levels as $level) {
+            $data = [];
+            foreach ($dimensions as $dimension) {
+                $data[] = $dimensionDistributions[$dimension][$level] ?? 0;
             }
+            $datasets[] = [
+                'label' => $level,
+                'data' => $data,
+                'backgroundColor' => $levelColors[$level],
+                'borderRadius' => 2,
+            ];
+        }
+
+        // Calculate total people
+        $total = 0;
+        foreach ($dimensionDistributions as $dimension => $levelData) {
+            $total = max($total, array_sum($levelData));
+        }
+
+        $dimensionsJson = json_encode($dimensions);
+        $datasetsJson = json_encode($datasets);
+        $titleHtml = $title ? "<h2 class=\"chart-title\">{$title}</h2>" : '';
+
+        // Calculate chart height based on number of dimensions
+        $dimensionCount = count($dimensions);
+        $chartHeight = max(350, $dimensionCount * 45);
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: white;
+            font-family: Arial, sans-serif;
+        }
+        .chart-title {
+            text-align: center;
+            color: #1e40af;
+            font-size: 16px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+        }
+        .chart-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .chart-container {
+            width: 900px;
+            height: {$chartHeight}px;
+        }
+        canvas {
+            max-width: 100%;
+        }
+        .total-label {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    {$titleHtml}
+    <div class="chart-wrapper">
+        <div class="chart-container">
+            <canvas id="dimensionChart"></canvas>
+        </div>
+        <div class="total-label">Total: {$total} personas</div>
+    </div>
+    <script>
+        const dimensions = {$dimensionsJson};
+        const datasets = {$datasetsJson};
+        
+        const ctx = document.getElementById('dimensionChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dimensions,
+                datasets: datasets
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'rect',
+                            padding: 15,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.x + ' personas';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        beginAtZero: true,
+                        grid: {
+                            display: true,
+                            color: '#e5e7eb'
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            color: '#6b7280'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Número de Personas',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            },
+                            color: '#374151'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 10,
+                                weight: '500'
+                            },
+                            color: '#374151',
+                            padding: 8,
+                            callback: function(value, index) {
+                                const label = this.getLabelForValue(value);
+                                if (label.length > 25) {
+                                    return label.substring(0, 25) + '...';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    const datasets = chart.data.datasets;
+                    const meta = chart.getDatasetMeta(datasets.length - 1);
+                    
+                    meta.data.forEach((bar, index) => {
+                        let total = 0;
+                        datasets.forEach(ds => {
+                            total += ds.data[index] || 0;
+                        });
+                        if (total > 0) {
+                            ctx.save();
+                            ctx.fillStyle = '#374151';
+                            ctx.font = 'bold 11px Arial';
+                            ctx.textAlign = 'left';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(total.toString(), bar.x + 5, bar.y);
+                            ctx.restore();
+                        }
+                    });
+                }
+            }]
+        });
+    </script>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Render vertical bar chart HTML for a single factor distribution
+     *
+     * @param  array<string, int>  $levelDistribution  Format: ['Level' => count]
+     */
+    protected function renderFactorDistributionChartHtml(array $levelDistribution, ?string $title = null): string
+    {
+        // Ensure levels are in correct order
+        $orderedLevels = ['Totalmente Desacuerdo', 'Desacuerdo', 'De Acuerdo', 'Totalmente de Acuerdo'];
+        $orderedDistribution = [];
+        foreach ($orderedLevels as $level) {
+            $orderedDistribution[$level] = $levelDistribution[$level] ?? 0;
+        }
+
+        $labels = array_keys($orderedDistribution);
+        $data = array_values($orderedDistribution);
+        $total = array_sum($data);
+
+        // Level colors (matching the Likert scale)
+        $levelColors = [
+            '#3b82f6', // blue-500 - Totalmente Desacuerdo
+            '#22c55e', // green-500 - Desacuerdo
+            '#eab308', // yellow-500 - De Acuerdo
+            '#ef4444', // red-500 - Totalmente de Acuerdo
+        ];
+
+        $labelsJson = json_encode($labels);
+        $dataJson = json_encode($data);
+        $colorsJson = json_encode($levelColors);
+        $titleHtml = $title ? "<h2 class=\"chart-title\">{$title}</h2>" : '';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: white;
+            font-family: Arial, sans-serif;
+        }
+        .chart-title {
+            text-align: center;
+            color: #1e40af;
+            font-size: 14px;
+            margin: 0 0 10px 0;
+            font-weight: 600;
+        }
+        .chart-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .chart-container {
+            width: 650px;
+            height: 350px;
+        }
+        canvas {
+            max-width: 100%;
+        }
+        .total-label {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 11px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    {$titleHtml}
+    <div class="chart-wrapper">
+        <div class="chart-container">
+            <canvas id="factorChart"></canvas>
+        </div>
+        <div class="total-label">Total: {$total} personas</div>
+    </div>
+    <script>
+        const labels = {$labelsJson};
+        const data = {$dataJson};
+        const colors = {$colorsJson};
+        const total = data.reduce((a, b) => a + b, 0);
+        
+        const ctx = document.getElementById('factorChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                    borderColor: '#ffffff',
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return value + ' personas (' + percentage + '%)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 10,
+                                weight: '500'
+                            },
+                            color: '#374151',
+                            maxRotation: 15,
+                            minRotation: 0
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            display: true,
+                            color: '#e5e7eb'
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            color: '#6b7280'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Número de Personas',
+                            font: {
+                                size: 11,
+                                weight: 'bold'
+                            },
+                            color: '#374151'
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const value = dataset.data[index];
+                            if (value > 0) {
+                                ctx.save();
+                                ctx.fillStyle = '#374151';
+                                ctx.font = 'bold 11px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(value.toString(), bar.x, bar.y - 5);
+                                ctx.restore();
+                            }
+                        });
+                    });
+                }
+            }]
         });
     </script>
 </body>
@@ -1078,7 +1777,27 @@ HTML;
                         }
                     }
                 }
-            }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const value = dataset.data[index];
+                            if (value > 0) {
+                                ctx.save();
+                                ctx.fillStyle = '#374151';
+                                ctx.font = 'bold 10px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(value.toString(), bar.x, bar.y - 3);
+                                ctx.restore();
+                            }
+                        });
+                    });
+                }
+            }]
         });
     </script>
 </body>
@@ -1589,10 +2308,16 @@ HTML;
                             return $service->generateBarChartImage($chartDef['distribution'], $outputPath, $title);
                         } elseif ($type === 'vertical-bar') {
                             return $service->generateVerticalBarChartImage($chartDef['distribution'], $outputPath, $title);
+                        } elseif ($type === 'demographic-horizontal-bar') {
+                            return $service->generateDemographicHorizontalBarChartImage($chartDef['distribution'], $outputPath, $title);
                         } elseif ($type === 'gender-cross') {
                             return $service->generateGenderCrossChartImage($chartDef['crossData'], $outputPath, $title);
                         } elseif ($type === 'question-scores') {
                             return $service->generateQuestionScoresChartImage($chartDef['questionScores'], $outputPath, $title);
+                        } elseif ($type === 'dimension-distribution') {
+                            return $service->generateDimensionDistributionChartImage($chartDef['dimensionDistributions'], $outputPath, $title);
+                        } elseif ($type === 'factor-distribution') {
+                            return $service->generateFactorDistributionChartImage($chartDef['distribution'], $outputPath, $title);
                         }
 
                         return false;

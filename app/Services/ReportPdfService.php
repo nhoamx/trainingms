@@ -1173,6 +1173,7 @@ class ReportPdfService
         $contractDistribution = [];
         $positionDistribution = [];
         $shiftDistribution = [];
+        $areaDistribution = [];
 
         foreach ($likertData['evaluations'] as $eval) {
             $demographics = $eval['demographics'] ?? [];
@@ -1192,6 +1193,10 @@ class ReportPdfService
             // Shift/Turno
             $shift = $demographics['turno'] ?? 'No especificado';
             $shiftDistribution[$shift] = ($shiftDistribution[$shift] ?? 0) + 1;
+
+            // Area
+            $area = $demographics['area'] ?? 'No especificado';
+            $areaDistribution[$area] = ($areaDistribution[$area] ?? 0) + 1;
         }
 
         return [
@@ -1199,7 +1204,85 @@ class ReportPdfService
             'contract' => $contractDistribution,
             'position' => $positionDistribution,
             'shift' => $shiftDistribution,
+            'area' => $areaDistribution,
         ];
+    }
+
+    /**
+     * Calculate distribution of people by dimension (factor)
+     * Returns count of people in each level for each dimension
+     *
+     * @param  array<string, mixed>  $likertData
+     * @return array<string, array<string, int>>
+     */
+    public function calculateDimensionDistributions(array $likertData): array
+    {
+        $valorOpciones = ['A' => 4, 'B' => 3, 'C' => 2, 'D' => 1];
+        $niveles = config('likert-value.niveles', []);
+        $valorNiveles = config('likert-value.valorNiveles', []);
+
+        $dimensionDistributions = [];
+
+        foreach ($niveles as $dimensionName => $dimensionConfig) {
+            $questionNumbers = $dimensionConfig['preguntas'] ?? [];
+            $ranges = $valorNiveles[$dimensionName] ?? [];
+
+            if (empty($questionNumbers) || empty($ranges)) {
+                continue;
+            }
+
+            // Initialize distribution with correct order (Totalmente Desacuerdo first)
+            $distribution = [
+                'Totalmente Desacuerdo' => 0,
+                'Desacuerdo' => 0,
+                'De Acuerdo' => 0,
+                'Totalmente de Acuerdo' => 0,
+            ];
+
+            // Calculate score for each person in this dimension
+            foreach ($likertData['evaluations'] as $eval) {
+                $personScore = 0;
+                $answeredQuestions = 0;
+
+                foreach ($questionNumbers as $qNum) {
+                    $answer = $eval['answers'][$qNum] ?? $eval['answers'][(string) $qNum] ?? null;
+                    if ($answer) {
+                        $personScore += $valorOpciones[strtoupper($answer)] ?? 0;
+                        $answeredQuestions++;
+                    }
+                }
+
+                // Only classify if answered at least one question
+                if ($answeredQuestions > 0) {
+                    $level = $this->getScoreLevelForDimension($personScore, $ranges);
+                    if ($level && isset($distribution[$level])) {
+                        $distribution[$level]++;
+                    }
+                }
+            }
+
+            $dimensionDistributions[$dimensionName] = $distribution;
+        }
+
+        return $dimensionDistributions;
+    }
+
+    /**
+     * Get the level interpretation for a score based on dimension ranges
+     *
+     * @param  array<string, array{min: float, max: float}>  $ranges
+     */
+    protected function getScoreLevelForDimension(float $score, array $ranges): ?string
+    {
+        foreach ($ranges as $level => $range) {
+            $min = $range['min'] ?? 0;
+            $max = $range['max'] ?? 0;
+            if ($score >= $min && $score <= $max) {
+                return $level;
+            }
+        }
+
+        return null;
     }
 
     /**
