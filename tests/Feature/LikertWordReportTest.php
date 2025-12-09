@@ -339,4 +339,126 @@ class LikertWordReportTest extends TestCase
             unlink($testPath);
         }
     }
+
+    public function test_generate_gender_cross_chart_creates_image(): void
+    {
+        $service = app(LikertChartImageService::class);
+
+        $tempDir = storage_path('app/temp');
+        if (! file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        $testPath = $tempDir.'/test_gender_cross_'.uniqid().'.png';
+
+        $crossData = [
+            'Producción' => ['Masculino' => 10, 'Femenino' => 8],
+            'Calidad' => ['Masculino' => 5, 'Femenino' => 12],
+            'Mantenimiento' => ['Masculino' => 7, 'Femenino' => 3],
+        ];
+
+        $result = $service->generateGenderCrossChartImage($crossData, $testPath, 'Género por Área');
+
+        $this->assertTrue($result);
+        $this->assertFileExists($testPath);
+
+        $fileSize = filesize($testPath);
+        $this->assertGreaterThan(0, $fileSize);
+
+        if (file_exists($testPath)) {
+            unlink($testPath);
+        }
+    }
+
+    public function test_generate_question_scores_chart_creates_image(): void
+    {
+        $service = app(LikertChartImageService::class);
+
+        $tempDir = storage_path('app/temp');
+        if (! file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        $testPath = $tempDir.'/test_question_scores_'.uniqid().'.png';
+
+        $questionScores = [];
+        for ($i = 1; $i <= 23; $i++) {
+            $questionScores[$i] = [
+                'question' => $i,
+                'score' => rand(50, 400),
+                'maxScore' => 400,
+                'label' => 'P'.$i,
+                'fullText' => 'Esta es la pregunta número '.$i,
+            ];
+        }
+
+        $result = $service->generateQuestionScoresChartImage($questionScores, $testPath, 'Puntaje Total por Pregunta');
+
+        $this->assertTrue($result);
+        $this->assertFileExists($testPath);
+
+        $fileSize = filesize($testPath);
+        $this->assertGreaterThan(0, $fileSize);
+
+        if (file_exists($testPath)) {
+            unlink($testPath);
+        }
+    }
+
+    public function test_calculate_gender_cross_distributions_returns_correct_structure(): void
+    {
+        $evaluations = PaperEvaluation::factory()
+            ->likert()
+            ->count(10)
+            ->create([
+                'organization_id' => $this->organization->id,
+            ]);
+
+        foreach ($evaluations as $index => $evaluation) {
+            $evaluation->demographicData()->create([
+                'gender' => $index % 2 === 0 ? 'Masculino' : 'Femenino',
+                'work_schedule' => $index % 3 === 0 ? 'Matutino' : 'Nocturno',
+                'contract_type' => $index % 2 === 0 ? 'Permanente' : 'Temporal',
+                'position' => 'Puesto '.($index % 3),
+                'department' => 'Área '.($index % 4),
+            ]);
+        }
+
+        $service = app(ReportPdfService::class);
+        $likertData = $service->getLikertReportWordData($this->organization->id);
+
+        $crossDistributions = $service->calculateGenderCrossDistributions($likertData);
+
+        $this->assertIsArray($crossDistributions);
+        $this->assertArrayHasKey('genderByPosition', $crossDistributions);
+        $this->assertArrayHasKey('genderByArea', $crossDistributions);
+        $this->assertArrayHasKey('genderByShift', $crossDistributions);
+        $this->assertArrayHasKey('genderByContract', $crossDistributions);
+    }
+
+    public function test_calculate_question_score_totals_returns_correct_structure(): void
+    {
+        $evaluations = PaperEvaluation::factory()
+            ->likert()
+            ->count(5)
+            ->create([
+                'organization_id' => $this->organization->id,
+            ]);
+
+        $service = app(ReportPdfService::class);
+        $likertData = $service->getLikertReportWordData($this->organization->id);
+
+        $questionScores = $service->calculateQuestionScoreTotals($likertData);
+
+        $this->assertIsArray($questionScores);
+        $this->assertCount(23, $questionScores);
+
+        foreach ($questionScores as $q => $data) {
+            $this->assertArrayHasKey('question', $data);
+            $this->assertArrayHasKey('score', $data);
+            $this->assertArrayHasKey('maxScore', $data);
+            $this->assertArrayHasKey('label', $data);
+            $this->assertEquals('P'.$q, $data['label']);
+        }
+    }
 }

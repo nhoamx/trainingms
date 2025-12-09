@@ -42,6 +42,39 @@
       </div>
 
       <div v-else>
+        <!-- Puntaje Total por Pregunta (No afectado por filtros) -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Puntaje Total por Pregunta</h3>
+              <p class="text-sm text-gray-500 mt-1">
+                Suma de puntajes de todos los {{ evaluations.length }} participantes (máximo = {{ evaluations.length * 4 }} por pregunta)
+              </p>
+            </div>
+            <div class="flex items-center gap-4 text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-green-600"></span>
+                <span class="text-gray-600">≥75%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-lime-500"></span>
+                <span class="text-gray-600">50-74%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-yellow-500"></span>
+                <span class="text-gray-600">25-49%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-red-600"></span>
+                <span class="text-gray-600">&lt;25%</span>
+              </div>
+            </div>
+          </div>
+          <div class="relative h-80">
+            <canvas ref="questionScoresChart"></canvas>
+          </div>
+        </div>
+
         <!-- Filtros Demográficos -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Filtros</h3>
@@ -753,9 +786,11 @@ const customFilters = ref(
 
 const pieChartTotal = ref(null)
 const dimensionChartCanvas = ref(null)
-const chartInstances = ref({}) // keyed instances; we'll use 'Total' and 'Dimension'
+const questionScoresChart = ref(null)
+const chartInstances = ref({}) // keyed instances; we'll use 'Total', 'Dimension', 'QuestionScores'
 const TOTAL_CHART_KEY = 'Total'
 const DIMENSION_CHART_KEY = 'Dimension'
+const QUESTION_SCORES_CHART_KEY = 'QuestionScores'
 
 // Sorting state for heatmap
 const sortColumn = ref(null) // Question number to sort by, or null for default (folio asc)
@@ -1042,6 +1077,52 @@ const filteredClimaLaboralDistribution = computed(() => {
 
 const filteredTotalPeople = computed(() => {
   return filteredEvaluations.value.length
+})
+
+// Calculate total scores per question (NOT affected by filters - uses all evaluations)
+const questionScoreTotals = computed(() => {
+  const valorOpciones = { A: 4, B: 3, C: 2, D: 1 }
+  const totalParticipants = props.evaluations.length
+  const maxScorePerQuestion = totalParticipants * 4
+  
+  const scores = []
+  
+  // Questions 1-23
+  for (let q = 1; q <= 23; q++) {
+    let totalScore = 0
+    
+    props.evaluations.forEach(evalData => {
+      const answer = evalData.answers[q] || evalData.answers[String(q)]
+      if (answer) {
+        totalScore += valorOpciones[answer.toUpperCase()] || 0
+      }
+    })
+    
+    const percentage = maxScorePerQuestion > 0 ? (totalScore / maxScorePerQuestion) * 100 : 0
+    
+    // Determine color based on percentage
+    let color
+    if (percentage >= 75) {
+      color = '#16a34a' // green-600
+    } else if (percentage >= 50) {
+      color = '#84cc16' // lime-500
+    } else if (percentage >= 25) {
+      color = '#eab308' // yellow-500
+    } else {
+      color = '#dc2626' // red-600
+    }
+    
+    scores.push({
+      question: q,
+      label: `P${q}`,
+      score: totalScore,
+      maxScore: maxScorePerQuestion,
+      percentage: percentage.toFixed(1),
+      color: color
+    })
+  }
+  
+  return scores
 })
 
 // Dimension-level helpers for header (similar to Total)
@@ -1393,8 +1474,116 @@ const createPieChart = (canvasRef, labels, data, title, legendClickHandler = nul
   chartInstances.value[title] = chart
 }
 
+// Create bar chart for question scores (not affected by filters)
+const createQuestionScoresChart = () => {
+  if (!questionScoresChart.value) return
+  
+  const ctx = questionScoresChart.value.getContext('2d')
+  
+  // Destroy existing chart if any
+  const existingChart = chartInstances.value[QUESTION_SCORES_CHART_KEY]
+  if (existingChart) {
+    existingChart.destroy()
+  }
+  
+  const scores = questionScoreTotals.value
+  const labels = scores.map(s => s.label)
+  const data = scores.map(s => s.score)
+  const colors = scores.map(s => s.color)
+  const maxScore = scores[0]?.maxScore || 0
+  
+  const chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: colors,
+        borderWidth: 1,
+        borderColor: '#ffffff',
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            title: function(context) {
+              const idx = context[0].dataIndex
+              const q = scores[idx]
+              // Get question text from dimensions
+              let questionText = `Pregunta ${q.question}`
+              for (const [dimName, dim] of Object.entries(props.dimensions)) {
+                if (dim.questions && dim.questions[q.question]) {
+                  const qData = dim.questions[q.question]
+                  questionText = (typeof qData === 'object' ? qData.question : qData) || questionText
+                  break
+                }
+              }
+              return questionText.substring(0, 100) + (questionText.length > 100 ? '...' : '')
+            },
+            label: function(context) {
+              const idx = context.dataIndex
+              const q = scores[idx]
+              return `Puntaje: ${q.score}`
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            font: {
+              size: 11,
+              weight: 'bold'
+            },
+            color: '#374151'
+          }
+        },
+        y: {
+          beginAtZero: true,
+          max: maxScore,
+          grid: {
+            display: true,
+            color: '#e5e7eb'
+          },
+          ticks: {
+            font: {
+              size: 11
+            },
+            color: '#6b7280'
+          },
+          title: {
+            display: true,
+            text: 'Puntaje Total',
+            font: {
+              size: 12
+            },
+            color: '#374151'
+          }
+        }
+      }
+    }
+  })
+  
+  chartInstances.value[QUESTION_SCORES_CHART_KEY] = chart
+}
+
 const renderCharts = () => {
   nextTick(() => {
+    // Question scores bar chart (NOT affected by filters)
+    if (questionScoresChart.value && props.evaluations.length > 0) {
+      createQuestionScoresChart()
+    }
+
     // Total pie chart - Distribution by Clima Laboral level
     if (pieChartTotal.value) {
       const distribution = filteredClimaLaboralDistribution.value

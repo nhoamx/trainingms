@@ -372,6 +372,60 @@ class GenerateWordReport implements ShouldQueue
                     'title' => 'Distribución por Turno',
                 ];
             }
+
+            // Gender cross-tabulation charts
+            $genderCrossDistributions = $reportPdfService->calculateGenderCrossDistributions($likertData);
+
+            // Gender x Position
+            if (! empty($genderCrossDistributions['genderByPosition'])) {
+                $chartDefinitions[] = [
+                    'type' => 'gender-cross',
+                    'crossData' => $genderCrossDistributions['genderByPosition'],
+                    'outputPath' => $tempDir.'/cross_gender_position_'.$imageSuffix.'.png',
+                    'title' => 'Género por Puesto',
+                ];
+            }
+
+            // Gender x Area
+            if (! empty($genderCrossDistributions['genderByArea'])) {
+                $chartDefinitions[] = [
+                    'type' => 'gender-cross',
+                    'crossData' => $genderCrossDistributions['genderByArea'],
+                    'outputPath' => $tempDir.'/cross_gender_area_'.$imageSuffix.'.png',
+                    'title' => 'Género por Área',
+                ];
+            }
+
+            // Gender x Shift
+            if (! empty($genderCrossDistributions['genderByShift'])) {
+                $chartDefinitions[] = [
+                    'type' => 'gender-cross',
+                    'crossData' => $genderCrossDistributions['genderByShift'],
+                    'outputPath' => $tempDir.'/cross_gender_shift_'.$imageSuffix.'.png',
+                    'title' => 'Género por Turno',
+                ];
+            }
+
+            // Gender x Contract
+            if (! empty($genderCrossDistributions['genderByContract'])) {
+                $chartDefinitions[] = [
+                    'type' => 'gender-cross',
+                    'crossData' => $genderCrossDistributions['genderByContract'],
+                    'outputPath' => $tempDir.'/cross_gender_contract_'.$imageSuffix.'.png',
+                    'title' => 'Género por Tipo de Contrato',
+                ];
+            }
+
+            // Question scores chart (wide)
+            $questionScores = $reportPdfService->calculateQuestionScoreTotals($likertData);
+            if (! empty($questionScores)) {
+                $chartDefinitions[] = [
+                    'type' => 'question-scores',
+                    'questionScores' => $questionScores,
+                    'outputPath' => $tempDir.'/question_scores_'.$imageSuffix.'.png',
+                    'title' => 'Puntaje Total por Pregunta',
+                ];
+            }
         }
 
         foreach ($sectionsData as $sectionData) {
@@ -712,6 +766,107 @@ class GenerateWordReport implements ShouldQueue
             $section->addImage($shiftChartPath, [
                 'width' => 400,
                 'height' => 300,
+                'alignment' => Jc::CENTER,
+            ]);
+            $section->addTextBreak(1);
+        }
+
+        // Add page break before cross-tabulation charts
+        $section->addPageBreak();
+
+        // Cross-tabulation section title
+        $section->addTitle('Cruces Demográficos por Género', 2);
+        $section->addTextBreak(1);
+
+        $section->addText(
+            'Distribución de género por diferentes categorías demográficas',
+            ['size' => 11, 'italic' => true, 'color' => '666666']
+        );
+        $section->addTextBreak(1);
+
+        // Gender x Position chart
+        $genderPositionPath = $tempDir.'/cross_gender_position_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$genderPositionPath]) && file_exists($genderPositionPath)) {
+            $section->addText(
+                'Género por Puesto',
+                ['bold' => true, 'size' => 11, 'color' => '1e40af']
+            );
+            $section->addTextBreak(0.5);
+            $section->addImage($genderPositionPath, [
+                'width' => 550,
+                'height' => 340,
+                'alignment' => Jc::CENTER,
+            ]);
+            $section->addTextBreak(1);
+        }
+
+        // Gender x Area chart
+        $genderAreaPath = $tempDir.'/cross_gender_area_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$genderAreaPath]) && file_exists($genderAreaPath)) {
+            $section->addText(
+                'Género por Área',
+                ['bold' => true, 'size' => 11, 'color' => '1e40af']
+            );
+            $section->addTextBreak(0.5);
+            $section->addImage($genderAreaPath, [
+                'width' => 550,
+                'height' => 340,
+                'alignment' => Jc::CENTER,
+            ]);
+            $section->addTextBreak(1);
+        }
+
+        // Gender x Shift chart
+        $genderShiftPath = $tempDir.'/cross_gender_shift_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$genderShiftPath]) && file_exists($genderShiftPath)) {
+            $section->addText(
+                'Género por Turno',
+                ['bold' => true, 'size' => 11, 'color' => '1e40af']
+            );
+            $section->addTextBreak(0.5);
+            $section->addImage($genderShiftPath, [
+                'width' => 550,
+                'height' => 340,
+                'alignment' => Jc::CENTER,
+            ]);
+            $section->addTextBreak(1);
+        }
+
+        // Gender x Contract chart
+        $genderContractPath = $tempDir.'/cross_gender_contract_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$genderContractPath]) && file_exists($genderContractPath)) {
+            $section->addText(
+                'Género por Tipo de Contrato',
+                ['bold' => true, 'size' => 11, 'color' => '1e40af']
+            );
+            $section->addTextBreak(0.5);
+            $section->addImage($genderContractPath, [
+                'width' => 550,
+                'height' => 340,
+                'alignment' => Jc::CENTER,
+            ]);
+            $section->addTextBreak(1);
+        }
+
+        // Add page break before question scores chart
+        $section->addPageBreak();
+
+        // Question scores section
+        $section->addTitle('Puntaje Total por Pregunta', 2);
+        $section->addTextBreak(1);
+
+        $section->addText(
+            'Suma de los puntajes de todos los participantes por cada pregunta (máximo = 4 × número de participantes)',
+            ['size' => 11, 'italic' => true, 'color' => '666666']
+        );
+        $section->addTextBreak(1);
+
+        // Question scores chart (wide)
+        $questionScoresPath = $tempDir.'/question_scores_'.$imageSuffix.'.png';
+        if (isset($chartPaths[$questionScoresPath]) && file_exists($questionScoresPath)) {
+            $section->addImage($questionScoresPath, [
+                'width' => 650,
+                'height' => 350,
                 'alignment' => Jc::CENTER,
             ]);
             $section->addTextBreak(1);

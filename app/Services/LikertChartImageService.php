@@ -104,6 +104,56 @@ class LikertChartImageService
     }
 
     /**
+     * Generate grouped bar chart image for gender cross-tabulation
+     *
+     * @param  array<string, array<string, int>>  $crossData  Format: ['Category' => ['Masculino' => 5, 'Femenino' => 3]]
+     */
+    public function generateGenderCrossChartImage(array $crossData, string $outputPath, ?string $title = null): bool
+    {
+        try {
+            $html = $this->renderGenderCrossChartHtml($crossData, $title);
+
+            $this->configureBrowsershot($html)
+                ->windowSize(900, 550)
+                ->save($outputPath);
+
+            return file_exists($outputPath);
+        } catch (\Exception $e) {
+            Log::error('Error generating gender cross chart image', [
+                'error' => $e->getMessage(),
+                'output_path' => $outputPath,
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Generate wide vertical bar chart for question scores
+     *
+     * @param  array<int, array{question: int, score: int, maxScore: int, label: string}>  $questionScores
+     */
+    public function generateQuestionScoresChartImage(array $questionScores, string $outputPath, ?string $title = null): bool
+    {
+        try {
+            $html = $this->renderQuestionScoresChartHtml($questionScores, $title);
+
+            $this->configureBrowsershot($html)
+                ->windowSize(1200, 600)
+                ->save($outputPath);
+
+            return file_exists($outputPath);
+        } catch (\Exception $e) {
+            Log::error('Error generating question scores chart image', [
+                'error' => $e->getMessage(),
+                'output_path' => $outputPath,
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
      * Generate heat map image for a specific dimension or all questions
      *
      * @param  array<int, array{folio: string, personal_folio: string, answers: array<int|string, string>}>  $evaluations
@@ -842,6 +892,416 @@ HTML;
     }
 
     /**
+     * Render grouped bar chart HTML for gender cross-tabulation
+     *
+     * @param  array<string, array<string, int>>  $crossData
+     */
+    protected function renderGenderCrossChartHtml(array $crossData, ?string $title = null): string
+    {
+        $categories = array_keys($crossData);
+        
+        // Collect all unique genders
+        $allGenders = [];
+        foreach ($crossData as $genderData) {
+            foreach (array_keys($genderData) as $gender) {
+                $allGenders[$gender] = true;
+            }
+        }
+        $genders = array_keys($allGenders);
+        
+        // Gender colors
+        $genderColors = [
+            'Masculino' => '#3b82f6', // blue-500
+            'Femenino' => '#ec4899',  // pink-500
+            'No especificado' => '#9ca3af', // gray-400
+        ];
+        
+        // Build datasets for each gender
+        $datasets = [];
+        foreach ($genders as $gender) {
+            $data = [];
+            foreach ($categories as $category) {
+                $data[] = $crossData[$category][$gender] ?? 0;
+            }
+            $datasets[] = [
+                'label' => $gender,
+                'data' => $data,
+                'backgroundColor' => $genderColors[$gender] ?? '#6b7280',
+                'borderRadius' => 4,
+            ];
+        }
+        
+        $categoriesJson = json_encode($categories);
+        $datasetsJson = json_encode($datasets);
+        $titleHtml = $title ? "<h2 class=\"chart-title\">{$title}</h2>" : '';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: white;
+            font-family: Arial, sans-serif;
+        }
+        .chart-title {
+            text-align: center;
+            color: #1e40af;
+            font-size: 16px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+        }
+        .chart-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .chart-container {
+            width: 850px;
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .legend-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid #d1d5db;
+        }
+        .legend-label {
+            font-weight: 600;
+            color: #374151;
+        }
+    </style>
+</head>
+<body>
+    {$titleHtml}
+    <div class="chart-wrapper">
+        <div class="chart-container">
+            <canvas id="groupedBarChart"></canvas>
+        </div>
+        <div class="legend-container" id="customLegend"></div>
+    </div>
+    <script>
+        const categories = {$categoriesJson};
+        const datasets = {$datasetsJson};
+        
+        // Build custom legend
+        const legendContainer = document.getElementById('customLegend');
+        datasets.forEach(ds => {
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            
+            const colorBox = document.createElement('div');
+            colorBox.className = 'legend-color';
+            colorBox.style.backgroundColor = ds.backgroundColor;
+            
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'legend-label';
+            labelSpan.textContent = ds.label;
+            
+            legendItem.appendChild(colorBox);
+            legendItem.appendChild(labelSpan);
+            legendContainer.appendChild(legendItem);
+        });
+        
+        const ctx = document.getElementById('groupedBarChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: categories,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + ' personas';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 10
+                            },
+                            color: '#374151',
+                            maxRotation: 45,
+                            minRotation: 0
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            display: true,
+                            color: '#e5e7eb'
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            color: '#6b7280'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Render wide vertical bar chart HTML for question scores
+     *
+     * @param  array<int, array{question: int, score: int, maxScore: int, label: string, fullText: string}>  $questionScores
+     */
+    protected function renderQuestionScoresChartHtml(array $questionScores, ?string $title = null): string
+    {
+        $labels = [];
+        $data = [];
+        $maxScores = [];
+        $fullTexts = [];
+        
+        foreach ($questionScores as $q) {
+            $labels[] = $q['label'];
+            $data[] = $q['score'];
+            $maxScores[] = $q['maxScore'];
+            $fullTexts[] = $q['fullText'] ?? '';
+        }
+        
+        // Calculate percentages for color gradient
+        $percentages = [];
+        foreach ($data as $i => $score) {
+            $percentages[] = $maxScores[$i] > 0 ? ($score / $maxScores[$i]) * 100 : 0;
+        }
+        
+        // Generate colors based on percentage (red to green)
+        $colors = [];
+        foreach ($percentages as $pct) {
+            if ($pct >= 75) {
+                $colors[] = '#16a34a'; // green-600
+            } elseif ($pct >= 50) {
+                $colors[] = '#84cc16'; // lime-500
+            } elseif ($pct >= 25) {
+                $colors[] = '#eab308'; // yellow-500
+            } else {
+                $colors[] = '#dc2626'; // red-600
+            }
+        }
+        
+        $labelsJson = json_encode($labels);
+        $dataJson = json_encode($data);
+        $maxScoresJson = json_encode($maxScores);
+        $colorsJson = json_encode($colors);
+        $fullTextsJson = json_encode($fullTexts);
+        $titleHtml = $title ? "<h2 class=\"chart-title\">{$title}</h2>" : '';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 15px;
+            background: white;
+            font-family: Arial, sans-serif;
+        }
+        .chart-title {
+            text-align: center;
+            color: #1e40af;
+            font-size: 16px;
+            margin: 0 0 10px 0;
+            font-weight: 600;
+        }
+        .chart-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .chart-container {
+            width: 1150px;
+            height: 450px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .color-legend {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            padding: 10px;
+            font-size: 12px;
+        }
+        .color-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            border: 1px solid #d1d5db;
+        }
+    </style>
+</head>
+<body>
+    {$titleHtml}
+    <div class="chart-wrapper">
+        <div class="chart-container">
+            <canvas id="questionScoresChart"></canvas>
+        </div>
+        <div class="color-legend">
+            <div class="color-legend-item">
+                <div class="color-box" style="background-color: #16a34a;"></div>
+                <span>≥75% (Excelente)</span>
+            </div>
+            <div class="color-legend-item">
+                <div class="color-box" style="background-color: #84cc16;"></div>
+                <span>50-74% (Bueno)</span>
+            </div>
+            <div class="color-legend-item">
+                <div class="color-box" style="background-color: #eab308;"></div>
+                <span>25-49% (Regular)</span>
+            </div>
+            <div class="color-legend-item">
+                <div class="color-box" style="background-color: #dc2626;"></div>
+                <span>&lt;25% (Crítico)</span>
+            </div>
+        </div>
+    </div>
+    <script>
+        const labels = {$labelsJson};
+        const data = {$dataJson};
+        const maxScores = {$maxScoresJson};
+        const colors = {$colorsJson};
+        const fullTexts = {$fullTextsJson};
+        
+        const ctx = document.getElementById('questionScoresChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                    borderColor: '#ffffff',
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const idx = context[0].dataIndex;
+                                return fullTexts[idx].substring(0, 80) + (fullTexts[idx].length > 80 ? '...' : '');
+                            },
+                            label: function(context) {
+                                const idx = context.dataIndex;
+                                const score = data[idx];
+                                const max = maxScores[idx];
+                                const pct = max > 0 ? ((score / max) * 100).toFixed(1) : 0;
+                                return 'Puntaje: ' + score + ' / ' + max + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11,
+                                weight: 'bold'
+                            },
+                            color: '#374151'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            display: true,
+                            color: '#e5e7eb'
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            color: '#6b7280'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Puntaje Total',
+                            font: {
+                                size: 12
+                            },
+                            color: '#374151'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+HTML;
+    }
+
+    /**
      * Render dimension-specific heat map HTML
      *
      * @param  array<int, array{folio: string, personal_folio: string, answers: array<int|string, string>}>  $evaluations
@@ -1116,20 +1576,23 @@ HTML;
 
             foreach ($batch as $chartDef) {
                 $type = $chartDef['type'];
-                $distribution = $chartDef['distribution'];
                 $outputPath = $chartDef['outputPath'];
                 $title = $chartDef['title'] ?? null;
 
-                $closures[$outputPath] = function () use ($type, $distribution, $outputPath, $title): bool {
+                $closures[$outputPath] = function () use ($type, $chartDef, $outputPath, $title): bool {
                     try {
                         $service = new self;
 
                         if ($type === 'pie') {
-                            return $service->generatePieChartImage($distribution, $outputPath, $title);
+                            return $service->generatePieChartImage($chartDef['distribution'], $outputPath, $title);
                         } elseif ($type === 'bar') {
-                            return $service->generateBarChartImage($distribution, $outputPath, $title);
+                            return $service->generateBarChartImage($chartDef['distribution'], $outputPath, $title);
                         } elseif ($type === 'vertical-bar') {
-                            return $service->generateVerticalBarChartImage($distribution, $outputPath, $title);
+                            return $service->generateVerticalBarChartImage($chartDef['distribution'], $outputPath, $title);
+                        } elseif ($type === 'gender-cross') {
+                            return $service->generateGenderCrossChartImage($chartDef['crossData'], $outputPath, $title);
+                        } elseif ($type === 'question-scores') {
+                            return $service->generateQuestionScoresChartImage($chartDef['questionScores'], $outputPath, $title);
                         }
 
                         return false;

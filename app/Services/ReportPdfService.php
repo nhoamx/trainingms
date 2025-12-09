@@ -1201,4 +1201,100 @@ class ReportPdfService
             'shift' => $shiftDistribution,
         ];
     }
+
+    /**
+     * Calculate cross-tabulation of gender with other demographic fields
+     *
+     * @param  array<string, mixed>  $likertData
+     * @return array<string, array<string, array<string, int>>>
+     */
+    public function calculateGenderCrossDistributions(array $likertData): array
+    {
+        $genderByPosition = [];
+        $genderByArea = [];
+        $genderByShift = [];
+        $genderByContract = [];
+
+        foreach ($likertData['evaluations'] as $eval) {
+            $demographics = $eval['demographics'] ?? [];
+
+            $gender = $demographics['genero'] ?? 'No especificado';
+            $position = $demographics['puesto'] ?? 'No especificado';
+            $area = $demographics['area'] ?? 'No especificado';
+            $shift = $demographics['turno'] ?? 'No especificado';
+            $contract = $demographics['tipo_contrato'] ?? 'No especificado';
+
+            // Gender x Position
+            if (! isset($genderByPosition[$position])) {
+                $genderByPosition[$position] = [];
+            }
+            $genderByPosition[$position][$gender] = ($genderByPosition[$position][$gender] ?? 0) + 1;
+
+            // Gender x Area
+            if (! isset($genderByArea[$area])) {
+                $genderByArea[$area] = [];
+            }
+            $genderByArea[$area][$gender] = ($genderByArea[$area][$gender] ?? 0) + 1;
+
+            // Gender x Shift
+            if (! isset($genderByShift[$shift])) {
+                $genderByShift[$shift] = [];
+            }
+            $genderByShift[$shift][$gender] = ($genderByShift[$shift][$gender] ?? 0) + 1;
+
+            // Gender x Contract
+            if (! isset($genderByContract[$contract])) {
+                $genderByContract[$contract] = [];
+            }
+            $genderByContract[$contract][$gender] = ($genderByContract[$contract][$gender] ?? 0) + 1;
+        }
+
+        return [
+            'genderByPosition' => $genderByPosition,
+            'genderByArea' => $genderByArea,
+            'genderByShift' => $genderByShift,
+            'genderByContract' => $genderByContract,
+        ];
+    }
+
+    /**
+     * Calculate total score per question across all evaluations
+     *
+     * @param  array<string, mixed>  $likertData
+     * @return array<int, array{question: int, score: int, maxScore: int, label: string}>
+     */
+    public function calculateQuestionScoreTotals(array $likertData): array
+    {
+        $config = config('likert-value');
+        $valorOpciones = $config['valorOpciones'];
+        $preguntas = $config['preguntas'];
+        $totalParticipants = count($likertData['evaluations']);
+
+        $questionScores = [];
+
+        // Initialize all 23 questions
+        for ($q = 1; $q <= 23; $q++) {
+            $questionScores[$q] = [
+                'question' => $q,
+                'score' => 0,
+                'maxScore' => $totalParticipants * 4, // Max is 4 points per person
+                'label' => 'P'.$q,
+                'fullText' => $preguntas[$q] ?? "Pregunta {$q}",
+            ];
+        }
+
+        // Sum scores for each question
+        foreach ($likertData['evaluations'] as $eval) {
+            $answers = $eval['answers'] ?? [];
+
+            for ($q = 1; $q <= 23; $q++) {
+                $answer = $answers[$q] ?? $answers[(string) $q] ?? null;
+                if ($answer) {
+                    $questionScores[$q]['score'] += $valorOpciones[strtoupper($answer)] ?? 0;
+                }
+            }
+        }
+
+        return $questionScores;
+    }
 }
