@@ -18,11 +18,23 @@ class OrganizationPolicy
         return $user->hasRole('organization') && $user->organization_id === $organization->id;
     }
 
+    /**
+     * Determina si el usuario puede ver el dashboard de la organización
+     */
+    public function viewOrganizationDashboard(User $user, Organization $organization): bool
+    {
+        // Solo usuarios con rol 'organization' pueden ver su propio dashboard
+        return $user->hasRole('organization') && $user->organization_id === $organization->id;
+    }
+
     // Alias para mantener compatibilidad con el nombre usando guiones
     public function __call($method, $args)
     {
         if ($method === 'view-organization-results') {
             return $this->viewOrganizationResults(...$args);
+        }
+        if ($method === 'view-organization-dashboard') {
+            return $this->viewOrganizationDashboard(...$args);
         }
         throw new \BadMethodCallException("Method {$method} does not exist.");
     }

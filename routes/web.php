@@ -46,6 +46,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/organization/{organization}/likert/report', [ResultsController::class, 'showLikertReport'])
         ->name('organization.likert.report');
 
+    // Organization dashboard route (only for organization users)
+    Route::get('/organizacion/{organization}/dashboard', [\App\Http\Controllers\OrganizationDashboardController::class, 'show'])
+        ->name('organization.dashboard');
+
     // Online results routes
     Route::get('/organization/{id}/online-results', [App\Http\Controllers\OnlineResultsController::class, 'index'])->name('organization.online-results');
     Route::get('/organization/{id}/online-results/report', [App\Http\Controllers\OnlineResultsController::class, 'report'])->name('organization.online-results.report');

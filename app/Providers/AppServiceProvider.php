@@ -29,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Registrar el servicio de caché para reportes de organización
         $this->app->singleton(\App\Services\OrganizationReportCacheService::class);
+
+        // Registrar el servicio para datos del dashboard de organización
+        $this->app->singleton(\App\Services\OrganizationDataService::class);
     }
 
     /**

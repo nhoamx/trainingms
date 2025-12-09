@@ -4,6 +4,7 @@ import AdminDashboard from '../Components/AdminDashboard.vue';
 import OrganizationOverviewDashboard from '../Components/OrganizationOverviewDashboard.vue';
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3'
+import Dashboard from "./Organizations/Dashboard.vue";
 
 
 const props = defineProps({
@@ -46,13 +47,7 @@ const showAdminView = computed(() => props.isAdmin || props.isSuperAdmin);
             />
         </div>
         <div v-else>
-            <OrganizationOverviewDashboard
-                :organization="props.organization"
-                :evaluation-stats="props.evaluation_stats"
-                :instrument-routes="props.instrument_routes"
-                :recent-evaluations="props.recent_evaluations"
-                :onboarding-tips="props.onboarding_tips"
-            />
+            <Dashboard /> 
         </div>
     </DashboardLayout>
 </template>
