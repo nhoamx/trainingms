@@ -114,6 +114,7 @@
                 <div class="flex justify-between items-start mb-6">
                     <h2 class="text-2xl font-bold text-gray-900">Evaluación de Clima Laboral</h2>
                     <button
+                    v-if="isAdmin"
                         @click="showEditModal = true"
                         class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                     >
@@ -183,6 +184,7 @@
                 <h3 class="text-xl font-bold text-gray-900 mb-4">Calificación por Dimensiones</h3>
 
                     <button
+                    v-if="isAdmin"
                         @click="openAnswersModal()"
                         class="ml-3 inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
                     >
