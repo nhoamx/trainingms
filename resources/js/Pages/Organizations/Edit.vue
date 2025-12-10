@@ -500,7 +500,7 @@ const handleImportAreasSuccess = () => {
                                         <div class="text-center">
                                             <div v-if="form.logo || organization.logo" class="mt-2 flex flex-col items-center gap-y-4">
                                                 <p class="text-lg text-gray-950">Logo actual:</p>
-                                                <img :src="`/${organization.logo}`" alt="Logo de la organización" class="h-18 w-auto" />
+                                                <img :src="`storage/${organization.logo}`" alt="Logo de la organización" class="h-18 w-auto" />
                                             </div>
                                             <PhotoIcon v-else class="mx-auto h-12 w-12 text-gray-300" aria-hidden="true" />
                                             <div class="mt-4 flex flex-wrap text-sm text-gray-600 justify-center">
