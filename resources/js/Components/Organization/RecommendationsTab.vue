@@ -170,6 +170,122 @@
                             Recursos Humanos<br />Supervisión<br />Comunicación
                         </td>
                     </tr>
+                    
+
+                    <tr>
+                        <td class="border-b border-gray-100 p-4 text-gray-800 text-justify">
+                            <span class="font-bold text-lg">Capacitación y Desarrollo</span>
+                            <p>
+                                Evalúa si la capacitación es suficiente y continua más allá de la inducción, y si la empresa provee capacitadores y recursos para desarrollar habilidades clave del puesto.
+                            </p>
+                        </td>
+                        <td class="border-b border-gray-100 p-4 text-gray-800 ">
+                            <ul class="list-decimal list-inside space-y-2 marker:font-bold">
+                                <li>
+                                    Levantar matriz de habilidades por puesto y brechas por equipo.
+                                </li>
+                                <li>
+                                    Implementar plan de capacitación anual por turno con horas mínimas garantizadas.
+                                </li>
+                                <li>
+                                    Certificar instructores internos y asegurar materiales/recursos prácticos.
+                                </li>
+                                <li>
+                                    Evaluar eficacia con pruebas de competencia y métricas de retrabajos/incidentes.
+                                </li>
+                            </ul>
+                        </td>
+                        <td class="border-b border-gray-100 p-4 text-gray-500 ">
+                            Recursos Humanos<br />Capacitación
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="border-b border-gray-100 p-4 text-gray-800 text-justify">
+                            <span class="font-bold text-lg">Equilibrio entre Vida Laboral y Personal</span>
+                            <p>
+                                Revisa si los patrones de turnos y horas extra son razonables y si las políticas de ausentismo y tiempo libre se gestionan de forma respetuosa.
+                            </p>
+                        </td>
+                        <td class="border-b border-gray-100 p-4 text-gray-800 ">
+                            <ul class="list-decimal list-inside space-y-2 marker:font-bold">
+                                <li>
+                                    Redefinir reglas de horas extra con rotación equitativa y topes por periodo.
+                                </li>
+                                <li>
+                                    Ajustar patrones de turnos para reducir fatiga (descansos y rotaciones planificadas).
+                                </li>
+                                <li>
+                                    Establecer proceso claro y humano para ausentismo y tiempo libre.
+                                </li>
+                                <li>
+                                    Monitorear bienestar con encuestas pulso y métricas de seguridad.
+                                </li>
+                            </ul>
+                        </td>
+                        <td class="border-b border-gray-100 p-4 text-gray-500 ">
+                            Gerencia<br />Producción<br />Recursos Humanos
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="border-b border-gray-100 p-4 text-gray-800 text-justify">
+                            <span class="font-bold text-lg">Avance Profesional</span>
+                            <p>
+                                Explora si existen rutas claras de crecimiento basadas en habilidades y desempeño y si la organización invierte en preparar al personal para roles superiores (p. ej., líderes de equipo o puestos calificados).
+                            </p>
+                        </td>
+                        <td class="border-b border-gray-100 p-4 text-gray-800 ">
+                            <ul class="list-decimal list-inside space-y-2 marker:font-bold">
+                                <li>
+                                    Crear y comunicar rutas de carrera por familia de puestos.
+                                </li>
+                                <li>
+                                    Definir criterios de promoción basados en habilidades y desempeño verificables.	
+                                </li>
+                                <li>
+                                    Implementar programa de desarrollo de líderes de equipo.
+                                </li>
+                                <li>
+                                    Publicar vacantes primero internamente y medir movilidad interna.
+                                </li>
+                                
+                            </ul>
+                        </td>
+                        <td class="border-b border-gray-100 p-4 text-gray-500 ">
+                            Gerencia<br />Producción<br />Recursos Humanos
+                        </td>
+                    </tr>
+
+
+                    <tr>
+                        <td class="border-b border-gray-100 p-4 text-gray-800 text-justify">
+                            <span class="font-bold text-lg">Apoyo al Empleado</span>
+                            <p>
+                                Evalúa la disponibilidad de recursos de apoyo accesibles (como consejería o programas de asistencia) para enfrentar retos personales y laborales relacionados con estrés, ausentismo o rotación
+                            </p>
+                        </td>
+                        <td class="border-b border-gray-100 p-4 text-gray-800 ">
+                            <ul class="list-decimal list-inside space-y-2 marker:font-bold">
+                                <li>
+                                    Implementar o fortalecer un Programa de Asistencia al Empleado (PAE).
+                                </li>
+                                <li>
+                                    Difundir accesos claros a consejería, apoyo emocional y orientación.
+                                </li>
+                                <li>
+                                    Capacitar líderes para detección temprana de estrés y canalización.
+                                </li>
+                                <li>
+                                    Integrar campañas periódicas de bienestar y manejo de estrés.
+                                </li>
+                                
+                            </ul>
+                        </td>
+                        <td class="border-b border-gray-100 p-4 text-gray-500 ">
+                            Gerencia<br />Producción<br />Recursos Humanos
+                        </td>
+                    </tr>
                 </tbody>
 
             </table>
