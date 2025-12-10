@@ -83,8 +83,16 @@
             </div>
 
             <div v-show="activeTab === 'recomendaciones'" class="animate-fade-in">
-              <RecommendationsTab :evaluations="evaluations" />
+              <template v-if="dashboardData.organization.id === 'a05bc65b-08cd-45d5-8ae1-f4f9d3eb5238'">
+                <RecommendationsTab :evaluations="evaluations" />
+              </template>
+
+              <template v-else>
+                <!-- Contenido alternativo -->
+                <RecommendationsP3Tab :evaluations="evaluations" />
+              </template>
             </div>
+
 
             <div v-show="activeTab === 'foda'" class="animate-fade-in">
               <FodaDataTab />
@@ -126,6 +134,7 @@ import TopRiskFactorsTab from '@/Components/Organization/TopRiskFactorsTab.vue';
 import RecommendationsTab from '@/Components/Organization/RecommendationsTab.vue';
 import EvidencesDataTab from '@/Components/Organization/EvidencesDataTab.vue';
 import FodaDataTab from '@/Components/Organization/FodaDataTab.vue';
+import RecommendationsP3Tab from '@/Components/Organization/RecommendationsP3Tab.vue';
 
 interface Tab {
   key: string;
