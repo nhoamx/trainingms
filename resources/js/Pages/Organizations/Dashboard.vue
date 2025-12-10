@@ -81,10 +81,8 @@
 
             </div>
 
-            <div v-show="activeTab === 'recomendaciones'" class="text-center py-16">
-              <div class="text-6xl mb-4">ℹ️</div>
-              <p class="text-2xl font-semibold text-gray-900 mb-2">No hay recomendaciones disponibles</p>
-              <p class="text-gray-600">Aún no se han generado recomendaciones.</p>
+            <div v-show="activeTab === 'recomendaciones'" class="animate-fade-in">
+              <RecommendationsTab :evaluations="evaluations" />
             </div>
 
             <!-- Informe -->
@@ -106,6 +104,7 @@ import Dashboard from '../../Layouts/Dashboard.vue';
 import CompanyDataTab from '@/Components/Organization/CompanyDataTab.vue';
 import DemographicDataTab from '@/Components/Organization/DemographicDataTab.vue';
 import TopRiskFactorsTab from '@/Components/Organization/TopRiskFactorsTab.vue';
+import RecommendationsTab from '@/Components/Organization/RecommendationsTab.vue';
 
 interface Tab {
   key: string;
