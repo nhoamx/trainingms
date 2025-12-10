@@ -331,7 +331,7 @@ const topThreeFactors = computed(() => {
   // Sort by disagreement sum (descending) and return top 3
   return factors
     .sort((a, b) => b.disagreementSum - a.disagreementSum)
-    .slice(0, 3)
+    //.slice(0, 3)
     .map((factor) => ({
       name: factor.name,
       counts: factor.counts,
@@ -342,11 +342,15 @@ const topThreeFactors = computed(() => {
 // Get severity badge color based on rank
 const getSeverityBadgeClass = (index: number): string => {
   const severities = [
+    'bg-red-600',
+    'bg-red-600',
     'bg-red-600',      // 1st place - worst
+    'bg-orange-600',
     'bg-orange-600',   // 2nd place
+    'bg-yellow-600',
     'bg-yellow-600',   // 3rd place
   ];
-  return severities[index] || 'bg-gray-600';
+  return severities[index] || 'bg-green-600';
 };
 
 // Extract unique comment factors from filtered evaluations
