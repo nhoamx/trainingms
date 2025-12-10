@@ -356,7 +356,7 @@
                                     personal</td>
                             </tr>
 
-                            <tr class="bg-yellow-50">
+                            <tr>
                                 <td class="px-6 py-3 whitespace-nowrap text-sm">Recursos Humanos</td>
                                 <td class="px-3 py-3 whitespace-nowrap text-sm text-center">40</td>
                                 <td class="px-3 py-3 whitespace-nowrap text-sm text-center">6</td>
@@ -369,7 +369,7 @@
                                 <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
                             </tr>
 
-                            <tr class="bg-yellow-50">
+                            <tr>
                                 <td class="px-6 py-3 whitespace-nowrap text-sm">Mantenimiento</td>
                                 <td class="px-3 py-3 whitespace-nowrap text-sm text-center">61</td>
                                 <td class="px-3 py-3 whitespace-nowrap text-sm text-center">12</td>
@@ -598,7 +598,7 @@
                                     de logras por equipo/turno</td>
                             </tr>
 
-                            <tr>
+                            <tr class="bg-yellow-50">
                                 <td class="px-3 py-3 whitespace-normal text-sm font-medium">Capacitación y desarrollo
                                 </td>
                                 <td class="px-3 py-3 whitespace-nowrap text-sm text-center">3502</td>
@@ -619,7 +619,7 @@
                                     competencia y métricas de retrabajos/incidentes</td>
                             </tr>
 
-                            <tr>
+                            <tr class="bg-yellow-50">
                                 <td class="px-3 py-3 whitespace-normal text-sm font-medium">Equilibrio vida
                                     laboral-personal</td>
                                 <td class="px-3 py-3 whitespace-nowrap text-sm text-center">3502</td>
