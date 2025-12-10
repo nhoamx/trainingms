@@ -10,21 +10,14 @@
               <img
                 :src="dashboardData.organization.logo"
                 :alt="`${dashboardData.organization.name} logo`"
-                class="h-20 w-auto object-contain max-w-xs rounded-lg shadow-sm"
+                class="h-20 w-auto object-contain max-w-xs"
               />
             </div>
             <div v-else class="flex-shrink-0">
-              <div class="h-20 w-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-sm flex items-center justify-center">
-                <span class="text-white text-xl font-bold">
-                  {{ dashboardData.organization.name.charAt(0).toUpperCase() }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Title -->
-            <div>
+              <div>
               <h1 class="text-4xl font-bold text-gray-900">{{ dashboardData.organization.name }}</h1>
               <p class="mt-2 text-gray-600">Dashboard de la Organización</p>
+            </div>
             </div>
           </div>
         </div>

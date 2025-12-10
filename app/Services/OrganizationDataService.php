@@ -17,7 +17,7 @@ class OrganizationDataService
     public function getCompanyData(Organization $organization): array
     {
         return [
-            'logo' => $organization->logo,
+            'logo' => asset('storage/' . $organization->logo),
             'general' => [
                 'name' => $organization->name,
                 'razon_social' => $organization->razon_social,
@@ -158,7 +158,7 @@ class OrganizationDataService
             'organization' => [
                 'id' => $organization->id,
                 'name' => $organization->name,
-                'logo' => $organization->logo,
+                'logo' => asset('storage/' . $organization->logo),
             ],
             'company_data' => $this->getCompanyData($organization),
             'demographic_summary' => $this->getDemographicSummary($organization),
