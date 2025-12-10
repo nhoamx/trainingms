@@ -8,13 +8,13 @@
         <!-- Grid of Images -->
         <div class="grid grid-cols-2 gap-4">
             <div
-                v-for="imageNumber in 16"
+                v-for="imageNumber in imageCount"
                 :key="imageNumber"
                 class="cursor-pointer overflow-hidden rounded-lg bg-gray-100 shadow-sm hover:shadow-md transition-shadow"
                 @click="openImageModal(imageNumber)"
             >
                 <img
-                    :src="`/assets/${imageNumber}.jpeg`"
+                    :src="`/assets/plantas/${organizationInfo.id}/${imageNumber}.jpeg`"
                     :alt="`Evidencia ${imageNumber}`"
                     class="w-full h-auto object-cover hover:scale-105 transition-transform"
                 />
@@ -31,7 +31,7 @@
                     ✕
                 </button>
                 <img
-                    :src="`/assets/${selectedImage}.jpeg`"
+                    :src="`/assets/plantas/${organizationInfo.id}/${selectedImage}.jpeg`"
                     :alt="`Evidencia ${selectedImage}`"
                     class="w-full h-full object-contain"
                 />
@@ -40,16 +40,29 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 
-const selectedImage = ref(null)
+interface OrganizationInfo {
+    id: string | number
+    name: string
+    logo?: string
+}
 
-function openImageModal(imageNumber) {
+interface Props {
+    organizationInfo: OrganizationInfo
+}
+
+const props = defineProps<Props>()
+
+const selectedImage = ref<number | null>(null)
+const imageCount = props.organizationInfo.id === 'a06fe33d-6955-4d24-98d1-a375ecb55645' ? 15 : 16;
+
+function openImageModal(imageNumber: number): void {
     selectedImage.value = imageNumber
 }
 
-function closeImageModal() {
+function closeImageModal(): void {
     selectedImage.value = null
 }
 </script>

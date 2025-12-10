@@ -106,7 +106,7 @@
             </div>
 
             <div v-show="activeTab === 'evidence'" class="animate-fade-in">
-              <EvidencesDataTab />
+              <EvidencesDataTab :organization-info="dashboardData.organization" />
             </div>
 
 
