@@ -9,6 +9,7 @@
     <!-- Grid de Gráficas -->
     <div v-if="demographicDetails.total_evaluations > 0" class="space-y-6">
       <!-- Row 1: Género -->
+       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-white rounded-lg p-6 border border-gray-200">
         <h3 class="text-lg font-semibold text-gray-900 mb-6">Género</h3>
         <canvas ref="genderChartCanvas" style="height: 300px"></canvas>
@@ -18,6 +19,7 @@
             <span class="font-semibold text-gray-900">{{ count }}</span>
           </div>
         </div>
+      </div>
       </div>
 
       <!-- Row 2: Tipo de Contrato - Género + Tipo de Contrato -->
@@ -186,6 +188,7 @@ interface DemographicData {
 
 interface Evaluation {
   id: string;
+  demographic_data?: DemographicData;
   demographicData?: DemographicData;
 }
 
@@ -205,6 +208,7 @@ const props = withDefaults(defineProps<Props>(), {
   }),
   evaluations: () => [],
 });
+
 
 const genderChartCanvas = ref<HTMLCanvasElement>();
 const contractTypeChartCanvas = ref<HTMLCanvasElement>();
@@ -236,13 +240,13 @@ const getChartColor = (index: number): string => {
 
 const getCountByField = (field: 'gender' | 'contract_type' | 'position' | 'department' | 'work_schedule', options: string[]): Record<string, number> => {
   const counts: Record<string, number> = {};
-  
+
   options.forEach(option => {
     counts[option] = 0;
   });
 
   props.evaluations.forEach((evaluation: Evaluation) => {
-    const demo = evaluation.demographicData;
+    const demo = evaluation.demographic_data || evaluation.demographicData;
     if (!demo) return;
 
     let value = '';
@@ -262,13 +266,13 @@ const getCountByField = (field: 'gender' | 'contract_type' | 'position' | 'depar
 
 const getCountByCombination = (field1: keyof DemographicData, value1: string, field2: keyof DemographicData, options2: string[]): Record<string, number> => {
   const counts: Record<string, number> = {};
-  
+
   options2.forEach(option => {
     counts[option] = 0;
   });
 
   props.evaluations.forEach((evaluation: Evaluation) => {
-    const demo = evaluation.demographicData;
+    const demo = evaluation.demographic_data || evaluation.demographicData;
     if (!demo) return;
 
     const demo1 = demo[field1] || '';
@@ -284,9 +288,9 @@ const getCountByCombination = (field1: keyof DemographicData, value1: string, fi
 
 const getCombinationCounts = (field1: 'gender' | 'contract_type' | 'position' | 'department' | 'work_schedule', options1: string[], field2: 'gender' | 'contract_type' | 'position' | 'department' | 'work_schedule', options2: string[]): Record<string, number> => {
   const counts: Record<string, number> = {};
-  
+
   props.evaluations.forEach((evaluation: Evaluation) => {
-    const demo = evaluation.demographicData;
+    const demo = evaluation.demographic_data || evaluation.demographicData;
     if (!demo) return;
 
     let value1 = '';
@@ -353,7 +357,7 @@ const createChart = (canvasRef: any, field: 'gender' | 'contract_type' | 'positi
   const labels = options.filter(opt => counts[opt] > 0);
   const data = labels.map(label => counts[label]);
   const backgroundColors = labels.map((_, index) => getChartColor(index));
-  
+
   const maxValue = data.length > 0 ? Math.max(...data) : 0;
   const stepSize = getConsistentStepSize(maxValue);
 
@@ -408,7 +412,7 @@ const createCombinationChart = (canvasRef: any, counts: Record<string, number>, 
   const labels = Object.keys(counts).filter(label => counts[label] > 0);
   const data = labels.map(label => counts[label]);
   const backgroundColors = labels.map((_, index) => getChartColor(index));
-  
+
   const maxValue = data.length > 0 ? Math.max(...data) : 0;
   const stepSize = getConsistentStepSize(maxValue);
 
@@ -457,7 +461,7 @@ const renderCharts = (): void => {
       createChart(positionChartCanvas, 'position', props.demographicDetails.positions, 'position');
       createChart(areaChartCanvas, 'department', props.demographicDetails.areas, 'area');
       createChart(shiftChartCanvas, 'work_schedule', props.demographicDetails.shifts, 'shift');
-      
+
       createCombinationChart(genderContractChartCanvas, genderContractCounts.value, 'genderContract');
       createCombinationChart(genderShiftChartCanvas, genderShiftCounts.value, 'genderShift');
       createCombinationChart(malePositionChartCanvas, malePositionCounts.value, 'malePosition');

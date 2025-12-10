@@ -80,6 +80,12 @@
               />
             </div>
 
+            <div v-show="activeTab === 'recomendaciones'" class="text-center py-16">
+              <div class="text-6xl mb-4">ℹ️</div>
+              <p class="text-2xl font-semibold text-gray-900 mb-2">No hay recomendaciones disponibles</p>
+              <p class="text-gray-600">Aún no se han generado recomendaciones.</p>
+            </div>
+
             <!-- Informe -->
             <div v-show="activeTab === 'report'" class="text-center py-16">
               <div class="text-6xl mb-4">📄</div>
@@ -94,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import Dashboard from '../../Layouts/Dashboard.vue';
 import CompanyDataTab from '@/Components/Organization/CompanyDataTab.vue';
 import DemographicDataTab from '@/Components/Organization/DemographicDataTab.vue';
@@ -155,6 +161,7 @@ interface DashboardData {
 
 interface Evaluation {
   id: string;
+  demographic_data?: Record<string, unknown>;
   demographicData?: Record<string, unknown>;
   scores?: {
     total_score?: number;
@@ -176,6 +183,7 @@ const tabs: Tab[] = [
   { key: 'demographic', label: 'Datos Demográficos' },
   { key: 'results', label: 'Resultados' },
   { key: 'analysis', label: 'Análisis' },
+  { key: 'recomendaciones', label: 'Recomendaciones' },
   { key: 'report', label: 'Informe' },
 ];
 

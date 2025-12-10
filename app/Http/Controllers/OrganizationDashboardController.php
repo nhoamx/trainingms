@@ -53,12 +53,12 @@ class OrganizationDashboardController extends Controller
 
                 return [
                     'id' => $evaluation->id,
-                    'demographic_data' => $evaluation->demographicData ? [
+                    'demographicData' => $evaluation->demographicData ? [
                         'gender' => $evaluation->demographicData->gender,
-                        'tipo_contrato' => $evaluation->demographicData->contract_type,
-                        'puesto' => $evaluation->demographicData->position,
-                        'area' => $evaluation->demographicData->department,
-                        'turno' => $evaluation->demographicData->work_schedule,
+                        'contract_type' => $evaluation->demographicData->contract_type,
+                        'position' => $evaluation->demographicData->position,
+                        'department' => $evaluation->demographicData->department,
+                        'work_schedule' => $evaluation->demographicData->work_schedule,
                     ] : null,
                     'dimensions' => $dimensions,
                     'total_score' => $scores['total_score'],

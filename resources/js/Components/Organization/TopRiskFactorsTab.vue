@@ -175,10 +175,10 @@ import { ref, computed } from 'vue';
 
 interface DemographicData {
   gender?: string;
-  tipo_contrato?: string;
-  puesto?: string;
-  area?: string;
-  turno?: string;
+  contract_type?: string;
+  position?: string;
+  department?: string;
+  work_schedule?: string;
 }
 
 interface DimensionScore {
@@ -189,7 +189,7 @@ interface DimensionScore {
 
 interface Evaluation {
   id: string;
-  demographic_data?: DemographicData;
+  demographicData?: DemographicData;
   dimensions?: DimensionScore[];
 }
 
@@ -197,8 +197,8 @@ interface DemographicDetails {
   genders: string[];
   contract_types: string[];
   positions: string[];
-  areas: string[];
-  shifts: string[];
+  departments: string[];
+  work_schedule: string[];
   total_evaluations: number;
 }
 
@@ -236,21 +236,21 @@ const resetFilters = (): void => {
 // Filtered evaluations
 const filteredEvaluations = computed(() => {
   return props.evaluations.filter((evaluation) => {
-    const demo = evaluation.demographic_data || {};
+    const demo = evaluation.demographicData || {};
 
     if (filters.value.gender && demo.gender !== filters.value.gender) {
       return false;
     }
-    if (filters.value.contract_type && demo.tipo_contrato !== filters.value.contract_type) {
+    if (filters.value.contract_type && demo.contract_type !== filters.value.contract_type) {
       return false;
     }
-    if (filters.value.position && demo.puesto !== filters.value.position) {
+    if (filters.value.position && demo.position !== filters.value.position) {
       return false;
     }
-    if (filters.value.area && demo.area !== filters.value.area) {
+    if (filters.value.area && demo.department !== filters.value.area) {
       return false;
     }
-    if (filters.value.shift && demo.turno !== filters.value.shift) {
+    if (filters.value.shift && demo.work_schedule !== filters.value.shift) {
       return false;
     }
 
