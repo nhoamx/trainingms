@@ -2,7 +2,7 @@
     <div class="space-y-6">
         <!-- Header -->
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">Recomendaciones de Gestión de Riesgos</h2>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Gestión de Niveles no Satisfactorios</h2>
         </div>
 
         <!-- Risk Factors and Recommendations -->
