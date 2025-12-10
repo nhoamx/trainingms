@@ -445,7 +445,7 @@ const createCommentChart = (): void => {
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      indexAxis: 'x',
+      indexAxis: 'y',
       plugins: {
         legend: {
           display: false,

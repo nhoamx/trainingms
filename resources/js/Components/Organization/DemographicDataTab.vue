@@ -342,7 +342,7 @@ const getConsistentStepSize = (maxValue: number): number => {
   return Math.ceil(maxValue / 5 / 100) * 100;
 };
 
-const createChart = (canvasRef: any, field: 'gender' | 'contract_type' | 'position' | 'department' | 'work_schedule', options: string[], chartKey: string): void => {
+const createChart = (canvasRef: any, field: 'gender' | 'contract_type' | 'position' | 'department' | 'work_schedule', options: string[], chartKey: string, chartAxis: 'x' | 'y'): void => {
   if (!canvasRef.value) return;
 
   const ctx = canvasRef.value.getContext('2d');
@@ -378,7 +378,7 @@ const createChart = (canvasRef: any, field: 'gender' | 'contract_type' | 'positi
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      indexAxis: 'x',
+      indexAxis: chartAxis,
       plugins: {
         legend: {
           display: false,
@@ -398,7 +398,7 @@ const createChart = (canvasRef: any, field: 'gender' | 'contract_type' | 'positi
   chartInstances.value[chartKey] = chart;
 };
 
-const createCombinationChart = (canvasRef: any, counts: Record<string, number>, chartKey: string): void => {
+const createCombinationChart = (canvasRef: any, counts: Record<string, number>, chartKey: string, chartAxis: 'x' | 'y'): void => {
   if (!canvasRef.value) return;
 
   const ctx = canvasRef.value.getContext('2d');
@@ -433,7 +433,7 @@ const createCombinationChart = (canvasRef: any, counts: Record<string, number>, 
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      indexAxis: 'x',
+      indexAxis: chartAxis,
       plugins: {
         legend: {
           display: false,
@@ -456,18 +456,18 @@ const createCombinationChart = (canvasRef: any, counts: Record<string, number>, 
 const renderCharts = (): void => {
   nextTick(() => {
     if (props.demographicDetails.total_evaluations > 0) {
-      createChart(genderChartCanvas, 'gender', props.demographicDetails.genders, 'gender');
-      createChart(contractTypeChartCanvas, 'contract_type', props.demographicDetails.contract_types, 'contractType');
-      createChart(positionChartCanvas, 'position', props.demographicDetails.positions, 'position');
-      createChart(areaChartCanvas, 'department', props.demographicDetails.areas, 'area');
-      createChart(shiftChartCanvas, 'work_schedule', props.demographicDetails.shifts, 'shift');
+      createChart(genderChartCanvas, 'gender', props.demographicDetails.genders, 'gender', 'x');
+      createChart(contractTypeChartCanvas, 'contract_type', props.demographicDetails.contract_types, 'contractType', 'x');
+      createChart(positionChartCanvas, 'position', props.demographicDetails.positions, 'position', 'y');
+      createChart(areaChartCanvas, 'department', props.demographicDetails.areas, 'area', 'y');
+      createChart(shiftChartCanvas, 'work_schedule', props.demographicDetails.shifts, 'shift', 'x');
 
-      createCombinationChart(genderContractChartCanvas, genderContractCounts.value, 'genderContract');
-      createCombinationChart(genderShiftChartCanvas, genderShiftCounts.value, 'genderShift');
-      createCombinationChart(malePositionChartCanvas, malePositionCounts.value, 'malePosition');
-      createCombinationChart(femalePositionChartCanvas, femalePositionCounts.value, 'femalePosition');
-      createCombinationChart(maleAreaChartCanvas, maleAreaCounts.value, 'maleArea');
-      createCombinationChart(femaleAreaChartCanvas, femaleAreaCounts.value, 'femaleArea');
+      createCombinationChart(genderContractChartCanvas, genderContractCounts.value, 'genderContract', 'x');
+      createCombinationChart(genderShiftChartCanvas, genderShiftCounts.value, 'genderShift', 'x');
+      createCombinationChart(malePositionChartCanvas, malePositionCounts.value, 'malePosition', 'y');
+      createCombinationChart(femalePositionChartCanvas, femalePositionCounts.value, 'femalePosition', 'y');
+      createCombinationChart(maleAreaChartCanvas, maleAreaCounts.value, 'maleArea', 'y');
+      createCombinationChart(femaleAreaChartCanvas, femaleAreaCounts.value, 'femaleArea', 'y');
     }
   });
 };
