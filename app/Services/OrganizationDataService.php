@@ -45,6 +45,23 @@ class OrganizationDataService
                 'email' => $organization->responsable_email,
                 'movil' => $organization->responsable_movil,
             ],
+            'workforce' => [
+                'total_trabajadores' => $organization->total_trabajadores,
+                'total_hombres' => $organization->total_hombres,
+                'total_mujeres' => $organization->total_mujeres,
+            ],
+            'sample' => [
+                'muestra_aplicada' => $organization->muestra_aplicada,
+                'muestra_hombres' => $organization->muestra_hombres,
+                'muestra_mujeres' => $organization->muestra_mujeres,
+                'justificacion_muestra' => $organization->justificacion_muestra,
+            ],
+            'evaluation_date' => $organization->fecha_aplicacion,
+            'committee' => [
+                'comite_integrantes' => $organization->comite_integrantes,
+                'comite_hombres' => $organization->comite_hombres,
+                'comite_mujeres' => $organization->comite_mujeres,
+            ],
         ];
     }
 

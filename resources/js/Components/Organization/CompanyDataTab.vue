@@ -22,6 +22,67 @@
 
     <hr class="border-gray-200" />
 
+    <!-- Sección: Colaboradores -->
+    <div>
+      <div class="flex items-center mb-6">
+        <div class="bg-indigo-100 rounded-lg p-3 mr-4">
+          <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 12H9m6 0a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900">Colaboradores</h2>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <InfoCard label="Total de Trabajadores" :value="companyData.workforce.total_trabajadores" />
+        <InfoCard label="Hombres" :value="companyData.workforce.total_hombres" />
+        <InfoCard label="Mujeres" :value="companyData.workforce.total_mujeres" />
+      </div>
+    </div>
+
+    <hr class="border-gray-200" />
+
+    <!-- Sección: Muestra Aplicada y Comité -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Muestra Aplicada -->
+      <div>
+        <div class="flex items-center mb-6">
+          <div class="bg-pink-100 rounded-lg p-3 mr-4">
+            <svg class="w-6 h-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900">Muestra Aplicada</h2>
+        </div>
+        <div class="space-y-6">
+          <InfoCard label="Total de Muestras" :value="companyData.sample.muestra_aplicada" />
+          <InfoCard label="Hombres" :value="companyData.sample.muestra_hombres" />
+          <InfoCard label="Mujeres" :value="companyData.sample.muestra_mujeres" />
+          <InfoCard label="Justificación" :value="companyData.sample.justificacion_muestra" />
+        </div>
+      </div>
+
+      <!-- Comité -->
+      <div>
+        <div class="flex items-center mb-6">
+          <div class="bg-yellow-100 rounded-lg p-3 mr-4">
+            <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10h.01M11 20h5v-2a3 3 0 00-5.856-1.487M15 10h.01M6 20h5v-2a3 3 0 00-5.856-1.487M11 10a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900">Comité</h2>
+        </div>
+        <div class="space-y-6">
+          <InfoCard label="Total de Integrantes" :value="companyData.committee.comite_integrantes" />
+          <InfoCard label="Hombres" :value="companyData.committee.comite_hombres" />
+          <InfoCard label="Mujeres" :value="companyData.committee.comite_mujeres" />
+          <InfoCard v-if="companyData.evaluation_date" label="Fecha de Aplicación" :value="formatDate(companyData.evaluation_date)" />
+        </div>
+      </div>
+    </div>
+
+    <hr class="border-gray-200" />
+
     <!-- Sección: Domicilio -->
     <div>
       <div class="flex items-center mb-6">
@@ -86,6 +147,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import InfoCard from '@/Components/Organization/InfoCard.vue';
 
 interface CompanyData {
@@ -96,6 +158,23 @@ interface CompanyData {
     registro_patronal: string | null;
     actividad_principal: string | null;
     folio_organization: number | null;
+  };
+  workforce: {
+    total_trabajadores: number | null;
+    total_hombres: number | null;
+    total_mujeres: number | null;
+  };
+  sample: {
+    muestra_aplicada: number | null;
+    muestra_hombres: number | null;
+    muestra_mujeres: number | null;
+    justificacion_muestra: string | null;
+  };
+  evaluation_date: string | null;
+  committee: {
+    comite_integrantes: number | null;
+    comite_hombres: number | null;
+    comite_mujeres: number | null;
   };
   address: {
     calle_numero: string | null;
@@ -123,4 +202,13 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const formatDate = (date: string | null): string => {
+  if (!date) return 'N/A';
+  return new Date(date).toLocaleDateString('es-MX', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
 </script>
