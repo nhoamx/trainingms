@@ -149,7 +149,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import InfoCard from '@/Components/Organization/InfoCard.vue';
-import { useTranslations } from '@/Composables/useTranslations';
+import { useTranslations } from '@/composables/useTranslations';
 
 const { t, locale } = useTranslations();
 

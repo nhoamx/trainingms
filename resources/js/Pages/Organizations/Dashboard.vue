@@ -140,7 +140,7 @@ import EvidencesDataTab from '@/Components/Organization/EvidencesDataTab.vue';
 import FodaDataTab from '@/Components/Organization/FodaDataTab.vue';
 import RecommendationsP3Tab from '@/Components/Organization/RecommendationsP3Tab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
-import { useTranslations } from '@/Composables/useTranslations';
+import { useTranslations } from '@/composables/useTranslations';
 
 const { t } = useTranslations();
 
