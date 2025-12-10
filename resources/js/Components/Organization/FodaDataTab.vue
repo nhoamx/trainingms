@@ -29,7 +29,7 @@
             </thead>
 
             <tbody class="bg-white">
-                <tr v-for="foda in FODAData" :key="foda.factor">
+                <tr v-for="foda in FODAData" :key="foda.factor" class="text-justify">
                     <td class="border-b border-gray-200 p-4 text-gray-800  px-6 py-4">
                         {{ foda.factor }}
                     </td>
