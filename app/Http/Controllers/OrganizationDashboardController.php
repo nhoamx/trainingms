@@ -33,26 +33,34 @@ class OrganizationDashboardController extends Controller
 
         // Obtener evaluaciones con datos demográficos y calcular score
         // Solo incluir evaluaciones Likert completadas (igual que en LikertOrganizationReport)
-        $config = config('likert-value');
-
         $evaluations = PaperEvaluation::where('organization_id', $organization->id)
             ->where('evaluation_type', 'likert')
             ->where('processing_status', 'completed')
             ->with('demographicData')
             ->get()
-            ->map(function ($evaluation) use ($config) {
-                $questions = $evaluation->likert_answers['questions'] ?? [];
-                $scores = $this->likertScoreService->calculateLikertScoresFromData($questions, $config);
+            ->map(function ($evaluation) {
+                $scores = $this->likertScoreService->calculateLikertScores($evaluation);
+
+                // Format dimensions for frontend consumption
+                $dimensions = [];
+                foreach ($scores['dimensions'] as $dimensionName => $dimensionData) {
+                    $dimensions[] = [
+                        'name' => $dimensionName,
+                        'score' => $dimensionData['score'],
+                        'interpretation' => $dimensionData['interpretation'],
+                    ];
+                }
 
                 return [
                     'id' => $evaluation->id,
-                    'demographicData' => $evaluation->demographicData ? [
+                    'demographic_data' => $evaluation->demographicData ? [
                         'gender' => $evaluation->demographicData->gender,
-                        'contract_type' => $evaluation->demographicData->contract_type,
-                        'position' => $evaluation->demographicData->position,
-                        'department' => $evaluation->demographicData->department,
-                        'work_schedule' => $evaluation->demographicData->work_schedule,
+                        'tipo_contrato' => $evaluation->demographicData->contract_type,
+                        'puesto' => $evaluation->demographicData->position,
+                        'area' => $evaluation->demographicData->department,
+                        'turno' => $evaluation->demographicData->work_schedule,
                     ] : null,
+                    'dimensions' => $dimensions,
                     'total_score' => $scores['total_score'],
                     'interpretation' => $scores['interpretation'],
                 ];

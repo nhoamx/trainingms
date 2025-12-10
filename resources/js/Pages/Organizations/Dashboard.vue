@@ -73,10 +73,11 @@
             </div>
 
             <!-- Análisis -->
-            <div v-show="activeTab === 'analysis'" class="text-center py-16">
-              <div class="text-6xl mb-4">🔍</div>
-              <p class="text-2xl font-semibold text-gray-900 mb-2">Próximamente</p>
-              <p class="text-gray-600">Esta sección se habilitará en la próxima versión</p>
+            <div v-show="activeTab === 'analysis'" class="animate-fade-in">
+              <TopRiskFactorsTab
+                :evaluations="evaluations"
+                :demographic-details="dashboardData.demographic_details"
+              />
             </div>
 
             <!-- Informe -->
@@ -97,6 +98,7 @@ import { ref } from 'vue';
 import Dashboard from '../../Layouts/Dashboard.vue';
 import CompanyDataTab from '@/Components/Organization/CompanyDataTab.vue';
 import DemographicDataTab from '@/Components/Organization/DemographicDataTab.vue';
+import TopRiskFactorsTab from '@/Components/Organization/TopRiskFactorsTab.vue';
 
 interface Tab {
   key: string;

@@ -310,7 +310,7 @@
                                         <span class="text-sm font-semibold text-gray-900">{{ group.total_score }}</span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                        <div class="flex items-center gap-3">
+                                        <div class="flex flex-col items-start gap-3">
                                             <Link
                                                 :href="getDetailRoute(group)"
                                                 class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
