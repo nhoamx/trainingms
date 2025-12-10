@@ -78,6 +78,7 @@
                 :evaluations="evaluations"
                 :demographic-details="dashboardData.demographic_details"
               />
+
             </div>
 
             <div v-show="activeTab === 'recomendaciones'" class="text-center py-16">
@@ -115,8 +116,8 @@ interface DemographicDetails {
   genders: string[];
   contract_types: string[];
   positions: string[];
-  areas: string[];
-  shifts: string[];
+  departments: string[];
+  work_schedules: string[];
   total_evaluations: number;
 }
 

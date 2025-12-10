@@ -167,11 +167,36 @@
         <p class="text-gray-600">Intenta cambiar los filtros para ver los factores de riesgo</p>
       </div>
     </div>
+
+    <!-- Gráfica de Comentarios por Factor -->
+    <div v-if="commentFactors.length > 0" class="bg-white rounded-lg border border-gray-200 p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-6">Comentarios por Factor</h3>
+      <p class="text-sm text-gray-600 mb-6">Distribución de comentarios según filtros demográficos aplicados</p>
+      
+      <canvas ref="commentChartCanvas" style="height: 300px"></canvas>
+      
+      <div class="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+        <div v-for="(count, label) in commentCounts" :key="label" class="flex justify-between">
+          <span class="text-gray-700">{{ label }}</span>
+          <span class="font-semibold text-gray-900">{{ count }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State para Comentarios -->
+    <div v-else class="bg-gray-50 rounded-lg p-12 text-center border border-gray-200">
+      <div class="text-6xl mb-4">💬</div>
+      <p class="text-lg font-semibold text-gray-900 mb-2">No hay comentarios disponibles</p>
+      <p class="text-gray-600">No se encontraron comentarios para los filtros seleccionados</p>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, nextTick, onMounted } from 'vue';
+import { Chart, registerables } from 'chart.js';
+
+Chart.register(...registerables);
 
 interface DemographicData {
   gender?: string;
@@ -187,18 +212,24 @@ interface DimensionScore {
   interpretation: string;
 }
 
+interface EvaluationComment {
+  factor: string;
+  comment: string;
+}
+
 interface Evaluation {
   id: string;
   demographicData?: DemographicData;
   dimensions?: DimensionScore[];
+  comments?: EvaluationComment[];
 }
 
 interface DemographicDetails {
   genders: string[];
   contract_types: string[];
   positions: string[];
-  departments: string[];
-  work_schedule: string[];
+  areas: string[];
+  shifts: string[];
   total_evaluations: number;
 }
 
@@ -224,6 +255,10 @@ const filters = ref({
   shift: '',
 });
 
+// Chart refs
+const commentChartCanvas = ref<HTMLCanvasElement>();
+const chartInstances = ref<Record<string, Chart>>({});
+
 // Reset filters function
 const resetFilters = (): void => {
   filters.value.gender = '';
@@ -235,7 +270,7 @@ const resetFilters = (): void => {
 
 // Filtered evaluations
 const filteredEvaluations = computed(() => {
-  return props.evaluations.filter((evaluation) => {
+  return props.evaluations.filter((evaluation: Evaluation) => {
     const demo = evaluation.demographicData || {};
 
     if (filters.value.gender && demo.gender !== filters.value.gender) {
@@ -263,12 +298,12 @@ const topThreeFactors = computed(() => {
   const factorMap: Record<string, Record<string, number>> = {};
 
   // Aggregate dimension scores
-  filteredEvaluations.value.forEach((evaluation) => {
+  filteredEvaluations.value.forEach((evaluation: Evaluation) => {
     if (!evaluation.dimensions || !Array.isArray(evaluation.dimensions)) {
       return;
     }
 
-    evaluation.dimensions.forEach((dimension) => {
+    evaluation.dimensions.forEach((dimension: DimensionScore) => {
       if (!factorMap[dimension.name]) {
         factorMap[dimension.name] = {
           'Totalmente de Acuerdo': 0,
@@ -313,4 +348,139 @@ const getSeverityBadgeClass = (index: number): string => {
   ];
   return severities[index] || 'bg-gray-600';
 };
+
+// Extract unique comment factors from filtered evaluations
+const commentFactors = computed(() => {
+  const factors = new Set<string>();
+  
+  filteredEvaluations.value.forEach((evaluation: Evaluation) => {
+    if (evaluation.comments && Array.isArray(evaluation.comments)) {
+      evaluation.comments.forEach((comment: EvaluationComment) => {
+        if (comment.factor) {
+          factors.add(comment.factor);
+        }
+      });
+    }
+  });
+  
+  return Array.from(factors).sort();
+});
+
+// Count comments by factor
+const commentCounts = computed(() => {
+  const counts: Record<string, number> = {};
+  
+  filteredEvaluations.value.forEach((evaluation: Evaluation) => {
+    if (evaluation.comments && Array.isArray(evaluation.comments)) {
+      evaluation.comments.forEach((comment: EvaluationComment) => {
+        if (comment.factor) {
+          counts[comment.factor] = (counts[comment.factor] || 0) + 1;
+        }
+      });
+    }
+  });
+  
+  return counts;
+});
+
+// Chart color helper
+const getChartColor = (index: number): string => {
+  const colors = [
+    'rgba(59, 130, 246, 0.8)',    // Blue
+    'rgba(34, 197, 94, 0.8)',     // Green
+    'rgba(239, 68, 68, 0.8)',     // Red
+    'rgba(251, 146, 60, 0.8)',    // Orange
+    'rgba(168, 85, 247, 0.8)',    // Purple
+    'rgba(14, 165, 233, 0.8)',    // Cyan
+    'rgba(236, 72, 153, 0.8)',    // Pink
+    'rgba(100, 116, 139, 0.8)',   // Slate
+  ];
+  return colors[index % colors.length];
+};
+
+const getConsistentStepSize = (maxValue: number): number => {
+  if (maxValue <= 10) return 1;
+  if (maxValue <= 50) return 5;
+  if (maxValue <= 100) return 10;
+  if (maxValue <= 500) return 50;
+  if (maxValue <= 1000) return 100;
+  if (maxValue <= 5000) return 500;
+  return Math.ceil(maxValue / 5 / 100) * 100;
+};
+
+// Create chart for comments
+const createCommentChart = (): void => {
+  if (!commentChartCanvas.value) return;
+
+  const ctx = commentChartCanvas.value.getContext('2d');
+  if (!ctx) return;
+
+  // Destroy existing chart
+  const existingChart = chartInstances.value['comments'];
+  if (existingChart) {
+    existingChart.destroy();
+  }
+
+  const labels = Object.keys(commentCounts.value).filter(label => commentCounts.value[label] > 0);
+  const data = labels.map(label => commentCounts.value[label]);
+  const backgroundColors = labels.map((_, index) => getChartColor(index));
+
+  const maxValue = data.length > 0 ? Math.max(...data) : 0;
+  const stepSize = getConsistentStepSize(maxValue);
+
+  const chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          data,
+          backgroundColor: backgroundColors,
+          borderColor: backgroundColors.map(c => c.replace('0.8', '1')),
+          borderWidth: 2,
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      indexAxis: 'x',
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize,
+          },
+        },
+      },
+    },
+  });
+
+  chartInstances.value['comments'] = chart;
+};
+
+// Render comment chart
+const renderCommentChart = (): void => {
+  nextTick(() => {
+    if (commentFactors.value.length > 0) {
+      createCommentChart();
+    }
+  });
+};
+
+// Watch for changes in filtered evaluations and re-render chart
+watch([filteredEvaluations, commentFactors], () => {
+  renderCommentChart();
+}, { deep: true });
+
+// Render chart on mount
+onMounted(() => {
+  renderCommentChart();
+});
 </script>

@@ -36,7 +36,7 @@ class OrganizationDashboardController extends Controller
         $evaluations = PaperEvaluation::where('organization_id', $organization->id)
             ->where('evaluation_type', 'likert')
             ->where('processing_status', 'completed')
-            ->with('demographicData')
+            ->with(['demographicData', 'comments'])
             ->get()
             ->map(function ($evaluation) {
                 $scores = $this->likertScoreService->calculateLikertScores($evaluation);
@@ -51,6 +51,14 @@ class OrganizationDashboardController extends Controller
                     ];
                 }
 
+                // Format comments for frontend consumption
+                $comments = $evaluation->comments->map(function ($comment) {
+                    return [
+                        'factor' => $comment->factor,
+                        'comment' => $comment->comment,
+                    ];
+                });
+
                 return [
                     'id' => $evaluation->id,
                     'demographicData' => $evaluation->demographicData ? [
@@ -61,6 +69,7 @@ class OrganizationDashboardController extends Controller
                         'work_schedule' => $evaluation->demographicData->work_schedule,
                     ] : null,
                     'dimensions' => $dimensions,
+                    'comments' => $comments,
                     'total_score' => $scores['total_score'],
                     'interpretation' => $scores['interpretation'],
                 ];

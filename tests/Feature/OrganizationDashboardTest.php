@@ -113,4 +113,60 @@ class OrganizationDashboardTest extends TestCase
             ->has('evaluations')
         );
     }
+
+    public function test_dashboard_includes_evaluation_comments(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $user = User::factory()->create();
+        $user->syncRoles(['organization']);
+        $user->update(['organization_id' => $organization->id]);
+
+        // Create a Likert evaluation with comments
+        $evaluation = PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'evaluation_type' => 'likert',
+            'processing_status' => 'completed',
+            'likert_answers' => [
+                'ambiente' => ['q1' => 3, 'q2' => 2],
+                'factores' => ['q1' => 4, 'q2' => 1],
+                'liderazgo' => ['q1' => 2, 'q2' => 3],
+                'cargas' => ['q1' => 1, 'q2' => 4],
+                'control' => ['q1' => 3, 'q2' => 2],
+                'jornada' => ['q1' => 2, 'q2' => 1],
+                'entorno' => ['q1' => 4, 'q2' => 3],
+            ],
+        ]);
+
+        DemographicData::factory()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'gender' => 'Masculino',
+        ]);
+
+        // Create comments for the evaluation
+        $evaluation->comments()->createMany([
+            ['factor' => 'Ambiente de trabajo', 'comment' => 'Comentario 1'],
+            ['factor' => 'Factores propios de la actividad', 'comment' => 'Comentario 2'],
+            ['factor' => 'Liderazgo', 'comment' => 'Comentario 3'],
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('organization.dashboard', $organization));
+
+        $response->assertInertia(fn ($page) => $page
+            ->has('evaluations', 1)
+            ->has('evaluations.0', fn ($eval) => $eval
+                ->has('id')
+                ->has('demographicData')
+                ->has('dimensions')
+                ->has('comments', 3)
+                ->has('total_score')
+                ->has('interpretation')
+                ->has('comments.0', fn ($comment) => $comment
+                    ->has('factor')
+                    ->has('comment')
+                )
+            )
+        );
+    }
 }
