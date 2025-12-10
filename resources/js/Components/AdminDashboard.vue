@@ -27,7 +27,7 @@
         <div class="p-5">
           <div class="flex items-center space-x-4">
             <div class="flex-shrink-0 h-14 w-14 flex items-center justify-center bg-gray-100 rounded-full">
-              <img v-if="org.logo" :src="`storage/${org.logo}`" alt="Logo" class="h-10 w-10 object-contain" />
+              <img v-if="org.logo" :src="`/storage/${org.logo}`" alt="Logo" class="h-10 w-10 object-contain" />
               <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none"
                 viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
