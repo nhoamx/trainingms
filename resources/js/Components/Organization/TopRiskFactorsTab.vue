@@ -2,7 +2,15 @@
   <div class="space-y-6">
     <!-- Filtros Demográficos -->
     <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Filtros Demográficos</h3>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Filtros Demográficos</h3>
+        <button
+          @click="resetFilters"
+          class="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors"
+        >
+          ↺ Restablecer Filtros
+        </button>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <!-- Genero -->
         <div>
@@ -215,6 +223,15 @@ const filters = ref({
   area: '',
   shift: '',
 });
+
+// Reset filters function
+const resetFilters = (): void => {
+  filters.value.gender = '';
+  filters.value.contract_type = '';
+  filters.value.position = '';
+  filters.value.area = '';
+  filters.value.shift = '';
+};
 
 // Filtered evaluations
 const filteredEvaluations = computed(() => {
