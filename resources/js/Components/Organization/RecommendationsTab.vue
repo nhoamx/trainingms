@@ -298,6 +298,240 @@
             </table>
         </div>
 
+        <div class="space-y-6 ">
+            <div class="max-w-7xl mx-auto shadow-xl rounded-lg overflow-hidden mb-24">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-slate-800 text-white sticky top-0">
+                            <tr>
+                                <th scope="col" rowspan="2"
+                                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider min-w-[150px]">
+                                    DEPARTAMENTOS
+                                </th>
+                                <th scope="col" rowspan="2"
+                                    class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider">
+                                    TRABAJADORES
+                                </th>
+                                <th colspan="4"
+                                    class="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider bg-slate-800">
+                                    NIVEL DE SATISFACCIÓN
+                                </th>
+                                <th scope="col" rowspan="2"
+                                    class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider bg-red-600">
+                                    NIVEL NO SATISFACTORIO (Total)
+                                </th>
+                                <th colspan="3"
+                                    class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider bg-slate-800 min-w-[450px]">
+                                    FACTORES MÁS CRÍTICOS
+                                </th>
+                            </tr>
+                            <tr class="bg-slate-500 text-white">
+                                <th scope="col" class="px-3 py-2 text-center text-xs font-medium min-w-[90px]">
+                                    Totalmente de acuerdo</th>
+                                <th scope="col" class="px-3 py-2 text-center text-xs font-medium min-w-[80px]">De
+                                    acuerdo</th>
+                                <th scope="col" class="px-3 py-2 text-center text-xs font-medium min-w-[80px]">
+                                    Desacuerdo</th>
+                                <th scope="col" class="px-3 py-2 text-center text-xs font-medium min-w-[90px]">
+                                    Totalmente desacuerdo</th>
+                                <th scope="col" class="px-3 py-2 text-center text-xs font-medium">1</th>
+                                <th scope="col" class="px-3 py-2 text-center text-xs font-medium">2</th>
+                                <th scope="col" class="px-3 py-2 text-center text-xs font-medium">3</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200 text-gray-800">
+
+                            <tr class="bg-yellow-50">
+                                <td class="px-6 py-3 whitespace-nowrap text-sm font-bold">Producción</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">3221</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">429</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1821</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">888</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">83</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-bold text-red-700">
+                                    971</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Equilibrio entre vida laboral y
+                                    personal</td>
+                            </tr>
+
+                            <tr class="bg-yellow-50">
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Recursos Humanos</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">40</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">6</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">17</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">17</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">17</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Entorno laboral.</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
+                            </tr>
+
+                            <tr class="bg-yellow-50">
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Mantenimiento</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">61</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">12</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">33</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">15</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">16</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Avance profesional</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Calidad</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">69</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">13</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">42</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">11</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">3</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">14</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Capacitación y desarrollo</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Materiales</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">54</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">14</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">30</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">10</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">10</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Avance profesional</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Materiales</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">54</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">14</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">30</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">10</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">10</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Avance profesional</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Manufactura</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">19</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">10</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">2</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">6</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">8</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Avance profesional</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Finanzas</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">15</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">2</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">9</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">4</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">4</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Import / Export</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">7</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">4</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">2</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">1</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs">Capacitación y desarrollo</td>
+                            </tr>
+
+                            <tr class="bg-gray-50">
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Ingeniería</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">1</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No
+                                    se listaron factores críticos</td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Administración</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">16</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">7</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">9</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">0</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No
+                                    se listaron factores críticos</td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Gerencia</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">19</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">9</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">10</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">0</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No
+                                    se listaron factores críticos</td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Mejora continua</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">3</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">2</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">0</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No
+                                    se listaron factores críticos</td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Programas</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">7</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">2</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">5</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">0</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No
+                                    se listaron factores críticos</td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-6 py-3 whitespace-nowrap text-sm">Sistemas</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">3</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">3</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">0</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No
+                                    se listaron factores críticos</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div class="space-y-6">
             <div class="max-w-7xl mx-auto shadow-lg rounded-lg overflow-hidden">
                 <div class="overflow-x-auto">
@@ -551,224 +785,7 @@
             </div>
         </div>
 
-        <div class="space-y-6">
-            <div class="p-4 bg-gray-100 min-h-screen">
-    <div class="max-w-7xl mx-auto shadow-xl rounded-lg overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-slate-800 text-white sticky top-0">
-                    <tr>
-                        <th scope="col" rowspan="2" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider min-w-[150px]">
-                            DEPARTAMENTOS
-                        </th>
-                        <th scope="col" rowspan="2" class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider">
-                            TRABAJADORES
-                        </th>
-                        NIVEL DE SATISFACCIÓN
-                        <th colspan="4" class="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider bg-slate-800">
-                        </th>
-                        <th scope="col" rowspan="2" class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider bg-red-600">
-                            NIVEL NO SATISFACTORIO (Total)
-                        </th>
-                        <th colspan="3" class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider bg-slate-800 min-w-[450px]">
-                            FACTORES MÁS CRÍTICOS
-                        </th>
-                    </tr>
-                    <tr class="bg-slate-500 text-white">
-                        <th scope="col" class="px-3 py-2 text-center text-xs font-medium min-w-[90px]">Totalmente de acuerdo</th>
-                        <th scope="col" class="px-3 py-2 text-center text-xs font-medium min-w-[80px]">De acuerdo</th>
-                        <th scope="col" class="px-3 py-2 text-center text-xs font-medium min-w-[80px]">Desacuerdo</th>
-                        <th scope="col" class="px-3 py-2 text-center text-xs font-medium min-w-[90px]">Totalmente desacuerdo</th>
-                        <th scope="col" class="px-3 py-2 text-center text-xs font-medium">1</th>
-                        <th scope="col" class="px-3 py-2 text-center text-xs font-medium">2</th>
-                        <th scope="col" class="px-3 py-2 text-center text-xs font-medium">3</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200 text-gray-800">
 
-                    <tr class="bg-yellow-50">
-                        <td class="px-6 py-3 whitespace-nowrap text-sm font-bold">Producción</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">3221</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">429</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1821</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">888</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">83</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-bold text-red-700">971</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Equilibrio entre vida laboral y personal</td>
-                    </tr>
-
-                    <tr class="bg-yellow-50">
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Recursos Humanos</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">40</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">6</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">17</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">17</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">17</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Entorno laboral.</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
-                    </tr>
-
-                    <tr class="bg-yellow-50">
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Mantenimiento</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">61</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">12</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">33</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">15</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">16</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Avance profesional</td>
-                    </tr>
-
-                    <tr>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Calidad</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">69</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">13</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">42</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">11</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">3</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">14</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Capacitación y desarrollo</td>
-                    </tr>
-
-                    <tr>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Materiales</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">54</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">14</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">30</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">10</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">10</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Avance profesional</td>
-                    </tr>
-
-                    <tr>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Materiales</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">54</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">14</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">30</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">10</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">10</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Avance profesional</td>
-                    </tr>
-
-                    <tr>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Manufactura</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">19</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">10</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">2</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">6</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">8</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Avance profesional</td>
-                    </tr>
-
-                    <tr>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Finanzas</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">15</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">2</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">9</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">4</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">4</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Apoyo al empleado</td>
-                    </tr>
-
-                    <tr>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Import / Export</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">7</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">4</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">2</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">1</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Reconocimiento y recompensa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs">Capacitación y desarrollo</td>
-                    </tr>
-
-                    <tr class="bg-gray-50">
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Ingeniería</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">1</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No se listaron factores críticos</td>
-                    </tr>
-                    <tr class="bg-gray-50">
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Administración</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">16</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">7</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">9</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">0</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No se listaron factores críticos</td>
-                    </tr>
-                    <tr class="bg-gray-50">
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Gerencia</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">19</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">9</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">10</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">0</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No se listaron factores críticos</td>
-                    </tr>
-                    <tr class="bg-gray-50">
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Mejora continua</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">3</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">2</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">0</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No se listaron factores críticos</td>
-                    </tr>
-                    <tr class="bg-gray-50">
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Programas</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">7</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">2</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">5</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">0</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No se listaron factores críticos</td>
-                    </tr>
-                    <tr class="bg-gray-50">
-                        <td class="px-6 py-3 whitespace-nowrap text-sm">Sistemas</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">3</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">3</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">0</td>
-                        <td class="px-6 py-3 whitespace-nowrap text-xs italic text-gray-500" colspan="3">No se listaron factores críticos</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-        </div>
     </div>
 
 
