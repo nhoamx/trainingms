@@ -147,39 +147,6 @@
           </div>
         </div>
 
-        <!-- Puntaje Total por Pregunta (Ahora afectado por filtros) -->
-        <div class="bg-white rounded-lg shadow p-6 mb-6">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900">Puntaje Total por Pregunta</h3>
-              <p class="text-sm text-gray-500 mt-1">
-                Suma de puntajes de {{ filteredTotalPeople }} participantes (máximo = {{ filteredTotalPeople * 4 }} por pregunta)
-              </p>
-            </div>
-            <div class="flex items-center gap-4 text-xs">
-              <div class="flex items-center gap-1.5">
-                <span class="w-3 h-3 rounded bg-green-600"></span>
-                <span class="text-gray-600">≥75%</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-3 h-3 rounded bg-lime-500"></span>
-                <span class="text-gray-600">50-74%</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-3 h-3 rounded bg-yellow-500"></span>
-                <span class="text-gray-600">25-49%</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-3 h-3 rounded bg-red-600"></span>
-                <span class="text-gray-600">&lt;25%</span>
-              </div>
-            </div>
-          </div>
-          <div class="relative h-80">
-            <canvas ref="questionScoresChart"></canvas>
-          </div>
-        </div>
-
         <!-- Tabs Principales: Cuantitativos / Cualitativos -->
         <div class="bg-white rounded-lg shadow mb-6">
           <div class="border-b border-gray-200">
@@ -623,6 +590,39 @@
                 </div>
               </div>
             </div>
+
+
+            <hr class="my-10 shadow-sm">
+
+            <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Puntaje Total por Pregunta</h3>
+              <p class="text-sm text-gray-500 mt-1">
+                Suma de puntajes de {{ filteredTotalPeople }} participantes (máximo = {{ filteredTotalPeople * 4 }} por pregunta)
+              </p>
+            </div>
+            <div class="flex items-center gap-4 text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-green-600"></span>
+                <span class="text-gray-600">≥75%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-lime-500"></span>
+                <span class="text-gray-600">50-74%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-yellow-500"></span>
+                <span class="text-gray-600">25-49%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-red-600"></span>
+                <span class="text-gray-600">&lt;25%</span>
+              </div>
+            </div>
+          </div>
+          <div class="relative h-80">
+            <canvas ref="questionScoresChart"></canvas>
+          </div>
           </div>
 
           <!-- Cualitativos Tab Content -->
