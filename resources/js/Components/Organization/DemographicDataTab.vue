@@ -1,143 +1,87 @@
 <template>
   <div>
-    <!-- Filtros -->
-    <div class="bg-gray-50 rounded-lg p-6 mb-6 border border-gray-200">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-gray-900">Filtros Demográficos</h3>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <!-- Título -->
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-gray-900">Datos Demográficos</h2>
+      <p class="text-sm text-gray-600 mt-1">Total de evaluaciones: {{ demographicDetails.total_evaluations }}</p>
+    </div>
+
+    <!-- Grid de Gráficas -->
+    <div v-if="demographicDetails.total_evaluations > 0" class="space-y-6">
+      <!-- Row 1: Género, Turno, Tipo de Contrato (2-1 layout) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Género -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Género</label>
-          <select
-            v-model="filters.gender"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Todos</option>
-            <option v-for="gender in demographicDetails.genders" :key="gender" :value="gender">
-              {{ gender }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Tipo de Contrato -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Contrato</label>
-          <select
-            v-model="filters.contractType"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Todos</option>
-            <option v-for="type in demographicDetails.contract_types" :key="type" :value="type">
-              {{ type }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Puesto -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Puesto</label>
-          <select
-            v-model="filters.position"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Todos</option>
-            <option v-for="position in demographicDetails.positions" :key="position" :value="position">
-              {{ position }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Área -->
-        <div>
-          <label for="area" class="block text-sm font-medium text-gray-700 mb-2">
-            Área
-          </label>
-          <select
-            id="area"
-            v-model="filters.area"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Todas</option>
-            <option v-for="area in demographicDetails.areas" :key="area" :value="area">
-              {{ area }}
-            </option>
-          </select>
+        <div class="bg-white rounded-lg p-6 border border-gray-200 lg:col-span-1">
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">Género</h3>
+          <canvas ref="genderChartCanvas" style="height: 250px"></canvas>
+          <div class="mt-4 space-y-2 text-sm">
+            <div v-for="(count, label) in genderCounts" :key="label" class="flex justify-between">
+              <span class="text-gray-700">{{ label }}</span>
+              <span class="font-semibold text-gray-900">{{ count }}</span>
+            </div>
+          </div>
         </div>
 
         <!-- Turno -->
-        <div>
-          <label for="shift" class="block text-sm font-medium text-gray-700 mb-2">
-            Turno
-          </label>
-          <select
-            id="shift"
-            v-model="filters.shift"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Todos</option>
-            <option v-for="shift in demographicDetails.shifts" :key="shift" :value="shift">
-              {{ shift }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Botón Limpiar Filtros -->
-        <div class="flex items-end">
-          <button
-            @click="resetFilters"
-            class="w-full px-4 py-2 bg-gray-300 text-gray-900 rounded-lg hover:bg-gray-400 transition-colors font-medium"
-          >
-            Limpiar Filtros
-          </button>
-        </div>
-      </div>
-
-      <!-- Resumen de Filtros -->
-      <div class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-        <p class="text-sm text-blue-900">
-          <strong>Registros mostrados:</strong> {{ filteredEvaluations.length }} de {{ demographicDetails.total_evaluations }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Gráficas Clima Laboral -->
-    <div v-if="filteredEvaluations.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Distribución por Nivel (Izquierda) -->
-      <div class="bg-white rounded-lg p-6 border border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900 mb-6">Distribución Clima Laboral</h3>
-        <canvas ref="climaChartCanvas"></canvas>
-        
-        <!-- Leyenda con conteos -->
-        <div class="mt-6 space-y-2">
-          <div v-for="(count, level) in climaDistribution" :key="level" class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div :class="['w-4 h-4 rounded', getLevelColorClass(level)]"></div>
-              <span class="text-sm font-medium text-gray-700">{{ level }}</span>
+        <div class="bg-white rounded-lg p-6 border border-gray-200 lg:col-span-1">
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">Turno</h3>
+          <canvas ref="shiftChartCanvas" style="height: 250px"></canvas>
+          <div class="mt-4 space-y-2 text-sm">
+            <div v-for="(count, label) in shiftCounts" :key="label" class="flex justify-between">
+              <span class="text-gray-700">{{ label }}</span>
+              <span class="font-semibold text-gray-900">{{ count }}</span>
             </div>
-            <span class="text-sm font-semibold text-gray-900">{{ count }} ({{ getPercentage(count) }}%)</span>
+          </div>
+        </div>
+
+        <!-- Tipo de Contrato -->
+        <div class="bg-white rounded-lg p-6 border border-gray-200 lg:col-span-1">
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">Tipo de Contrato</h3>
+          <canvas ref="contractTypeChartCanvas" style="height: 250px"></canvas>
+          <div class="mt-4 space-y-2 text-sm">
+            <div v-for="(count, label) in contractTypeCounts" :key="label" class="flex justify-between">
+              <span class="text-gray-700">{{ label }}</span>
+              <span class="font-semibold text-gray-900">{{ count }}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Gráfica de Barras (Derecha) -->
+      <!-- Row 2: Puesto (full width) -->
       <div class="bg-white rounded-lg p-6 border border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900 mb-6">Puntaje Promedio por Nivel</h3>
-        <canvas ref="barChartCanvas" style="height: 300px"></canvas>
+        <h3 class="text-lg font-semibold text-gray-900 mb-6">Puesto</h3>
+        <canvas ref="positionChartCanvas" style="height: 300px"></canvas>
+        <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+          <div v-for="(count, label) in positionCounts" :key="label" class="flex justify-between">
+            <span class="text-gray-700">{{ label }}</span>
+            <span class="font-semibold text-gray-900">{{ count }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Área (full width) -->
+      <div class="bg-white rounded-lg p-6 border border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900 mb-6">Área</h3>
+        <canvas ref="areaChartCanvas" style="height: 300px"></canvas>
+        <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+          <div v-for="(count, label) in areaCounts" :key="label" class="flex justify-between">
+            <span class="text-gray-700">{{ label }}</span>
+            <span class="font-semibold text-gray-900">{{ count }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Estado vacío -->
     <div v-else class="bg-gray-50 rounded-lg p-12 text-center">
       <div class="text-4xl mb-4">📭</div>
-      <p class="text-gray-600 text-lg">No hay datos que coincidan con los filtros seleccionados</p>
+      <p class="text-gray-600 text-lg">No hay datos disponibles</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
-// import { Chart, registerables } from 'chart.js/auto';
+import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
@@ -162,8 +106,6 @@ interface DemographicData {
 interface Evaluation {
   id: string;
   demographicData?: DemographicData;
-  total_score?: number;
-  interpretation?: string;
 }
 
 interface Props {
@@ -183,172 +125,89 @@ const props = withDefaults(defineProps<Props>(), {
   evaluations: () => [],
 });
 
-const filters = ref({
-  gender: '',
-  contractType: '',
-  position: '',
-  area: '',
-  shift: '',
-});
+const genderChartCanvas = ref<HTMLCanvasElement>();
+const contractTypeChartCanvas = ref<HTMLCanvasElement>();
+const positionChartCanvas = ref<HTMLCanvasElement>();
+const areaChartCanvas = ref<HTMLCanvasElement>();
+const shiftChartCanvas = ref<HTMLCanvasElement>();
 
-const climaChartCanvas = ref<HTMLCanvasElement>();
-const barChartCanvas = ref<HTMLCanvasElement>();
 const chartInstances = ref<Record<string, Chart>>({});
 
-// Evaluaciones filtradas
-const filteredEvaluations = computed(() => {
-  return props.evaluations.filter(evaluation => {
+const getChartColor = (index: number): string => {
+  const colors = [
+    'rgba(59, 130, 246, 0.8)',    // Blue
+    'rgba(34, 197, 94, 0.8)',     // Green
+    'rgba(239, 68, 68, 0.8)',     // Red
+    'rgba(251, 146, 60, 0.8)',    // Orange
+    'rgba(168, 85, 247, 0.8)',    // Purple
+    'rgba(14, 165, 233, 0.8)',    // Cyan
+    'rgba(236, 72, 153, 0.8)',    // Pink
+    'rgba(100, 116, 139, 0.8)',   // Slate
+  ];
+  return colors[index % colors.length];
+};
+
+const getCountByField = (field: 'gender' | 'contract_type' | 'position' | 'department' | 'work_schedule', options: string[]): Record<string, number> => {
+  const counts: Record<string, number> = {};
+  
+  options.forEach(option => {
+    counts[option] = 0;
+  });
+
+  props.evaluations.forEach((evaluation: Evaluation) => {
     const demo = evaluation.demographicData;
-    if (!demo) return false;
+    if (!demo) return;
 
-    if (filters.value.gender && demo.gender !== filters.value.gender) return false;
-    if (filters.value.contractType && demo.contract_type !== filters.value.contractType) return false;
-    if (filters.value.position && demo.position !== filters.value.position) return false;
-    if (filters.value.area && demo.department !== filters.value.area) return false;
-    if (filters.value.shift && demo.work_schedule !== filters.value.shift) return false;
+    let value = '';
+    if (field === 'gender') value = demo.gender || '';
+    else if (field === 'contract_type') value = demo.contract_type || '';
+    else if (field === 'position') value = demo.position || '';
+    else if (field === 'department') value = demo.department || '';
+    else if (field === 'work_schedule') value = demo.work_schedule || '';
 
-    return true;
-  });
-});
-
-// Distribución de Clima Laboral
-const climaDistribution = computed(() => {
-  const distribution = {
-    'Totalmente de Acuerdo': 0,
-    'De Acuerdo': 0,
-    'Desacuerdo': 0,
-    'Totalmente Desacuerdo': 0,
-  };
-
-  filteredEvaluations.value.forEach(evaluation => {
-    const interpretation = evaluation.interpretation;
-    if (interpretation && distribution.hasOwnProperty(interpretation)) {
-      distribution[interpretation as keyof typeof distribution]++;
+    if (value && counts.hasOwnProperty(value)) {
+      counts[value]++;
     }
   });
 
-  return distribution;
-});
-
-// Promedio de puntaje por nivel
-const averageScoresByLevel = computed(() => {
-  const scores = {
-    'Totalmente de Acuerdo': { total: 0, count: 0 },
-    'De Acuerdo': { total: 0, count: 0 },
-    'Desacuerdo': { total: 0, count: 0 },
-    'Totalmente Desacuerdo': { total: 0, count: 0 },
-  };
-
-  filteredEvaluations.value.forEach(evaluation => {
-    const interpretation = evaluation.interpretation;
-    const score = evaluation.total_score || 0;
-
-    if (interpretation && scores.hasOwnProperty(interpretation)) {
-      scores[interpretation as keyof typeof scores].total += score;
-      scores[interpretation as keyof typeof scores].count++;
-    }
-  });
-
-  return Object.entries(scores).map(([level, data]) => ({
-    level,
-    average: data.count > 0 ? (data.total / data.count).toFixed(2) : 0,
-  }));
-});
-
-const getLevelColor = (level: string): string => {
-  const colors: Record<string, string> = {
-    'Totalmente de Acuerdo': 'rgba(96, 165, 250, 0.8)',
-    'De Acuerdo': 'rgba(22, 163, 74, 0.8)',
-    'Desacuerdo': 'rgba(234, 179, 8, 0.8)',
-    'Totalmente Desacuerdo': 'rgba(220, 38, 38, 0.8)',
-  };
-  return colors[level] || 'rgba(156, 163, 175, 0.8)';
+  return counts;
 };
 
-const getLevelColorClass = (level: string): string => {
-  const classes: Record<string, string> = {
-    'Totalmente de Acuerdo': 'bg-blue-400',
-    'De Acuerdo': 'bg-green-600',
-    'Desacuerdo': 'bg-yellow-500',
-    'Totalmente Desacuerdo': 'bg-red-600',
-  };
-  return classes[level] || 'bg-gray-400';
+// Computed properties for counts display
+const genderCounts = computed(() => getCountByField('gender', props.demographicDetails.genders));
+const contractTypeCounts = computed(() => getCountByField('contract_type', props.demographicDetails.contract_types));
+const positionCounts = computed(() => getCountByField('position', props.demographicDetails.positions));
+const areaCounts = computed(() => getCountByField('department', props.demographicDetails.areas));
+const shiftCounts = computed(() => getCountByField('work_schedule', props.demographicDetails.shifts));
+
+const getConsistentStepSize = (maxValue: number): number => {
+  if (maxValue <= 10) return 1;
+  if (maxValue <= 50) return 5;
+  if (maxValue <= 100) return 10;
+  if (maxValue <= 500) return 50;
+  if (maxValue <= 1000) return 100;
+  if (maxValue <= 5000) return 500;
+  return Math.ceil(maxValue / 5 / 100) * 100;
 };
 
-const getPercentage = (count: number): string => {
-  if (filteredEvaluations.value.length === 0) return '0';
-  const percentage = (count / filteredEvaluations.value.length) * 100;
-  return percentage.toFixed(1);
-};
+const createChart = (canvasRef: any, field: 'gender' | 'contract_type' | 'position' | 'department' | 'work_schedule', options: string[], chartKey: string): void => {
+  if (!canvasRef.value) return;
 
-const resetFilters = (): void => {
-  filters.value = {
-    gender: '',
-    contractType: '',
-    position: '',
-    area: '',
-    shift: '',
-  };
-};
-
-const createClimaChart = (): void => {
-  if (!climaChartCanvas.value) return;
-
-  const ctx = climaChartCanvas.value.getContext('2d');
+  const ctx = canvasRef.value.getContext('2d');
   if (!ctx) return;
 
-  const existingChart = chartInstances.value['clima'];
+  const existingChart = chartInstances.value[chartKey];
   if (existingChart) {
     existingChart.destroy();
   }
 
-  const labels = Object.keys(climaDistribution.value).filter(
-    key => climaDistribution.value[key as keyof typeof climaDistribution.value] > 0
-  );
-  const data = labels.map(key => climaDistribution.value[key as keyof typeof climaDistribution.value]);
-  const colors = labels.map(label => getLevelColor(label));
-
-  const chart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels,
-      datasets: [
-        {
-          data,
-          backgroundColor: colors,
-          borderColor: '#fff',
-          borderWidth: 2,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: {
-          display: false,
-        },
-      },
-    },
-  });
-
-  chartInstances.value['clima'] = chart;
-};
-
-const createBarChart = (): void => {
-  if (!barChartCanvas.value) return;
-
-  const ctx = barChartCanvas.value.getContext('2d');
-  if (!ctx) return;
-
-  const existingChart = chartInstances.value['bar'];
-  if (existingChart) {
-    existingChart.destroy();
-  }
-
-  const labels = averageScoresByLevel.value.map(item => item.level);
-  const data = averageScoresByLevel.value.map(item => parseFloat(item.average as string));
-  const colors = labels.map(label => getLevelColor(label));
+  const counts = getCountByField(field, options);
+  const labels = options.filter(opt => counts[opt] > 0);
+  const data = labels.map(label => counts[label]);
+  const backgroundColors = labels.map((_, index) => getChartColor(index));
+  
+  const maxValue = data.length > 0 ? Math.max(...data) : 0;
+  const stepSize = getConsistentStepSize(maxValue);
 
   const chart = new Chart(ctx, {
     type: 'bar',
@@ -356,10 +215,9 @@ const createBarChart = (): void => {
       labels,
       datasets: [
         {
-          label: 'Puntaje Promedio',
           data,
-          backgroundColor: colors,
-          borderColor: colors.map(c => c.replace('0.8', '1')),
+          backgroundColor: backgroundColors,
+          borderColor: backgroundColors.map(c => c.replace('0.8', '1')),
           borderWidth: 2,
           borderRadius: 4,
         },
@@ -368,43 +226,42 @@ const createBarChart = (): void => {
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      indexAxis: 'y',
+      indexAxis: 'x',
       plugins: {
         legend: {
           display: false,
         },
       },
       scales: {
-        x: {
+        y: {
           beginAtZero: true,
-          max: 100,
+          ticks: {
+            stepSize,
+          },
         },
       },
     },
   });
 
-  chartInstances.value['bar'] = chart;
+  chartInstances.value[chartKey] = chart;
 };
 
 const renderCharts = (): void => {
   nextTick(() => {
-    if (filteredEvaluations.value.length > 0) {
-      createClimaChart();
-      createBarChart();
+    if (props.demographicDetails.total_evaluations > 0) {
+      createChart(genderChartCanvas, 'gender', props.demographicDetails.genders, 'gender');
+      createChart(contractTypeChartCanvas, 'contract_type', props.demographicDetails.contract_types, 'contractType');
+      createChart(positionChartCanvas, 'position', props.demographicDetails.positions, 'position');
+      createChart(areaChartCanvas, 'department', props.demographicDetails.areas, 'area');
+      createChart(shiftChartCanvas, 'work_schedule', props.demographicDetails.shifts, 'shift');
     }
   });
 };
-
-watch(() => filteredEvaluations.value.length, () => {
-  renderCharts();
-});
 
 watch([() => props.evaluations, () => props.demographicDetails], () => {
   renderCharts();
 }, { deep: true });
 
-// Renderizar gráficas al montar
-import { onMounted } from 'vue';
 onMounted(() => {
   renderCharts();
 });
