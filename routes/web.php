@@ -78,8 +78,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('reports.dimension.summary');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(UserDashboardAccess::class)
-    ->name('dashboard');
+        ->middleware(UserDashboardAccess::class)
+        ->name('dashboard');
 
     // API route for raw answer distribution by category
     Route::get('/dashboard/report/category-answer-distribution/{categoryId}', [DashboardController::class, 'getCategoryAnswerDistribution'])
@@ -204,6 +204,11 @@ Route::middleware(['auth'])->group(function () {
     // Update Likert answers (edit responses UI)
     Route::post('/organizacion/{organization}/resultados/{personalFolio}/likert/answers', [ResultsController::class, 'updateLikertAnswers'])
         ->name('organization.results.likert.update-answers')
+        ->middleware('can:view-organization-results,organization');
+
+    // Export Likert evaluations by clima laboral level
+    Route::post('/organizacion/{organization}/likert/export-by-level', [ResultsController::class, 'exportLikertByClimaLevel'])
+        ->name('organization.likert.export-by-level')
         ->middleware('can:view-organization-results,organization');
 
     // Bulk update routes

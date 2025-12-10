@@ -142,10 +142,10 @@ class ResultsController extends Controller
             ->map(function ($fields) use ($customFieldLabels) {
                 $fieldKey = $fields->first()->field_key;
                 $dbLabel = $fields->first()->key_label;
-                
+
                 // Use label from config if exists, otherwise use database label
                 $label = $customFieldLabels[$fieldKey] ?? $dbLabel;
-                
+
                 return [
                     'label' => $label,
                     'values' => $fields->pluck('value')->unique()->filter()->values()->all(),
@@ -203,10 +203,10 @@ class ResultsController extends Controller
             foreach ($evaluation->customFields as $customField) {
                 $fieldKey = $customField->field_key;
                 $dbLabel = $customField->key_label;
-                
+
                 // Use label from config if exists, otherwise use database label
                 $label = $customFieldLabels[$fieldKey] ?? $dbLabel;
-                
+
                 $evaluationCustomFields[$fieldKey] = [
                     'label' => $label,
                     'value' => $customField->value,
@@ -350,6 +350,82 @@ class ResultsController extends Controller
         }
 
         return 'Sin interpretación';
+    }
+
+    /**
+     * Export Likert evaluations by selected clima laboral levels
+     */
+    public function exportLikertByClimaLevel(Organization $organization, Request $request)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        $user = $request->user();
+
+        // Only admin and super-admin can download
+        if (! $this->isAdminOrSuperAdmin($user)) {
+            abort(403, 'Solo administradores pueden descargar este reporte');
+        }
+
+        $selectedLevels = $request->input('levels', []);
+
+        if (empty($selectedLevels)) {
+            return response()->json(['error' => 'Debe seleccionar al menos un nivel'], 422);
+        }
+
+        // Get cached report data
+        $reportData = $this->cacheService->rememberLikertReport($organization->id, function () use ($organization) {
+            return $this->computeLikertReportData($organization);
+        });
+
+        $evaluations = $reportData['evaluations'] ?? [];
+        $customFieldFilters = $reportData['customFieldFilters'] ?? [];
+
+        // Get custom field headers (ordered by key)
+        $customFieldHeaders = [];
+        $customFieldKeys = [];
+        foreach ($customFieldFilters as $fieldKey => $fieldData) {
+            $customFieldKeys[] = $fieldKey;
+            $customFieldHeaders[] = $fieldData['label'] ?? $fieldKey;
+        }
+
+        // Filter evaluations by selected levels
+        $filteredData = [];
+        foreach ($evaluations as $evaluation) {
+            $interpretation = $evaluation['scores']['interpretation'] ?? null;
+
+            if (in_array($interpretation, $selectedLevels, true)) {
+                $row = [
+                    $evaluation['personal_folio'] ?? $evaluation['folio'] ?? '',
+                    $evaluation['evaluee_name'] ?? 'Sin nombre',
+                    $interpretation ?? 'Sin clasificar',
+                    $evaluation['scores']['total_score'] ?? '',
+                    $evaluation['demographics']['genero'] ?? '',
+                    $evaluation['demographics']['tipo_contrato'] ?? '',
+                    $evaluation['demographics']['puesto'] ?? '',
+                    $evaluation['demographics']['area'] ?? '',
+                    $evaluation['demographics']['turno'] ?? '',
+                ];
+
+                // Add custom fields values
+                foreach ($customFieldKeys as $fieldKey) {
+                    $customFieldValue = $evaluation['customFields'][$fieldKey]['value'] ?? '';
+                    $row[] = $customFieldValue;
+                }
+
+                $filteredData[] = $row;
+            }
+        }
+
+        if (empty($filteredData)) {
+            return response()->json(['error' => 'No se encontraron evaluaciones con los niveles seleccionados'], 404);
+        }
+
+        $filename = 'clima_laboral_'.str_replace(' ', '_', $organization->name).'_'.now()->format('Y-m-d').'.xlsx';
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\LikertClimaLevelExport($filteredData, $customFieldHeaders),
+            $filename
+        );
     }
 
     public function organizationResults(Organization $organization, Request $request)
@@ -1032,10 +1108,10 @@ class ResultsController extends Controller
         foreach ($likert->customFields as $customField) {
             $fieldKey = $customField->field_key;
             $dbLabel = $customField->key_label;
-            
+
             // Use label from config if exists, otherwise use database label
             $label = $customFieldLabels[$fieldKey] ?? $dbLabel;
-            
+
             $customFields[$fieldKey] = [
                 'label' => $label,
                 'value' => $customField->value,

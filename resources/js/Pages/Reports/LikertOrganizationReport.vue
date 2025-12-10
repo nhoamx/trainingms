@@ -14,6 +14,15 @@
           </div>
           <div v-if="evaluations.length > 0 && (isAdmin || isSuperAdmin)" class="flex items-center gap-3">
             <button
+              @click="openExportByLevelModal"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Exportar por Nivel
+            </button>
+            <button
               @click="downloadWordReport"
               :disabled="isDownloading"
               class="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -720,6 +729,74 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de Exportación por Nivel de Clima Laboral -->
+  <div v-if="showExportByLevelModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click="closeExportByLevelModal">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-md flex flex-col" @click.stop>
+      <div class="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <h3 class="text-lg font-semibold">Exportar por Nivel de Clima Laboral</h3>
+        <button @click="closeExportByLevelModal" class="text-gray-500 hover:text-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="p-6">
+        <p class="text-sm text-gray-600 mb-4">Selecciona los niveles de clima laboral que deseas exportar:</p>
+        <div class="space-y-3">
+          <label 
+            v-for="level in climaLaboralLevels" 
+            :key="level.key"
+            class="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors"
+            :class="[
+              selectedExportLevels.includes(level.key) ? level.bgSelected : 'bg-gray-50 hover:bg-gray-100'
+            ]"
+          >
+            <input 
+              type="checkbox" 
+              :value="level.key" 
+              v-model="selectedExportLevels"
+              class="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-offset-0"
+              :class="level.checkboxClass"
+            >
+            <div class="flex-1">
+              <span class="font-medium" :class="selectedExportLevels.includes(level.key) ? level.textSelected : 'text-gray-900'">{{ level.label }}</span>
+              <span class="ml-2 text-sm" :class="selectedExportLevels.includes(level.key) ? level.textSelected : 'text-gray-500'">
+                ({{ filteredClimaLaboralDistribution[level.key] || 0 }} personas)
+              </span>
+            </div>
+          </label>
+        </div>
+        <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+          <p class="text-sm text-gray-700">
+            <span class="font-medium">Total seleccionado:</span> {{ selectedExportCount }} personas
+          </p>
+        </div>
+        <div v-if="exportByLevelError" class="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+          {{ exportByLevelError }}
+        </div>
+      </div>
+      <div class="p-4 border-t flex justify-end gap-3 flex-shrink-0">
+        <button @click="closeExportByLevelModal" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
+          Cancelar
+        </button>
+        <button 
+          @click="downloadByLevel"
+          :disabled="selectedExportLevels.length === 0 || isExportingByLevel"
+          class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <svg v-if="isExportingByLevel" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          {{ isExportingByLevel ? 'Descargando...' : 'Descargar Excel' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -848,6 +925,113 @@ const isDownloading = ref(false)
 const downloadMessage = ref('')
 const downloadMessageClass = ref('')
 let pollingInterval = null
+
+// Export by Level Modal State
+const showExportByLevelModal = ref(false)
+const selectedExportLevels = ref([])
+const isExportingByLevel = ref(false)
+const exportByLevelError = ref('')
+
+const climaLaboralLevels = [
+  { 
+    key: 'Totalmente de Acuerdo', 
+    label: 'Totalmente de Acuerdo',
+    bgSelected: 'bg-blue-100',
+    textSelected: 'text-blue-900',
+    checkboxClass: 'text-blue-600 focus:ring-blue-500'
+  },
+  { 
+    key: 'De Acuerdo', 
+    label: 'De Acuerdo',
+    bgSelected: 'bg-green-100',
+    textSelected: 'text-green-900',
+    checkboxClass: 'text-green-600 focus:ring-green-500'
+  },
+  { 
+    key: 'Desacuerdo', 
+    label: 'Desacuerdo',
+    bgSelected: 'bg-yellow-100',
+    textSelected: 'text-yellow-900',
+    checkboxClass: 'text-yellow-600 focus:ring-yellow-500'
+  },
+  { 
+    key: 'Totalmente Desacuerdo', 
+    label: 'Totalmente Desacuerdo',
+    bgSelected: 'bg-red-100',
+    textSelected: 'text-red-900',
+    checkboxClass: 'text-red-600 focus:ring-red-500'
+  },
+]
+
+const selectedExportCount = computed(() => {
+  return selectedExportLevels.value.reduce((total, level) => {
+    return total + (filteredClimaLaboralDistribution.value[level] || 0)
+  }, 0)
+})
+
+const openExportByLevelModal = () => {
+  selectedExportLevels.value = []
+  exportByLevelError.value = ''
+  showExportByLevelModal.value = true
+}
+
+const closeExportByLevelModal = () => {
+  showExportByLevelModal.value = false
+  selectedExportLevels.value = []
+  exportByLevelError.value = ''
+}
+
+const downloadByLevel = async () => {
+  if (selectedExportLevels.value.length === 0) {
+    exportByLevelError.value = 'Debe seleccionar al menos un nivel'
+    return
+  }
+
+  isExportingByLevel.value = true
+  exportByLevelError.value = ''
+
+  try {
+    const response = await axios.post(
+      route('organization.likert.export-by-level', { organization: props.organizationId }),
+      { levels: selectedExportLevels.value },
+      { responseType: 'blob' }
+    )
+
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    
+    // Get filename from Content-Disposition header or use default
+    const contentDisposition = response.headers['content-disposition']
+    let filename = `clima_laboral_export_${new Date().toISOString().split('T')[0]}.xlsx`
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '')
+      }
+    }
+    
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+
+    closeExportByLevelModal()
+  } catch (error) {
+    console.error('Error downloading export:', error)
+    if (error.response?.status === 422) {
+      exportByLevelError.value = 'Debe seleccionar al menos un nivel'
+    } else if (error.response?.status === 404) {
+      exportByLevelError.value = 'No se encontraron evaluaciones con los niveles seleccionados'
+    } else {
+      exportByLevelError.value = 'Error al descargar el archivo. Intente nuevamente.'
+    }
+  } finally {
+    isExportingByLevel.value = false
+  }
+}
 
 const downloadWordReport = async () => {
   isDownloading.value = true
