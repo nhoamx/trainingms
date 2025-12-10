@@ -261,11 +261,16 @@
                 <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Factor</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div 
-                    v-for="(dim, dimName) in filteredDimensions" 
+                    v-for="(dim, dimName) in orderedFilteredDimensions" 
                     :key="dimName"
-                    class="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500"
+                    class="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500 relative"
                   >
-                    <div class="mb-3">
+                    <!-- Severity Badge -->
+                    <div v-if="dim.severity" class="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white" :class="dim.severity >= 8 ? 'bg-red-600' : dim.severity >= 6 ? 'bg-orange-500' : dim.severity >= 4 ? 'bg-yellow-500' : 'bg-green-600'">
+                      {{ dim.severity }}
+                    </div>
+                    
+                    <div class="mb-3 pr-8">
                       <span class="font-medium text-gray-900">{{ dimName }}</span>
                       <div class="text-xs text-gray-500 mt-1">
                         {{ dim.questionCount }} preguntas
@@ -1208,6 +1213,36 @@ const filteredClimaLaboralDistribution = computed(() => {
 
 const filteredTotalPeople = computed(() => {
   return filteredEvaluations.value.length
+})
+
+// Order dimensions by sum of "Totalmente Desacuerdo" + "Desacuerdo" (descending)
+const orderedFilteredDimensions = computed(() => {
+  const dims = filteredDimensions.value
+  const dimensionArray = Object.entries(dims).map(([name, data]) => ({
+    name,
+    ...data,
+  }))
+
+  // Sort by sum of negative responses (descending)
+  dimensionArray.sort((a, b) => {
+    const aSum = (a.distribution['Totalmente Desacuerdo'] || 0) + (a.distribution['Desacuerdo'] || 0)
+    const bSum = (b.distribution['Totalmente Desacuerdo'] || 0) + (b.distribution['Desacuerdo'] || 0)
+    return bSum - aSum
+  })
+
+  // Convert back to object with severity ranking (10 = worst, 1 = best)
+  const result = {}
+  const maxSeverity = Math.min(dimensionArray.length, 10)
+  dimensionArray.forEach((item, index) => {
+    const { name, ...data } = item
+    const severity = index < maxSeverity ? maxSeverity - index : 1
+    result[name] = {
+      ...data,
+      severity,
+    }
+  })
+
+  return result
 })
 
 // Calculate total scores per question (affected by filters - uses filtered evaluations)
