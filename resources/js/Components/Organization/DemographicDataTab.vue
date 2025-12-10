@@ -2,8 +2,8 @@
   <div>
     <!-- Título -->
     <div class="mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Datos Demográficos</h2>
-      <p class="text-sm text-gray-600 mt-1">Total de evaluaciones: {{ demographicDetails.total_evaluations }}</p>
+      <h2 class="text-2xl font-bold text-gray-900">{{ t('Demographic Data') }}</h2>
+      <p class="text-sm text-gray-600 mt-1">{{ t('Total evaluations') }}: {{ demographicDetails.total_evaluations }}</p>
     </div>
 
     <!-- Grid de Gráficas -->
@@ -11,7 +11,7 @@
       <!-- Row 1: Género -->
        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-white rounded-lg p-6 border border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900 mb-6">Género</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Gender') }}</h3>
         <canvas ref="genderChartCanvas" style="height: 300px"></canvas>
         <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
           <div v-for="(count, label) in genderCounts" :key="label" class="flex justify-between">
@@ -26,7 +26,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Tipo de Contrato -->
         <div class="bg-white rounded-lg p-6 border border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900 mb-6">Tipo de Contrato</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Contract Type') }}</h3>
           <canvas ref="contractTypeChartCanvas" style="height: 300px"></canvas>
           <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 text-sm">
             <div v-for="(count, label) in contractTypeCounts" :key="label" class="flex justify-between">
@@ -38,7 +38,7 @@
 
         <!-- Género + Tipo de Contrato -->
         <div class="bg-white rounded-lg p-6 border border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900 mb-6">Género + Tipo de Contrato</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Gender + Contract Type') }}</h3>
           <canvas ref="genderContractChartCanvas" style="height: 300px"></canvas>
           <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 text-sm">
             <div v-for="(count, label) in genderContractCounts" :key="label" class="flex justify-between">
@@ -53,7 +53,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Turno -->
         <div class="bg-white rounded-lg p-6 border border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900 mb-6">Turno</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Shift') }}</h3>
           <canvas ref="shiftChartCanvas" style="height: 300px"></canvas>
           <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 text-sm">
             <div v-for="(count, label) in shiftCounts" :key="label" class="flex justify-between">
@@ -65,7 +65,7 @@
 
         <!-- Género + Turno -->
         <div class="bg-white rounded-lg p-6 border border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900 mb-6">Género + Turno</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Gender + Shift') }}</h3>
           <canvas ref="genderShiftChartCanvas" style="height: 300px"></canvas>
           <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 text-sm">
             <div v-for="(count, label) in genderShiftCounts" :key="label" class="flex justify-between">
@@ -78,7 +78,7 @@
 
       <!-- Row 4: Puesto -->
       <div class="bg-white rounded-lg p-6 border border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900 mb-6">Puesto</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Position') }}</h3>
         <canvas ref="positionChartCanvas" style="height: 300px"></canvas>
         <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div v-for="(count, label) in positionCounts" :key="label" class="flex justify-between">
@@ -92,7 +92,7 @@
       <div class="grid grid-cols-1 gap-6">
         <!-- Género (Masculino) + Puesto -->
         <div class="bg-white rounded-lg p-6 border border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900 mb-6">Género (Masculino) + Puesto</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Gender (Male) + Position') }}</h3>
           <canvas ref="malePositionChartCanvas" style="height: 300px"></canvas>
           <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 text-sm">
             <div v-for="(count, label) in malePositionCounts" :key="label" class="flex justify-between">
@@ -104,7 +104,7 @@
 
         <!-- Género (Femenino) + Puesto -->
         <div class="bg-white rounded-lg p-6 border border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900 mb-6">Género (Femenino) + Puesto</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Gender (Female) + Position') }}</h3>
           <canvas ref="femalePositionChartCanvas" style="height: 300px"></canvas>
           <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 text-sm">
             <div v-for="(count, label) in femalePositionCounts" :key="label" class="flex justify-between">
@@ -117,7 +117,7 @@
 
       <!-- Row 6: Área -->
       <div class="bg-white rounded-lg p-6 border border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900 mb-6">Área</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Area') }}</h3>
         <canvas ref="areaChartCanvas" style="height: 300px"></canvas>
         <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div v-for="(count, label) in areaCounts" :key="label" class="flex justify-between">
@@ -131,7 +131,7 @@
       <div class="grid grid-cols-1 gap-6">
         <!-- Género (Masculino) + Área -->
         <div class="bg-white rounded-lg p-6 border border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900 mb-6">Género (Masculino) + Área</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Gender (Male) + Area') }}</h3>
           <canvas ref="maleAreaChartCanvas" style="height: 300px"></canvas>
           <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 text-sm">
             <div v-for="(count, label) in maleAreaCounts" :key="label" class="flex justify-between">
@@ -143,7 +143,7 @@
 
         <!-- Género (Femenino) + Área -->
         <div class="bg-white rounded-lg p-6 border border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900 mb-6">Género (Femenino) + Área</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Gender (Female) + Area') }}</h3>
           <canvas ref="femaleAreaChartCanvas" style="height: 300px"></canvas>
           <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 text-sm">
             <div v-for="(count, label) in femaleAreaCounts" :key="label" class="flex justify-between">
@@ -158,7 +158,7 @@
     <!-- Estado vacío -->
     <div v-else class="bg-gray-50 rounded-lg p-12 text-center">
       <div class="text-4xl mb-4">📭</div>
-      <p class="text-gray-600 text-lg">No hay datos disponibles</p>
+      <p class="text-gray-600 text-lg">{{ t('No data available') }}</p>
     </div>
   </div>
 </template>
@@ -166,8 +166,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import { Chart, registerables } from 'chart.js';
+import { useTranslations } from '@/Composables/useTranslations';
 
 Chart.register(...registerables);
+
+const { t } = useTranslations();
 
 interface DemographicDetails {
   genders: string[];

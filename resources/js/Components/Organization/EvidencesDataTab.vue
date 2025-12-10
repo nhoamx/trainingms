@@ -2,7 +2,7 @@
     <div>
         <!-- Header -->
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">Evidencias</h2>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ t('Evidence') }}</h2>
         </div>
 
         <!-- Grid of Images -->
@@ -15,7 +15,7 @@
             >
                 <img
                     :src="`/assets/plantas/${organizationInfo.id}/${imageNumber}.jpeg`"
-                    :alt="`Evidencia ${imageNumber}`"
+                    :alt="`${t('Evidence')} ${imageNumber}`"
                     class="w-full h-auto object-cover hover:scale-105 transition-transform"
                 />
             </div>
@@ -32,7 +32,7 @@
                 </button>
                 <img
                     :src="`/assets/plantas/${organizationInfo.id}/${selectedImage}.jpeg`"
-                    :alt="`Evidencia ${selectedImage}`"
+                    :alt="`${t('Evidence')} ${selectedImage}`"
                     class="w-full h-full object-contain"
                 />
             </div>
@@ -42,6 +42,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useTranslations } from '@/Composables/useTranslations';
+
+const { t } = useTranslations();
 
 interface OrganizationInfo {
     id: string | number

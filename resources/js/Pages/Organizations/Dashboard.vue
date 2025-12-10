@@ -16,8 +16,12 @@
             <div v-else class="flex-shrink-0">
               <div>
               <h1 class="text-4xl font-bold text-gray-900">{{ dashboardData.organization.name }}</h1>
-              <p class="mt-2 text-gray-600">Dashboard de la Organización</p>
+              <p class="mt-2 text-gray-600">{{ t('Organization Dashboard') }}</p>
             </div>
+            </div>
+            <!-- Language Switcher -->
+            <div class="sm:ml-auto">
+              <LanguageSwitcher />
             </div>
           </div>
         </div>
@@ -26,7 +30,7 @@
         <div class="mb-8">
           <nav class="flex flex-wrap gap-2 lg:gap-4" aria-label="Tabs">
             <button
-              v-for="tab in tabs"
+              v-for="tab in translatedTabs"
               :key="tab.key"
               @click="activeTab = tab.key"
               :class="[
@@ -61,15 +65,15 @@
             <!-- Resultados -->
             <div v-show="activeTab === 'results'" class="text-center py-16">
               <div class="text-6xl mb-4">📈</div>
-              <p class="text-2xl font-semibold text-gray-900 mb-2">Reporte de Clima Laboral</p>
-              <p class="text-gray-600 mb-6">Visualiza el análisis detallado de los resultados de la evaluación</p>
+              <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Work Climate Report') }}</p>
+              <p class="text-gray-600 mb-6">{{ t('View the detailed analysis of the evaluation results') }}</p>
               <a
                 :href="`/organization/${dashboardData.organization.id}/likert/report`"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Ver Reporte →
+                {{ t('View Report') }} →
               </a>
             </div>
 
@@ -101,16 +105,16 @@
             <div v-show="activeTab === 'conclusions'" class="animate-fade-in">
               <div class="text-center py-16">
                 <div class="text-6xl mb-4">🔍</div>
-                <p class="text-2xl font-semibold text-gray-900 mb-2">Próximamente</p>
-                <p class="text-gray-600">Esta sección se habilitará en la próxima versión</p>
+                <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Coming Soon') }}</p>
+                <p class="text-gray-600">{{ t('This section will be enabled in the next version') }}</p>
               </div>
             </div>
 
             <!-- Informe -->
             <div v-show="activeTab === 'report'" class="text-center py-16">
               <div class="text-6xl mb-4">📄</div>
-              <p class="text-2xl font-semibold text-gray-900 mb-2">Próximamente</p>
-              <p class="text-gray-600">Esta sección se habilitará en la próxima versión</p>
+              <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Coming Soon') }}</p>
+              <p class="text-gray-600">{{ t('This section will be enabled in the next version') }}</p>
             </div>
 
             <div v-show="activeTab === 'evidence'" class="animate-fade-in">
@@ -135,10 +139,14 @@ import RecommendationsTab from '@/Components/Organization/RecommendationsTab.vue
 import EvidencesDataTab from '@/Components/Organization/EvidencesDataTab.vue';
 import FodaDataTab from '@/Components/Organization/FodaDataTab.vue';
 import RecommendationsP3Tab from '@/Components/Organization/RecommendationsP3Tab.vue';
+import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
+import { useTranslations } from '@/Composables/useTranslations';
+
+const { t } = useTranslations();
 
 interface Tab {
   key: string;
-  label: string;
+  labelKey: string;
 }
 
 interface DemographicDetails {
@@ -209,16 +217,23 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const tabs: Tab[] = [
-  { key: 'company', label: 'Datos de la Empresa' },
-  { key: 'demographic', label: 'Datos Demográficos' },
-  { key: 'results', label: 'Resultados' },
-  { key: 'analysis', label: 'Análisis' },
-  { key: 'recomendaciones', label: 'Recomendaciones' },
-  { key: 'report', label: 'Informe' },
-  { key: 'evidence', label: 'Evidencias' },
-  { key: 'foda', label: 'FODA' },
-  { key: 'conclusions', label: 'Conclusiones' },
+  { key: 'company', labelKey: 'Company Data' },
+  { key: 'demographic', labelKey: 'Demographic Data' },
+  { key: 'results', labelKey: 'Results' },
+  { key: 'analysis', labelKey: 'Analysis' },
+  { key: 'recomendaciones', labelKey: 'Recommendations' },
+  { key: 'report', labelKey: 'Report' },
+  { key: 'evidence', labelKey: 'Evidence' },
+  { key: 'foda', labelKey: 'SWOT' },
+  { key: 'conclusions', labelKey: 'Conclusions' },
 ];
+
+const translatedTabs = computed(() =>
+  tabs.map(tab => ({
+    key: tab.key,
+    label: t(tab.labelKey),
+  }))
+);
 
 const activeTab = ref<string>('company');
 const evaluations = ref<Evaluation[]>(props.evaluations || []);

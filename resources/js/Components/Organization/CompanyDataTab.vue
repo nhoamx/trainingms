@@ -8,15 +8,15 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5.5m0 0H9m0 0H3.5m0 0H2m5.5 0v-7.5a2 2 0 014 0V21" />
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900">Información General</h2>
+        <h2 class="text-2xl font-bold text-gray-900">{{ t('General Information') }}</h2>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <InfoCard label="Nombre de la Empresa" :value="companyData.general.name" />
-        <InfoCard label="Razón Social" :value="companyData.general.razon_social" />
-        <InfoCard label="RFC" :value="companyData.general.rfc" />
-        <InfoCard label="Registro Patronal" :value="companyData.general.registro_patronal" />
-        <InfoCard label="Actividad Principal" :value="companyData.general.actividad_principal" />
-        <InfoCard label="Folio de Organización" :value="companyData.general.folio_organization" />
+        <InfoCard :label="t('Company Name')" :value="companyData.general.name" />
+        <InfoCard :label="t('Legal Name')" :value="companyData.general.razon_social" />
+        <InfoCard :label="t('Tax ID')" :value="companyData.general.rfc" />
+        <InfoCard :label="t('Employer Registration')" :value="companyData.general.registro_patronal" />
+        <InfoCard :label="t('Main Activity')" :value="companyData.general.actividad_principal" />
+        <InfoCard :label="t('Organization Folio')" :value="companyData.general.folio_organization" />
       </div>
     </div>
 
@@ -31,12 +31,12 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900">Colaboradores</h2>
+        <h2 class="text-2xl font-bold text-gray-900">{{ t('Employees') }}</h2>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <InfoCard label="Total de Trabajadores" :value="companyData.workforce.total_trabajadores" />
-        <InfoCard label="Hombres" :value="companyData.workforce.total_hombres" />
-        <InfoCard label="Mujeres" :value="companyData.workforce.total_mujeres" />
+        <InfoCard :label="t('Total Workers')" :value="companyData.workforce.total_trabajadores" />
+        <InfoCard :label="t('Men')" :value="companyData.workforce.total_hombres" />
+        <InfoCard :label="t('Women')" :value="companyData.workforce.total_mujeres" />
       </div>
     </div>
 
@@ -52,13 +52,13 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h2 class="text-2xl font-bold text-gray-900">Muestra Aplicada</h2>
+          <h2 class="text-2xl font-bold text-gray-900">{{ t('Applied Sample') }}</h2>
         </div>
         <div class="space-y-6">
-          <InfoCard label="Total de Muestras" :value="companyData.sample.muestra_aplicada" />
-          <InfoCard label="Hombres" :value="companyData.sample.muestra_hombres" />
-          <InfoCard label="Mujeres" :value="companyData.sample.muestra_mujeres" />
-          <InfoCard label="Justificación" :value="companyData.sample.justificacion_muestra" />
+          <InfoCard :label="t('Total Samples')" :value="companyData.sample.muestra_aplicada" />
+          <InfoCard :label="t('Men')" :value="companyData.sample.muestra_hombres" />
+          <InfoCard :label="t('Women')" :value="companyData.sample.muestra_mujeres" />
+          <InfoCard :label="t('Sample Justification')" :value="companyData.sample.justificacion_muestra" />
         </div>
       </div>
 
@@ -70,13 +70,13 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10h.01M11 20h5v-2a3 3 0 00-5.856-1.487M15 10h.01M6 20h5v-2a3 3 0 00-5.856-1.487M11 10a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <h2 class="text-2xl font-bold text-gray-900">Comité</h2>
+          <h2 class="text-2xl font-bold text-gray-900">{{ t('Committee') }}</h2>
         </div>
         <div class="space-y-6">
-          <InfoCard label="Total de Integrantes" :value="companyData.committee.comite_integrantes" />
-          <InfoCard label="Hombres" :value="companyData.committee.comite_hombres" />
-          <InfoCard label="Mujeres" :value="companyData.committee.comite_mujeres" />
-          <InfoCard v-if="companyData.evaluation_date" label="Fecha de Aplicación" :value="formatDate(companyData.evaluation_date)" />
+          <InfoCard :label="t('Total Members')" :value="companyData.committee.comite_integrantes" />
+          <InfoCard :label="t('Men')" :value="companyData.committee.comite_hombres" />
+          <InfoCard :label="t('Women')" :value="companyData.committee.comite_mujeres" />
+          <InfoCard v-if="companyData.evaluation_date" :label="t('Application Date')" :value="formatDate(companyData.evaluation_date)" />
         </div>
       </div>
     </div>
@@ -92,14 +92,14 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900">Domicilio</h2>
+        <h2 class="text-2xl font-bold text-gray-900">{{ t('Address') }}</h2>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <InfoCard label="Calle y Número" :value="companyData.address.calle_numero" />
-        <InfoCard label="Colonia" :value="companyData.address.colonia" />
-        <InfoCard label="Código Postal" :value="companyData.address.codigo_postal" />
-        <InfoCard label="Municipio" :value="companyData.address.municipio" />
-        <InfoCard label="Estado" :value="companyData.address.estado" class="md:col-span-2" />
+        <InfoCard :label="t('Street and Number')" :value="companyData.address.calle_numero" />
+        <InfoCard :label="t('Neighborhood')" :value="companyData.address.colonia" />
+        <InfoCard :label="t('Postal Code')" :value="companyData.address.codigo_postal" />
+        <InfoCard :label="t('Municipality')" :value="companyData.address.municipio" />
+        <InfoCard :label="t('State')" :value="companyData.address.estado" class="md:col-span-2" />
       </div>
     </div>
 
@@ -115,13 +115,13 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 class="text-2xl font-bold text-gray-900">Contacto Principal</h2>
+          <h2 class="text-2xl font-bold text-gray-900">{{ t('Primary Contact') }}</h2>
         </div>
         <div class="space-y-6">
-          <InfoCard label="Nombre" :value="companyData.contact.nombre" />
-          <InfoCard label="Puesto" :value="companyData.contact.puesto" />
-          <InfoCard label="Email" :value="companyData.contact.email" />
-          <InfoCard label="Móvil" :value="companyData.contact.movil" />
+          <InfoCard :label="t('Name')" :value="companyData.contact.nombre" />
+          <InfoCard :label="t('Position')" :value="companyData.contact.puesto" />
+          <InfoCard :label="t('Email')" :value="companyData.contact.email" />
+          <InfoCard :label="t('Mobile')" :value="companyData.contact.movil" />
         </div>
       </div>
 
@@ -133,13 +133,13 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
-          <h2 class="text-2xl font-bold text-gray-900">Responsable</h2>
+          <h2 class="text-2xl font-bold text-gray-900">{{ t('Responsible') }}</h2>
         </div>
         <div class="space-y-6">
-          <InfoCard label="Nombre" :value="companyData.responsible.nombre" />
-          <InfoCard label="Puesto" :value="companyData.responsible.puesto" />
-          <InfoCard label="Email" :value="companyData.responsible.email" />
-          <InfoCard label="Móvil" :value="companyData.responsible.movil" />
+          <InfoCard :label="t('Name')" :value="companyData.responsible.nombre" />
+          <InfoCard :label="t('Position')" :value="companyData.responsible.puesto" />
+          <InfoCard :label="t('Email')" :value="companyData.responsible.email" />
+          <InfoCard :label="t('Mobile')" :value="companyData.responsible.movil" />
         </div>
       </div>
     </div>
@@ -149,6 +149,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import InfoCard from '@/Components/Organization/InfoCard.vue';
+import { useTranslations } from '@/Composables/useTranslations';
+
+const { t, locale } = useTranslations();
 
 interface CompanyData {
   general: {
@@ -205,7 +208,8 @@ const props = defineProps<Props>();
 
 const formatDate = (date: string | null): string => {
   if (!date) return 'N/A';
-  return new Date(date).toLocaleDateString('es-MX', {
+  const localeCode = locale.value === 'es' ? 'es-MX' : 'en-US';
+  return new Date(date).toLocaleDateString(localeCode, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',

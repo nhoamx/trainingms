@@ -3,6 +3,8 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\File;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -48,6 +50,25 @@ class HandleInertiaRequests extends Middleware
             ],
             'csrf_token' => fn () => csrf_token(),
             'currentOrganization' => fn () => $request->user() && $request->user()->organization ? $request->user()->organization : null,
+            'locale' => fn () => App::getLocale(),
+            'translations' => fn () => $this->getTranslations(),
         ]);
+    }
+
+    /**
+     * Load translations for the current locale.
+     *
+     * @return array<string, string>
+     */
+    protected function getTranslations(): array
+    {
+        $locale = App::getLocale();
+        $path = lang_path("{$locale}.json");
+
+        if (File::exists($path)) {
+            return json_decode(File::get($path), true) ?? [];
+        }
+
+        return [];
     }
 }

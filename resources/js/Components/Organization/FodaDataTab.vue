@@ -2,7 +2,7 @@
     <div>
         <!-- Header -->
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">FODA</h2>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ t('SWOT') }}</h2>
         </div>
     </div>
 
@@ -11,19 +11,19 @@
             <thead>
                 <tr>
                     <th class="border-b border-gray-200 p-4 pt-0 pb-3 text-left font-medium text-black">
-                        Factor
+                        {{ t('Factor') }}
                     </th>
                     <th class="border-b border-gray-200 p-4 pt-0 pb-3 text-left font-medium text-black">
-                        Fortaleza
+                        {{ t('Strength') }}
                     </th>
                     <th class="border-b border-gray-200 p-4 pt-0 pb-3 text-left font-medium text-black">
-                        Debilidad
+                        {{ t('Weakness') }}
                     </th>
                     <th class="border-b border-gray-200 p-4 pt-0 pb-3 text-left font-medium text-black">
-                        Oportunidad
+                        {{ t('Opportunity') }}
                     </th>
                     <th class="border-b border-gray-200 p-4 pt-0 pb-3 text-left font-medium text-black">
-                        Amenaza
+                        {{ t('Threat') }}
                     </th>
                 </tr>
             </thead>
@@ -54,6 +54,9 @@
 
 
 <script setup lang="ts">
+import { useTranslations } from '@/Composables/useTranslations';
+
+const { t } = useTranslations();
 
 export interface FODAItem {
   factor: string;

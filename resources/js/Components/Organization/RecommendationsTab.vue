@@ -2,7 +2,7 @@
     <div class="space-y-6">
         <!-- Header -->
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">Gestión de Niveles no Satisfactorios</h2>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ t('Management of Unsatisfactory Levels') }}</h2>
         </div>
 
         <!-- Risk Factors and Recommendations -->
@@ -11,13 +11,13 @@
                 <thead>
                     <tr>
                         <th class="border-b border-gray-200 p-4 pt-0 pb-3 text-left font-medium text-black">
-                            Factor
+                            {{ t('Factor') }}
                         </th>
                         <th class="border-b border-gray-200 p-4 pt-0 pb-3 text-left font-medium text-black">
-                            Acción
+                            {{ t('Action') }}
                         </th>
                         <th class="border-b border-gray-200 p-4 pt-0 pb-3 text-left font-medium text-black">
-                            Departamento
+                            {{ t('Department') }}
                         </th>
                     </tr>
                 </thead>
@@ -792,5 +792,7 @@
 </template>
 
 <script setup lang="ts">
+import { useTranslations } from '@/Composables/useTranslations';
 
+const { t } = useTranslations();
 </script>

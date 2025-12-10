@@ -3,23 +3,23 @@
     <!-- Filtros Demográficos -->
     <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-gray-900">Filtros Demográficos</h3>
+        <h3 class="text-lg font-semibold text-gray-900">{{ t('Demographic Filters') }}</h3>
         <button
           @click="resetFilters"
           class="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors"
         >
-          ↺ Restablecer Filtros
+          ↺ {{ t('Reset Filters') }}
         </button>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <!-- Genero -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Género</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Gender') }}</label>
           <select
             v-model="filters.gender"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">Todos</option>
+            <option value="">{{ t('All') }}</option>
             <option v-for="gender in demographicDetails.genders" :key="gender" :value="gender">
               {{ gender }}
             </option>
@@ -28,12 +28,12 @@
 
         <!-- Tipo de Contrato -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Contrato</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Contract Type') }}</label>
           <select
             v-model="filters.contract_type"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">Todos</option>
+            <option value="">{{ t('All') }}</option>
             <option v-for="type in demographicDetails.contract_types" :key="type" :value="type">
               {{ type }}
             </option>
@@ -42,12 +42,12 @@
 
         <!-- Puesto -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Puesto</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Position') }}</label>
           <select
             v-model="filters.position"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">Todos</option>
+            <option value="">{{ t('All') }}</option>
             <option v-for="position in demographicDetails.positions" :key="position" :value="position">
               {{ position }}
             </option>
@@ -56,12 +56,12 @@
 
         <!-- Área -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Área</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Area') }}</label>
           <select
             v-model="filters.area"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">Todos</option>
+            <option value="">{{ t('All') }}</option>
             <option v-for="area in demographicDetails.areas" :key="area" :value="area">
               {{ area }}
             </option>
@@ -70,12 +70,12 @@
 
         <!-- Turno -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Turno</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Shift') }}</label>
           <select
             v-model="filters.shift"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">Todos</option>
+            <option value="">{{ t('All') }}</option>
             <option v-for="shift in demographicDetails.shifts" :key="shift" :value="shift">
               {{ shift }}
             </option>
@@ -87,33 +87,33 @@
     <!-- Tabla de Factores de Riesgo -->
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div class="p-6 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">Top 3 Factores de Riesgo</h3>
-        <p class="text-sm text-gray-600 mt-1">Basado en el total de respuestas de desacuerdo</p>
+        <h3 class="text-lg font-semibold text-gray-900">{{ t('Top 3 Risk Factors') }}</h3>
+        <p class="text-sm text-gray-600 mt-1">{{ t('Based on total disagreement responses') }}</p>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Factor de Riesgo</th>
+              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">{{ t('Risk Factor') }}</th>
               <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900">
                 <span class="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full">
-                  Totalmente de Acuerdo
+                  {{ t('Strongly Agree') }}
                 </span>
               </th>
               <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900">
                 <span class="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
-                  De Acuerdo
+                  {{ t('Agree') }}
                 </span>
               </th>
               <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900">
                 <span class="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full">
-                  Desacuerdo
+                  {{ t('Disagree') }}
                 </span>
               </th>
               <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900">
                 <span class="inline-block px-3 py-1 bg-red-100 text-red-800 rounded-full">
-                  Totalmente Desacuerdo
+                  {{ t('Strongly Disagree') }}
                 </span>
               </th>
             </tr>
@@ -163,15 +163,15 @@
       <!-- Empty State -->
       <div v-if="topThreeFactors.length === 0" class="p-12 text-center">
         <div class="text-6xl mb-4">📊</div>
-        <p class="text-lg font-semibold text-gray-900 mb-2">No hay datos disponibles</p>
-        <p class="text-gray-600">Intenta cambiar los filtros para ver los factores de riesgo</p>
+        <p class="text-lg font-semibold text-gray-900 mb-2">{{ t('No data available') }}</p>
+        <p class="text-gray-600">{{ t('Try changing the filters to see risk factors') }}</p>
       </div>
     </div>
 
     <!-- Gráfica de Comentarios por Factor -->
     <div v-if="commentFactors.length > 0" class="bg-white rounded-lg border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-6">Comentarios por Factor</h3>
-      <p class="text-sm text-gray-600 mb-6">Distribución de comentarios según filtros demográficos aplicados</p>
+      <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Comments by Factor') }}</h3>
+      <p class="text-sm text-gray-600 mb-6">{{ t('Comment distribution based on applied demographic filters') }}</p>
       
       <canvas ref="commentChartCanvas" style="height: 300px"></canvas>
       
@@ -186,8 +186,8 @@
     <!-- Empty State para Comentarios -->
     <div v-else class="bg-gray-50 rounded-lg p-12 text-center border border-gray-200">
       <div class="text-6xl mb-4">💬</div>
-      <p class="text-lg font-semibold text-gray-900 mb-2">No hay comentarios disponibles</p>
-      <p class="text-gray-600">No se encontraron comentarios para los filtros seleccionados</p>
+      <p class="text-lg font-semibold text-gray-900 mb-2">{{ t('No comments available') }}</p>
+      <p class="text-gray-600">{{ t('No comments found for selected filters') }}</p>
     </div>
   </div>
 </template>
@@ -195,8 +195,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import { Chart, registerables } from 'chart.js';
+import { useTranslations } from '@/Composables/useTranslations';
 
 Chart.register(...registerables);
+
+const { t } = useTranslations();
 
 interface DemographicData {
   gender?: string;

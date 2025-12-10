@@ -2,7 +2,7 @@
     <div class="space-y-6">
         <!-- Header -->
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">Gestión de Niveles no Satisfactorios</h2>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ t('Management of Unsatisfactory Levels') }}</h2>
         </div>
 
         <div class="max-w-7xl mx-auto rounded-lg overflow-hidden">
@@ -12,31 +12,31 @@
                         <tr>
                             <th scope="col"
                                 class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider min-w-[200px]">
-                                 FACTORES</th> 
+                                 {{ t('Factors').toUpperCase() }}</th> 
                                <th scope="col"
                                 class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider">    
-                                  TRABAJADORES</th>   
+                                  {{ t('Workers').toUpperCase() }}</th>   
                              <th colspan="3"
                                 class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider bg-green-700">
-                                 NIVEL SATISFACTORIO  
+                                 {{ t('Satisfactory Level').toUpperCase() }}  
                                   </th><th colspan="2"
                                 class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider bg-red-600">
-                                 NIVEL NO SATISFACTORIO 
+                                 {{ t('Unsatisfactory Level').toUpperCase() }} 
                                    </th><th colspan="4"
                                 class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider min-w-[500px] bg-slate-800">
-                                 ACCIONES RECOMENDADAS 
+                                 {{ t('Recommended Actions').toUpperCase() }} 
                                    </th>   </tr>   <tr
                             class="bg-slate-500 text-white"><th scope="col"
                                 class="px-3 py-2 text-left text-xs font-medium"></th>   
                              <th scope="col" class="px-3 py-2 text-center text-xs font-medium"></th>  
                            <th scope="col" class="px-3 py-2 text-center text-xs font-medium">
-                                Totalmente de acuerdo</th>
-                           <th scope="col" class="px-3 py-2 text-center text-xs font-medium">De acuerdo
+                                {{ t('Totally Agree') }}</th>
+                           <th scope="col" class="px-3 py-2 text-center text-xs font-medium">{{ t('Agree') }}
                             </th><th scope="col"
-                                class="px-3 py-2 text-center text-xs font-medium">Total</th>
-                           <th scope="col" class="px-3 py-2 text-center text-xs font-medium">Desacuerdo
+                                class="px-3 py-2 text-center text-xs font-medium">{{ t('Total') }}</th>
+                           <th scope="col" class="px-3 py-2 text-center text-xs font-medium">{{ t('Disagree') }}
                             </th><th scope="col"
-                                class="px-3 py-2 text-center text-xs font-medium">Totalmente desacuerdo 
+                                class="px-3 py-2 text-center text-xs font-medium">{{ t('Totally Disagree') }} 
                                 </th><th scope="col"
                                 class="px-3 py-2 text-center text-xs font-medium">1</th>  
                               <th scope="col" class="px-3 py-2 text-center text-xs font-medium">2</th> 
@@ -297,5 +297,7 @@
 </template>
 
 <script setup lang="ts">
+import { useTranslations } from '@/Composables/useTranslations';
 
+const { t } = useTranslations();
 </script>
