@@ -68,8 +68,16 @@
             <!-- Resultados -->
             <div v-show="activeTab === 'results'" class="text-center py-16">
               <div class="text-6xl mb-4">📈</div>
-              <p class="text-2xl font-semibold text-gray-900 mb-2">Próximamente</p>
-              <p class="text-gray-600">Esta sección se habilitará en la próxima versión</p>
+              <p class="text-2xl font-semibold text-gray-900 mb-2">Reporte Likert</p>
+              <p class="text-gray-600 mb-6">Visualiza el análisis detallado de los resultados de la evaluación</p>
+              <a
+                :href="`/organization/${dashboardData.organization.id}/likert/report`"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Ver Reporte →
+              </a>
             </div>
 
             <!-- Análisis -->
