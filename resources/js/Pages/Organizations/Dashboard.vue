@@ -91,6 +91,12 @@
               <p class="text-2xl font-semibold text-gray-900 mb-2">Próximamente</p>
               <p class="text-gray-600">Esta sección se habilitará en la próxima versión</p>
             </div>
+
+            <div v-show="activeTab === 'evidence'" class="animate-fade-in">
+              <EvidencesDataTab />
+            </div>
+
+
           </div>
         </div>
       </div>
@@ -105,6 +111,7 @@ import CompanyDataTab from '@/Components/Organization/CompanyDataTab.vue';
 import DemographicDataTab from '@/Components/Organization/DemographicDataTab.vue';
 import TopRiskFactorsTab from '@/Components/Organization/TopRiskFactorsTab.vue';
 import RecommendationsTab from '@/Components/Organization/RecommendationsTab.vue';
+import EvidencesDataTab from '@/Components/Organization/EvidencesDataTab.vue';
 
 interface Tab {
   key: string;
@@ -185,6 +192,7 @@ const tabs: Tab[] = [
   { key: 'analysis', label: 'Análisis' },
   { key: 'recomendaciones', label: 'Recomendaciones' },
   { key: 'report', label: 'Informe' },
+  { key: 'evidence', label: 'Evidencias' },
 ];
 
 const activeTab = ref<string>('company');
