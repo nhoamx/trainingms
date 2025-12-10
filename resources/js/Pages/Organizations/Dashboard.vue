@@ -85,6 +85,18 @@
               <RecommendationsTab :evaluations="evaluations" />
             </div>
 
+            <div v-show="activeTab === 'foda'" class="animate-fade-in">
+              <FodaDataTab />
+            </div>
+
+            <div v-show="activeTab === 'conclusions'" class="animate-fade-in">
+              <div class="text-center py-16">
+                <div class="text-6xl mb-4">🔍</div>
+                <p class="text-2xl font-semibold text-gray-900 mb-2">Próximamente</p>
+                <p class="text-gray-600">Esta sección se habilitará en la próxima versión</p>
+              </div>
+            </div>
+
             <!-- Informe -->
             <div v-show="activeTab === 'report'" class="text-center py-16">
               <div class="text-6xl mb-4">📄</div>
@@ -112,6 +124,7 @@ import DemographicDataTab from '@/Components/Organization/DemographicDataTab.vue
 import TopRiskFactorsTab from '@/Components/Organization/TopRiskFactorsTab.vue';
 import RecommendationsTab from '@/Components/Organization/RecommendationsTab.vue';
 import EvidencesDataTab from '@/Components/Organization/EvidencesDataTab.vue';
+import FodaDataTab from '@/Components/Organization/FodaDataTab.vue';
 
 interface Tab {
   key: string;
@@ -193,6 +206,8 @@ const tabs: Tab[] = [
   { key: 'recomendaciones', label: 'Recomendaciones' },
   { key: 'report', label: 'Informe' },
   { key: 'evidence', label: 'Evidencias' },
+  { key: 'foda', label: 'FODA' },
+  { key: 'conclusions', label: 'Conclusiones' },
 ];
 
 const activeTab = ref<string>('company');
