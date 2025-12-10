@@ -38,7 +38,7 @@ console.log(props.organizations.length);
         <ul v-else role="list" class="divide-y divide-gray-100 overflow-hidden bg-white shadow-sm ring-gray-900/5 sm:rounded-b-xl">
             <li v-for="organization in props.organizations" :key="organization.id" class="relative flex justify-between gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6">
                 <div class="flex min-w-0 gap-x-4">
-                    <img v-if="organization.logo" class="h-12 w-auto flex-none rounded-full bg-gray-50" :src="organization.logo" alt="" />
+                    <img v-if="organization.logo" class="h-12 w-auto flex-none rounded-full bg-gray-50" :src="`storage/${organization.logo}`" alt="" />
                     <div class="min-w-0 flex-auto">
                         <p class="text-sm font-semibold leading-6 text-gray-900">
                             <a :href="route('organizations.edit', organization)">
