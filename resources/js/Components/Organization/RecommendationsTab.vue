@@ -343,7 +343,7 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200 text-gray-800">
 
-                            <tr>
+                            <tr class="bg-yellow-50">
                                 <td class="px-3 py-3 whitespace-normal text-sm font-medium">Reconocimiento y recompensa
                                 </td>
                                 <td class="px-3 py-3 whitespace-nowrap text-sm text-center">3502</td>
@@ -599,7 +599,7 @@
                         <td class="px-6 py-3 whitespace-nowrap text-xs">Equilibrio entre vida laboral y personal</td>
                     </tr>
 
-                    <tr>
+                    <tr class="bg-yellow-50">
                         <td class="px-6 py-3 whitespace-nowrap text-sm">Recursos Humanos</td>
                         <td class="px-3 py-3 whitespace-nowrap text-sm text-center">40</td>
                         <td class="px-3 py-3 whitespace-nowrap text-sm text-center">6</td>
@@ -612,7 +612,7 @@
                         <td class="px-6 py-3 whitespace-nowrap text-xs">Compensación justa</td>
                     </tr>
 
-                    <tr>
+                    <tr class="bg-yellow-50">
                         <td class="px-6 py-3 whitespace-nowrap text-sm">Mantenimiento</td>
                         <td class="px-3 py-3 whitespace-nowrap text-sm text-center">61</td>
                         <td class="px-3 py-3 whitespace-nowrap text-sm text-center">12</td>
