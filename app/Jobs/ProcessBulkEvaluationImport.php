@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Events\BulkImportProgress;
 use App\Imports\EvaluationBulkUpdateImport;
 use App\Models\BulkImportJob;
+use App\Services\OrganizationReportCacheService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -24,9 +25,14 @@ class ProcessBulkEvaluationImport implements ShouldQueue
 
     /**
      * Create a new job instance.
+     *
+     * Important: This job must invalidate organization report caches after importing evaluations.
+     * Since Excel::import() performs bulk updates that bypass Eloquent Observers, we manually
+     * invalidate the caches to ensure next page loads show fresh data (not stale cached results).
      */
     public function __construct(
-        public BulkImportJob $bulkImportJob
+        public BulkImportJob $bulkImportJob,
+        protected OrganizationReportCacheService $cacheService = new OrganizationReportCacheService
     ) {}
 
     /**
@@ -79,6 +85,9 @@ class ProcessBulkEvaluationImport implements ShouldQueue
                 'skipped' => $import->getSkippedCount(),
                 'errors_count' => count($import->getErrors()),
             ]);
+
+            // Invalidate organization caches so next page load shows fresh data
+            $this->cacheService->forgetOrganizationCaches($this->bulkImportJob->organization_id);
 
             // Broadcast final progress
             $this->broadcastProgress();
