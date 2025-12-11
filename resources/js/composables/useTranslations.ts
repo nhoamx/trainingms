@@ -11,7 +11,7 @@ export function useTranslations() {
   /**
    * Current locale from Laravel
    */
-  const locale = computed(() => page.props.locale || 'es')
+  const locale = computed(() => page.props.locale || 'en')
 
   /**
    * All translations for current locale

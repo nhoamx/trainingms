@@ -12,7 +12,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                             </svg>
-                            Volver a Lista
+                            {{ t('Back to List') }}
                         </Link>
                     </div>
                 </div>
@@ -22,7 +22,7 @@
                         <div class="text-gray-600">
                             <p class="text-lg font-semibold">{{ organization.name }}</p>
                             <div class="flex items-center gap-2">
-                                <p>Folio Personal: {{ personalFolio }}</p>
+                                <p>{{ t('Personal Folio') }}: {{ personalFolio }}</p>
                                 <button
                                     @click="showEditFolioModal = true"
                                     class="text-blue-600 hover:text-blue-800 p-1"
@@ -34,7 +34,7 @@
                                 </button>
                             </div>
                             <div class="flex items-center gap-2">
-                                <p>Nombre: {{ evaluation.evaluee_name || 'Sin nombre asignado' }}</p>
+                                <p>{{ t('Name') }}: {{ evaluation.evaluee_name || t('No name assigned') }}</p>
                                 <button
                                     @click="showEditNameModal = true"
                                     class="text-blue-600 hover:text-blue-800 p-1"
@@ -45,7 +45,7 @@
                                     </svg>
                                 </button>
                             </div>
-                            <p>Fecha: {{ evaluation.created_at }}</p>
+                            <p>{{ t('Date') }}: {{ evaluation.created_at }}</p>
                         </div>
                     </div>
                 </div>
@@ -78,18 +78,18 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <!-- Final Score -->
                             <div class="bg-white p-6 rounded-lg shadow flex flex-col justify-center items-center">
-                                <h3 class="text-2xl text-center font-semibold text-gray-900 mb-4">Calificación Final</h3>
+                                <h3 class="text-2xl text-center font-semibold text-gray-900 mb-4">{{ t('Final Score') }}</h3>
                                 <div class="text-5xl font-bold text-blue-600">
                                     {{ totalScore }}
                                 </div>
                                 <div class="mt-4 text-sm text-gray-600">
-                                    Nivel de Riesgo: <span :class="getRiskLevelClass(totalScore)" class="font-semibold">{{ getRiskLevel(totalScore) }}</span>
+                                    {{ t('Risk Level') }}: <span :class="getRiskLevelClass(totalScore)" class="font-semibold">{{ getRiskLevel(totalScore) }}</span>
                                 </div>
                             </div>
 
                             <!-- Categories Summary -->
                             <div class="bg-white p-6 rounded-lg shadow">
-                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Categorías</h3>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('Categories') }}</h3>
                                 <div class="space-y-2">
                                     <div v-for="category in categoryScores" :key="category.name" class="flex justify-between items-center">
                                         <span class="text-gray-700 text-sm">{{ category.name }}:</span>
@@ -100,7 +100,7 @@
 
                             <!-- Domains Summary -->
                             <div class="bg-white p-6 rounded-lg shadow">
-                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Dominios</h3>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('Domains') }}</h3>
                                 <div class="space-y-2">
                                     <div v-for="domain in domainScores" :key="domain.name" class="flex justify-between items-center">
                                         <span class="text-gray-700 text-sm">{{ domain.name }}:</span>
@@ -112,15 +112,15 @@
 
                         <!-- Detailed Results Table -->
                         <div class="overflow-x-auto mt-6">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Detalle por Categoría, Dominio y Dimensión</h3>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('Detail by Category, Domain and Dimension') }}</h3>
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Dominio</th>
-                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Dimensión</th>
-                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Ítem</th>
-                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">Puntaje</th>
+                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">{{ t('Category') }}</th>
+                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">{{ t('Domain') }}</th>
+                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">{{ t('Dimension') }}</th>
+                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">{{ t('Item') }}</th>
+                                        <th class="px-6 py-3 text-center border border-gray-200 text-xs font-medium text-gray-500 uppercase">{{ t('Score') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
@@ -167,7 +167,7 @@
                     <!-- Guide I Tab -->
                     <div v-else-if="currentTab === 'guideI'">
                         <div v-if="guideIResults" class="space-y-4">
-                            <h3 class="text-lg font-semibold text-gray-900">Guía de Referencia I - Acontecimientos Traumáticos Severos</h3>
+                            <h3 class="text-lg font-semibold text-gray-900">{{ t('Guide Reference I - Severe Traumatic Events') }}</h3>
                             <div class="bg-gray-50 p-6 rounded-lg">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div v-for="(answer, question) in guideIResults.answers" :key="question" class="bg-white p-4 rounded shadow-sm">
@@ -178,7 +178,7 @@
                             </div>
                         </div>
                         <div v-else class="text-center py-12 text-gray-500">
-                            No hay resultados disponibles para la Guía de Referencia I
+                            {{ t('No results available for Guide Reference I') }}
                         </div>
                     </div>
 
@@ -186,14 +186,14 @@
                     <div v-else-if="currentTab === 'guideIII'">
                         <div v-if="guideIIIResults" class="space-y-6">
                             <div>
-                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Guía de Referencia III - Respuestas Principales</h3>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('Guide Reference III - Main Answers') }}</h3>
                                 <div class="overflow-x-auto">
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead class="bg-gray-50">
                                             <tr>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N°</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pregunta</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Respuesta</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Question') }}</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Answer') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
@@ -209,7 +209,7 @@
 
                             <!-- Conditional Questions -->
                             <div v-if="guideIIIResults.conditional && guideIIIResults.conditional.length > 0">
-                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Preguntas Condicionales</h3>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('Conditional Questions') }}</h3>
                                 <div v-for="(section, idx) in guideIIIResults.conditional" :key="idx" class="mb-6">
                                     <div class="font-semibold text-blue-700 mb-1">{{ section.section }}: <span class="font-normal text-gray-700">{{ section.condition }}</span></div>
                                     <div class="overflow-x-auto">
@@ -217,8 +217,8 @@
                                             <thead class="bg-gray-50">
                                                 <tr>
                                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N°</th>
-                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pregunta</th>
-                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Respuesta</th>
+                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Question') }}</th>
+                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Answer') }}</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="bg-white divide-y divide-gray-200">
@@ -235,14 +235,14 @@
 
                             <!-- CITSATS-S1 -->
                             <div v-if="guideIIIResults.citsats_s1 && Object.keys(guideIIIResults.citsats_s1).length > 0">
-                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Acontecimientos Traumáticos (CITSATS-S1)</h3>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('Traumatic Events (CITSATS-S1)') }}</h3>
                                 <div class="overflow-x-auto">
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead class="bg-gray-50">
                                             <tr>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N°</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pregunta</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Respuesta</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Question') }}</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Answer') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
@@ -259,7 +259,7 @@
                             </div>
                         </div>
                         <div v-else class="text-center py-12 text-gray-500">
-                            No hay resultados disponibles para la Guía de Referencia III
+                            {{ t('No results available for Guide Reference III') }}
                         </div>
                     </div>
 
@@ -267,7 +267,7 @@
                     <div v-else-if="currentTab === 'guideV'">
                         <div v-if="guideVResults" class="space-y-4">
                             <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold text-gray-900">Guía de Referencia V - Datos Demográficos</h3>
+                                <h3 class="text-lg font-semibold text-gray-900">{{ t('Guide Reference V - Demographic Data') }}</h3>
                                 <button
                                     @click="showEditDemographicModal = true"
                                     class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -276,15 +276,15 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                         <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                                     </svg>
-                                    Editar Datos
+                                    {{ t('Edit Data') }}
                                 </button>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead class="bg-gray-50">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campo</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Field') }}</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Value') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
@@ -297,20 +297,20 @@
                             </div>
                         </div>
                         <div v-else class="text-center py-12 text-gray-500">
-                            No hay resultados disponibles para la Guía de Referencia V
+                            {{ t('No results available for Guide Reference V') }}
                         </div>
                     </div>
 
                     <!-- Cisneros Tab -->
                     <div v-else-if="currentTab === 'cisneros'">
                         <div v-if="cisnerosResults" class="space-y-4">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Escala CISNEROS - Violencia Laboral</h3>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('CISNEROS Scale - Workplace Violence') }}</h3>
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead class="bg-gray-50">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pregunta</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Respuesta</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Question') }}</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Answer') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
@@ -323,8 +323,8 @@
                             </div>
                         </div>
                         <div v-else class="text-center py-12 text-gray-500">
-                            <p class="text-lg font-medium">Escala CISNEROS</p>
-                            <p class="mt-2">En Desarrollo</p>
+                            <p class="text-lg font-medium">{{ t('CISNEROS Scale - Workplace Violence') }}</p>
+                            <p class="mt-2">{{ t('In Development') }}</p>
                         </div>
                     </div>
 
@@ -337,12 +337,12 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                     <div>
-                                        <h3 class="text-sm font-medium text-blue-900">Imágenes Procesadas - Respuestas Detectadas</h3>
+                                        <h3 class="text-sm font-medium text-blue-900">{{ t('Processed Images - Detected Responses') }}</h3>
                                         <p class="mt-1 text-sm text-blue-700">
-                                            Las siguientes imágenes muestran los formularios procesados con los círculos azules indicando las respuestas detectadas por el sistema OCR.
+                                            {{ t('The following images show the processed forms with blue circles indicating the responses detected by the OCR system.') }}
                                         </p>
                                         <p class="mt-2 text-xs text-blue-600 font-medium">
-                                            ⏱️ Nota: Estas imágenes se eliminan automáticamente después de 7 días por razones de almacenamiento.
+                                            ⏱️ {{ t('Note: These images are automatically deleted after 7 days for storage reasons.') }}
                                         </p>
                                     </div>
                                 </div>
@@ -351,10 +351,10 @@
                             <!-- Referencia I Image -->
                             <div v-if="evaluation.has_guide_i" class="bg-white rounded-lg shadow-lg p-6">
                                 <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                                    Guía de Referencia I - Acontecimientos Traumáticos
+                                    {{ t('Guide Reference I - Traumatic Events') }}
                                 </h3>
                                 <p class="text-sm text-gray-600 mb-4">
-                                    Folio: {{ getReferenceFolio('01') }}
+                                    {{ t('Folio') }}: {{ getReferenceFolio('01') }}
                                 </p>
                                 
                                 <div class="flex justify-center mb-4">
@@ -369,9 +369,9 @@
                                 </div>
 
                                 <div class="text-sm text-gray-600 border-t pt-4">
-                                    <p class="font-medium mb-2">Leyenda:</p>
+                                    <p class="font-medium mb-2">{{ t('Legend') }}:</p>
                                     <ul class="list-disc list-inside space-y-1">
-                                        <li><span class="text-blue-600 font-semibold">Círculos azules</span>: Respuestas detectadas y procesadas por el sistema OCR</li>
+                                        <li><span class="text-blue-600 font-semibold">{{ t('Blue circles') }}</span>: {{ t('Detected and processed responses by the OCR system') }}</li>
                                     </ul>
                                 </div>
                             </div>
@@ -379,10 +379,10 @@
                             <!-- Referencia III Image -->
                             <div v-if="evaluation.has_guide_iii" class="bg-white rounded-lg shadow-lg p-6">
                                 <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                                    Guía de Referencia III - Cuestionario de Factores de Riesgo Psicosocial
+                                    {{ t('Guide Reference III - Psychosocial Risk Factors Questionnaire') }}
                                 </h3>
                                 <p class="text-sm text-gray-600 mb-4">
-                                    Folio: {{ getReferenceFolio('02') }}
+                                    {{ t('Folio') }}: {{ getReferenceFolio('02') }}
                                 </p>
                                 
                                 <div class="flex justify-center mb-4">
@@ -397,9 +397,9 @@
                                 </div>
 
                                 <div class="text-sm text-gray-600 border-t pt-4">
-                                    <p class="font-medium mb-2">Leyenda:</p>
+                                    <p class="font-medium mb-2">{{ t('Legend') }}:</p>
                                     <ul class="list-disc list-inside space-y-1">
-                                        <li><span class="text-blue-600 font-semibold">Círculos azules</span>: Respuestas de las 6 secciones detectadas (preguntas 1-72, CITSATS)</li>
+                                        <li><span class="text-blue-600 font-semibold">{{ t('Blue circles') }}</span>: {{ t('Responses from the 6 sections detected (questions 1-72, CITSATS)') }}</li>
                                     </ul>
                                 </div>
                             </div>
@@ -407,10 +407,10 @@
                             <!-- Referencia V Image -->
                             <div v-if="evaluation.has_guide_v" class="bg-white rounded-lg shadow-lg p-6">
                                 <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                                    Guía de Referencia V - Datos Demográficos del Evaluado
+                                    {{ t('Guide Reference V - Evaluee Demographic Data') }}
                                 </h3>
                                 <p class="text-sm text-gray-600 mb-4">
-                                    Folio: {{ getReferenceFolio('03') }}
+                                    {{ t('Folio') }}: {{ getReferenceFolio('03') }}
                                 </p>
                                 
                                 <div class="flex justify-center mb-4">
@@ -425,9 +425,9 @@
                                 </div>
 
                                 <div class="text-sm text-gray-600 border-t pt-4">
-                                    <p class="font-medium mb-2">Leyenda:</p>
+                                    <p class="font-medium mb-2">{{ t('Legend') }}:</p>
                                     <ul class="list-disc list-inside space-y-1">
-                                        <li><span class="text-blue-600 font-semibold">Círculos azules</span>: Respuestas de las 20 subsecciones demográficas detectadas</li>
+                                        <li><span class="text-blue-600 font-semibold">{{ t('Blue circles') }}</span>: {{ t('Responses from the 20 demographic subsections detected') }}</li>
                                     </ul>
                                 </div>
                             </div>
@@ -484,6 +484,7 @@ import Dashboard from "../../Layouts/Dashboard.vue";
 import EditNameModal from '../../Components/PaperEvaluation/EditNameModal.vue';
 import EditFolioModal from '../../Components/PaperEvaluation/EditFolioModal.vue';
 import EditDemographicDataModal from '../../Components/PaperEvaluation/EditDemographicDataModal.vue';
+import { useTranslations } from '@/composables/useTranslations';
 import type {
     Organization,
     Evaluation,
@@ -497,6 +498,8 @@ import type {
     CategorySummary,
     DomainSummary
 } from '../../types/results';
+
+const { t } = useTranslations();
 
 interface OccupationPosition {
     id: number;
@@ -611,23 +614,23 @@ const currentTab = ref<string>('summary');
 const availableTabs = computed<Tab[]>(() => {
     const tabs: Tab[] = [];
     if (props.results && props.results.length) {
-        tabs.push({ key: 'summary', label: 'Resumen' });
+        tabs.push({ key: 'summary', label: t('Summary') });
     }
     if (props.evaluation?.has_guide_i) {
-        tabs.push({ key: 'guideI', label: 'Guía I' });
+        tabs.push({ key: 'guideI', label: t('Guide I') });
     }
     if (props.evaluation?.has_guide_iii) {
-        tabs.push({ key: 'guideIII', label: 'Guía III' });
+        tabs.push({ key: 'guideIII', label: t('Guide III') });
     }
     if (props.evaluation?.has_guide_v) {
-        tabs.push({ key: 'guideV', label: 'Guía V' });
+        tabs.push({ key: 'guideV', label: t('Guide V') });
     }
     if (props.evaluation?.has_cisneros) {
-        tabs.push({ key: 'cisneros', label: 'CISNEROS' });
+        tabs.push({ key: 'cisneros', label: t('CISNEROS') });
     }
     // Admin-only tab for marked images
     if (props.isAdmin && props.evaluation?.folio) {
-        tabs.push({ key: 'markedImage', label: 'Imagen Procesada' });
+        tabs.push({ key: 'markedImage', label: t('Processed Image') });
     }
     return tabs;
 });

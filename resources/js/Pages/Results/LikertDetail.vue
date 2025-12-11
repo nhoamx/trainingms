@@ -12,18 +12,19 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                             </svg>
-                            Volver a Lista
+                            {{ t('Back to List') }}
                         </Link>
                     </div>
+                    <LanguageSwitcher />
                 </div>
 
                 <div class="mt-4">
                     <div class="flex items-center justify-between">
                         <div class="text-gray-600">
                             <p class="text-lg font-semibold">{{ organization.name }}</p>
-                            <p>Folio Personal: {{ personalFolio }}</p>
-                            <p>Nombre: {{ evaluation.evaluee_name || 'Sin nombre asignado' }}</p>
-                            <p>Fecha: {{ evaluation.created_at }}</p>
+                            <p>{{ t('Personal Folio') }}: {{ personalFolio }}</p>
+                            <p>{{ t('Name') }}: {{ evaluation.evaluee_name || t('No name assigned') }}</p>
+                            <p>{{ t('Date') }}: {{ evaluation.created_at }}</p>
                         </div>
                     </div>
                 </div>
@@ -31,7 +32,7 @@
 
             <!-- Scanned Form Image (Admin/SuperAdmin only) -->
             <div v-if="evaluation.scanned_image_url && isAdmin" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
-                <h2 class="text-xl font-bold text-gray-900 mb-4">Formulario Escaneado</h2>
+                <h2 class="text-xl font-bold text-gray-900 mb-4">{{ t('Scanned Form') }}</h2>
                 <div class="flex justify-center items-center bg-gray-50 rounded-lg p-4 min-h-64">
                     <button
                         @click="showImageModal = true"
@@ -50,7 +51,7 @@
                             </div>
                         </div>
                         <div class="mt-2 text-center text-sm text-gray-500 group-hover:text-blue-600 transition-colors">
-                            Haz clic para ampliar
+                            {{ t('Click to enlarge') }}
                         </div>
                     </button>
                 </div>
@@ -69,7 +70,7 @@
                     <!-- Modal Header -->
                     <div class="flex items-center justify-between p-6 border-b border-gray-200">
                         <h3 class="text-xl font-bold text-gray-900">
-                            Formulario Escaneado - Folio {{ personalFolio }}
+                            {{ t('Scanned Form') }} - {{ t('Folio') }} {{ personalFolio }}
                         </h3>
                         <button
                             @click="showImageModal = false"
@@ -93,7 +94,7 @@
                     <!-- Modal Footer -->
                     <div class="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
                         <div class="text-sm text-gray-600">
-                            Presiona <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> para cerrar
+                            {{ t('Press') }} <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> {{ t('to close') }}
                         </div>
                         <a
                             :href="evaluation.scanned_image_url"
@@ -103,7 +104,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
-                            Descargar
+                            {{ t('Download') }}
                         </a>
                     </div>
                 </div>
@@ -112,7 +113,7 @@
             <!-- Score Summary -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
                 <div class="flex justify-between items-start mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900">Evaluación de Clima Laboral</h2>
+                    <h2 class="text-2xl font-bold text-gray-900">{{ t('Work Climate Evaluation') }}</h2>
                     <button
                     v-if="isAdmin"
                         @click="showEditModal = true"
@@ -121,45 +122,45 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                        Editar Datos
+                        {{ t('Edit Data') }}
                     </button>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Total Score (Clima Laboral) -->
                     <div class="p-6 rounded-lg border-2" :class="getClimaLaboralBgClass(scores.total_score)">
-                        <h3 class="text-lg font-semibold mb-2" :class="getClimaLaboralTextClass(scores.total_score)">Clima Laboral</h3>
+                        <h3 class="text-lg font-semibold mb-2" :class="getClimaLaboralTextClass(scores.total_score)">{{ t('Work Climate') }}</h3>
                         <div class="text-5xl font-bold mb-2" :class="getClimaLaboralTextClass(scores.total_score)">
                             {{ scores.total_score }}
                         </div>
                         <div class="text-sm opacity-90" :class="getClimaLaboralTextClass(scores.total_score)">
-                            Interpretación: <span class="font-semibold">{{ scores.interpretation }}</span>
+                            {{ t('Interpretation') }}: <span class="font-semibold">{{ scores.interpretation }}</span>
                         </div>
                     </div>
 
                     <!-- Demographic Data -->
                     <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-700 mb-4">Datos Demográficos</h3>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-4">{{ t('Demographic Data') }}</h3>
                         <div class="space-y-2 text-sm">
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Género:</span>
+                                <span class="text-gray-600">{{ t('Gender') }}:</span>
                                 <span class="font-medium">{{ formatDemographic('genero', demographic.genero) }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Turno:</span>
+                                <span class="text-gray-600">{{ t('Shift') }}:</span>
                                 <span class="font-medium">{{ formatDemographic('turno', demographic.turno) }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Tipo de Contrato:</span>
+                                <span class="text-gray-600">{{ t('Contract Type') }}:</span>
                                 <span class="font-medium">{{ formatDemographic('tipo_contrato', demographic.tipo_contrato) }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Puesto:</span>
-                                <span class="font-medium">{{ demographic.puesto || 'No especificado' }}</span>
+                                <span class="text-gray-600">{{ t('Position') }}:</span>
+                                <span class="font-medium">{{ demographic.puesto || t('Not specified') }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Área:</span>
-                                <span class="font-medium">{{ demographic.area || 'No especificado' }}</span>
+                                <span class="text-gray-600">{{ t('Area') }}:</span>
+                                <span class="font-medium">{{ demographic.area || t('Not specified') }}</span>
                             </div>
                             <!-- Custom Fields -->
                             <template v-if="Object.keys(customFields).length > 0">
@@ -170,7 +171,7 @@
                                     class="flex justify-between"
                                 >
                                     <span class="text-gray-600">{{ field.label }}:</span>
-                                    <span class="font-medium">{{ field.value || 'No especificado' }}</span>
+                                    <span class="font-medium">{{ field.value || t('Not specified') }}</span>
                                 </div>
                             </template>
                         </div>
@@ -181,7 +182,7 @@
             <!-- Dimension Scores -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
                 <div class="flex justify-between items-start mb-6">
-                <h3 class="text-xl font-bold text-gray-900 mb-4">Calificación por Dimensiones</h3>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">{{ t('Score by Dimensions') }}</h3>
 
                     <button
                     v-if="isAdmin"
@@ -191,7 +192,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
-                        Editar Respuestas
+                        {{ t('Edit Answers') }}
                     </button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -208,7 +209,7 @@
                             <div class="text-xs text-gray-500 text-right">
                                 <div>{{ dimension.interpretation }}</div>
                                 <div class="mt-1 text-gray-400">
-                                    {{ dimension.questions.length }} pregunta{{ dimension.questions.length > 1 ? 's' : '' }}
+                                    {{ dimension.questions.length }} {{ dimension.questions.length > 1 ? t('questions') : t('question') }}
                                 </div>
                             </div>
                         </div>
@@ -218,7 +219,7 @@
 
             <!-- Questions and Answers -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                <h3 class="text-xl font-bold text-gray-900 mb-4">Preguntas y Respuestas</h3>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">{{ t('Questions and Answers') }}</h3>
                 
                 <div class="space-y-4">
                     <div
@@ -239,13 +240,13 @@
                             </div>
                             <div class="flex items-center gap-4 flex-shrink-0">
                                 <div class="text-center">
-                                    <div class="text-xs text-gray-500 mb-1">Respuesta</div>
+                                    <div class="text-xs text-gray-500 mb-1">{{ t('Answer') }}</div>
                                     <div class="text-lg font-bold" :class="getAnswerColorClass(question.answer)">
                                         {{ question.answer || '-' }}
                                     </div>
                                 </div>
                                 <div class="text-center">
-                                    <div class="text-xs text-gray-500 mb-1">Valor</div>
+                                    <div class="text-xs text-gray-500 mb-1">{{ t('Value') }}</div>
                                     <div class="text-lg font-bold text-gray-700">
                                         {{ question.value !== null ? question.value : '-' }}
                                     </div>
@@ -258,31 +259,31 @@
 
             <!-- Legend -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mt-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Escala de Respuestas</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('Answer Scale') }}</h3>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded bg-blue-400 border-2 border-blue-400 flex items-center justify-center font-bold text-black">
                             A
                         </div>
-                        <span class="text-sm text-gray-700">Totalmente de acuerdo (4 pts)</span>
+                        <span class="text-sm text-gray-700">{{ t('Strongly Agree') }} (4 pts)</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded bg-green-600 border-2 border-green-600 flex items-center justify-center font-bold text-white">
                             B
                         </div>
-                        <span class="text-sm text-gray-700">De acuerdo (3 pts)</span>
+                        <span class="text-sm text-gray-700">{{ t('Agree') }} (3 pts)</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded bg-yellow-500 border-2 border-yellow-500 flex items-center justify-center font-bold text-black">
                             C
                         </div>
-                        <span class="text-sm text-gray-700">En desacuerdo (2 pts)</span>
+                        <span class="text-sm text-gray-700">{{ t('Disagree') }} (2 pts)</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded bg-red-600 border-2 border-red-600 flex items-center justify-center font-bold text-white">
                             D
                         </div>
-                        <span class="text-sm text-gray-700">Totalmente en desacuerdo (1 pt)</span>
+                        <span class="text-sm text-gray-700">{{ t('Strongly Disagree') }} (1 pt)</span>
                     </div>
                 </div>
             </div>
@@ -302,7 +303,7 @@
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-6 border-b border-gray-200">
                 <h3 class="text-xl font-bold text-gray-900">
-                    Editar Datos Demográficos
+                    {{ t('Edit Demographic Data') }}
                 </h3>
                 <button
                     @click="showEditModal = false"
@@ -320,92 +321,92 @@
                     <!-- Evaluee Name -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Nombre del Evaluado
+                            {{ t('Evaluee Name') }}
                         </label>
                         <input
                             v-model="formData.evaluee_name"
                             type="text"
                             class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                            placeholder="Nombre completo"
+                            :placeholder="t('Full name')"
                         />
                     </div>
 
                     <!-- Gender -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Género
+                            {{ t('Gender') }}
                         </label>
                         <select
                             v-model="formData.gender"
                             class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
                         >
-                            <option value="">Seleccionar género</option>
-                            <option value="male">Masculino</option>
-                            <option value="female">Femenino</option>
+                            <option value="">{{ t('Select gender') }}</option>
+                            <option value="male">{{ t('Male') }}</option>
+                            <option value="female">{{ t('Female') }}</option>
                         </select>
                     </div>
 
                     <!-- Work Schedule -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Turno
+                            {{ t('Shift') }}
                         </label>
                         <select
                             v-model="formData.work_schedule"
                             class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
                         >
-                            <option value="">Seleccionar turno</option>
-                            <option value="morning">Matutino</option>
-                            <option value="afternoon">Vespertino</option>
-                            <option value="night">Nocturno</option>
-                            <option value="morning_afternoon">Matutino-Vespertino</option>
-                            <option value="afternoon_night">Vespertino-Nocturno</option>
-                            <option value="rotating">Rotativo</option>
+                            <option value="">{{ t('Select shift') }}</option>
+                            <option value="morning">{{ t('Morning') }}</option>
+                            <option value="afternoon">{{ t('Afternoon') }}</option>
+                            <option value="night">{{ t('Night') }}</option>
+                            <option value="morning_afternoon">{{ t('Morning-Afternoon') }}</option>
+                            <option value="afternoon_night">{{ t('Afternoon-Night') }}</option>
+                            <option value="rotating">{{ t('Rotating') }}</option>
                         </select>
                     </div>
 
                     <!-- Contract Type -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Tipo de Contrato
+                            {{ t('Contract Type') }}
                         </label>
                         <select
                             v-model="formData.contract_type"
                             class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
                         >
-                            <option value="">Seleccionar tipo de contrato</option>
-                            <option value="permanent">Tiempo indeterminado</option>
-                            <option value="fixed_term">Por tiempo determinado</option>
-                            <option value="project_based">Por obra o proyecto</option>
-                            <option value="honorarios">Honorarios</option>
-                            <option value="confidence">Confianza</option>
-                            <option value="unionized">Sindicalizado</option>
+                            <option value="">{{ t('Select contract type') }}</option>
+                            <option value="permanent">{{ t('Permanent') }}</option>
+                            <option value="fixed_term">{{ t('Fixed Term') }}</option>
+                            <option value="project_based">{{ t('Project Based') }}</option>
+                            <option value="honorarios">{{ t('Fees') }}</option>
+                            <option value="confidence">{{ t('Confidence') }}</option>
+                            <option value="unionized">{{ t('Unionized') }}</option>
                         </select>
                     </div>
 
                     <!-- Position -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Puesto
+                            {{ t('Position') }}
                         </label>
                         <input
                             v-model="formData.position"
                             type="text"
                             class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                            placeholder="Puesto/Ocupación"
+                            :placeholder="t('Position/Occupation')"
                         />
                     </div>
 
                     <!-- Department -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Área/Departamento
+                            {{ t('Area/Department') }}
                         </label>
                         <input
                             v-model="formData.department"
                             type="text"
                             class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                            placeholder="Área o departamento"
+                            :placeholder="t('Area or department')"
                         />
                     </div>
 
@@ -416,15 +417,15 @@
                             @click="showEditModal = false"
                             class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                         >
-                            Cancelar
+                            {{ t('Cancel') }}
                         </button>
                         <button
                             type="submit"
                             :disabled="isSubmitting"
                             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors font-medium"
                         >
-                            <span v-if="!isSubmitting">Guardar Cambios</span>
-                            <span v-else>Guardando...</span>
+                            <span v-if="!isSubmitting">{{ t('Save Changes') }}</span>
+                            <span v-else>{{ t('Saving...') }}</span>
                         </button>
                     </div>
                 </form>
@@ -436,7 +437,7 @@
         <div v-if="showAnswersModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click="showAnswersModal = false">
             <div class="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden" @click.stop>
                 <div class="flex items-center justify-between p-6 border-b border-gray-200">
-                    <h3 class="text-xl font-bold text-gray-900">Editar Respuestas (A/B/C/D)</h3>
+                    <h3 class="text-xl font-bold text-gray-900">{{ t('Edit Answers') }} (A/B/C/D)</h3>
                     <button @click="showAnswersModal = false" class="text-gray-500 hover:text-gray-700 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -445,7 +446,7 @@
                 </div>
                 <div class="p-6 space-y-4 overflow-auto">
                     <div class="flex justify-end mb-2">
-                        <button @click="setAllBlank" type="button" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded">Limpiar todas</button>
+                        <button @click="setAllBlank" type="button" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded">{{ t('Clear all') }}</button>
                     </div>
                     <div class="grid grid-cols-1 gap-4">
                         <div v-for="q in questions" :key="q.number" class="border rounded-lg p-4">
@@ -458,36 +459,36 @@
                                 <label class="inline-flex items-center gap-2">
                                     <input type="radio" :name="`q-${q.number}`" value="A" v-model="editableAnswers[q.number]" />
                                     <span class="px-2 py-1 rounded bg-blue-100 text-blue-700 font-semibold">A</span>
-                                    <span class="text-xs text-gray-600">Totalmente de acuerdo</span>
+                                    <span class="text-xs text-gray-600">{{ t('Strongly Agree') }}</span>
                                 </label>
                                 <label class="inline-flex items-center gap-2">
                                     <input type="radio" :name="`q-${q.number}`" value="B" v-model="editableAnswers[q.number]" />
                                     <span class="px-2 py-1 rounded bg-green-100 text-green-700 font-semibold">B</span>
-                                    <span class="text-xs text-gray-600">De acuerdo</span>
+                                    <span class="text-xs text-gray-600">{{ t('Agree') }}</span>
                                 </label>
                                 <label class="inline-flex items-center gap-2">
                                     <input type="radio" :name="`q-${q.number}`" value="C" v-model="editableAnswers[q.number]" />
                                     <span class="px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold">C</span>
-                                    <span class="text-xs text-gray-600">En desacuerdo</span>
+                                    <span class="text-xs text-gray-600">{{ t('Disagree') }}</span>
                                 </label>
                                 <label class="inline-flex items-center gap-2">
                                     <input type="radio" :name="`q-${q.number}`" value="D" v-model="editableAnswers[q.number]" />
                                     <span class="px-2 py-1 rounded bg-red-100 text-red-700 font-semibold">D</span>
-                                    <span class="text-xs text-gray-600">Totalmente en desacuerdo</span>
+                                    <span class="text-xs text-gray-600">{{ t('Strongly Disagree') }}</span>
                                 </label>
                                 <label class="inline-flex items-center gap-2">
                                     <input type="radio" :name="`q-${q.number}`" value="" v-model="editableAnswers[q.number]" />
-                                    <span class="px-2 py-1 rounded bg-gray-100 text-gray-700 font-semibold">Vaciar</span>
+                                    <span class="px-2 py-1 rounded bg-gray-100 text-gray-700 font-semibold">{{ t('Clear') }}</span>
                                 </label>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
-                    <button type="button" @click="showAnswersModal = false" class="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200">Cancelar</button>
+                    <button type="button" @click="showAnswersModal = false" class="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200">{{ t('Cancel') }}</button>
                     <button type="button" :disabled="answersSubmitting" @click="saveAnswers" class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:bg-emerald-400">
-                        <span v-if="!answersSubmitting">Guardar Respuestas</span>
-                        <span v-else>Guardando...</span>
+                        <span v-if="!answersSubmitting">{{ t('Save Answers') }}</span>
+                        <span v-else>{{ t('Saving...') }}</span>
                     </button>
                 </div>
             </div>
@@ -498,6 +499,10 @@
 import { Link } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import Dashboard from '@/Layouts/Dashboard.vue'
+import LanguageSwitcher from '@/Components/LanguageSwitcher.vue'
+import { useTranslations } from '@/composables/useTranslations'
+
+const { t } = useTranslations()
 
 const props = defineProps({
     organization: Object,

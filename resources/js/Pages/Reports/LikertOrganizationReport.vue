@@ -1,18 +1,20 @@
 <template>
-  <Dashboard :title="title || 'Reporte Clima Laboral'">
+  <Dashboard :title="title || t('Work Climate Report')">
     <div class="max-w-7xl mx-auto p-6">
       <!-- Header -->
       <div class="bg-white rounded-lg shadow p-6 mb-6">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2 class="text-2xl font-bold text-gray-900">
-              Reporte Clima Laboral - {{ organizationName }}
+              {{ t('Work Climate Report') }} - {{ organizationName }}
             </h2>
             <p class="mt-1 text-sm text-gray-600">
-              {{ evaluations.length }} evaluaciones completadas
+              {{ evaluations.length }} {{ t('completed evaluations') }}
             </p>
           </div>
-          <div v-if="evaluations.length > 0 && (isAdmin || isSuperAdmin)" class="flex items-center gap-3">
+          <div class="flex items-center gap-3">
+            <LanguageSwitcher />
+            <template v-if="evaluations.length > 0 && (isAdmin || isSuperAdmin)">
             <button
               @click="openExportByLevelModal"
               class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -20,7 +22,7 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Exportar por Nivel
+              {{ t('Export by Level') }}
             </button>
             <button
               @click="downloadWordReport"
@@ -34,8 +36,9 @@
               <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              {{ isDownloading ? 'Generando...' : 'Descargar Word' }}
+              {{ isDownloading ? t('Generating...') : t('Download Word') }}
             </button>
+            </template>
           </div>
         </div>
         <!-- Download Status Message -->
@@ -46,83 +49,83 @@
 
       <div v-if="evaluations.length === 0" class="bg-white rounded-lg shadow p-8">
         <div class="text-center text-gray-500">
-          <p class="text-lg">No hay evaluaciones Clima Laboral completadas para esta organización.</p>
+          <p class="text-lg">{{ t('No Work Climate evaluations completed for this organization.') }}</p>
         </div>
       </div>
 
       <div v-else>
         <!-- Filtros Demográficos -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Filtros</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('Filters') }}</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Género -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Género</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Gender') }}</label>
               <select 
                 v-model="filters.genero"
                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
-                <option value="">Todos</option>
+                <option value="">{{ t('All') }}</option>
                 <option v-for="g in demographics.generos" :key="g" :value="g">{{ g }}</option>
               </select>
             </div>
 
             <!-- Tipo de Contrato -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Contrato</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Contract Type') }}</label>
               <select 
                 v-model="filters.tipo_contrato"
                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
-                <option value="">Todos</option>
+                <option value="">{{ t('All') }}</option>
                 <option v-for="tc in demographics.tipos_contrato" :key="tc" :value="tc">{{ tc }}</option>
               </select>
             </div>
 
             <!-- Puesto -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Puesto</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Position') }}</label>
               <select 
                 v-model="filters.puesto"
                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
-                <option value="">Todos</option>
+                <option value="">{{ t('All') }}</option>
                 <option v-for="p in demographics.puestos" :key="p" :value="p">{{ getPuestoName(p) }}</option>
               </select>
             </div>
 
             <!-- Área -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Área</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Area') }}</label>
               <select 
                 v-model="filters.area"
                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
-                <option value="">Todas</option>
+                <option value="">{{ t('All') }}</option>
                 <option v-for="a in demographics.areas" :key="a" :value="a">{{ getAreaName(a) }}</option>
               </select>
             </div>
 
             <!-- Turno -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Turno</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Shift') }}</label>
               <select 
                 v-model="filters.turno"
                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
-                <option value="">Todos</option>
+                <option value="">{{ t('All') }}</option>
                 <option v-for="t in demographics.turnos" :key="t" :value="t">{{ t }}</option>
               </select>
             </div>
 
             <!-- Factor (for comments) -->
             <div v-if="factors.length > 0">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Factor (Comentarios)</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Factor (Comments)') }}</label>
               <select 
                 v-model="filters.factor"
                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
-                <option value="">Todos</option>
+                <option value="">{{ t('All') }}</option>
                 <option v-for="f in factors" :key="f" :value="f">{{ f }}</option>
               </select>
             </div>
@@ -130,7 +133,7 @@
 
           <!-- Custom Field Filters -->
           <div v-if="Object.keys(customFieldFilters).length > 0" class="mt-4 pt-4 border-t border-gray-200">
-            <h4 class="text-sm font-medium text-gray-700 mb-3">Campos Adicionales</h4>
+            <h4 class="text-sm font-medium text-gray-700 mb-3">{{ t('Additional Fields') }}</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div v-for="(fieldData, fieldKey) in customFieldFilters" :key="fieldKey">
                 <label class="block text-sm font-medium text-gray-700 mb-2">{{ fieldData.label }}</label>
@@ -138,7 +141,7 @@
                   v-model="customFilters[fieldKey]"
                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 >
-                  <option value="">Todos</option>
+                  <option value="">{{ t('All') }}</option>
                   <option v-for="val in fieldData.values" :key="val" :value="val">{{ val }}</option>
                 </select>
               </div>
@@ -151,7 +154,7 @@
               @click="resetFilters"
               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm"
             >
-              Limpiar Filtros
+              {{ t('Clear Filters') }}
             </button>
           </div>
         </div>
@@ -169,7 +172,7 @@
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 ]"
               >
-                Cuantitativos
+                {{ t('Quantitative') }}
               </button>
               <button
                 @click="mainTabType = 'cualitativos'"
@@ -180,7 +183,7 @@
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 ]"
               >
-                Cualitativos
+                {{ t('Qualitative') }}
               </button>
             </nav>
           </div>
@@ -199,7 +202,7 @@
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   ]"
                 >
-                  Organización
+                  {{ t('Organization') }}
                 </button>
                 <button
                   v-for="dimensionName in Object.keys(dimensions)"
@@ -221,13 +224,13 @@
             <div v-if="activeTab === 'Total'">
               <!-- Clima Laboral -->
               <div class="mb-6 rounded-lg p-6" :class="getLevelColor(getMostCommonInterpretation).bgSolid">
-                <h3 class="text-lg font-semibold mb-2" :class="getLevelColor(getMostCommonInterpretation).text">Clima Laboral</h3>
+                <h3 class="text-lg font-semibold mb-2" :class="getLevelColor(getMostCommonInterpretation).text">{{ t('Work Climate') }}</h3>
                 <div class="flex items-baseline gap-3">
                   <span class="text-3xl font-bold" :class="getLevelColor(getMostCommonInterpretation).text">{{ getMostCommonInterpretation }}</span>
-                  <span class="text-lg opacity-90" :class="getLevelColor(getMostCommonInterpretation).text">/ {{ filteredTotalPeople }} {{ filteredTotalPeople === 1 ? 'persona' : 'personas' }}</span>
+                  <span class="text-lg opacity-90" :class="getLevelColor(getMostCommonInterpretation).text">/ {{ filteredTotalPeople }} {{ filteredTotalPeople === 1 ? t('person') : t('persons') }}</span>
                 </div>
                 <div class="text-sm mt-2 opacity-90" :class="getLevelColor(getMostCommonInterpretation).text">
-                  Nivel más frecuente en la organización
+                  {{ t('Most frequent level in the organization') }}
                 </div>
               </div>
 
@@ -238,8 +241,8 @@
                   <div class="bg-white rounded-lg border border-gray-200 p-4">
                     <div class="flex items-center justify-between mb-3">
                       <div>
-                        <h4 class="text-md font-semibold text-gray-900">Distribución por nivel</h4>
-                        <div class="text-xs text-gray-500">{{ filteredTotalPeople }} {{ filteredTotalPeople === 1 ? 'persona' : 'personas' }}</div>
+                        <h4 class="text-md font-semibold text-gray-900">{{ t('Distribution by level') }}</h4>
+                        <div class="text-xs text-gray-500">{{ filteredTotalPeople }} {{ filteredTotalPeople === 1 ? t('person') : t('persons') }}</div>
                       </div>
                     </div>
                     <div class="flex flex-col gap-3">
@@ -259,7 +262,7 @@
 
                   <!-- Gráfica (derecha) -->
                   <div class="bg-gray-50 rounded-lg p-4 md:ml-auto w-full">
-                    <h4 class="text-md font-semibold text-gray-900 mb-4">Nivel de Satisfacción</h4>
+                    <h4 class="text-md font-semibold text-gray-900 mb-4">{{ t('Satisfaction Level') }}</h4>
                     <canvas ref="pieChartTotal"></canvas>
                   </div>
                 </div>
@@ -267,7 +270,7 @@
 
               <!-- Lista de Dimensiones con Distribución de Personas -->
               <div class="mb-6">
-                <h4 class="text-md font-semibold text-gray-900 mb-4">Distribución de Personas por Factor</h4>
+                <h4 class="text-md font-semibold text-gray-900 mb-4">{{ t('Person Distribution by Factor') }}</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div 
                     v-for="(dim, dimName) in orderedFilteredDimensions" 
@@ -282,7 +285,7 @@
                     <div class="mb-3 pr-8">
                       <span class="font-medium text-gray-900">{{ dimName }}</span>
                       <div class="text-xs text-gray-500 mt-1">
-                        {{ dim.questionCount }} preguntas
+                        {{ dim.questionCount }} {{ t('questions') }}
                       </div>
                     </div>
                     <div class="space-y-2 text-sm">
@@ -290,7 +293,7 @@
                         <span class="px-2 py-1 rounded text-xs font-medium flex-shrink-0" :class="getLevelColor(level).badge">
                           {{ level }}
                         </span>
-                        <span class="font-medium text-gray-900">{{ count }} {{ count === 1 ? 'persona' : 'personas' }}</span>
+                        <span class="font-medium text-gray-900">{{ count }} {{ count === 1 ? t('person') : t('persons') }}</span>
                       </div>
                     </div>
                   </div>
@@ -303,7 +306,7 @@
                   <div>
                     <h4 class="text-md font-semibold text-gray-900">{{ heatmapTitle }}</h4>
                     <p class="text-xs text-gray-500 mt-1">
-                      Mostrando {{ Math.min((totalHeatmapCurrentPage - 1) * totalHeatmapRowsPerPage + 1, sortedFilteredEvaluations.length) }}-{{ Math.min(totalHeatmapCurrentPage * totalHeatmapRowsPerPage, sortedFilteredEvaluations.length) }} de {{ sortedFilteredEvaluations.length }} evaluaciones
+                      {{ t('Showing') }} {{ Math.min((totalHeatmapCurrentPage - 1) * totalHeatmapRowsPerPage + 1, sortedFilteredEvaluations.length) }}-{{ Math.min(totalHeatmapCurrentPage * totalHeatmapRowsPerPage, sortedFilteredEvaluations.length) }} {{ t('of') }} {{ sortedFilteredEvaluations.length }} {{ t('evaluations') }}
                     </p>
                   </div>
                   <div class="flex items-center gap-4">
@@ -319,13 +322,13 @@
                       <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      {{ isExportingHeatmap ? 'Descargando...' : 'Descargar CSV' }}
+                      {{ isExportingHeatmap ? t('Downloading...') : t('Download CSV') }}
                     </button>
                     <p class="text-xs text-gray-500 flex items-center gap-1">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Clic en el número de pregunta para ordenar
+                      {{ t('Click on the question number to sort') }}
                     </p>
                   </div>
                 </div>
@@ -339,10 +342,10 @@
                       <!-- Dimension headers row -->
                       <tr class="bg-gray-100">
                         <th class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 sticky left-0 bg-gray-100 z-10">
-                          Folio
+                          {{ t('Folio') }}
                         </th>
                         <th class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 text-center bg-gray-100">
-                          Clima Laboral
+                          {{ t('Work Climate') }}
                         </th>
                         <template v-for="(dim, dimName) in filteredDimensions" :key="`dim-header-${dimName}`">
                           <th 
@@ -425,7 +428,7 @@
                 <!-- Pagination Controls -->
                 <div v-if="sortedFilteredEvaluations.length > totalHeatmapRowsPerPage" class="mt-4 flex items-center justify-between">
                   <div class="text-sm text-gray-600">
-                    Página {{ totalHeatmapCurrentPage }} de {{ Math.ceil(sortedFilteredEvaluations.length / totalHeatmapRowsPerPage) }}
+                    {{ t('Page') }} {{ totalHeatmapCurrentPage }} {{ t('of') }} {{ Math.ceil(sortedFilteredEvaluations.length / totalHeatmapRowsPerPage) }}
                   </div>
                   <div class="flex gap-2">
                     <button
@@ -433,14 +436,14 @@
                       :disabled="totalHeatmapCurrentPage === 1"
                       class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      Anterior
+                      {{ t('Previous') }}
                     </button>
                     <button
                       @click="totalHeatmapCurrentPage = Math.min(Math.ceil(sortedFilteredEvaluations.length / totalHeatmapRowsPerPage), totalHeatmapCurrentPage + 1)"
                       :disabled="totalHeatmapCurrentPage === Math.ceil(sortedFilteredEvaluations.length / totalHeatmapRowsPerPage)"
                       class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      Siguiente
+                      {{ t('Next') }}
                     </button>
                   </div>
                 </div>
@@ -451,13 +454,13 @@
             <div v-else-if="filteredDimensions[activeTab]">
               <!-- Clima Laboral de la Dimensión (encabezado como en Total) -->
               <div class="mb-6 rounded-lg p-6" :class="getLevelColor(activeDimensionMostCommon).bgSolid">
-                <h3 class="text-lg font-semibold mb-2" :class="getLevelColor(activeDimensionMostCommon).text">Clima Laboral</h3>
+                <h3 class="text-lg font-semibold mb-2" :class="getLevelColor(activeDimensionMostCommon).text">{{ t('Work Climate') }}</h3>
                 <div class="flex items-baseline gap-3">
                   <span class="text-3xl font-bold" :class="getLevelColor(activeDimensionMostCommon).text">{{ activeDimensionMostCommon }}</span>
-                  <span class="text-lg opacity-90" :class="getLevelColor(activeDimensionMostCommon).text">/ {{ activeDimensionTotalPeople }} {{ activeDimensionTotalPeople === 1 ? 'persona' : 'personas' }}</span>
+                  <span class="text-lg opacity-90" :class="getLevelColor(activeDimensionMostCommon).text">/ {{ activeDimensionTotalPeople }} {{ activeDimensionTotalPeople === 1 ? t('person') : t('people') }}</span>
                 </div>
                 <div class="text-sm mt-2 opacity-90" :class="getLevelColor(activeDimensionMostCommon).text">
-                  Nivel más frecuente en la dimensión
+                  {{ t('Most frequent level in dimension') }}
                 </div>
               </div>
 
@@ -468,8 +471,8 @@
                   <div class="bg-white rounded-lg border border-gray-200 p-4">
                     <div class="flex items-center justify-between mb-3">
                       <div>
-                        <h4 class="text-md font-semibold text-gray-900">Distribución por nivel</h4>
-                        <div class="text-xs text-gray-500">{{ filteredDimensions[activeTab].questionCount }} preguntas evaluadas</div>
+                        <h4 class="text-md font-semibold text-gray-900">{{ t('Distribution by level') }}</h4>
+                        <div class="text-xs text-gray-500">{{ filteredDimensions[activeTab].questionCount }} {{ t('questions evaluated') }}</div>
                       </div>
                     </div>
                     <div class="flex flex-col gap-3">
@@ -489,7 +492,7 @@
 
                   <!-- Gráfica (derecha) -->
                   <div class="bg-gray-50 rounded-lg p-4 md:ml-auto w-full">
-                    <h4 class="text-md font-semibold text-gray-900 mb-4">Nivel de Satisfacción</h4>
+                    <h4 class="text-md font-semibold text-gray-900 mb-4">{{ t('Satisfaction Level') }}</h4>
                     <canvas ref="dimensionChartCanvas"></canvas>
                   </div>
                 </div>
@@ -501,7 +504,7 @@
                   <div>
                     <h4 class="text-md font-semibold text-gray-900">{{ heatmapTitle }}</h4>
                     <p class="text-xs text-gray-500 mt-1">
-                      Mostrando {{ Math.min((dimensionHeatmapCurrentPage - 1) * dimensionHeatmapRowsPerPage + 1, sortedFilteredEvaluations.length) }}-{{ Math.min(dimensionHeatmapCurrentPage * dimensionHeatmapRowsPerPage, sortedFilteredEvaluations.length) }} de {{ sortedFilteredEvaluations.length }} evaluaciones
+                      {{ t('Showing') }} {{ Math.min((dimensionHeatmapCurrentPage - 1) * dimensionHeatmapRowsPerPage + 1, sortedFilteredEvaluations.length) }}-{{ Math.min(dimensionHeatmapCurrentPage * dimensionHeatmapRowsPerPage, sortedFilteredEvaluations.length) }} {{ t('of') }} {{ sortedFilteredEvaluations.length }} {{ t('evaluations') }}
                     </p>
                   </div>
                   <div class="flex items-center gap-4">
@@ -517,13 +520,13 @@
                       <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      {{ isExportingHeatmap ? 'Descargando...' : 'Descargar CSV' }}
+                      {{ isExportingHeatmap ? t('Downloading...') : t('Download CSV') }}
                     </button>
                     <p class="text-xs text-gray-500 flex items-center gap-1">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Clic en el número de pregunta para ordenar
+                      {{ t('Click on question number to sort') }}
                     </p>
                   </div>
                 </div>
@@ -583,7 +586,7 @@
                 <!-- Pagination Controls -->
                 <div v-if="sortedFilteredEvaluations.length > dimensionHeatmapRowsPerPage" class="mt-4 flex items-center justify-between">
                   <div class="text-sm text-gray-600">
-                    Página {{ dimensionHeatmapCurrentPage }} de {{ Math.ceil(sortedFilteredEvaluations.length / dimensionHeatmapRowsPerPage) }}
+                    {{ t('Page') }} {{ dimensionHeatmapCurrentPage }} {{ t('of') }} {{ Math.ceil(sortedFilteredEvaluations.length / dimensionHeatmapRowsPerPage) }}
                   </div>
                   <div class="flex gap-2">
                     <button
@@ -591,14 +594,14 @@
                       :disabled="dimensionHeatmapCurrentPage === 1"
                       class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      Anterior
+                      {{ t('Previous') }}
                     </button>
                     <button
                       @click="dimensionHeatmapCurrentPage = Math.min(Math.ceil(sortedFilteredEvaluations.length / dimensionHeatmapRowsPerPage), dimensionHeatmapCurrentPage + 1)"
                       :disabled="dimensionHeatmapCurrentPage === Math.ceil(sortedFilteredEvaluations.length / dimensionHeatmapRowsPerPage)"
                       class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      Siguiente
+                      {{ t('Next') }}
                     </button>
                   </div>
                 </div>
@@ -610,9 +613,9 @@
 
             <div class="flex items-center justify-between mb-4">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900">Puntaje Total por Pregunta</h3>
+              <h3 class="text-lg font-semibold text-gray-900">{{ t('Total Score by Question') }}</h3>
               <p class="text-sm text-gray-500 mt-1">
-                Suma de puntajes de {{ filteredTotalPeople }} participantes (máximo = {{ filteredTotalPeople * 4 }} por pregunta)
+                {{ t('Sum of scores from') }} {{ filteredTotalPeople }} {{ t('participants') }} ({{ t('maximum') }} = {{ filteredTotalPeople * 4 }} {{ t('per question') }})
               </p>
             </div>
             <div class="flex items-center gap-4 text-xs">
@@ -642,12 +645,12 @@
           <!-- Cualitativos Tab Content -->
           <div v-else-if="mainTabType === 'cualitativos'" class="p-6">
             <div v-if="filteredComments.length === 0" class="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
-              No hay comentarios disponibles con los filtros actuales.
+              {{ t('No comments available with current filters.') }}
             </div>
             <div v-else>
               <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                Comentarios por Factor
-                <span class="text-sm font-normal text-gray-600 ml-2">({{ filteredComments.length }} comentarios)</span>
+                {{ t('Comments by Factor') }}
+                <span class="text-sm font-normal text-gray-600 ml-2">({{ filteredComments.length }} {{ t('comments') }})</span>
               </h3>
               
               <div class="space-y-4">
@@ -657,7 +660,7 @@
                     <div v-for="(comment, index) in commentsGroup" :key="`${factor}-${index}`" class="bg-gray-50 rounded p-3">
                       <p class="text-sm text-gray-700">{{ comment.comment }}</p>
                       <p class="text-xs text-gray-500 mt-1">
-                        Folio: {{ comment.folio }} 
+                        {{ t('Folio') }}: {{ comment.folio }} 
                         <span v-if="comment.name" class="ml-2">- {{ comment.name }}</span>
                       </p>
                     </div>
@@ -686,19 +689,19 @@
         <table class="min-w-full text-sm">
           <thead>
             <tr class="text-left text-gray-600">
-              <th class="py-2 pr-4">Folio</th>
-              <th class="py-2 pr-4">Nombre</th>
-              <th class="py-2 pr-4 text-center">Clima Laboral</th>
+              <th class="py-2 pr-4">{{ t('Folio') }}</th>
+              <th class="py-2 pr-4">{{ t('Name') }}</th>
+              <th class="py-2 pr-4 text-center">{{ t('Work Climate') }}</th>
               <th class="py-2"></th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="foliosModalItems.length === 0">
-              <td colspan="4" class="py-4 text-gray-500">No hay folios para este nivel.</td>
+              <td colspan="4" class="py-4 text-gray-500">{{ t('No folios for this level.') }}</td>
             </tr>
             <tr v-for="item in foliosModalItems" :key="item.folio" class="border-t">
               <td class="py-2 pr-4 font-medium">{{ item.folio }}</td>
-              <td class="py-2 pr-4">{{ item.name || 'Sin nombre' }}</td>
+              <td class="py-2 pr-4">{{ item.name || t('No name') }}</td>
               <td class="py-2 pr-4 text-center">
                 <span 
                   class="inline-block px-2 py-1 rounded text-xs font-bold"
@@ -713,7 +716,7 @@
                   target="_blank"
                   class="inline-flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
-                  Ver datos
+                  {{ t('View data') }}
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 3h7m0 0v7m0-7L10 14" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10v10a1 1 0 001 1h10" />
@@ -725,7 +728,7 @@
         </table>
       </div>
       <div class="p-4 border-t flex justify-end flex-shrink-0">
-        <button @click="closeFoliosModal" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Cerrar</button>
+        <button @click="closeFoliosModal" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">{{ t('Close') }}</button>
       </div>
     </div>
   </div>
@@ -734,7 +737,7 @@
   <div v-if="showExportByLevelModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click="closeExportByLevelModal">
     <div class="bg-white rounded-lg shadow-2xl w-full max-w-md flex flex-col" @click.stop>
       <div class="flex items-center justify-between p-4 border-b flex-shrink-0">
-        <h3 class="text-lg font-semibold">Exportar por Nivel de Clima Laboral</h3>
+        <h3 class="text-lg font-semibold">{{ t('Export by Work Climate Level') }}</h3>
         <button @click="closeExportByLevelModal" class="text-gray-500 hover:text-gray-700">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -742,7 +745,7 @@
         </button>
       </div>
       <div class="p-6">
-        <p class="text-sm text-gray-600 mb-4">Selecciona los niveles de clima laboral que deseas exportar:</p>
+        <p class="text-sm text-gray-600 mb-4">{{ t('Select the work climate levels you want to export:') }}</p>
         <div class="space-y-3">
           <label 
             v-for="level in climaLaboralLevels" 
@@ -762,14 +765,14 @@
             <div class="flex-1">
               <span class="font-medium" :class="selectedExportLevels.includes(level.key) ? level.textSelected : 'text-gray-900'">{{ level.label }}</span>
               <span class="ml-2 text-sm" :class="selectedExportLevels.includes(level.key) ? level.textSelected : 'text-gray-500'">
-                ({{ filteredClimaLaboralDistribution[level.key] || 0 }} personas)
+                ({{ filteredClimaLaboralDistribution[level.key] || 0 }} {{ t('people') }})
               </span>
             </div>
           </label>
         </div>
         <div class="mt-4 p-3 bg-gray-50 rounded-lg">
           <p class="text-sm text-gray-700">
-            <span class="font-medium">Total seleccionado:</span> {{ selectedExportCount }} personas
+            <span class="font-medium">{{ t('Total selected:') }}</span> {{ selectedExportCount }} {{ t('people') }}
           </p>
         </div>
         <div v-if="exportByLevelError" class="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
@@ -778,7 +781,7 @@
       </div>
       <div class="p-4 border-t flex justify-end gap-3 flex-shrink-0">
         <button @click="closeExportByLevelModal" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
-          Cancelar
+          {{ t('Cancel') }}
         </button>
         <button 
           @click="downloadByLevel"
@@ -792,7 +795,7 @@
           <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          {{ isExportingByLevel ? 'Descargando...' : 'Descargar Excel' }}
+          {{ isExportingByLevel ? t('Downloading...') : t('Download Excel') }}
         </button>
       </div>
     </div>
@@ -805,8 +808,12 @@ import Dashboard from '@/Layouts/Dashboard.vue'
 import { Chart, registerables } from 'chart.js'
 import { Link, router } from '@inertiajs/vue3'
 import axios from 'axios'
+import { useTranslations } from '@/composables/useTranslations'
+import LanguageSwitcher from '@/Components/LanguageSwitcher.vue'
 
 Chart.register(...registerables)
+
+const { t } = useTranslations()
 
 const props = defineProps({
   organizationId: {
