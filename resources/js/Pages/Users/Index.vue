@@ -167,9 +167,9 @@ const handleDisableUser = (user) => {
 
                                 <!-- Organización -->
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center gap-2">
-                                        <img v-if="user.organization?.logo" :src="user.organization.logo" alt="Logo" class="h-6 w-6 object-contain" />
-                                        <span class="text-sm text-gray-900">{{ user.organization.name }}</span>
+                                    <div class="flex flex-col items-start gap-2">
+                                        <img v-if="user.organization?.logo" :src="user.organization.logo" alt="Logo" class="h-6 object-contain" />
+                                        <span v-else class="text-sm text-wrap text-gray-900">{{ user.organization.name }}</span>
                                     </div>
                                 </td>
 
@@ -197,7 +197,7 @@ const handleDisableUser = (user) => {
 
                                 <!-- Acciones -->
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div class="flex items-center justify-end gap-3">
+                                    <div class="flex flex-col items-start justify-end gap-3">
                                         <a
                                             :href="route('users.edit', user.id)"
                                             class="text-blue-600 hover:text-blue-900 inline-flex items-center gap-1"

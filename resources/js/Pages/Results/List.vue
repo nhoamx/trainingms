@@ -256,8 +256,9 @@
                                     </td>
 
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        <!-- Nombre: mostrar evaluee_name si existe, si no '-' -->
-                                        <div class="text-sm text-gray-900">{{ group.evaluee_name ? group.evaluee_name : '-' }}</div>
+                                        <!-- Nombre: mostrar evaluee_name si existe, si no '-' - Solo visible para admin/super admin -->
+                                        <div class="text-sm text-gray-900" v-if="isAdmin || isSuperAdmin">{{ group.evaluee_name ? group.evaluee_name : '-' }}</div>
+                                        <div class="text-sm text-gray-600" v-else>***</div>
                                     </td>
 
                                     <td class="px-6 py-4 whitespace-nowrap">

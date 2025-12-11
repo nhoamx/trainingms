@@ -68,76 +68,74 @@ export interface FODAItem {
 
 const FODAData: FODAItem[] = [
   {
-    factor: "Entorno Laboral Seguro",
-    fortaleza: "Prácticas consistentes y liderazgo que gestiona riesgos psicosociales y operativos.",
-    debilidad: "Prevención de la violencia laboral, sobrecarga u horas extra descontroladas.",
-    oportunidad: "Alinear programas NOM-035 con auditorías internas y liderazgo preventivo.",
-    amenaza: "Accidentes, sanciones, deterioro del clima y paros operativos."
+    factor: t('Safe Work Environment'),
+    fortaleza: t('Safe Work Environment Strength'),
+    debilidad: t('Safe Work Environment Weakness'),
+    oportunidad: t('Safe Work Environment Opportunity'),
+    amenaza: t('Safe Work Environment Threat')
   },
   {
-    factor: "Seguridad Laboral",
-    fortaleza: "Percepción de estabilidad y esfuerzos visibles contra la rotación.",
-    debilidad: "Incertidumbre laboral que afecta compromiso y desempeño.",
-    oportunidad: "Estrategias de retención y comunicación del rumbo del negocio.",
-    amenaza: "Volatilidad económica y competencia por talento."
+    factor: t('Job Security'),
+    fortaleza: t('Job Security Strength'),
+    debilidad: t('Job Security Weakness'),
+    oportunidad: t('Job Security Opportunity'),
+    amenaza: t('Job Security Threat')
   },
   {
-    factor: "Compensación Justa",
-    fortaleza: "Paquetes competitivos y equitativos.",
-    debilidad: "Inequidad o rezago salarial que alimente rotación.",
-    oportunidad: "Revisión de tabuladores y beneficios flexibles.",
-    amenaza: "Inflación y presión del mercado/sindicatos."
+    factor: t('Fair Compensation'),
+    fortaleza: t('Fair Compensation Strength'),
+    debilidad: t('Fair Compensation Weakness'),
+    oportunidad: t('Fair Compensation Opportunity'),
+    amenaza: t('Fair Compensation Threat')
   },
   {
-    factor: "Comunicación Abierta",
-    fortaleza: "Comunicación regular y trato justo de líderes clave.",
-    debilidad: "Rumores, favoritismo percibido, baja credibilidad jerárquica.",
-    oportunidad: "Estandarizar canales, formación en liderazgo justo.",
-    amenaza: "Crisis operativas que deterioren confianza."
+    factor: t('Open Communication'),
+    fortaleza: t('Open Communication Strength'),
+    debilidad: t('Open Communication Weakness'),
+    oportunidad: t('Open Communication Opportunity'),
+    amenaza: t('Open Communication Threat')
   },
   {
-    factor: "Participación de los Empleados",
-    fortaleza: "Involucramiento real en decisiones y mejoras.",
-    debilidad: "Desconexión del personal y resistencia al cambio.",
-    oportunidad: "Sistemas de sugerencias y mejora continua.",
-    amenaza: "Cultura cínica si no se implementan aportes."
+    factor: t('Employee Participation'),
+    fortaleza: t('Employee Participation Strength'),
+    debilidad: t('Employee Participation Weakness'),
+    oportunidad: t('Employee Participation Opportunity'),
+    amenaza: t('Employee Participation Threat')
   },
   {
-    factor: "Reconocimiento y Recompensa",
-    fortaleza: "Reconocimiento frecuente y recompensas por confiabilidad.",
-    debilidad: "Esfuerzo no valorado y percepción de arbitrariedad.",
-    oportunidad: "Programas de reconocimiento y rutas de incentivos.",
-    amenaza: "Restricciones presupuestales y fatiga organizacional."
+    factor: t('Recognition and Reward'),
+    fortaleza: t('Recognition and Reward Strength'),
+    debilidad: t('Recognition and Reward Weakness'),
+    oportunidad: t('Recognition and Reward Opportunity'),
+    amenaza: t('Recognition and Reward Threat')
   },
   {
-    factor: "Capacitación y Desarrollo",
-    fortaleza: "Capacitación adecuada y recursos suficientes.",
-    debilidad: "Falta de capacitación a los líderes.",
-    oportunidad: "Academias internas e instructores certificados.",
-    amenaza: "Cambios tecnológicos y rotación alta."
+    factor: t('Training and Development'),
+    fortaleza: t('Training and Development Strength'),
+    debilidad: t('Training and Development Weakness'),
+    oportunidad: t('Training and Development Opportunity'),
+    amenaza: t('Training and Development Threat')
   },
   {
-    factor: "Equilibrio Vida-Trabajo",
-    fortaleza: "Turnos razonables y políticas respetuosas.",
-    debilidad: "Fatiga, estrés y conflictos disciplinarios.",
-    oportunidad: "Rediseño de turnos y balance de cargas.",
-    amenaza: "Picos de demanda y presión por productividad."
+    factor: t('Work-Life Balance'),
+    fortaleza: t('Work-Life Balance Strength'),
+    debilidad: t('Work-Life Balance Weakness'),
+    oportunidad: t('Work-Life Balance Opportunity'),
+    amenaza: t('Work-Life Balance Threat')
   },
   {
-    factor: "Avance Profesional",
-    fortaleza: "Caminos claros e inversión en desarrollo.",
-    debilidad: "Estancamiento y dependencia de contratación externa.",
-    oportunidad: "Mapas de carrera y planes de sucesión.",
-    amenaza: "Competidores con mejores rutas de crecimiento."
+    factor: t('Professional Advancement'),
+    fortaleza: t('Professional Advancement Strength'),
+    debilidad: t('Professional Advancement Weakness'),
+    oportunidad: t('Professional Advancement Opportunity'),
+    amenaza: t('Professional Advancement Threat')
   },
   {
-    factor: "Apoyo al Empleado",
-    fortaleza: "Recursos accesibles de apoyo personal/laboral.",
-    debilidad: "Estrés no atendido y aumento de ausentismo.",
-    oportunidad: "Convenios de asistencia y campañas de bienestar.",
-    amenaza: "Estigma y aumento general de riesgos psicosociales."
+    factor: t('Employee Support'),
+    fortaleza: t('Employee Support Strength'),
+    debilidad: t('Employee Support Weakness'),
+    oportunidad: t('Employee Support Opportunity'),
+    amenaza: t('Employee Support Threat')
   }
 ];
-
-
 </script>

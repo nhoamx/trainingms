@@ -4,8 +4,8 @@
             <!-- Header with navigation -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
                 <div class="flex justify-between items-center">
-                    <div class="flex items-center space-x-4">
-                        <Link
+                    <div  class="flex items-center space-x-4">
+                        <Link v-if="isAdmin"
                             :href="route('organization.results.list', { organization: organization.id })"
                             class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 flex items-center"
                         >
@@ -23,7 +23,7 @@
                         <div class="text-gray-600">
                             <p class="text-lg font-semibold">{{ organization.name }}</p>
                             <p>{{ t('Personal Folio') }}: {{ personalFolio }}</p>
-                            <p>{{ t('Name') }}: {{ evaluation.evaluee_name || t('No name assigned') }}</p>
+                            <p v-if="isAdmin">{{ t('Name') }}: {{ evaluation.evaluee_name || t('No name assigned') }}</p>
                             <p>{{ t('Date') }}: {{ evaluation.created_at }}</p>
                         </div>
                     </div>
@@ -318,8 +318,8 @@
             <!-- Modal Body -->
             <div class="flex-1 overflow-auto p-6">
                 <form @submit.prevent="submitForm" class="space-y-6">
-                    <!-- Evaluee Name -->
-                    <div>
+                    <!-- Evaluee Name - Solo visible para admin/super admin -->
+                    <div v-if="isAdmin">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             {{ t('Evaluee Name') }}
                         </label>

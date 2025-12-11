@@ -690,18 +690,18 @@
           <thead>
             <tr class="text-left text-gray-600">
               <th class="py-2 pr-4">{{ t('Folio') }}</th>
-              <th class="py-2 pr-4">{{ t('Name') }}</th>
+              <th v-if="isAdmin || isSuperAdmin" class="py-2 pr-4">{{ t('Name') }}</th>
               <th class="py-2 pr-4 text-center">{{ t('Work Climate') }}</th>
               <th class="py-2"></th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="foliosModalItems.length === 0">
-              <td colspan="4" class="py-4 text-gray-500">{{ t('No folios for this level.') }}</td>
+              <td :colspan="isAdmin || isSuperAdmin ? 4 : 3" class="py-4 text-gray-500">{{ t('No folios for this level.') }}</td>
             </tr>
             <tr v-for="item in foliosModalItems" :key="item.folio" class="border-t">
               <td class="py-2 pr-4 font-medium">{{ item.folio }}</td>
-              <td class="py-2 pr-4">{{ item.name || t('No name') }}</td>
+              <td v-if="isAdmin || isSuperAdmin" class="py-2 pr-4">{{ item.name || t('No name') }}</td>
               <td class="py-2 pr-4 text-center">
                 <span 
                   class="inline-block px-2 py-1 rounded text-xs font-bold"

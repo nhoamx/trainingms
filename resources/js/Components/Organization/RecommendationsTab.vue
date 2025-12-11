@@ -25,28 +25,21 @@
                     <!-- Entorno Laboral Seguro -->
                     <tr class="">
                         <td class="border-b border-gray-100 p-4 text-gray-800  px-6 py-4">
-                            <span class="font-bold text-lg">Entorno Laboral Seguro</span>
+                            <span class="font-bold text-lg">{{ t('Safe Work Environment') }}</span>
                             <p>
-                                Explora si la empresa prioriza la seguridad física con prácticas constantes y si el
-                                liderazgo atiende activamente riesgos organizacionales que pueden afectar el bienestar
-                                (p. ej., acoso, horas extra excesivas, sobrecarga, alta rotación, brechas de
-                                capacitación o falta de control del trabajo).
+                                {{ t('Safe Work Environment Description') }}
                             </p>
                         </td>
                         <td class="border-b border-gray-100 p-4 text-gray-800 ">
                             <ul class="list-decimal list-inside space-y-2 marker:font-bold">
-                                <li>Implementar rutina diaria de seguridad por turno (charla breve + checklist de
-                                    riesgos).</li>
-                                <li>Activar protocolo anti acoso con canal confidencial, investigación y sanciones
-                                    claras.</li>
-                                <li>Diagnóstico de cargas y horas extra por línea/área y plan de reducción escalonado.
-                                </li>
-                                <li>Establecer comité de riesgos psicosociales con metas trimestrales y seguimiento
-                                    visible.</li>
+                                <li>{{ t('Safe Work Environment Action 1') }}</li>
+                                <li>{{ t('Safe Work Environment Action 2') }}</li>
+                                <li>{{ t('Safe Work Environment Action 3') }}</li>
+                                <li>{{ t('Safe Work Environment Action 4') }}</li>
                             </ul>
                         </td>
                         <td class="border-b border-gray-100 p-4 text-gray-500 ">
-                            Recursos Humanos
+                            {{ t('Safe Work Environment HR') }}
                         </td>
                     </tr>
 
@@ -78,23 +71,21 @@
                     <!-- Compensación Justa -->
                     <tr>
                         <td class="border-b border-gray-100 p-4 text-gray-800 text-justify">
-                            <span class="font-bold text-lg">Compensación Justa</span>
+                            <span class="font-bold text-lg">{{ t('Fair Compensation') }}</span>
                             <p>
-                                Evalúa si el personal percibe que salario y beneficios son equitativos y competitivos
-                                frente a lo que ofrece la industria.
+                                {{ t('Fair Compensation Description') }}
                             </p>
                         </td>
                         <td class="border-b border-gray-100 p-4 text-gray-800 ">
                             <ul class="list-decimal list-inside space-y-2 marker:font-bold">
-                                <li>Ejecutar benchmark salarial contra industria y región.</li>
-                                <li>Corregir brechas con ajustes por bandas y equidad interna.</li>
-                                <li>Transparentar estructura de compensación y beneficios mediante comunicación clara.
-                                </li>
-                                <li>Vincular incentivos a seguridad, calidad y productividad con reglas simples.</li>
+                                <li>{{ t('Fair Compensation Action 1') }}</li>
+                                <li>{{ t('Fair Compensation Action 2') }}</li>
+                                <li>{{ t('Fair Compensation Action 3') }}</li>
+                                <li>{{ t('Fair Compensation Action 4') }}</li>
                             </ul>
                         </td>
                         <td class="border-b border-gray-100 p-4 text-gray-500 ">
-                            Compensaciones<br />Dirección
+                            {{ t('Fair Compensation Department') }}
                         </td>
                     </tr>
 
