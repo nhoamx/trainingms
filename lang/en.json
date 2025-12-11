@@ -91,6 +91,7 @@
     "Workers": "Workers",
     "Satisfactory Level": "Satisfactory Level",
     "Unsatisfactory Level": "Unsatisfactory Level",
+    "Most Critical Factors": "Most Critical Factors",
     "Recommended Actions": "Recommended Actions",
     "Total": "Total",
     "Totally Agree": "Totally Agree",
@@ -382,5 +383,9 @@
     "Employee Support Strength": "Accessible resources for personal/work support.",
     "Employee Support Weakness": "Unaddressed stress and increased absenteeism.",
     "Employee Support Opportunity": "Assistance agreements and wellness campaigns.",
-    "Employee Support Threat": "Stigma and increased psychosocial risks."
+    "Employee Support Threat": "Stigma and increased psychosocial risks.",
+
+    "Factors": "Factors",
+    "Satisfactory Level": "Satisfactory Level",
+    "Recommended Actions": "Recommended Actions"
 }

@@ -134,7 +134,7 @@
                             {{ scores.total_score }}
                         </div>
                         <div class="text-sm opacity-90" :class="getClimaLaboralTextClass(scores.total_score)">
-                            {{ t('Interpretation') }}: <span class="font-semibold">{{ scores.interpretation }}</span>
+                            {{ t('Interpretation') }}: <span class="font-semibold">{{ translateInterpretation(scores.interpretation) }}</span>
                         </div>
                     </div>
 
@@ -201,13 +201,13 @@
                         :key="name"
                         class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                     >
-                        <h4 class="text-sm font-semibold text-gray-700 mb-2">{{ name }}</h4>
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">{{ translateDimension(name) }}</h4>
                         <div class="flex items-center justify-between">
                             <div class="text-3xl font-bold" :class="getScoreColorClass(name, dimension.score)">
                                 {{ dimension.score }}
                             </div>
                             <div class="text-xs text-gray-500 text-right">
-                                <div>{{ dimension.interpretation }}</div>
+                                <div>{{ translateInterpretation(dimension.interpretation) }}</div>
                                 <div class="mt-1 text-gray-400">
                                     {{ dimension.questions.length }} {{ dimension.questions.length > 1 ? t('questions') : t('question') }}
                                 </div>
@@ -234,7 +234,7 @@
                                     <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">
                                         P{{ question.number }}
                                     </span>
-                                    <span class="text-xs text-gray-500">{{ question.dimension }}</span>
+                                    <span class="text-xs text-gray-500">{{ translateDimension(question.dimension) }}</span>
                                 </div>
                                 <p class="text-sm text-gray-700">{{ question.text }}</p>
                             </div>
@@ -504,6 +504,39 @@ import { useTranslations } from '@/composables/useTranslations'
 
 const { t } = useTranslations()
 
+// Dimension name translations
+const dimensionTranslations = {
+  'Entorno Laboral Seguro': 'Safe Work Environment',
+  'Seguridad Laboral': 'Job Security',
+  'Compensación Justa': 'Fair Compensation',
+  'Comunicación Abierta': 'Open Communication',
+  'Participación de los Empleados': 'Employee Participation',
+  'Reconocimiento y Recompensa': 'Recognition and Reward',
+  'Capacitación y Desarrollo': 'Training and Development',
+  'Equilibrio entre Vida Laboral y Personal': 'Work-Life Balance',
+  'Avance Profesional': 'Professional Advancement',
+  'Apoyo al Empleado': 'Employee Support',
+  'Clima Laboral': 'Work Climate',
+}
+
+// Interpretation translations
+const interpretationTranslations = {
+  'Totalmente de Acuerdo': 'Totally Agree',
+  'De Acuerdo': 'Agree',
+  'Desacuerdo': 'Disagree',
+  'Totalmente Desacuerdo': 'Totally Disagree',
+}
+
+// Helper to translate dimension name
+const translateDimension = (name) => {
+  return dimensionTranslations[name] || name
+}
+
+// Helper to translate interpretation
+const translateInterpretation = (interpretation) => {
+  return interpretationTranslations[interpretation] || interpretation
+}
+
 const props = defineProps({
     organization: Object,
     personalFolio: String,
@@ -662,69 +695,70 @@ const getQuestionBorderClass = (answer) => {
 
 // Helper: Get color class based on dimension score and ranges from config
 const getScoreColorClass = (dimensionName, score) => {
-    // valorNiveles ranges from config/likert-value.php
+    // valorNiveles ranges from config/likert-value.php - using translated names
+    const translatedName = translateDimension(dimensionName)
     const ranges = {
-        'Entorno Laboral Seguro': [
-            { min: 6.6, max: 8, color: 'text-blue-400' },      // Totalmente de Acuerdo
-            { min: 5.1, max: 6.5, color: 'text-green-600' },   // De Acuerdo
-            { min: 3.6, max: 5, color: 'text-yellow-500' },    // Desacuerdo
-            { min: 2, max: 3.5, color: 'text-red-600' },       // Totalmente Desacuerdo
+        'Safe Work Environment': [
+            { min: 6.6, max: 8, color: 'text-blue-400' },      // Totally Agree
+            { min: 5.1, max: 6.5, color: 'text-green-600' },   // Agree
+            { min: 3.6, max: 5, color: 'text-yellow-500' },    // Disagree
+            { min: 2, max: 3.5, color: 'text-red-600' },       // Totally Disagree
         ],
-        'Seguridad Laboral': [
+        'Job Security': [
             { min: 6.6, max: 8, color: 'text-blue-400' },
             { min: 5.1, max: 6.5, color: 'text-green-600' },
             { min: 3.6, max: 5, color: 'text-yellow-500' },
             { min: 2, max: 3.5, color: 'text-red-600' },
         ],
-        'Compensación Justa': [
+        'Fair Compensation': [
             { min: 3.26, max: 4, color: 'text-blue-400' },
             { min: 2.6, max: 3.25, color: 'text-green-600' },
             { min: 1.76, max: 2.5, color: 'text-yellow-500' },
             { min: 1, max: 1.75, color: 'text-red-600' },
         ],
-        'Comunicación Abierta': [
+        'Open Communication': [
             { min: 19.6, max: 24, color: 'text-blue-400' },
             { min: 15.1, max: 19.5, color: 'text-green-600' },
             { min: 10.6, max: 15, color: 'text-yellow-500' },
             { min: 6, max: 10.5, color: 'text-red-600' },
         ],
-        'Participación de los Empleados': [
+        'Employee Participation': [
             { min: 9.76, max: 12, color: 'text-blue-400' },
             { min: 7.6, max: 9.75, color: 'text-green-600' },
             { min: 5.26, max: 7.5, color: 'text-yellow-500' },
             { min: 3, max: 5.25, color: 'text-red-600' },
         ],
-        'Reconocimiento y Recompensa': [
+        'Recognition and Reward': [
             { min: 6.6, max: 8, color: 'text-blue-400' },
             { min: 5.1, max: 6.5, color: 'text-green-600' },
             { min: 3.6, max: 5, color: 'text-yellow-500' },
             { min: 2, max: 3.5, color: 'text-red-600' },
         ],
-        'Capacitación y Desarrollo': [
+        'Training and Development': [
             { min: 6.6, max: 8, color: 'text-blue-400' },
             { min: 5.1, max: 6.5, color: 'text-green-600' },
             { min: 3.6, max: 5, color: 'text-yellow-500' },
             { min: 2, max: 3.5, color: 'text-red-600' },
         ],
-        'Equilibrio entre Vida Laboral y Personal': [
+        'Work-Life Balance': [
             { min: 6.6, max: 8, color: 'text-blue-400' },
             { min: 5.1, max: 6.5, color: 'text-green-600' },
             { min: 3.6, max: 5, color: 'text-yellow-500' },
             { min: 2, max: 3.5, color: 'text-red-600' },
         ],
-        'Avance Profesional': [
+        'Professional Advancement': [
             { min: 6.6, max: 8, color: 'text-blue-400' },
             { min: 5.1, max: 6.5, color: 'text-green-600' },
             { min: 3.6, max: 5, color: 'text-yellow-500' },
             { min: 2, max: 3.5, color: 'text-red-600' },
         ],
-        'Apoyo al Empleado': [
+        'Employee Support': [
             { min: 3.26, max: 4, color: 'text-blue-400' },
             { min: 2.6, max: 3.25, color: 'text-green-600' },
             { min: 1.76, max: 2.5, color: 'text-yellow-500' },
             { min: 1, max: 1.75, color: 'text-red-600' },
         ],
-        'Clima Laboral': [
+        'Work Climate': [
             { min: 75.6, max: 93, color: 'text-blue-400' },
             { min: 59, max: 75.5, color: 'text-green-600' },
             { min: 40.6, max: 58, color: 'text-yellow-500' },
@@ -732,7 +766,7 @@ const getScoreColorClass = (dimensionName, score) => {
         ],
     }
 
-    const dimensionRanges = ranges[dimensionName] || ranges['Clima Laboral']
+    const dimensionRanges = ranges[translatedName] || ranges['Work Climate']
     
     for (const range of dimensionRanges) {
         if (score >= range.min && score <= range.max) {

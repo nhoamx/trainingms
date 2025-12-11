@@ -132,27 +132,27 @@
                   >
                     {{ index + 1 }}
                   </span>
-                  <span class="font-medium text-gray-900">{{ factor.name }}</span>
+                  <span class="font-medium text-gray-900">{{ translateDimension(factor.name) }}</span>
                 </div>
               </td>
               <td class="px-6 py-4 text-center">
                 <span class="inline-flex items-center justify-center w-10 h-10 bg-green-50 rounded-lg font-semibold text-green-700">
-                  {{ factor.counts['Totalmente de Acuerdo'] || 0 }}
+                  {{ factor.counts['Totally Agree'] || 0 }}
                 </span>
               </td>
               <td class="px-6 py-4 text-center">
                 <span class="inline-flex items-center justify-center w-10 h-10 bg-blue-50 rounded-lg font-semibold text-blue-700">
-                  {{ factor.counts['De Acuerdo'] || 0 }}
+                  {{ factor.counts['Agree'] || 0 }}
                 </span>
               </td>
               <td class="px-6 py-4 text-center">
                 <span class="inline-flex items-center justify-center w-10 h-10 bg-yellow-50 rounded-lg font-semibold text-yellow-700">
-                  {{ factor.counts['Desacuerdo'] || 0 }}
+                  {{ factor.counts['Disagree'] || 0 }}
                 </span>
               </td>
               <td class="px-6 py-4 text-center">
                 <span class="inline-flex items-center justify-center w-10 h-10 bg-red-50 rounded-lg font-semibold text-red-700">
-                  {{ factor.counts['Totalmente Desacuerdo'] || 0 }}
+                  {{ factor.counts['Totally Disagree'] || 0 }}
                 </span>
               </td>
             </tr>
@@ -177,7 +177,7 @@
       
       <div class="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
         <div v-for="(count, label) in commentCounts" :key="label" class="flex justify-between">
-          <span class="text-gray-700">{{ label }}</span>
+          <span class="text-gray-700">{{ translateDimension(label) }}</span>
           <span class="font-semibold text-gray-900">{{ count }}</span>
         </div>
       </div>
@@ -262,6 +262,33 @@ const filters = ref({
 const commentChartCanvas = ref<HTMLCanvasElement>();
 const chartInstances = ref<Record<string, Chart>>({});
 
+// Map Spanish interpretations to English keys
+const interpretationMap = {
+  'Totalmente de Acuerdo': 'Totally Agree',
+  'De Acuerdo': 'Agree',
+  'Desacuerdo': 'Disagree',
+  'Totalmente Desacuerdo': 'Totally Disagree',
+};
+
+// Map Spanish dimension names to English
+const dimensionMap = {
+  'Entorno Laboral Seguro': 'Safe Work Environment',
+  'Seguridad Laboral': 'Job Security',
+  'Compensación Justa': 'Fair Compensation',
+  'Comunicación Abierta': 'Open Communication',
+  'Participación de los Empleados': 'Employee Participation',
+  'Reconocimiento y Recompensa': 'Recognition and Reward',
+  'Capacitación y Desarrollo': 'Training and Development',
+  'Equilibrio entre Vida Laboral y Personal': 'Work-Life Balance',
+  'Avance Profesional': 'Professional Advancement',
+  'Apoyo al Empleado': 'Employee Support',
+};
+
+// Helper to translate dimension name
+const translateDimension = (name) => {
+  return dimensionMap[name] || name;
+};
+
 // Reset filters function
 const resetFilters = (): void => {
   filters.value.gender = '';
@@ -309,15 +336,15 @@ const topThreeFactors = computed(() => {
     evaluation.dimensions.forEach((dimension: DimensionScore) => {
       if (!factorMap[dimension.name]) {
         factorMap[dimension.name] = {
-          'Totalmente de Acuerdo': 0,
-          'De Acuerdo': 0,
-          'Desacuerdo': 0,
-          'Totalmente Desacuerdo': 0,
+          'Totally Agree': 0,
+          'Agree': 0,
+          'Disagree': 0,
+          'Totally Disagree': 0,
         };
       }
 
       // Map interpretation to agreement level
-      const interpretation = dimension.interpretation || '';
+      const interpretation = interpretationMap[dimension.interpretation] || dimension.interpretation || '';
       if (factorMap[dimension.name][interpretation] !== undefined) {
         factorMap[dimension.name][interpretation]++;
       }
@@ -328,7 +355,7 @@ const topThreeFactors = computed(() => {
   const factors: RiskFactor[] = Object.entries(factorMap).map(([name, counts]) => ({
     name,
     counts: counts as Record<string, number>,
-    disagreementSum: (counts['Desacuerdo'] || 0) + (counts['Totalmente Desacuerdo'] || 0),
+    disagreementSum: (counts['Disagree'] || 0) + (counts['Totally Disagree'] || 0),
   }));
 
   // Sort by disagreement sum (descending) and return top 3
