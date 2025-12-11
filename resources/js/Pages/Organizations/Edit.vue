@@ -8,7 +8,9 @@ import Alert from '../../Components/Alert.vue'
 import FormInput from "../../Components/FormInput.vue"
 import Folios from './components/Folios.vue'
 import ImportDataModal from '../../Components/ImportDataModal.vue'
-import { defineProps } from 'vue'
+import ClimaExporter from '../../Components/ClimaExporter.vue'
+import { defineProps, computed } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 
 // Recibimos la organización desde el backend
 const { organization } = defineProps({
@@ -17,6 +19,14 @@ const { organization } = defineProps({
         required: true,
     },
 });
+
+// Check if user is admin
+const page = usePage()
+const isAdmin = computed(() => {
+    const user = page.props.auth?.user
+    const roles = user?.roles || []
+    return roles.some(role => ['admin', 'super-admin'].includes(role.name))
+})
 
 // Creamos el formulario con datos iniciales basados en la organización
 const form = useForm({
@@ -334,6 +344,14 @@ const handleImportAreasSuccess = () => {
                         :class="activeTab === 'folios' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700'"
                     >
                         Folios
+                    </button>
+                    <button
+                        v-if="isAdmin"
+                        @click="changeTab('clima-export')"
+                        class="px-3 py-2 text-sm font-medium rounded-md transition-colors"
+                        :class="activeTab === 'clima-export' ? 'bg-teal-100 text-teal-700' : 'text-gray-500 hover:text-gray-700'"
+                    >
+                        Exportar Clima
                     </button>
                 </div>
             </div>
@@ -750,6 +768,11 @@ const handleImportAreasSuccess = () => {
 
             <div v-else-if="activeTab === 'folios'" class="space-y-6">
                 <Folios :organization="organization" />
+            </div>
+
+            <!-- Pestaña de Exportar Clima (solo admin) -->
+            <div v-else-if="activeTab === 'clima-export' && isAdmin" class="space-y-6">
+                <ClimaExporter :organization-id="organization.id" />
             </div>
 
             <!-- Modal de confirmación de eliminación -->

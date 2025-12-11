@@ -211,6 +211,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('organization.likert.export-by-level')
         ->middleware('can:view-organization-results,organization');
 
+    // Multi-sheet climate export routes (admin only)
+    Route::get('/organizacion/{organization}/clima/export-options', [ResultsController::class, 'getClimaExportOptions'])
+        ->name('organization.clima.export-options')
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
+
+    Route::post('/organizacion/{organization}/clima/export-multi', [ResultsController::class, 'exportClimaMultiSheet'])
+        ->name('organization.clima.export-multi')
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
+
     // Bulk update routes
     Route::get('/organizacion/{organization}/plantilla-actualizacion', [ResultsController::class, 'downloadTemplate'])
         ->name('organization.results.template')

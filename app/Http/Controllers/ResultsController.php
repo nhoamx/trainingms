@@ -428,6 +428,333 @@ class ResultsController extends Controller
         );
     }
 
+    /**
+     * Get available export options for climate export (demographics, custom fields, factors)
+     */
+    public function getClimaExportOptions(Organization $organization, Request $request): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        $user = $request->user();
+
+        if (! $this->isAdminOrSuperAdmin($user)) {
+            abort(403, 'Solo administradores pueden acceder a esta función');
+        }
+
+        // Get evaluation types available for this organization
+        $evaluationTypes = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('processing_status', 'completed')
+            ->distinct()
+            ->pluck('evaluation_type')
+            ->toArray();
+
+        // For now, focus on likert evaluations
+        if (! in_array('likert', $evaluationTypes)) {
+            return response()->json([
+                'evaluationTypes' => $evaluationTypes,
+                'demographics' => [],
+                'customFields' => [],
+                'factors' => [],
+            ]);
+        }
+
+        // Get cached report data
+        $reportData = $this->cacheService->rememberLikertReport($organization->id, function () use ($organization) {
+            return $this->computeLikertReportData($organization);
+        });
+
+        $demographics = $reportData['demographics'] ?? [];
+        $customFieldFilters = $reportData['customFieldFilters'] ?? [];
+
+        // Get unique factors from comments
+        $factors = $reportData['factors'] ?? [];
+
+        // If no factors from comments, use config defaults
+        if (empty($factors)) {
+            $factors = array_keys(config('likert-value.niveles', []));
+        }
+
+        // Build demographic options
+        $demographicOptions = [];
+
+        if (! empty($demographics['generos'])) {
+            $demographicOptions[] = [
+                'key' => 'genero',
+                'label' => 'Género',
+                'values' => $demographics['generos'],
+            ];
+        }
+
+        if (! empty($demographics['turnos'])) {
+            $demographicOptions[] = [
+                'key' => 'turno',
+                'label' => 'Turno',
+                'values' => $demographics['turnos'],
+            ];
+        }
+
+        if (! empty($demographics['tipos_contrato'])) {
+            $demographicOptions[] = [
+                'key' => 'tipo_contrato',
+                'label' => 'Tipo de Contrato',
+                'values' => $demographics['tipos_contrato'],
+            ];
+        }
+
+        if (! empty($demographics['puestos'])) {
+            $demographicOptions[] = [
+                'key' => 'puesto',
+                'label' => 'Puesto',
+                'values' => $demographics['puestos'],
+            ];
+        }
+
+        if (! empty($demographics['areas'])) {
+            $demographicOptions[] = [
+                'key' => 'area',
+                'label' => 'Área',
+                'values' => $demographics['areas'],
+            ];
+        }
+
+        // Build custom field options
+        $customFieldOptions = [];
+        foreach ($customFieldFilters as $fieldKey => $fieldData) {
+            $customFieldOptions[] = [
+                'key' => $fieldKey,
+                'label' => $fieldData['label'] ?? $fieldKey,
+                'values' => $fieldData['values'] ?? [],
+            ];
+        }
+
+        return response()->json([
+            'evaluationTypes' => $evaluationTypes,
+            'demographics' => $demographicOptions,
+            'customFields' => $customFieldOptions,
+            'factors' => $factors,
+        ]);
+    }
+
+    /**
+     * Export multi-sheet Excel with demographic/custom field combinations
+     */
+    public function exportClimaMultiSheet(Organization $organization, Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        $user = $request->user();
+
+        if (! $this->isAdminOrSuperAdmin($user)) {
+            abort(403, 'Solo administradores pueden descargar este reporte');
+        }
+
+        $combinations = $request->input('combinations', []);
+        $selectedFactors = $request->input('factors', []);
+
+        if (empty($combinations)) {
+            return response()->json(['error' => 'Debe agregar al menos una combinación'], 422);
+        }
+
+        if (count($combinations) > 4) {
+            return response()->json(['error' => 'Máximo 4 combinaciones permitidas'], 422);
+        }
+
+        // Get cached report data
+        $reportData = $this->cacheService->rememberLikertReport($organization->id, function () use ($organization) {
+            return $this->computeLikertReportData($organization);
+        });
+
+        $evaluations = $reportData['evaluations'] ?? [];
+        $customFieldFilters = $reportData['customFieldFilters'] ?? [];
+
+        if (empty($evaluations)) {
+            return response()->json(['error' => 'No hay evaluaciones disponibles para exportar'], 404);
+        }
+
+        // Get custom field headers
+        $customFieldHeaders = [];
+        $customFieldKeys = [];
+        foreach ($customFieldFilters as $fieldKey => $fieldData) {
+            $customFieldKeys[] = $fieldKey;
+            $customFieldHeaders[] = $fieldData['label'] ?? $fieldKey;
+        }
+
+        // If no factors selected, use all from config
+        if (empty($selectedFactors)) {
+            $selectedFactors = array_keys(config('likert-value.niveles', []));
+        }
+
+        // Build sheets for each combination
+        $sheets = [];
+        foreach ($combinations as $combination) {
+            $sheetData = $this->buildSheetDataForCombination(
+                $evaluations,
+                $combination,
+                $customFieldKeys,
+                $selectedFactors
+            );
+
+            $sheetTitle = $this->buildSheetTitle($combination);
+
+            $sheets[] = new \App\Exports\LikertCombinationSheetExport(
+                $sheetData,
+                $sheetTitle,
+                $customFieldHeaders,
+                $selectedFactors
+            );
+        }
+
+        $filename = 'clima_combinaciones_'.str_replace(' ', '_', $organization->name).'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(
+            new \App\Exports\MultiSheetLikertExport($sheets),
+            $filename
+        );
+    }
+
+    /**
+     * Build sheet data for a specific combination filter
+     *
+     * @param  array<int, array<string, mixed>>  $evaluations
+     * @param  array<string, mixed>  $combination
+     * @param  array<int, string>  $customFieldKeys
+     * @param  array<int, string>  $selectedFactors
+     * @return array<int, array<int, mixed>>
+     */
+    private function buildSheetDataForCombination(
+        array $evaluations,
+        array $combination,
+        array $customFieldKeys,
+        array $selectedFactors
+    ): array {
+        $filters = $combination['filters'] ?? [];
+        $filteredData = [];
+
+        foreach ($evaluations as $evaluation) {
+            // Apply filters
+            if (! $this->evaluationMatchesFilters($evaluation, $filters)) {
+                continue;
+            }
+
+            // Build row
+            $row = [
+                $evaluation['personal_folio'] ?? $evaluation['folio'] ?? '',
+                $evaluation['evaluee_name'] ?? 'Sin nombre',
+                $evaluation['demographics']['genero'] ?? '',
+                $evaluation['demographics']['tipo_contrato'] ?? '',
+                $evaluation['demographics']['puesto'] ?? '',
+                $evaluation['demographics']['area'] ?? '',
+                $evaluation['demographics']['turno'] ?? '',
+            ];
+
+            // Add custom fields
+            foreach ($customFieldKeys as $fieldKey) {
+                $row[] = $evaluation['customFields'][$fieldKey]['value'] ?? '';
+            }
+
+            // Add factor scores and levels
+            $dimensionScores = $evaluation['scores']['dimensions'] ?? [];
+            $valorNiveles = config('likert-value.valorNiveles', []);
+
+            foreach ($selectedFactors as $factor) {
+                $factorScore = $dimensionScores[$factor]['score'] ?? 0;
+                $row[] = $factorScore ?: '';
+
+                // Calculate factor level based on score and config ranges
+                $factorLevel = $this->getFactorLevel($factorScore, $factor, $valorNiveles);
+                $row[] = $factorLevel;
+            }
+
+            // Add all comments (not filtered by factor)
+            $comments = $evaluation['comments'] ?? [];
+            $allComments = [];
+            foreach ($comments as $comment) {
+                $allComments[] = $comment['factor'].': '.$comment['comment'];
+            }
+            $row[] = implode(' | ', $allComments);
+
+            $filteredData[] = $row;
+        }
+
+        return $filteredData;
+    }
+
+    /**
+     * Get factor level interpretation based on score
+     */
+    private function getFactorLevel(float|int $score, string $factor, array $valorNiveles): string
+    {
+        if (empty($score) || $score == 0) {
+            return '';
+        }
+
+        $ranges = $valorNiveles[$factor] ?? [];
+
+        foreach ($ranges as $level => $range) {
+            $min = $range['min'] ?? 0;
+            $max = $range['max'] ?? 0;
+
+            if ($score >= $min && $score <= $max) {
+                return $level;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Check if evaluation matches all filters
+     *
+     * @param  array<string, mixed>  $evaluation
+     * @param  array<string, mixed>  $filters
+     */
+    private function evaluationMatchesFilters(array $evaluation, array $filters): bool
+    {
+        foreach ($filters as $filter) {
+            $type = $filter['type'] ?? '';
+            $key = $filter['key'] ?? '';
+            $value = $filter['value'] ?? '';
+
+            if ($type === 'demographic') {
+                $evalValue = $evaluation['demographics'][$key] ?? null;
+                if ($evalValue !== $value) {
+                    return false;
+                }
+            } elseif ($type === 'customField') {
+                $evalValue = $evaluation['customFields'][$key]['value'] ?? null;
+                if ($evalValue !== $value) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Build sheet title from combination filters (short format)
+     *
+     * @param  array<string, mixed>  $combination
+     */
+    private function buildSheetTitle(array $combination): string
+    {
+        $filters = $combination['filters'] ?? [];
+        $parts = [];
+
+        foreach ($filters as $filter) {
+            $value = $filter['value'] ?? '';
+            if ($value) {
+                $parts[] = $value;
+            }
+        }
+
+        if (empty($parts)) {
+            return 'Todos';
+        }
+
+        return implode('+', $parts);
+    }
+
     public function organizationResults(Organization $organization, Request $request)
     {
         // Si se proporciona un folio específico, buscar esa evaluación
