@@ -303,15 +303,21 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
         $updated = false;
 
         // Handle DemographicData model (for Likert evaluations)
-        if ($evaluation->demographicData) {
-            $currentValue = $evaluation->demographicData->{$field} ?? null;
+        if (! $evaluation->demographicData) {
+            // Create DemographicData if it doesn't exist
+            $evaluation->demographicData = DemographicData::create([
+                'paper_evaluation_id' => $evaluation->id,
+            ]);
+            Log::info("Created new DemographicData for row {$rowNumber}", ['evaluation_id' => $evaluation->id]);
+        }
 
-            if ($value !== $currentValue) {
-                $evaluation->demographicData->{$field} = $value;
-                $evaluation->demographicData->save();
-                $updated = true;
-                Log::info("Updated DemographicData.{$field} for row {$rowNumber}");
-            }
+        $currentValue = $evaluation->demographicData->{$field} ?? null;
+
+        if ($value !== $currentValue) {
+            $evaluation->demographicData->{$field} = $value;
+            $evaluation->demographicData->save();
+            $updated = true;
+            Log::info("Updated DemographicData.{$field} for row {$rowNumber}");
         }
 
         // Handle referencia_v JSON demographic_data
