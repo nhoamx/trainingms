@@ -662,7 +662,7 @@
                       <p class="text-sm text-gray-700">{{ comment.comment }}</p>
                       <p class="text-xs text-gray-500 mt-1">
                         {{ t('Folio') }}: {{ comment.folio }} 
-                        <span v-if="comment.name" class="ml-2">- {{ comment.name }}</span>
+                        <span v-if="comment.name && isAdmin" class="ml-2">- {{ comment.name }}</span>
                       </p>
                     </div>
                   </div>
