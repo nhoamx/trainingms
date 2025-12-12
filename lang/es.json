@@ -383,5 +383,21 @@
     "Employee Support Strength": "Recursos accesibles de apoyo personal/laboral.",
     "Employee Support Weakness": "Estrés no atendido y aumento de ausentismo.",
     "Employee Support Opportunity": "Convenios de asistencia y campañas de bienestar.",
-    "Employee Support Threat": "Estigma y aumento general de riesgos psicosociales."
+    "Employee Support Threat": "Estigma y aumento general de riesgos psicosociales.",
+
+    "Totalmente de Acuerdo": "Totalmente de Acuerdo",
+    "De Acuerdo": "De Acuerdo",
+    "Desacuerdo": "Desacuerdo",
+    "Totalmente Desacuerdo": "Totalmente Desacuerdo",
+
+    "Entorno Laboral Seguro": "Entorno Laboral Seguro",
+    "Seguridad Laboral": "Seguridad Laboral",
+    "Compensación Justa": "Compensación Justa",
+    "Comunicación Abierta": "Comunicación Abierta",
+    "Participación de los Empleados": "Participación de los Empleados",
+    "Reconocimiento y Recompensa": "Reconocimiento y Recompensa",
+    "Capacitación y Desarrollo": "Capacitación y Desarrollo",
+    "Equilibrio entre Vida Laboral y Personal": "Equilibrio entre Vida Laboral y Personal",
+    "Avance Profesional": "Avance Profesional",
+    "Apoyo al Empleado": "Apoyo al Empleado"
 }

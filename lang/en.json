@@ -96,7 +96,6 @@
     "Total": "Total",
     "Totally Agree": "Totally Agree",
     "Totally Disagree": "Totally Disagree",
-
     "Strength": "Strength",
     "Weakness": "Weakness",
     "Opportunity": "Opportunity",
@@ -387,5 +386,21 @@
 
     "Factors": "Factors",
     "Satisfactory Level": "Satisfactory Level",
-    "Recommended Actions": "Recommended Actions"
+    "Recommended Actions": "Recommended Actions",
+
+    "Totalmente de Acuerdo": "Strongly Agree",
+    "De Acuerdo": "Agree",
+    "Desacuerdo": "Disagree",
+    "Totalmente Desacuerdo": "Strongly Disagree",
+
+    "Entorno Laboral Seguro": "Safe Work Environment",
+    "Seguridad Laboral": "Job Security",
+    "Compensación Justa": "Fair Compensation",
+    "Comunicación Abierta": "Open Communication",
+    "Participación de los Empleados": "Employee Participation",
+    "Reconocimiento y Recompensa": "Recognition and Reward",
+    "Capacitación y Desarrollo": "Training and Development",
+    "Equilibrio entre Vida Laboral y Personal": "Work-Life Balance",
+    "Avance Profesional": "Professional Advancement",
+    "Apoyo al Empleado": "Employee Support"
 }

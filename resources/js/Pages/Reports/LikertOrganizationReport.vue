@@ -226,7 +226,7 @@
               <div class="mb-6 rounded-lg p-6" :class="getLevelColor(getMostCommonInterpretation).bgSolid">
                 <h3 class="text-lg font-semibold mb-2" :class="getLevelColor(getMostCommonInterpretation).text">{{ t('Work Climate') }}</h3>
                 <div class="flex items-baseline gap-3">
-                  <span class="text-3xl font-bold" :class="getLevelColor(getMostCommonInterpretation).text">{{ getMostCommonInterpretation }}</span>
+                  <span class="text-3xl font-bold" :class="getLevelColor(getMostCommonInterpretation).text">{{ t(getMostCommonInterpretation) }}</span>
                   <span class="text-lg opacity-90" :class="getLevelColor(getMostCommonInterpretation).text">/ {{ filteredTotalPeople }} {{ filteredTotalPeople === 1 ? t('person') : t('persons') }}</span>
                 </div>
                 <div class="text-sm mt-2 opacity-90" :class="getLevelColor(getMostCommonInterpretation).text">
@@ -255,7 +255,7 @@
                         @click="openFoliosModal(`Folios en ${level} (Clima Laboral)`, getFoliosForClimaLevel(level))"
                       >
                         <div class="text-2xl font-bold">{{ count }}</div>
-                        <div class="text-xs mt-1">{{ level }}</div>
+                        <div class="text-xs mt-1">{{ t(level) }}</div>
                       </button>
                     </div>
                   </div>
@@ -283,7 +283,7 @@
                     </div>
                     
                     <div class="mb-3 pr-8">
-                      <span class="font-medium text-gray-900">{{ dimName }}</span>
+                      <span class="font-medium text-gray-900">{{ t(dimName) }}</span>
                       <div class="text-xs text-gray-500 mt-1">
                         {{ dim.questionCount }} {{ t('questions') }}
                       </div>
@@ -291,7 +291,7 @@
                     <div class="space-y-2 text-sm">
                       <div v-for="(count, level) in dim.distribution" :key="level" class="flex items-center justify-between gap-2">
                         <span class="px-2 py-1 rounded text-xs font-medium flex-shrink-0" :class="getLevelColor(level).badge">
-                          {{ level }}
+                          {{ t(level) }}
                         </span>
                         <span class="font-medium text-gray-900">{{ count }} {{ count === 1 ? t('person') : t('persons') }}</span>
                       </div>
@@ -311,6 +311,7 @@
                   </div>
                   <div class="flex items-center gap-4">
                     <button
+                      v-if="isAdmin || isSuperAdmin"
                       @click="exportHeatmapToExcel('total')"
                       :disabled="isExportingHeatmap"
                       class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -352,7 +353,7 @@
                             :colspan="dim.questionCount" 
                             class="border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 text-center"
                           >
-                            {{ dimName }}
+                            {{ t(dimName) }}
                           </th>
                         </template>
                       </tr>
@@ -785,6 +786,7 @@
         </button>
         <button 
           @click="downloadByLevel"
+          v-if="isAdmin || isSuperAdmin"
           :disabled="selectedExportLevels.length === 0 || isExportingByLevel"
           class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
