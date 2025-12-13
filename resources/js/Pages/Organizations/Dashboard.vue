@@ -111,10 +111,11 @@
             </div>
 
             <!-- Informe -->
-            <div v-show="activeTab === 'report'" class="text-center py-16">
-              <div class="text-6xl mb-4">📄</div>
-              <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Coming Soon') }}</p>
-              <p class="text-gray-600">{{ t('This section will be enabled in the next version') }}</p>
+            <div v-show="activeTab === 'report'" class="animate-fade-in">
+              <ReportTab
+                :organization-id="dashboardData.organization.id"
+                :organization-name="dashboardData.organization.name"
+              />
             </div>
 
             <div v-show="activeTab === 'evidence'" class="animate-fade-in">
@@ -139,6 +140,7 @@ import RecommendationsTab from '@/Components/Organization/RecommendationsTab.vue
 import EvidencesDataTab from '@/Components/Organization/EvidencesDataTab.vue';
 import FodaDataTab from '@/Components/Organization/FodaDataTab.vue';
 import RecommendationsP3Tab from '@/Components/Organization/RecommendationsP3Tab.vue';
+import ReportTab from '@/Components/Organization/ReportTab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
 import { useTranslations } from '@/composables/useTranslations';
 

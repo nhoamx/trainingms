@@ -17,7 +17,7 @@ class OrganizationDataService
     public function getCompanyData(Organization $organization): array
     {
         return [
-            'logo' => asset('storage/' . $organization->logo),
+            'logo' => asset('storage/'.$organization->logo),
             'general' => [
                 'name' => $organization->name,
                 'razon_social' => $organization->razon_social,
@@ -103,8 +103,10 @@ class OrganizationDataService
      */
     public function getDemographicDetails(Organization $organization): array
     {
-        // Obtener todas las evaluaciones de la organización con datos demográficos
+        // Obtener solo evaluaciones Likert completadas (igual que en LikertOrganizationReport)
         $evaluations = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('evaluation_type', 'likert')
+            ->where('processing_status', 'completed')
             ->with('demographicData')
             ->get();
 
@@ -158,7 +160,7 @@ class OrganizationDataService
             'organization' => [
                 'id' => $organization->id,
                 'name' => $organization->name,
-                'logo' => asset('storage/' . $organization->logo),
+                'logo' => asset('storage/'.$organization->logo),
             ],
             'company_data' => $this->getCompanyData($organization),
             'demographic_summary' => $this->getDemographicSummary($organization),
