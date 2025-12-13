@@ -103,11 +103,99 @@
             </div>
 
             <div v-show="activeTab === 'conclusions'" class="animate-fade-in">
-              <div class="text-center py-16">
-                <div class="text-6xl mb-4">🔍</div>
-                <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Coming Soon') }}</p>
-                <p class="text-gray-600">{{ t('This section will be enabled in the next version') }}</p>
-              </div>
+              <!-- Planta 1 Conclusions -->
+              <template v-if="dashboardData.organization.id === 'a05bc65b-08cd-45d5-8ae1-f4f9d3eb5238'">
+                <div class="max-w-4xl mx-auto">
+                  <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">{{ t('Conclusions') }}</h2>
+                    <p class="text-gray-600">JAROPAMEX S.A. DE C.V. - PLANTA 1</p>
+                    <p class="text-sm text-gray-500 mt-2">
+                      <span class="font-medium">{{ t('Evaluation period') }}:</span> {{ t('November') }} 2025 |
+                      <span class="font-medium">{{ t('Issue date') }}:</span> 10/12/2025
+                    </p>
+                  </div>
+
+                  <!-- Objetivo General -->
+                  <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+                    <h3 class="text-lg font-semibold text-blue-900 mb-2">{{ t('General Objective') }}</h3>
+                    <p class="text-blue-800">
+                      {{ t('Evaluate the perception of employees regarding leadership, communication, recognition, work organization, and well-being, to guide decisions and improvement plans.') }}
+                    </p>
+                  </div>
+
+                  <!-- Análisis -->
+                  <h3 class="text-2xl font-bold text-gray-900 mb-6">{{ t('Analysis') }}</h3>
+
+                  <!-- Factor 1: Reconocimiento -->
+                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
+                    <div class="flex items-center gap-2 mb-3">
+                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
+                      <h4 class="text-xl font-bold text-gray-900">1) {{ t('Recognition and Reward') }}</h4>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                      {{ t('There is a strong perception of lack of recognition and clear rewards, which can impact motivation, discipline, and retention.') }}
+                    </p>
+                    <div class="bg-white rounded-lg p-4">
+                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Priority Actions') }}:</h5>
+                      <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li>{{ t('Immediate recognition program for safety, quality, and attendance.') }}</li>
+                        <li>{{ t('Transparent criteria for critical roles and rewards.') }}</li>
+                        <li>{{ t('Train middle management in leadership best practices, avoiding violence.') }}</li>
+                        <li>{{ t('Staff motivation by supervisors and leaders (they are not identified).') }}</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <!-- Factor 2: Capacitación -->
+                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
+                    <div class="flex items-center gap-2 mb-3">
+                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
+                      <h4 class="text-xl font-bold text-gray-900">2) {{ t('Training and Development') }}</h4>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                      {{ t('A significant gap is observed in effective training and educational resources, with direct risk to quality, rework, and safety.') }}
+                    </p>
+                    <div class="bg-white rounded-lg p-4">
+                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Recommended Actions') }}:</h5>
+                      <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li>{{ t('Skills and gaps matrix by position/team.') }}</li>
+                        <li>{{ t('Train middle management in leadership best practices, avoiding violence.') }}</li>
+                        <li>{{ t('Certify internal instructors.') }}</li>
+                        <li>{{ t('Measure effectiveness with competency tests for internal employee growth.') }}</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <!-- Factor 3: Equilibrio -->
+                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
+                    <div class="flex items-center gap-2 mb-3">
+                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
+                      <h4 class="text-xl font-bold text-gray-900">3) {{ t('Work-Life Balance') }}</h4>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                      {{ t('Responses point to fatigue and pressure from overtime/shifts, a probable trigger for absenteeism and psychosocial risks.') }}
+                    </p>
+                    <div class="bg-white rounded-lg p-4">
+                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Recommended Actions') }}:</h5>
+                      <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li>{{ t('Clear overtime rules with equitable rotation.') }}</li>
+                        <li>{{ t('Adjust shift patterns to reduce fatigue.') }}</li>
+                        <li>{{ t('Clear and humane process for absenteeism and time off.') }}</li>
+                        <li>{{ t('Pulse surveys and safety metrics for monitoring.') }}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Other organizations - Coming Soon -->
+              <template v-else>
+                <div class="text-center py-16">
+                  <div class="text-6xl mb-4">🚧</div>
+                  <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Document in Preparation') }}</p>
+                  <p class="text-gray-600">{{ t('We are working on the conclusions for your organization. It will be available soon.') }}</p>
+                </div>
+              </template>
             </div>
 
             <!-- Informe -->
