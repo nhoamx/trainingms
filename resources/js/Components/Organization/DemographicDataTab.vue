@@ -357,7 +357,11 @@ const createChart = (canvasRef: any, field: 'gender' | 'contract_type' | 'positi
   }
 
   const counts = getCountByField(field, options);
-  const labels = options.filter(opt => counts[opt] > 0);
+  let labels = options.filter(opt => counts[opt] > 0);
+  
+  // Sort labels by count in descending order
+  labels.sort((a, b) => counts[b] - counts[a]);
+  
   const data = labels.map(label => counts[label]);
   const backgroundColors = labels.map((_, index) => getChartColor(index));
 
@@ -412,7 +416,11 @@ const createCombinationChart = (canvasRef: any, counts: Record<string, number>, 
     existingChart.destroy();
   }
 
-  const labels = Object.keys(counts).filter(label => counts[label] > 0);
+  let labels = Object.keys(counts).filter(label => counts[label] > 0);
+  
+  // Sort labels by count in descending order
+  labels.sort((a, b) => counts[b] - counts[a]);
+  
   const data = labels.map(label => counts[label]);
   const backgroundColors = labels.map((_, index) => getChartColor(index));
 
