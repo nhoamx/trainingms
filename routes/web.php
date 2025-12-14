@@ -178,7 +178,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Perfil
     Route::get('/perfil', [UserController::class, 'showProfile'])->name('profile');
-    Route::post('/perfil', [UserController::class, 'updateProfile']);
+    Route::post('/perfil', [UserController::class, 'updateProfile'])->name('profile.update');
 
     // Rutas accesibles para usuarios de organización y administradores
     Route::get('/organizacion/{organization}/resultados', [ResultsController::class, 'listResults'])

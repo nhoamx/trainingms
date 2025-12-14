@@ -211,7 +211,7 @@ const navigation = computed(() => {
     ];
 });
 const userNavigation = [
-    { name: 'Editar', href: '#' },
+    { name: 'Mi Perfil', href: route('profile') },
     { name: 'Cerrar sesión', href: route('logout'), method: 'post' },
 ]
 </script>
