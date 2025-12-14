@@ -353,6 +353,14 @@ const handleImportAreasSuccess = () => {
                     >
                         Exportar Clima
                     </button>
+                    <button
+                        v-if="isAdmin"
+                        @click="changeTab('likert-answers')"
+                        class="px-3 py-2 text-sm font-medium rounded-md transition-colors"
+                        :class="activeTab === 'likert-answers' ? 'bg-purple-100 text-purple-700' : 'text-gray-500 hover:text-gray-700'"
+                    >
+                        Exportar Respuestas Likert
+                    </button>
                 </div>
             </div>
 
@@ -773,6 +781,35 @@ const handleImportAreasSuccess = () => {
             <!-- Pestaña de Exportar Clima (solo admin) -->
             <div v-else-if="activeTab === 'clima-export' && isAdmin" class="space-y-6">
                 <ClimaExporter :organization-id="organization.id" />
+            </div>
+
+            <!-- Pestaña de Exportar Respuestas Likert (solo admin) -->
+            <div v-else-if="activeTab === 'likert-answers' && isAdmin" class="space-y-6">
+                <div class="border-b border-gray-900/10 pb-6">
+                    <h2 class="text-base font-semibold leading-7 text-gray-900">Exportar Respuestas Likert</h2>
+                    <p class="mt-1 text-sm leading-6 text-gray-600">
+                        Descarga un reporte en Excel con todas las respuestas individuales de las evaluaciones Likert.
+                    </p>
+                    <div class="mt-6">
+                        <p class="text-sm text-gray-600 mb-4">
+                            El reporte incluye:
+                        </p>
+                        <ul class="list-disc list-inside text-sm text-gray-600 mb-6 space-y-1">
+                            <li>Folio de la evaluación</li>
+                            <li>Nombre de la organización</li>
+                            <li>Datos demográficos (Género, Tipo de Contrato, Puesto, Área, Turno)</li>
+                            <li>Campos personalizados (Número, Código de Línea, Líder de Línea, Supervisor, Superintendente, Gerente)</li>
+                            <li>Las 23 respuestas individuales (P1-P23)</li>
+                        </ul>
+                        <a 
+                            :href="route('organizations.export-likert-answers', organization.id)"
+                            class="inline-flex items-center gap-2 rounded-md bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600"
+                        >
+                            <ArrowUpTrayIcon class="h-5 w-5" />
+                            Descargar Reporte Excel
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <!-- Modal de confirmación de eliminación -->

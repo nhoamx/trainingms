@@ -163,4 +163,17 @@ class OrganizationController extends Controller
                 'message' => 'La organización ha sido eliminada permanentemente.',
             ]);
     }
+
+    /**
+     * Export Likert answers report to Excel
+     */
+    public function exportLikertAnswers(Organization $organization): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $filename = 'respuestas_likert_'.str_replace(' ', '_', $organization->name).'_'.now()->format('Y-m-d').'.xlsx';
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\LikertAnswersExport($organization->id, $organization->name),
+            $filename
+        );
+    }
 }

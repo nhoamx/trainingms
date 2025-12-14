@@ -313,6 +313,7 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{organization}', 'destroy')->name('organizations.destroy');
             Route::delete('/{organization}/delete', 'forceDelete')->name('organizations.force-delete')->withTrashed();
             Route::put('/{organization}/restore', 'restore')->name('organizations.restore')->withTrashed();
+            Route::get('/{organization}/export-likert-answers', 'exportLikertAnswers')->name('organizations.export-likert-answers');
         });
 
         // Rutas para puestos de ocupación
