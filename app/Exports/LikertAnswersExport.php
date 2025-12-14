@@ -85,7 +85,7 @@ class LikertAnswersExport implements FromCollection, WithHeadings, WithMapping, 
 
         // Get custom field values
         $numero = $customFields->get('numero')?->value ?? '';
-        $linea = $customFields->get('linea')?->value ?? '';
+        $linea = $customFields->get('linea')?->value ?? $customFields->get('codigolinea')?->value ?? '';
         $liderLinea = $customFields->get('lider_de_linea')?->value ?? '';
         $supervisor = $customFields->get('supervisor')?->value ?? '';
         $superintendente = $customFields->get('superintendente')?->value ?? '';
