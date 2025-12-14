@@ -132,7 +132,7 @@
                   >
                     {{ index + 1 }}
                   </span>
-                  <span class="font-medium text-gray-900">{{ translateDimension(factor.name) }}</span>
+                  <span class="font-medium text-gray-900">{{ t(factor.name) }}</span>
                 </div>
               </td>
               <td class="px-6 py-4 text-center">
