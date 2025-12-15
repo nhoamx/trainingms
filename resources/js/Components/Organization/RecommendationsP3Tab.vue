@@ -279,7 +279,7 @@
               <th colspan="3" class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider bg-green-700">
                 {{ t('Satisfactory Level').toUpperCase() }}
               </th>
-              <th colspan="2" class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider bg-red-600">
+              <th colspan="3" class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider bg-red-600">
                 {{ t('Unsatisfactory Level').toUpperCase() }}
               </th>
               <th colspan="4"
@@ -297,6 +297,8 @@
               <th scope="col" class="px-3 py-2 text-center text-xs font-medium">{{ t('Total') }}</th>
               <th scope="col" class="px-3 py-2 text-center text-xs font-medium">{{ t('Disagree') }}
               </th>
+              <th scope="col" class="px-3 py-2 text-center text-xs font-medium bg-red-600">{{ t('Highly Disagree') }}
+              </th>
               <th scope="col" class="px-3 py-2 text-center text-xs font-medium">{{ t('Totally Disagree') }}
               </th>
               <th scope="col" class="px-3 py-2 text-center text-xs font-medium">1</th>
@@ -308,14 +310,15 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200 text-gray-800">
 
-            <tr>
+            <tr class="bg-yellow-50">
               <td class="px-3 py-3 whitespace-normal text-sm font-medium">{{ t('Work-Life Balance') }}</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">2339</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">697</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">285</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-green-100 font-semibold">412</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">926</td>
-              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">1642</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">716</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1642</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Redefine overtime rules with equitable rotation and limits per period') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Adjust shift patterns to reduce fatigue (planned breaks and rotations)') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Establish clear and humane process for absenteeism and time off') }}</td>
@@ -329,7 +332,8 @@
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">382</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-green-100 font-semibold">587</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">981</td>
-              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">1370</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">389</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1370</td>
               <td class="px-3 py-3 whitespace-normal text-xs min-w-[150px]">{{ t('Launch immediate recognition program for safety, quality and attendance') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs min-w-[150px]">{{ t('Define transparent criteria for assignment to critical roles and rewards') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs min-w-[150px]">{{ t('Train management in micro-recognition and specific positive feedback') }}</td>
@@ -343,7 +347,8 @@
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">435</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-green-100 font-semibold">536</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1011</td>
-              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">1368</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">357</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1368</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Create and communicate career paths by job family') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Define promotion criteria based on verifiable skills and performance') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Implement team leader development program') }}</td>
@@ -357,7 +362,8 @@
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">456</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-green-100 font-semibold">547</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">998</td>
-              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">1336</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">338</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1336</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Develop skills matrix by position and gaps by team') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Implement annual training plan by shift with guaranteed minimum hours') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Certify internal trainers and ensure practical materials/resources') }}</td>
@@ -371,7 +377,8 @@
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">343</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-green-100 font-semibold">704</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">743</td>
-              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">1292</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">549</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1292</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Implement or strengthen an Employee Assistance Program (EAP)') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Spread clear access to counseling, emotional support and guidance') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Train leaders for early detection of stress and referral') }}</td>
@@ -385,7 +392,8 @@
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">640</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-green-100 font-semibold">595</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">930</td>
-              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">1104</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">174</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1104</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Implement daily safety routine by shift (brief talk + risk checklist)') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Activate anti-harassment protocol with confidential channel, investigation and clear sanctions') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Diagnosis of workloads and overtime by line/area and phased reduction plan') }}</td>
@@ -399,7 +407,8 @@
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">477</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-green-100 font-semibold">766</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">722</td>
-              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">1096</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">374</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1096</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Activate improvement circles by cell/line with bi-weekly meetings') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Implement ideas system with mandatory feedback') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Include operational representatives in standards and process updates') }}</td>
@@ -413,7 +422,8 @@
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">444</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-green-100 font-semibold">1015</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">612</td>
-              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">880</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">268</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center">880</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Execute salary benchmark against industry and region') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Fix gaps with band adjustments and internal equity') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Clarify compensation structure and benefits through clear communication') }}</td>
@@ -427,7 +437,8 @@
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">808</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-green-100 font-semibold">721</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">685</td>
-              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">810</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">125</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center">810</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Communicate a stability plan (demand projections, hiring/adjustment criteria)') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Design retention strategy for critical roles (permanence bonuses/internal mobility)') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Train managers in trust-based leadership and communication of operational certainty') }}</td>
@@ -441,7 +452,8 @@
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1814</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-green-100 font-semibold">419</td>
               <td class="px-3 py-3 whitespace-nowrap text-sm text-center">95</td>
-              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">106</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center bg-red-100 font-semibold">11</td>
+              <td class="px-3 py-3 whitespace-nowrap text-sm text-center">106</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Implement weekly briefing by area/shift with goals, changes and priorities') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Establish monthly plant communication calendar (results, quality, safety)') }}</td>
               <td class="px-3 py-3 whitespace-normal text-xs">{{ t('Train leaders in fair treatment and respectful communication with 180/360 evaluation') }}</td>
