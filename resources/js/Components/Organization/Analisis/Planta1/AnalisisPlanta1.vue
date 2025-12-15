@@ -115,19 +115,6 @@
                             </tr>
 
                             <tr>
-                                <td class="px-6 py-3 whitespace-nowrap text-sm">{{ t('Materials') }}</td>
-                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">54</td>
-                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">14</td>
-                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">30</td>
-                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">10</td>
-                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center">0</td>
-                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center font-semibold">10</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-xs">{{ t('Recognition and Reward') }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-xs">{{ t('Fair Compensation') }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-xs">{{ t('Professional Advancement') }}</td>
-                            </tr>
-
-                            <tr>
                                 <td class="px-6 py-3 whitespace-nowrap text-sm">{{ t('Manufacturing') }}</td>
                                 <td class="px-3 py-3 whitespace-nowrap text-sm text-center">19</td>
                                 <td class="px-3 py-3 whitespace-nowrap text-sm text-center">1</td>

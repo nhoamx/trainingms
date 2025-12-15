@@ -483,6 +483,16 @@
     "Programmer": "Programador",
     "QC Technician": "Técnico OC",
     "Import / Export": "Importación / Exportación",
-    "Management": "Gerencia"
+    "Management": "Gerencia", 
+    "Human Resources": "Recursos Humanos",
+    "Maintenance": "Mantenimiento",
+    "Quality": "Calidad",
+    "Materials": "Materiales",
+    "Manufacturing": "Manufactura",
+    "Finance": "Finanzas",
+    "Engineering": "Ingeniería",
+    "Continuous Improvement": "Mejora Continua",
+    "Programs": "Programas",
+    "Systems": "Sistemas"
 }
 
