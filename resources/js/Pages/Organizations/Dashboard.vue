@@ -189,6 +189,91 @@
                 </div>
               </template>
 
+              <!-- Planta 3 Conclusions -->
+              <template v-else-if="dashboardData.organization.id === 'a06fe33d-6955-4d24-98d1-a375ecb55645'">
+                <div class="max-w-4xl mx-auto">
+                  <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">{{ t('Conclusions') }}</h2>
+                    <p class="text-gray-600">JAROPAMEX S.A. DE C.V. - PLANTA 3</p>
+                    <p class="text-sm text-gray-500 mt-2">
+                      <span class="font-medium">{{ t('Evaluation period') }}:</span> {{ t('November') }} 2025 |
+                      <span class="font-medium">{{ t('Issue date') }}:</span> 10/12/2025
+                    </p>
+                  </div>
+
+                  <!-- Objetivo General -->
+                  <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+                    <h3 class="text-lg font-semibold text-blue-900 mb-2">{{ t('General Objective') }}</h3>
+                    <p class="text-blue-800">
+                      {{ t('General study objective') }}
+                    </p>
+                  </div>
+
+                  <!-- Análisis -->
+                  <h3 class="text-2xl font-bold text-gray-900 mb-6">{{ t('Analysis') }}</h3>
+
+                  <!-- Factor 1: Equilibrio vida laboral-personal -->
+                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
+                    <div class="flex items-center gap-2 mb-3">
+                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
+                      <h4 class="text-xl font-bold text-gray-900">1) {{ t('Work-Life Balance Critical') }}</h4>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                      {{ t('Responses indicate fatigue and pressure from overtime/shifts, a likely trigger for absenteeism and psychosocial risks.') }}
+                    </p>
+                    <div class="bg-white rounded-lg p-4">
+                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Recommended Actions') }}:</h5>
+                      <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li>{{ t('Clear overtime rules with equitable rotation') }}</li>
+                        <li>{{ t('Adjust shift patterns to reduce fatigue') }}</li>
+                        <li>{{ t('Clear and humane process for absenteeism and time off') }}</li>
+                        <li>{{ t('Pulse surveys and safety metrics for monitoring') }}</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <!-- Factor 2: Avance profesional -->
+                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
+                    <div class="flex items-center gap-2 mb-3">
+                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
+                      <h4 class="text-xl font-bold text-gray-900">2) {{ t('Professional Advancement Critical') }}</h4>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                      {{ t('Predominates perception of few clear growth paths; this tends to increase turnover and disengagement.') }}
+                    </p>
+                    <div class="bg-white rounded-lg p-4">
+                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Recommended Actions') }}:</h5>
+                      <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li>{{ t('Career paths by job family') }}</li>
+                        <li>{{ t('Verifiable promotion criteria') }}</li>
+                        <li>{{ t('Team leader development program') }}</li>
+                        <li>{{ t('Post vacancies internally first and measure mobility') }}</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <!-- Factor 3: Reconocimiento y recompensa -->
+                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
+                    <div class="flex items-center gap-2 mb-3">
+                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
+                      <h4 class="text-xl font-bold text-gray-900">3) {{ t('Recognition and Reward Critical') }}</h4>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                      {{ t('Significant gap observed in effective training and educational resources, with direct risk to quality, rework, and safety.') }}
+                    </p>
+                    <div class="bg-white rounded-lg p-4">
+                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Recommended Actions') }}:</h5>
+                      <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li>{{ t('Skills and gaps matrix by position/team') }}</li>
+                        <li>{{ t('Train middle management in leadership best practices, avoiding violence') }}</li>
+                        <li>{{ t('Certify internal instructors') }}</li>
+                        <li>{{ t('Measure effectiveness with competency tests for internal employee growth') }}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
               <!-- Other organizations - Coming Soon -->
               <template v-else>
                 <div class="text-center py-16">
