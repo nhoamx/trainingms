@@ -180,7 +180,7 @@
 
 
     <!-- Gráfica de Comentarios por Factor -->
-    <!-- <div v-if="commentFactors.length > 0" class="bg-white rounded-lg border border-gray-200 p-6">
+    <div v-if="commentFactors.length > 0" class="bg-white rounded-lg border border-gray-200 p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-6">{{ t('Comments by Factor') }}</h3>
       <p class="text-sm text-gray-600 mb-6">{{ t('Comment distribution based on applied demographic filters') }}</p>
       
@@ -192,14 +192,14 @@
           <span class="font-semibold text-gray-900">{{ count }}</span>
         </div>
       </div>
-    </div> -->
+    </div>
 
     <!-- Empty State para Comentarios -->
-    <!-- <div v-else class="bg-gray-50 rounded-lg p-12 text-center border border-gray-200">
+    <div v-else class="bg-gray-50 rounded-lg p-12 text-center border border-gray-200">
       <div class="text-6xl mb-4">💬</div>
       <p class="text-lg font-semibold text-gray-900 mb-2">{{ t('No comments available') }}</p>
       <p class="text-gray-600">{{ t('No comments found for selected filters') }}</p>
-    </div> -->
+    </div>
   </div>
 </template>
 
