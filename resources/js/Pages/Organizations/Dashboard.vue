@@ -82,6 +82,7 @@
               <TopRiskFactorsTab
                 :evaluations="evaluations"
                 :demographic-details="dashboardData.demographic_details"
+                :organization="dashboardData.organization"
               />
 
             </div>
