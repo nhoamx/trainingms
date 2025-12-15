@@ -23,6 +23,10 @@ class OrganizationPolicy
      */
     public function viewOrganizationDashboard(User $user, Organization $organization): bool
     {
+        if ($user->hasRole(['admin', 'super-admin'])) {
+            return true;
+        }
+        
         // Solo usuarios con rol 'organization' pueden ver su propio dashboard
         return $user->hasRole('organization') && $user->organization_id === $organization->id;
     }

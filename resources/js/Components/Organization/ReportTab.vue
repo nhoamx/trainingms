@@ -4,7 +4,6 @@
     <div class="text-center mb-8">
       <div class="text-5xl mb-4">📄</div>
       <h2 class="text-3xl font-bold text-gray-900 mb-2">{{ t('Organization Reports') }}</h2>
-      <p class="text-gray-600 max-w-2xl mx-auto">{{ t('Download detailed psychosocial risk assessment reports for your organization.Reports are available in Spanish and English.') }}</p>
     </div>
 
     <!-- Reports Grid -->
@@ -14,9 +13,7 @@
         class="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-8 border border-red-200 hover:shadow-lg transition-shadow">
         <div class="flex items-start justify-between mb-6">
           <div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-2">Reporte</h3>
-            <p class="text-gray-700 text-sm">Análisis integral de factores de riesgo psicosocial según NOM-035-STPS-2018
-            </p>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">Informe</h3>
           </div>
           <span class="text-3xl"></span>
         </div>
@@ -28,7 +25,7 @@
                 d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
                 clip-rule="evenodd" />
             </svg>
-            <span>Identificación de riesgos psicosociales</span>
+            <span>Identificación de Clima Laboral</span>
           </div>
           <div class="flex items-center text-gray-700">
             <svg class="w-5 h-5 mr-3 text-red-600" fill="currentColor" viewBox="0 0 20 20">
@@ -126,22 +123,6 @@
       </div>
     </div>
 
-    <!-- Info Section -->
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
-      <div class="flex gap-4">
-        <svg class="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd"
-            d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zM8 7a1 1 0 000 2h6a1 1 0 100-2H8zm0 3a1 1 0 000 2h6a1 1 0 100-2H8z"
-            clip-rule="evenodd" />
-        </svg>
-        <div>
-          <h4 class="font-semibold text-gray-900 mb-1">{{ t('About These Reports') }}</h4>
-          <p class="text-gray-700 text-sm">
-            {{ t('These comprehensive reports contain the psychosocial risk assessment results for your organization based on the NOM-035 - STPS - 2018 Mexican workplace safety standard.They include detailed analysis, risk factor identification, and intervention recommendations.') }}
-          </p>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
