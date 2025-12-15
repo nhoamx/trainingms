@@ -150,7 +150,7 @@ const downloadReport = async (language: 'es' | 'en') => {
     // Create a temporary link and click it
     const link = document.createElement('a');
     link.href = pdfPath;
-    link.download = `${language === 'es' ? 'Reporte_Riesgos_Psicosociales' : 'Psychosocial_Risk_Report'}_${new Date().getFullYear()}.pdf`;
+    link.download = `${language === 'es' ? 'reporte_clima_laboral' : 'work_climate_report'}_${new Date().getFullYear()}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
