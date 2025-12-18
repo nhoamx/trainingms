@@ -4,91 +4,158 @@ This document provides guidance for AI coding agents working on the `trainingms`
 
 ## Project Overview
 
-`trainingms` is a Laravel 11 + Inertia.js + Vue 3 application for managing **psychological workplace risk assessments** under Mexico's **NOM-035-STPS-2018** regulation. This system handles both online digital evaluations and OCR-processed paper forms for identifying, analyzing, and preventing psychosocial risk factors in Mexican organizations.
+`trainingms` is a Laravel 11 + Inertia.js + Vue 3 application for managing **psychological workplace assessments** under multiple Mexican regulatory instruments. This system handles both online digital evaluations and OCR-processed paper forms, supporting:
+
+- **NOM-035-STPS-2018**: Psychosocial risk factors identification, analysis, and prevention
+- **Clima Laboral (Work Climate)**: Organizational climate and work environment assessment
+
+The platform processes evaluations through dual workflows: online quiz submissions and OCR-scanned paper forms.
 
 ### Core Domain Concepts
 
-- **NOM-035-STPS-2018 Compliance**: Official Mexican standard for psychosocial risk factors in the workplace - identification, analysis, and prevention
-- **Evaluations**: Psychological assessments measuring workplace stress, trauma, and mobbing using validated instruments per NOM-035 requirements
-- **Organizations**: Companies that conduct evaluations with their employees (15+ workers require different compliance levels)
+#### Regulatory Instruments
+- **NOM-035-STPS-2018**: Official Mexican standard for psychosocial risk factors in the workplace - identification, analysis, and prevention
+  - Different requirements by organization size (≤15, 16-50, >50 workers)
+  - Instruments: Guide I (PTSD), Escala Cisneros (Mobbing), Reference III/V (Workplace factors)
+- **Clima Laboral (Work Climate)**: Organizational climate assessment using Likert scales
+  - Evaluates work environment, leadership, and organizational culture
+  - Scoring system with levels: Muy desfavorable, Desfavorable, Medio, Favorable, Muy favorable
+
+#### Core Entities
+- **Organizations**: Companies conducting evaluations with their employees
 - **Quizzes**: Temporary evaluation links with expiration dates for online assessments
-- **Folios**: Unique identifiers for paper-based evaluations processed via OCR
-- **Reference Guides**: Standardized question sets aligned with NOM-035 (Guide I: PTSD, Escala Cisneros: Mobbing, Reference III/V: Workplace factors)
+- **Folios**: Unique identifiers (4-digit strings) for paper-based evaluations processed via OCR
+- **PaperEvaluation**: OCR-processed bubble sheet evaluations (supports NOM-035 and Likert/Clima Laboral)
+- **SubmissionStatus**: Tracks online quiz submission processing state (pending, processing, completed, failed)
+- **DemographicData**: Normalized demographic information linked to evaluations
+- **EvaluationComment**: Comments/observations for individual evaluations
+- **EvaluationCustomField**: Dynamic custom fields associated with evaluations
 
 ### Application Architecture
 
-- **Backend** (`app/`): Laravel 11 with domain models (Quiz, Evaluation, Organization, Folio, etc.)
+- **Backend** (`app/`): Laravel 11 with domain models (Quiz, Evaluation, PaperEvaluation, Organization, Folio, etc.)
 - **Frontend** (`resources/js/`): Vue 3 + Inertia.js with modular quiz components in `Components/Quiz/`
-- **OCR Processing** (`docker/`): Python-based bubble sheet detection for paper forms
+- **OCR Processing** (`docker/`): Python-based bubble sheet detection for paper forms (outputs JSON by folio)
 - **Configuration** (`config/`): Domain-specific question sets and demographic data structures
 - **Database** (`database/`): Psychological evaluation data with JSON storage for flexible questionnaire responses
+- **Services Layer** (`app/Services/`): 19 specialized services for reports, scoring, caching, and data processing
+- **Queued Jobs** (`app/Jobs/`): Async processing for reports, imports, OCR, and cache warming
+- **Exports** (`app/Exports/`): Excel/CSV exports using Laravel Excel with multi-sheet support
 
 ## Developer Workflows
 
 ### Database Operations
 - Run migrations with `php artisan migrate`
 - Seed with `php artisan db:seed --class=RolesSeeder` (roles use `firstOrCreate` pattern)
-- Models use UUIDs where applicable (`Evaluation` model uses `HasUuids`)
+- Models use UUIDs where applicable (`Evaluation` model uses `HasUuids` trait)
+- Personal IDs are always 4-digit zero-padded strings (see `Evaluation::setPersonalIdAttribute`)
 
 ### OCR Processing Workflow
 - Paper forms are processed via Docker container (`docker/main.py`)
-- Python scripts detect bubble sheets and output JSON results by folio ID
-- Results are imported into Laravel via JSON parsing into `Evaluation->data` field
+- Python scripts detect bubble sheets and output JSON results by folio ID to `docker/output/`
+- Results are imported into Laravel via JSON parsing into `Evaluation->data` field or `PaperEvaluation->raw_data`
+- Config files in `docker/config/` define bubble positions for different form layouts
 
 ### Frontend Development
 - Vue 3 components in `resources/js/Components/Quiz/` are modular and reusable
 - Use `npm run dev` for development, `npm run build` for production
-- Quiz components follow specific patterns (see `Components/Quiz/README.md`)
+- Quiz components follow composition API patterns with `v-model` (see `Components/Quiz/README.md`)
+- All components use Tailwind CSS - check sibling components for consistent styling patterns
 
 ### Testing
 - Run tests with `php artisan test`
 - Use `php artisan test --filter=TestName` for specific tests
-- All database tests use `DatabaseTransactions`
-- Feature tests are in `tests/Feature/`
+- All database tests use `DatabaseTransactions` trait
+- Feature tests are in `tests/Feature/` - includes cache, export, import, and integration tests
+- Must run `vendor/bin/pint --dirty` before finalizing changes (code formatting enforcement)
+
+### Async Job Processing
+- 9 queued jobs handle heavy operations: report generation, imports, OCR processing, cache warming
+- Use `ProcessQuizSubmission` for online quiz submissions (creates `SubmissionStatus` records)
+- Use `ProcessPaperEvaluation` for OCR result imports
+- Use `GenerateWordReport` for Word document generation (queued, not synchronous)
+- Use `WarmOrganizationReportCache` to precompute expensive reports
 
 ## Project-Specific Conventions
 
 ### Domain-Specific Patterns
-- **NOM-035-STPS-2018 Compliance Structure**: 
-  - Different requirements by organization size (≤15, 16-50, >50 workers)
-  - Mandatory biannual evaluations for workplace psychosocial risk factors
-  - Three intervention levels: organizational, group, and individual
-- **Question Configuration**: All questionnaires are defined in `config/` files following NOM-035 validated instruments (e.g., `guide_i_questions.php`, `escala_cisneros.php`, `referencia_v.php`)
-- **Mexican Workplace Demographics**: Configured in `referencia_v.php` with nested arrays for Mexican labor market specifics
-- **JSON Data Storage**: `Evaluation->data` field stores flexible questionnaire responses as JSON per NOM-035 data requirements
-- **Quiz Types**: Support for regular, reduced, and Cisneros scale evaluations (`is_reduced`, `is_cisneros` flags) based on organizational risk levels
-- **Temporary URLs**: Quizzes have expiring temporary URLs with `expires_at` datetime handling for secure access
+- **Multi-Instrument Support**: System now supports multiple regulatory frameworks
+  - **NOM-035**: Psychosocial risk assessment with Reference Guides I, III, V and Escala Cisneros
+  - **Clima Laboral**: Work climate assessment using Likert scales (`likert_answers` in `PaperEvaluation`)
+  - Both can be processed from same paper form or separate online quizzes
+- **Question Configuration**: All questionnaires defined in `config/` files:
+  - NOM-035: `guide_i_questions.php`, `escala_cisneros.php`, `referencia_iii.php`, `referencia_v.php`
+  - Clima Laboral: `likert-value.php` (scoring and interpretation levels)
+  - Demographics: `referencia_v.php` (edad, estado civil, nivel estudios, datos laborales)
+- **JSON Data Storage**: 
+  - `PaperEvaluation->raw_data`: Complete OCR results including quiz_id, evaluation_type_code
+  - `PaperEvaluation->likert_answers`: Clima Laboral responses
+  - `PaperEvaluation->referencia_i_answers`, `referencia_iii_answers`: NOM-035 responses
+  - `PaperEvaluation->demographic_data`: Normalized demographic information
+- **Quiz Types**: Flags determine evaluation type (`is_reduced`, `is_cisneros` on Quiz model)
+- **Temporary URLs**: Quizzes have expiring URLs (`expires_at`, `scopeActive` filters active non-expired)
+
+### Cache System Architecture (Critical!)
+- **Centralized Cache Service**: `OrganizationReportCacheService` manages all organization report caching
+- **Three Cache Keys**: `org_report_list_{id}`, `org_report_missing_folios_{id}`, `org_report_likert_{id}`
+- **Auto-Invalidation via Observers**: Changes to `PaperEvaluation`, `DemographicData`, `EvaluationComment`, or `EvaluationCustomField` automatically invalidate organization caches
+- **Cache Warming**: `WarmOrganizationReportCache` job precomputes expensive reports
+- See `docs/CACHE_SYSTEM_EXPLANATION.md` for complete architecture diagrams
 
 ### Vue Component Architecture
-- Quiz components use composition API with `v-model` patterns
-- Modular components in `Components/Quiz/` for reusability between quiz types
+- Quiz components use composition API with `v-model` patterns for two-way binding
+- Modular components in `Components/Quiz/` for reusability between quiz types:
+  - `ProgressBar.vue`, `ViewModeToggle.vue`, `NavigationButtons.vue` (UI controls)
+  - `PersonalDataSection.vue`, `LaborDataSection.vue` (demographic collection)
+  - `TraumaticEventsSection.vue`, `GeneralQuestionsSection.vue`, `ConditionalQuestionsSection.vue` (question types)
 - Data collection components handle personal/labor demographics separately
 - Navigation and progress components provide consistent UX across quiz flows
+- All emit `update:modelValue` for parent communication
 
 ### Model Conventions
-- Use `casts()` method for model casting (Laravel 11 pattern)
-- UUID primary keys on `Evaluation` model for privacy
-- JSON casting for flexible data structures
-- Scope methods for common queries (`scopeActive` on Quiz)
+- Use `casts()` method for model casting (Laravel 11 pattern), not `$casts` property
+- UUID primary keys where applicable (uses `HasUuids` trait)
+- JSON casting for flexible data structures (`data`, `raw_data`, `demographic_data` fields)
+- Scope methods for common queries (`scopeActive` on Quiz, check other models for similar patterns)
+- Always use constructor property promotion for dependencies
+
+### Deprecated Models (DO NOT USE)
+- **`Evaluation`**: Replaced by `PaperEvaluation` for paper forms and `SubmissionStatus` for online submissions
+  - Legacy model with recursive answer processing
+  - New code should use `PaperEvaluation` (for OCR results) or `SubmissionStatus` (for quiz submissions)
+- **`Question`**: Replaced by `SubmissionStatus` for a flatter, more performant structure
+  - Old model had complex nested relationships with dimensions/domains/categories
+  - New model uses denormalized structure for better query performance
+- **`OnlineAnswer`**: Replaced by `SubmissionStatus` model
+  - Was an intermediate solution between `Question` and `SubmissionStatus`
+  - `SubmissionStatus` provides better state tracking and error handling
+- **`Answer`**: Legacy model replaced by domain-specific scoring in services
+  - Old answer storage mechanism no longer used
+  - Scoring now handled by `PaperEvaluationScoreService` and related services
+- **`CustomField`**: Replaced by `EvaluationCustomField` with improved organization linkage
+  - Old model had limited quiz-only scope
+  - New model supports organization-wide custom fields
 
 ## Integration Points
 
 ### OCR Processing Pipeline
 - Docker container processes PDF forms to detect bubble selections
-- Python scripts in `docker/` handle image conversion and bubble detection
-- Folio detection determines unique evaluation identifiers
-- Results saved as JSON files by folio for Laravel import
+- Python scripts in `docker/` handle image conversion (`pdf_to_image_converter.py`) and bubble detection (`bubble_detector.py`)
+- Folio detection determines unique evaluation identifiers (4-digit format)
+- Results saved as JSON files by folio in `docker/output/` for Laravel import
+- Main entry point: `docker/main.py` orchestrates the full pipeline
 
-### External Services
+### External Services & Real-Time Features
 - Configured in `config/services.php` for mail, storage, and third-party APIs
-- Laravel Reverb for real-time features (deployment notes in README)
-- Laravel Telescope included for debugging and monitoring
+- Laravel Reverb for real-time features (see README for deployment: https://codecourse.com/articles/deploying-reverb-on-laravel-forge)
+- Laravel Telescope included for debugging and monitoring in development
 
 ### Cross-Component Communication
-- Inertia.js bridges Laravel backend with Vue frontend
-- Ziggy provides named route access in JavaScript
-- Quiz data flows: Configuration → Backend Models → Inertia Props → Vue Components
-- OCR results: Docker JSON → Laravel Evaluation JSON → Frontend display
+- Inertia.js bridges Laravel backend with Vue frontend (no API layer needed)
+- Ziggy provides named route access in JavaScript (`route()` helper)
+- Quiz data flows: Config files (`config/`) → Backend Models → Controller → Inertia Props → Vue Components
+- OCR results: Docker JSON → Laravel Evaluation/PaperEvaluation JSON → Frontend display
+- Public routes: `/evaluacion` for anonymous quiz access, authenticated routes under `/organization/{id}/*`
 
 ## Key Files and Directories
 
@@ -105,7 +172,13 @@ This document provides guidance for AI coding agents working on the `trainingms`
   - `config/escala_cisneros.php`: Workplace mobbing scale questions (violencia laboral/acoso psicológico)
   - `config/referencia_v.php`: Mexican demographic data structures aligned with NOM-035 requirements
   - `config/referencia_iii.php`: Reference III - Workplace psychosocial factors evaluation
-- `config/answer_values.php`: Standardized response options for scales per NOM-035 specifications
+  - `config/referencia_iii_reduced.php`: Reduced version for smaller organizations
+- **Clima Laboral Configuration**:
+  - `config/likert-value.php`: Likert scale scoring, interpretation levels, and dimension mapping
+  - Defines 5 levels: Muy desfavorable, Desfavorable, Medio, Favorable, Muy favorable
+- **Shared Configuration**:
+  - `config/answer_values.php`: Standardized response options for NOM-035 scales
+  - `config/question_dimensions.php`: Dimension/domain/category mappings for NOM-035 questions
 
 ### OCR Processing
 - `docker/main.py`: Main OCR processing script for bubble detection
@@ -130,12 +203,20 @@ This document provides guidance for AI coding agents working on the `trainingms`
 - Modular component architecture in `Components/Quiz/` for reusability
 
 ### Critical Workflows
-- **NOM-035 Compliance Cycle**: Biannual evaluations required by law with proper documentation and intervention programs
-- Quiz creation with temporary URLs and expiration handling for secure regulatory compliance
-- OCR processing pipeline from PDF → images → bubble detection → JSON import for paper forms
-- Multi-step evaluation forms with conditional logic and demographic collection per NOM-035 requirements
-- **Three-Level Intervention**: Organizational (policies), group (team dynamics), and individual (clinical) interventions based on risk levels
-- Report generation from aggregated psychological assessment data meeting regulatory reporting standards
+- **Multi-Instrument Assessment Cycle**: 
+  - NOM-035: Biannual evaluations with three intervention levels (organizational, group, individual)
+  - Clima Laboral: Work climate assessment with 5-level scoring system
+  - Both can be combined in single paper form or separate online evaluations
+- **Dual Processing Paths**:
+  - **Online**: Quiz → `ProcessQuizSubmission` job → `SubmissionStatus` records
+  - **Paper**: PDF → OCR (`docker/main.py`) → JSON → `ProcessPaperEvaluation` job → `PaperEvaluation` record
+- **OCR Multi-Instrument Detection**: Single paper form can contain NOM-035 + Clima Laboral sections
+  - Detected via `evaluation_type_code` in raw_data
+  - Stored in separate JSON fields: `referencia_i_answers`, `referencia_iii_answers`, `likert_answers`
+- **Report Generation**: 
+  - NOM-035: Domain/dimension/category analysis with risk level classification
+  - Clima Laboral: Likert scoring with distribution charts and level interpretation
+  - Both use cached data from `OrganizationReportCacheService`
 
 For domain-specific examples, consult configuration files in `config/` and the Quiz component documentation in `resources/js/Components/Quiz/README.md`.
 
