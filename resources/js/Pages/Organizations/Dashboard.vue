@@ -186,6 +186,36 @@
                       </ul>
                     </div>
                   </div>
+
+                  <!-- Intervention Programs Downloads -->
+                  <div class="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                    <div class="text-center mb-4">
+                      <h3 class="text-xl font-bold text-gray-900 mb-2">{{ t('Intervention Programs Available') }}</h3>
+                      <p class="text-gray-600 text-sm">{{ t('Download the intervention programs designed for this organization') }}</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                      <a
+                        href="/assets/plantas/a05bc65b-08cd-45d5-8ae1-f4f9d3eb5238/PROGRAMA-DE-INTERVENCION-JAROPAMEX-PLANTA-1-2025-Programa-General-Planta 1.pdf"
+                        download
+                        class="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+                      >
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                        </svg>
+                        {{ t('Download General Program') }}
+                      </a>
+                      <a
+                        href="/assets/plantas/a05bc65b-08cd-45d5-8ae1-f4f9d3eb5238/PROGRAMA-DE-INTERVENCION-JAROPAMEX-PLANTA-1-2025-Programa-Salary-Planta-1.pdf"
+                        download
+                        class="inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg"
+                      >
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                        </svg>
+                        {{ t('Download Salary Program') }}
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </template>
 
@@ -269,6 +299,36 @@
                         <li>{{ t('Certify internal instructors') }}</li>
                         <li>{{ t('Measure effectiveness with competency tests for internal employee growth') }}</li>
                       </ul>
+                    </div>
+                  </div>
+
+                  <!-- Intervention Programs Downloads -->
+                  <div class="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                    <div class="text-center mb-4">
+                      <h3 class="text-xl font-bold text-gray-900 mb-2">{{ t('Intervention Programs Available') }}</h3>
+                      <p class="text-gray-600 text-sm">{{ t('Download the intervention programs designed for this organization') }}</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                      <a
+                        href="/assets/plantas/a06fe33d-6955-4d24-98d1-a375ecb55645/PROGRAMA-DE-INTERVENCION-JAROPAMEX-PLANTA-3-2025-Programa-General-Planta-3.pdf"
+                        download
+                        class="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+                      >
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                        </svg>
+                        {{ t('Download General Program') }}
+                      </a>
+                      <a
+                        href="/assets/plantas/a06fe33d-6955-4d24-98d1-a375ecb55645/PROGRAMA-DE-INTERVENCION-JAROPAMEX-PLANTA-3-2025-Programa-Salary-Planta-3.pdf"
+                        download
+                        class="inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg"
+                      >
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                        </svg>
+                        {{ t('Download Salary Program') }}
+                      </a>
                     </div>
                   </div>
                 </div>
