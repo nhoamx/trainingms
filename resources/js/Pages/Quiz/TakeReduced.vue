@@ -154,6 +154,34 @@ const progress = computed(() => {
 const viewMode = ref('comfortable'); // 'comfortable' o 'compact'
 const isSubmitting = ref(false);
 
+// URLs de audio para las preguntas (puede venir del servidor o ser vacío)
+const audioUrls = computed(() => {
+    const urls = {};
+    // Usar example.mpeg para todas las preguntas
+    const exampleUrl = '/storage/audio/example.mpeg';
+    
+    // Generar URLs para eventos traumáticos
+    const traumaticQuestions = props.quiz?.questions?.acontecimientos_traumaticos?.questions || [];
+    traumaticQuestions.forEach((_, idx) => {
+        urls[`traumatic_${idx}`] = exampleUrl;
+    });
+    
+    // Generar URLs para referencia_i
+    const referencia_i = props.quiz?.reference_i;
+    if (Array.isArray(referencia_i)) {
+        referencia_i.forEach((_, idx) => {
+            urls[`referencia_i_${idx}`] = exampleUrl;
+        });
+    }
+    
+    // Fallback para índices simples
+    for (let i = 0; i < 50; i++) {
+        urls[i] = exampleUrl;
+    }
+    
+    return urls;
+});
+
 // Helpers para la sección de acontecimientos traumáticos
 const traumaticQuestions = computed(() => props.quiz?.questions?.acontecimientos_traumaticos?.questions || []);
 const traumaticAnswers = computed(() => answers.value.acontecimientos_traumaticos || {});
@@ -276,6 +304,7 @@ const submitEvaluation = () => {
                             v-model="answers.acontecimientos_traumaticos"
                             :answer-options="answerOptions.yesNo"
                             name-prefix="trauma"
+                            :audio-urls="audioUrls"
                         />
                     </div>
 
@@ -285,6 +314,7 @@ const submitEvaluation = () => {
                             :follow-up-questions="quiz.reference_i"
                             v-model="answers.referencia_i"
                             :answer-options="answerOptions.yesNo"
+                            :audio-urls="audioUrls"
                         />
                     </div>
 

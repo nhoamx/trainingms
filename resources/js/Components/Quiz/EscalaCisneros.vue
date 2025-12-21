@@ -27,8 +27,13 @@
         </div>
         <div class="space-y-4">
             <div v-for="(question, idx) in cisnerosQuestions" :key="idx" class="mb-6">
-                <label class="block text-sm font-medium text-slate-700 mb-2">{{ idx + 1 }}: {{ question }}</label>
-                <div class="flex flex-col gap-2 mt-2">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <label class="block text-sm font-medium text-slate-700 flex-grow">{{ idx + 1 }}: {{ question }}</label>
+                    <div class="flex-shrink-0 w-48">
+                        <AudioPlayer :audio-url="getAudioUrl(`cisneros_${idx + 1}`)" />
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2">
                     <!-- ABC selector -->
                     <div class="flex items-center space-x-4 bg-slate-100 p-2 rounded">
                         <span class="text-xs font-semibold text-slate-600 mr-2 w-20">Persona:</span>
@@ -66,10 +71,16 @@
 </template>
 
 <script setup>
+import AudioPlayer from './AudioPlayer.vue';
+
 const props = defineProps({
     modelValue: {
         type: Object,
         required: true
+    },
+    audioUrls: {
+        type: Object,
+        default: () => ({})
     }
 });
 
@@ -81,6 +92,11 @@ const updateField = (field, value) => {
         [field]: value
     });
 };
+
+const getAudioUrl = (questionId) => {
+    return props.audioUrls?.[questionId] || null;
+};
+
 const cisnerosQuestions = [
     "Mi superior restringe mis posibilidades de comunicarme, hablar o reunirme con él",
     "Me ignoran, me excluyen o me hacen el vacío, fingen no verme o me hacen «invisible»",

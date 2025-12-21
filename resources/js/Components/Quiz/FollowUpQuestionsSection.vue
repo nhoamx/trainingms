@@ -12,7 +12,12 @@
                     :key="index"
                     class="bg-white p-4 rounded-lg border border-slate-100"
                 >
-                    <p class="mb-3 text-slate-900">{{ question }}</p>
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <p class="text-slate-900 flex-grow">{{ question }}</p>
+                        <div class="flex-shrink-0 w-48">
+                            <AudioPlayer :audio-url="getAudioUrl(`${category}_${index}`)" />
+                        </div>
+                    </div>
                     <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
                         <label
                             v-for="option in answerOptions"
@@ -37,6 +42,8 @@
 </template>
 
 <script setup>
+import AudioPlayer from './AudioPlayer.vue';
+
 const props = defineProps({
     followUpQuestions: {
         type: Object,
@@ -49,10 +56,18 @@ const props = defineProps({
     answerOptions: {
         type: Array,
         required: true
+    },
+    audioUrls: {
+        type: Object,
+        default: () => ({})
     }
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+const getAudioUrl = (key) => {
+    return props.audioUrls?.[key] || null;
+};
 
 const updateAnswer = (key, value) => {
     emit('update:modelValue', {

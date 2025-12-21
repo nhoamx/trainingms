@@ -5,7 +5,12 @@
         class="border-b border-slate-100 last:border-0 pb-6 last:pb-0 mb-6"
         :class="{ 'bg-slate-50 p-4 rounded-lg': viewMode === 'comfortable' }"
     >
-        <p class="mb-3 text-slate-900">{{ question.id }}. {{ question.text }}</p>
+        <div class="flex items-start justify-between gap-3 mb-4">
+            <p class="text-slate-900 flex-grow">{{ question.id }}. {{ question.text }}</p>
+            <div class="flex-shrink-0 w-48">
+                <AudioPlayer :audio-url="getAudioUrl(question.id)" />
+            </div>
+        </div>
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
             <label
                 v-for="option in answerOptions"
@@ -27,6 +32,8 @@
 </template>
 
 <script setup>
+import AudioPlayer from './AudioPlayer.vue';
+
 const props = defineProps({
     paginatedQuestions: {
         type: Array,
@@ -43,10 +50,18 @@ const props = defineProps({
     viewMode: {
         type: String,
         default: 'comfortable'
+    },
+    audioUrls: {
+        type: Object,
+        default: () => ({})
     }
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+const getAudioUrl = (questionId) => {
+    return props.audioUrls?.[questionId] || null;
+};
 
 const updateAnswer = (questionId, value) => {
     emit('update:modelValue', {

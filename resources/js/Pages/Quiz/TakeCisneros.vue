@@ -53,7 +53,7 @@
 
                     <!-- Sección Escala Cisneros -->
                     <div v-if="currentSection === 'escala_cisneros'" class="space-y-6">
-                        <EscalaCisneros v-model="answers.escala_cisneros" />
+                        <EscalaCisneros v-model="answers.escala_cisneros" :audio-urls="audioUrls" />
                     </div>
 
                     <!-- Sección Acontecimientos Traumáticos -->
@@ -61,12 +61,12 @@
                         <TraumaticEventsSection
                             :title="quiz.questions?.acontecimientos_traumaticos?.title || 'Acontecimientos Traumáticos'"
                             :questions="traumaticQuestions" v-model="answers.acontecimientos_traumaticos"
-                            :answer-options="answerOptions.yesNo" name-prefix="trauma" />
+                            :answer-options="answerOptions.yesNo" name-prefix="trauma" :audio-urls="audioUrls" />
                     </div>
 
                     <div v-if="currentSection === 'referencia_i'" class="space-y-6">
                         <FollowUpQuestionsSection :follow-up-questions="quiz.reference_i" v-model="answers.referencia_i"
-                            :answer-options="answerOptions.yesNo" />
+                            :answer-options="answerOptions.yesNo" :audio-urls="audioUrls" />
                     </div>
 
                     <!-- Sección Final -->
@@ -231,6 +231,39 @@ const progress = computed(() => {
 // Agregar estado para el modo de visualización
 const viewMode = ref('comfortable');
 const isSubmitting = ref(false);
+
+// URLs de audio para las preguntas (puede venir del servidor o ser vacío)
+const audioUrls = computed(() => {
+    const urls = {};
+    const exampleUrl = '/storage/audio/example.mpeg';
+    
+    // Generar URLs para Escala Cisneros
+    const cisnerosQuestions = props.quiz?.questions?.escala_cisneros?.questions || {};
+    Object.keys(cisnerosQuestions).forEach((key, idx) => {
+        urls[`cisneros_${idx}`] = exampleUrl;
+    });
+    
+    // Generar URLs para eventos traumáticos
+    const traumaticQuestions = props.quiz?.questions?.acontecimientos_traumaticos?.questions || [];
+    traumaticQuestions.forEach((_, idx) => {
+        urls[`traumatic_${idx}`] = exampleUrl;
+    });
+    
+    // Generar URLs para referencia_i
+    const referencia_i = props.quiz?.reference_i;
+    if (Array.isArray(referencia_i)) {
+        referencia_i.forEach((_, idx) => {
+            urls[`referencia_i_${idx}`] = exampleUrl;
+        });
+    }
+    
+    // Fallback para índices simples
+    for (let i = 0; i < 50; i++) {
+        urls[i] = exampleUrl;
+    }
+    
+    return urls;
+});
 
 const submitEvaluation = () => {
     isSubmitting.value = true;

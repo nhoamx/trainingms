@@ -32,7 +32,12 @@
                 :key="qIndex"
                 class="border-b border-slate-100 last:border-0 pb-4 last:pb-0"
             >
-                <p class="mb-3 text-slate-900">{{ qIndex }}. {{ question }}</p>
+                <div class="flex items-start justify-between gap-3 mb-4">
+                    <p class="text-slate-900 flex-grow">{{ qIndex }}. {{ question }}</p>
+                    <div class="flex-shrink-0 w-48">
+                        <AudioPlayer :audio-url="getAudioUrl(qIndex)" />
+                    </div>
+                </div>
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
                     <label
                         v-for="option in generalOptions"
@@ -57,6 +62,7 @@
 
 <script setup>
 import { watch } from 'vue';
+import AudioPlayer from './AudioPlayer.vue';
 
 const props = defineProps({
     conditionalSections: {
@@ -74,10 +80,18 @@ const props = defineProps({
     generalOptions: {
         type: Array,
         required: true
+    },
+    audioUrls: {
+        type: Object,
+        default: () => ({})
     }
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+const getAudioUrl = (questionId) => {
+    return props.audioUrls?.[questionId] || null;
+};
 
 // Watch para inicializar preguntas condicionales como null si el filtro es "No"
 Object.entries(props.conditionalSections).forEach(([key, section]) => {

@@ -7,7 +7,12 @@
                 :key="index"
                 class="bg-white p-4 rounded-lg border border-slate-100"
             >
-                <p class="mb-3 text-slate-900">{{ index }}. {{ question }}</p>
+                <div class="flex items-start justify-between gap-3 mb-4">
+                    <p class="text-slate-900 flex-grow">{{ index }}. {{ question }}</p>
+                    <div class="flex-shrink-0 w-48">
+                        <AudioPlayer :audio-url="getAudioUrl(index)" />
+                    </div>
+                </div>
                 <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
                     <label
                         v-for="option in answerOptions"
@@ -32,6 +37,7 @@
 
 <script setup>
 import { onMounted } from 'vue';
+import AudioPlayer from './AudioPlayer.vue';
 
 const props = defineProps({
     title: {
@@ -53,10 +59,19 @@ const props = defineProps({
     namePrefix: {
         type: String,
         required: true
+    },
+    audioUrls: {
+        type: Object,
+        default: () => ({})
     }
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+// Obtener la URL del audio para una pregunta
+const getAudioUrl = (index) => {
+    return props.audioUrls?.[index] || null;
+};
 
 // Inicializa todas las preguntas traumáticas como null si no existen
 onMounted(() => {
