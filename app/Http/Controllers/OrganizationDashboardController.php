@@ -29,10 +29,8 @@ class OrganizationDashboardController extends Controller
     {
         $this->authorize('viewOrganizationDashboard', $organization);
 
-        // Caliza organization ID
-        $calizaOrganizationId = 'a0315c7c-d7a2-4969-b51e-d126fa6da1af';
-
         // Check if this is Caliza organization (NOM-035 report)
+        $calizaOrganizationId = config('organizations.caliza.id');
         if ($organization->id === $calizaOrganizationId) {
             return $this->showCalizaDashboard($organization);
         }

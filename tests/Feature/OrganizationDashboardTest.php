@@ -105,8 +105,8 @@ class OrganizationDashboardTest extends TestCase
                     ->has('genders')
                     ->has('contract_types')
                     ->has('positions')
-                    ->has('areas')
-                    ->has('shifts')
+                    ->has('departments')
+                    ->has('work_schedules')
                     ->has('total_evaluations')
                 )
             )
@@ -172,8 +172,8 @@ class OrganizationDashboardTest extends TestCase
 
     public function test_caliza_organization_renders_nom035_dashboard(): void
     {
-        // Create Caliza organization with the specific ID
-        $calizaId = 'a0315c7c-d7a2-4969-b51e-d126fa6da1af';
+        // Create Caliza organization with the specific ID from config
+        $calizaId = config('organizations.caliza.id');
         $organization = Organization::factory()->create([
             'id' => $calizaId,
             'name' => 'CORPORACION INDUSTRIAL DE CALIZA',

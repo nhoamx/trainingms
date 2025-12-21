@@ -196,7 +196,6 @@ interface DashboardData {
 
 interface Evaluation {
   id: string;
-  demographic_data?: Record<string, unknown>;
   demographicData?: Record<string, unknown>;
 }
 

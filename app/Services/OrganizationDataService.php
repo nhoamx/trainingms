@@ -152,8 +152,8 @@ class OrganizationDataService
             'genders' => array_keys($genders),
             'contract_types' => array_keys($contractTypes),
             'positions' => array_keys($positions),
-            'areas' => array_keys($areas),
-            'shifts' => array_keys($shifts),
+            'departments' => array_keys($areas),
+            'work_schedules' => array_keys($shifts),
             'total_evaluations' => $evaluations->count(),
         ];
     }
