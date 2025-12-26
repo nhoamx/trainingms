@@ -99,16 +99,26 @@ class OrganizationDataService
      * Obtiene datos demográficos detallados para filtrado
      *
      * @param  Organization  $organization  La organización
+     * @param  string|null  $evaluationType  Tipo de evaluación a filtrar (null = todos)
      * @return array Datos demográficos detallados para filtrado
      */
-    public function getDemographicDetails(Organization $organization): array
+    public function getDemographicDetails(Organization $organization, ?string $evaluationType = 'likert'): array
     {
-        // Obtener solo evaluaciones Likert completadas (igual que en LikertOrganizationReport)
-        $evaluations = PaperEvaluation::where('organization_id', $organization->id)
-            ->where('evaluation_type', 'likert')
+        // Determinar qué tipos de evaluación incluir
+        $query = PaperEvaluation::where('organization_id', $organization->id)
             ->where('processing_status', 'completed')
-            ->with('demographicData')
-            ->get();
+            ->with('demographicData');
+
+        if ($evaluationType === 'likert') {
+            // Solo evaluaciones Likert (Clima Laboral)
+            $query->where('evaluation_type', 'likert');
+        } elseif ($evaluationType === 'nom035') {
+            // Evaluaciones NOM-035 (Referencia I, III, Cisneros)
+            $query->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros']);
+        }
+        // Si es null, obtener todas las evaluaciones completadas
+
+        $evaluations = $query->get();
 
         // Extraer valores únicos de cada campo demográfico
         $genders = [];
@@ -142,8 +152,8 @@ class OrganizationDataService
             'genders' => array_keys($genders),
             'contract_types' => array_keys($contractTypes),
             'positions' => array_keys($positions),
-            'areas' => array_keys($areas),
-            'shifts' => array_keys($shifts),
+            'departments' => array_keys($areas),
+            'work_schedules' => array_keys($shifts),
             'total_evaluations' => $evaluations->count(),
         ];
     }
@@ -152,9 +162,10 @@ class OrganizationDataService
      * Obtiene todos los datos del dashboard de la organización
      *
      * @param  Organization  $organization  La organización
+     * @param  string|null  $evaluationType  Tipo de evaluación para datos demográficos ('likert', 'nom035', null=todos)
      * @return array Datos consolidados del dashboard
      */
-    public function getDashboardData(Organization $organization): array
+    public function getDashboardData(Organization $organization, ?string $evaluationType = 'likert'): array
     {
         return [
             'organization' => [
@@ -164,7 +175,7 @@ class OrganizationDataService
             ],
             'company_data' => $this->getCompanyData($organization),
             'demographic_summary' => $this->getDemographicSummary($organization),
-            'demographic_details' => $this->getDemographicDetails($organization),
+            'demographic_details' => $this->getDemographicDetails($organization, $evaluationType),
         ];
     }
 

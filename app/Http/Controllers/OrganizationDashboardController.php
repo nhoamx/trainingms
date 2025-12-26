@@ -29,7 +29,57 @@ class OrganizationDashboardController extends Controller
     {
         $this->authorize('viewOrganizationDashboard', $organization);
 
-        $data = $this->organizationDataService->getDashboardData($organization);
+        // Check if this is Caliza organization (NOM-035 report)
+        $calizaOrganizationId = config('organizations.caliza.id');
+        if ($organization->id === $calizaOrganizationId) {
+            return $this->showCalizaDashboard($organization);
+        }
+
+        // Default: Likert/Clima Laboral dashboard
+        return $this->showLikertDashboard($organization);
+    }
+
+    /**
+     * Muestra el dashboard de Caliza (NOM-035)
+     */
+    protected function showCalizaDashboard(Organization $organization): Response
+    {
+        $data = $this->organizationDataService->getDashboardData($organization, 'nom035');
+
+        // Obtener evaluaciones NOM-035 completadas con datos demográficos
+        $evaluations = PaperEvaluation::where('organization_id', $organization->id)
+            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros'])
+            ->where('processing_status', 'completed')
+            ->with(['demographicData', 'comments'])
+            ->get()
+            ->map(function ($evaluation) {
+                return [
+                    'id' => $evaluation->id,
+                    'evaluation_type' => $evaluation->evaluation_type,
+                    'personal_folio' => $evaluation->personal_folio,
+                    'demographicData' => $evaluation->demographicData ? [
+                        'gender' => $evaluation->demographicData->gender,
+                        'contract_type' => $evaluation->demographicData->contract_type,
+                        'position' => $evaluation->demographicData->position,
+                        'department' => $evaluation->demographicData->department,
+                        'work_schedule' => $evaluation->demographicData->work_schedule,
+                    ] : null,
+                ];
+            });
+
+        return Inertia::render('Organizations/CalizaDashboard', [
+            'title' => 'NOM-035-STPS-2018',
+            'dashboardData' => $data,
+            'evaluations' => $evaluations,
+        ]);
+    }
+
+    /**
+     * Muestra el dashboard de Likert/Clima Laboral
+     */
+    protected function showLikertDashboard(Organization $organization): Response
+    {
+        $data = $this->organizationDataService->getDashboardData($organization, 'likert');
 
         // Obtener evaluaciones con datos demográficos y calcular score
         // Solo incluir evaluaciones Likert completadas (igual que en LikertOrganizationReport)

@@ -105,8 +105,8 @@ class OrganizationDashboardTest extends TestCase
                     ->has('genders')
                     ->has('contract_types')
                     ->has('positions')
-                    ->has('areas')
-                    ->has('shifts')
+                    ->has('departments')
+                    ->has('work_schedules')
                     ->has('total_evaluations')
                 )
             )
@@ -167,6 +167,90 @@ class OrganizationDashboardTest extends TestCase
                     ->has('comment')
                 )
             )
+        );
+    }
+
+    public function test_caliza_organization_renders_nom035_dashboard(): void
+    {
+        // Create Caliza organization with the specific ID from config
+        $calizaId = config('organizations.caliza.id');
+        $organization = Organization::factory()->create([
+            'id' => $calizaId,
+            'name' => 'CORPORACION INDUSTRIAL DE CALIZA',
+        ]);
+
+        // Create a user assigned to Caliza organization
+        $user = User::factory()->create();
+        $user->syncRoles(['organization']);
+        $user->update(['organization_id' => $organization->id]);
+
+        // Create a NOM-035 evaluation (referencia_iii)
+        $evaluation = PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'evaluation_type' => 'referencia_iii',
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => ['q1' => 1, 'q2' => 2],
+        ]);
+
+        DemographicData::factory()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'gender' => 'Masculino',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('organization.dashboard', $organization));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Organizations/CalizaDashboard')
+            ->has('dashboardData')
+            ->has('evaluations')
+            ->where('title', 'NOM-035-STPS-2018')
+        );
+    }
+
+    public function test_non_caliza_organization_renders_likert_dashboard(): void
+    {
+        // Create a different organization (not Caliza)
+        $organization = Organization::factory()->create([
+            'name' => 'Test Organization',
+        ]);
+
+        // Create a user assigned to this organization
+        $user = User::factory()->create();
+        $user->syncRoles(['organization']);
+        $user->update(['organization_id' => $organization->id]);
+
+        // Create a Likert evaluation
+        $evaluation = PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'evaluation_type' => 'likert',
+            'processing_status' => 'completed',
+            'likert_answers' => [
+                'ambiente' => ['q1' => 3, 'q2' => 2],
+                'factores' => ['q1' => 4, 'q2' => 1],
+                'liderazgo' => ['q1' => 2, 'q2' => 3],
+                'cargas' => ['q1' => 1, 'q2' => 4],
+                'control' => ['q1' => 3, 'q2' => 2],
+                'jornada' => ['q1' => 2, 'q2' => 1],
+                'entorno' => ['q1' => 4, 'q2' => 3],
+            ],
+        ]);
+
+        DemographicData::factory()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'gender' => 'Masculino',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('organization.dashboard', $organization));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Organizations/Dashboard')
+            ->has('dashboardData')
+            ->has('evaluations')
+            ->where('title', 'Clima Laboral')
         );
     }
 }

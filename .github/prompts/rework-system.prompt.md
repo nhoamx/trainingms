@@ -2,8 +2,6 @@
 agent: agent
 ---
 
-Perfecto, te dejo **un resumen claro, compacto y accionable** de **todo lo que vamos a cambiar** (DB + arquitectura + flujo), pensando en **30k evaluaciones**, **OMR en Python**, **Laravel**, **NOM-035** y **tiempo realista (fin de semana)**.
-
 ---
 
 # 🧱 1. Cambios clave en BASE DE DATOS
@@ -32,9 +30,9 @@ Campos clave:
 
 * `id (uuid)`
 * `organization_id`
-* `instrument_code` (`ref_i`, `ref_iii`, `cisneros`)
+* `instrument_code` (`ref_i`, `ref_iii`, `cisneros`, etc.)
 * `source` (`paper`, `online`)
-* `folio_visible` (el que ve la persona)
+* `personal_folio`
 * `processing_status`
 * `processed_at`
 * timestamps
@@ -53,7 +51,7 @@ Campos:
 
 * `evaluation_id`
 * `question_number`
-* `answer_raw` (`A`, `B`, `SI`, `NO`)
+* `answer_raw` (`A`, `B`, `SI`, `NO`, etc.)
 * `answer_numeric` (0–4, según NOM)
 * `domain_code` (opcional)
 * `created_at`
