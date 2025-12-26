@@ -95,4 +95,19 @@ class Organization extends Model
     {
         return $this->hasMany(Quiz::class);
     }
+
+    public function instruments()
+    {
+        return $this->belongsToMany(Instrument::class, 'organization_instrument')->withTimestamps();
+    }
+
+    public function assets()
+    {
+        return $this->hasMany(Asset::class);
+    }
+
+    public function hasInstrument(string $instrumentName): bool
+    {
+        return $this->instruments()->where('name', $instrumentName)->exists();
+    }
 }

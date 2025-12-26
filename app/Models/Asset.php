@@ -1,0 +1,27 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Asset extends Model
+{
+    use HasFactory, HasUuids;
+
+    protected $fillable = [
+        'organization_id',
+        'asset_type',
+        'serial_number',
+        'location',
+        'capacity',
+        'fire_class',
+    ];
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+}

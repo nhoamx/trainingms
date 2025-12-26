@@ -316,6 +316,19 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{organization}/export-likert-answers', 'exportLikertAnswers')->name('organizations.export-likert-answers');
         });
 
+        // Rutas para extintores (NOM-002)
+        Route::prefix('/organizaciones/{organization}/extintores')->name('organizations.assets.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\AssetController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\AssetController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\AssetController::class, 'store'])->name('store');
+            Route::get('/{asset}/edit', [\App\Http\Controllers\AssetController::class, 'edit'])->name('edit');
+            Route::put('/{asset}', [\App\Http\Controllers\AssetController::class, 'update'])->name('update');
+            Route::delete('/{asset}', [\App\Http\Controllers\AssetController::class, 'destroy'])->name('destroy');
+            Route::get('/{asset}/qr', [\App\Http\Controllers\AssetController::class, 'qrCode'])->name('qr');
+            Route::get('/{asset}/qr/download', [\App\Http\Controllers\AssetController::class, 'downloadQr'])->name('qr.download');
+            Route::get('/qr/download-all', [\App\Http\Controllers\AssetController::class, 'downloadAllQr'])->name('qr.download-all');
+        });
+
         // Rutas para puestos de ocupación
         Route::post('/occupation-positions', [\App\Http\Controllers\OccupationPositionController::class, 'store'])
             ->name('occupation-positions.store');
@@ -399,6 +412,9 @@ Route::get('/q/{tempUrl}', [QuizController::class, 'showTemp'])->name('quiz.temp
 Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])
     ->name('quiz.submit');
 // ->middleware(\App\Http\Middleware\RateLimitQuizSubmissions::class);
+
+// Ruta pública para inspección de activos (extintores)
+Route::get('/assets/{asset}/inspect', [\App\Http\Controllers\AssetController::class, 'inspect'])->name('assets.inspect');
 
 // Rutas públicas para las plantillas OMR de evaluación presencial
 Route::prefix('omr')->name('omr.')->group(function () {
