@@ -24,10 +24,11 @@ const form = useForm({
     anomalies_followup: '',
 })
 
-// Inicializar checklist_results con estructura vacía
+// Inicializar checklist_results con estructura vacía y fecha actual
+const currentDate = new Date().toISOString().split('T')[0]
 Object.keys(props.checklist).forEach(key => {
     form.checklist_results[key] = {
-        date: '',
+        date: currentDate,
         result: '',
     }
 })
