@@ -145,9 +145,9 @@
                         <template v-for="item in userNavigation" :key="item.name">
                             <form v-if="item.method" :action="item.href" method="post">
                                 <input type="hidden" name="_token" :value="csrfToken">
-                                <DisclosureButton as="button" type="submit" class="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-400 hover:bg-gray-700 hover:text-white">
+                                <button type="submit" class="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-400 hover:bg-gray-700 hover:text-white">
                                     {{ item.name }}
-                                </DisclosureButton>
+                                </button>
                             </form>
                             <DisclosureButton v-else as="a" :href="item.href" class="block rounded-md px-3 py-2 text-base font-medium text-gray-400 hover:bg-gray-700 hover:text-white">
                                 {{ item.name }}
