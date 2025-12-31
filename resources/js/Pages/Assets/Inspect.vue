@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
-import { FireIcon, MapPinIcon, BuildingOfficeIcon, ClipboardDocumentCheckIcon, ArrowRightOnRectangleIcon } from '@heroicons/vue/24/outline'
+import { FireIcon, MapPinIcon, BuildingOfficeIcon, ClipboardDocumentCheckIcon, ArrowRightOnRectangleIcon, ChevronRightIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     asset: {
@@ -18,7 +18,15 @@ const props = defineProps({
     },
 })
 
+const selectedInspection = ref(null)
 
+const selectInspection = (inspection) => {
+    selectedInspection.value = inspection
+}
+
+const closeInspectionDetail = () => {
+    selectedInspection.value = null
+}
 </script>
 
 <template>
@@ -137,18 +145,92 @@ const props = defineProps({
                             Últimas Inspecciones
                         </h3>
                         <ul role="list" class="divide-y divide-gray-200">
-                            <li v-for="inspection in asset.inspections" :key="inspection.id" class="py-4">
+                            <li 
+                                v-for="inspection in asset.inspections" 
+                                :key="inspection.id" 
+                                class="py-4 cursor-pointer hover:bg-gray-50 -mx-4 px-4 transition-colors rounded-lg"
+                                @click="selectInspection(inspection)"
+                            >
                                 <div class="flex items-center justify-between">
-                                    <div>
+                                    <div class="flex-1">
                                         <p class="text-sm font-medium text-gray-900">{{ inspection.inspector_name }}</p>
                                         <p class="text-sm text-gray-500">{{ new Date(inspection.inspection_date).toLocaleDateString('es-MX') }}</p>
                                     </div>
-                                    <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                                        Completada
-                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                            Completada
+                                        </span>
+                                        <ChevronRightIcon class="h-5 w-5 text-gray-400" />
+                                    </div>
                                 </div>
                             </li>
                         </ul>
+                    </div>
+                </div>
+
+                <!-- Detalle de la inspección seleccionada -->
+                <div v-if="selectedInspection" class="mt-6 bg-white shadow sm:rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-semibold leading-6 text-gray-900">
+                                Detalle de Inspección
+                            </h3>
+                            <button
+                                @click="closeInspectionDetail"
+                                class="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                            >
+                                <XMarkIcon class="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <!-- Información del inspector -->
+                        <div class="mb-4 pb-4 border-b border-gray-200">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500">Inspector</p>
+                                    <p class="text-sm text-gray-900">{{ selectedInspection.inspector_name }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500">Fecha de Inspección</p>
+                                    <p class="text-sm text-gray-900">{{ new Date(selectedInspection.inspection_date).toLocaleDateString('es-MX') }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Checklist results -->
+                        <div class="mb-4">
+                            <h4 class="text-sm font-medium text-gray-900 mb-3">Procedimientos de Revisión</h4>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 border border-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">No.</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Resultado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr 
+                                            v-for="(item, index) in selectedInspection.checklist_results" 
+                                            :key="index"
+                                            class="hover:bg-gray-50"
+                                        >
+                                            <td class="px-3 py-2 text-sm text-gray-900">{{ index }}</td>
+                                            <td class="px-3 py-2 text-sm text-gray-900">
+                                                {{ item.date ? new Date(item.date).toLocaleDateString('es-MX') : '-' }}
+                                            </td>
+                                            <td class="px-3 py-2 text-sm text-gray-900">{{ item.result || '-' }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Seguimiento de anomalías -->
+                        <div v-if="selectedInspection.anomalies_followup" class="mt-4 p-4 bg-gray-50 rounded-lg">
+                            <h4 class="text-sm font-medium text-gray-900 mb-2">Seguimiento de Anomalías</h4>
+                            <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ selectedInspection.anomalies_followup }}</p>
+                        </div>
                     </div>
                 </div>
 
