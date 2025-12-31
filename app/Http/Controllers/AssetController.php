@@ -159,35 +159,38 @@ class AssetController extends Controller
         $qrWidth = (int) $qrSvg['width'];
         $qrHeight = (int) $qrSvg['height'];
 
-        // Configuración del label
-        $labelHeight = 60;
-        $totalHeight = $qrHeight + $labelHeight;
-        $fontSize = 14;
-        $fontSizeLarge = 18;
+        // Configuración del label y padding
+        $labelHeight = 40;
+        $padding = 15;
+        $borderWidth = 2;
+        
+        // Dimensiones totales con padding
+        $contentWidth = $qrWidth + ($padding * 2);
+        $contentHeight = $qrHeight + $labelHeight + ($padding * 2);
+        
+        $fontSize = 16;
 
-        // Crear un nuevo SVG que contenga el QR y el label
+        // Crear un nuevo SVG que contenga el QR y el label con borde
         $svg = '<?xml version="1.0" encoding="UTF-8"?>';
-        $svg .= '<svg xmlns="http://www.w3.org/2000/svg" width="'.$qrWidth.'" height="'.$totalHeight.'" viewBox="0 0 '.$qrWidth.' '.$totalHeight.'">';
+        $svg .= '<svg xmlns="http://www.w3.org/2000/svg" width="'.$contentWidth.'" height="'.$contentHeight.'" viewBox="0 0 '.$contentWidth.' '.$contentHeight.'">';
 
         // Fondo blanco
-        $svg .= '<rect width="'.$qrWidth.'" height="'.$totalHeight.'" fill="white"/>';
+        $svg .= '<rect width="'.$contentWidth.'" height="'.$contentHeight.'" fill="white"/>';
 
-        // Agregar el QR code
+        // Borde negro alrededor de todo
+        $svg .= '<rect x="'.($borderWidth/2).'" y="'.($borderWidth/2).'" width="'.($contentWidth - $borderWidth).'" height="'.($contentHeight - $borderWidth).'" fill="none" stroke="#000000" stroke-width="'.$borderWidth.'"/>';
+
+        // Agregar el QR code centrado con padding
         $qrInnerSvg = preg_replace('/<\?xml.*?\?>/s', '', $qrCode);
-        $qrInnerSvg = preg_replace('/<svg[^>]*>/s', '<g>', $qrInnerSvg);
+        $qrInnerSvg = preg_replace('/<svg[^>]*>/s', '<g transform="translate('.$padding.','.$padding.')">', $qrInnerSvg);
         $qrInnerSvg = str_replace('</svg>', '</g>', $qrInnerSvg);
         $svg .= $qrInnerSvg;
 
-        // Agregar el número consecutivo (primera línea, más grande)
-        $text1Y = $qrHeight + 22;
-        $svg .= '<text x="'.($qrWidth / 2).'" y="'.$text1Y.'" font-family="Arial, sans-serif" font-size="'.$fontSizeLarge.'" font-weight="bold" text-anchor="middle" fill="#000000">';
-        $svg .= 'N° '.htmlspecialchars($asset->consecutive_number, ENT_XML1, 'UTF-8');
-        $svg .= '</text>';
-
-        // Agregar la ubicación (segunda línea)
-        $text2Y = $qrHeight + 44;
-        $svg .= '<text x="'.($qrWidth / 2).'" y="'.$text2Y.'" font-family="Arial, sans-serif" font-size="'.$fontSize.'" text-anchor="middle" fill="#333333">';
-        $svg .= htmlspecialchars($asset->location, ENT_XML1, 'UTF-8');
+        // Agregar el label: "n° consecutivo - ubicación"
+        $label = $asset->consecutive_number.' - '.($asset->location ?? 'Sin ubicación');
+        $textY = $qrHeight + $padding + 25;
+        $svg .= '<text x="'.($contentWidth / 2).'" y="'.$textY.'" font-family="Arial, sans-serif" font-size="'.$fontSize.'" font-weight="bold" text-anchor="middle" fill="#000000">';
+        $svg .= htmlspecialchars($label, ENT_XML1, 'UTF-8');
         $svg .= '</text>';
 
         $svg .= '</svg>';
