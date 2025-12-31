@@ -41,30 +41,31 @@ const submit = () => {
 <template>
     <Head :title="'Nueva Inspección - Extintor ' + asset.consecutive_number" />
 
-    <div v-if="canInspect">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <div v-if="canInspect" class="min-h-screen bg-gray-50">
+        <div class="mx-auto max-w-4xl px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
             <!-- Header -->
-            <div class="mb-6">
+            <div class="mb-4 sm:mb-6">
                 <a
                     :href="route('assets.inspect', asset.id)"
-                    class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
+                    class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-3 sm:mb-4 touch-manipulation"
                 >
-                    <ArrowLeftIcon class="h-4 w-4" />
+                    <ArrowLeftIcon class="h-5 w-5" />
                     Volver al extintor
                 </a>
-                <h1 class="text-2xl font-bold text-gray-900">Nueva Inspección</h1>
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Nueva Inspección</h1>
                 <p class="mt-1 text-sm text-gray-600">
                     Extintor {{ asset.consecutive_number }} - {{ asset.location }}
                 </p>
             </div>
 
             <!-- Form -->
-            <form @submit.prevent="submit" class="bg-white shadow sm:rounded-lg">
-                <div class="px-4 py-5 sm:p-6 space-y-6">
-                    <!-- Inspector Info -->
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <form @submit.prevent="submit" class="space-y-4">
+                <!-- Inspector Info -->
+                <div class="bg-white shadow rounded-lg p-4">
+                    <h3 class="text-base font-semibold text-gray-900 mb-4">Información del Inspector</h3>
+                    <div class="space-y-4">
                         <div>
-                            <label for="inspector_name" class="block text-sm font-medium text-gray-700">
+                            <label for="inspector_name" class="block text-sm font-medium text-gray-700 mb-1">
                                 Nombre del Inspector <span class="text-red-500">*</span>
                             </label>
                             <input
@@ -72,7 +73,7 @@ const submit = () => {
                                 v-model="form.inspector_name"
                                 type="text"
                                 required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 text-base py-3 px-4"
                             />
                             <p v-if="form.errors.inspector_name" class="mt-1 text-sm text-red-600">
                                 {{ form.errors.inspector_name }}
@@ -80,7 +81,7 @@ const submit = () => {
                         </div>
 
                         <div>
-                            <label for="inspection_date" class="block text-sm font-medium text-gray-700">
+                            <label for="inspection_date" class="block text-sm font-medium text-gray-700 mb-1">
                                 Fecha de Inspección <span class="text-red-500">*</span>
                             </label>
                             <input
@@ -88,100 +89,99 @@ const submit = () => {
                                 v-model="form.inspection_date"
                                 type="date"
                                 required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 text-base py-3 px-4"
                             />
                             <p v-if="form.errors.inspection_date" class="mt-1 text-sm text-red-600">
                                 {{ form.errors.inspection_date }}
                             </p>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Checklist Table -->
-                    <div>
-                        <h4 class="text-sm font-medium text-gray-900 mb-3">
-                            Procedimientos de Revisión / Mantenimiento
-                        </h4>
-                        <div class="overflow-x-auto border border-gray-200 rounded-lg">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="w-16 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            No.
-                                        </th>
-                                        <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Procedimiento
-                                        </th>
-                                        <th scope="col" class="w-40 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Fecha
-                                        </th>
-                                        <th scope="col" class="w-64 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Resultados / Anomalías
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-for="(procedure, index) in checklist" :key="index" class="hover:bg-gray-50">
-                                        <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                                            {{ index }}
-                                        </td>
-                                        <td class="px-3 py-3 text-sm text-gray-900">
-                                            {{ procedure }}
-                                        </td>
-                                        <td class="px-3 py-3 whitespace-nowrap">
-                                            <input
-                                                v-model="form.checklist_results[index].date"
-                                                type="date"
-                                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-                                            />
-                                        </td>
-                                        <td class="px-3 py-3">
-                                            <textarea
-                                                v-model="form.checklist_results[index].result"
-                                                rows="2"
-                                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-                                                placeholder="Observaciones..."
-                                            />
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                <!-- Checklist Items as Cards -->
+                <div class="space-y-3">
+                    <h3 class="text-base font-semibold text-gray-900 px-1">
+                        Procedimientos de Revisión / Mantenimiento
+                    </h3>
+                    
+                    <div 
+                        v-for="(procedure, index) in checklist" 
+                        :key="index"
+                        class="bg-white shadow rounded-lg p-4"
+                    >
+                        <div class="flex items-start gap-3 mb-3">
+                            <div class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                <span class="text-sm font-semibold text-red-600">{{ index }}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 leading-tight">
+                                    {{ procedure }}
+                                </p>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Anomalies Followup -->
-                    <div>
-                        <label for="anomalies_followup" class="block text-sm font-medium text-gray-700">
-                            Seguimiento de Anomalías
-                        </label>
-                        <textarea
-                            id="anomalies_followup"
-                            v-model="form.anomalies_followup"
-                            rows="4"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-                            placeholder="Describa las anomalías encontradas y el seguimiento necesario..."
-                        />
-                        <p v-if="form.errors.anomalies_followup" class="mt-1 text-sm text-red-600">
-                            {{ form.errors.anomalies_followup }}
-                        </p>
+                        <div class="space-y-3 ml-11">
+                            <div>
+                                <label :for="'date_' + index" class="block text-xs font-medium text-gray-600 mb-1">
+                                    Fecha
+                                </label>
+                                <input
+                                    :id="'date_' + index"
+                                    v-model="form.checklist_results[index].date"
+                                    type="date"
+                                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 text-base py-2.5 px-3"
+                                />
+                            </div>
+
+                            <div>
+                                <label :for="'result_' + index" class="block text-xs font-medium text-gray-600 mb-1">
+                                    Resultados / Anomalías
+                                </label>
+                                <textarea
+                                    :id="'result_' + index"
+                                    v-model="form.checklist_results[index].result"
+                                    rows="3"
+                                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 text-base py-2.5 px-3"
+                                    placeholder="Observaciones..."
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Footer -->
-                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-3">
+                <!-- Anomalies Followup -->
+                <div class="bg-white shadow rounded-lg p-4">
+                    <label for="anomalies_followup" class="block text-sm font-medium text-gray-700 mb-2">
+                        Seguimiento de Anomalías
+                    </label>
+                    <textarea
+                        id="anomalies_followup"
+                        v-model="form.anomalies_followup"
+                        rows="5"
+                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 text-base py-3 px-4"
+                        placeholder="Describa las anomalías encontradas y el seguimiento necesario..."
+                    />
+                    <p v-if="form.errors.anomalies_followup" class="mt-1 text-sm text-red-600">
+                        {{ form.errors.anomalies_followup }}
+                    </p>
+                </div>
+
+                <!-- Footer Buttons -->
+                <div class="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-3 sm:mx-0 sm:rounded-lg sm:border-0 sm:shadow flex flex-col-reverse sm:flex-row gap-3">
+                    <a
+                        :href="route('assets.inspect', asset.id)"
+                        class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-base font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 touch-manipulation"
+                    >
+                        Cancelar
+                    </a>
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="inline-flex w-full justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg bg-red-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                     >
                         <span v-if="form.processing">Guardando...</span>
                         <span v-else>Guardar Inspección</span>
                     </button>
-                    <a
-                        :href="route('assets.inspect', asset.id)"
-                        class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-                    >
-                        Cancelar
-                    </a>
                 </div>
             </form>
         </div>
