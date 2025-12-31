@@ -127,7 +127,8 @@ class AssetController extends Controller
         foreach ($assets as $asset) {
             $qrCodeWithLabel = $this->generateQrWithLabel($asset);
 
-            $filename = $this->sanitizeFilename($asset->location).'-'.$asset->serial_number.'.svg';
+            $location = $asset->location ?? 'sin-ubicacion';
+            $filename = $this->sanitizeFilename($location).'-'.$asset->serial_number.'.svg';
             $zip->addFromString($filename, $qrCodeWithLabel);
         }
 
