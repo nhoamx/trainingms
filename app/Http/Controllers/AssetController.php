@@ -101,7 +101,7 @@ class AssetController extends Controller
     public function downloadAllQr(Organization $organization)
     {
         $assets = $organization->assets()
-            ->where('asset_type', 'extintor')
+            ->where('asset_category', 'extintor')
             ->get();
 
         if ($assets->isEmpty()) {
@@ -138,10 +138,47 @@ class AssetController extends Controller
 
     public function inspect(Asset $asset)
     {
+        $user = auth()->user();
+        $isInspector = $user && $user->hasAnyRole(['admin', 'super-admin']);
+
         return Inertia::render('Assets/Inspect', [
             'title' => 'Inspección de Extintor',
-            'asset' => $asset->load('organization'),
+            'asset' => $asset->load(['organization', 'inspections' => function ($query) {
+                $query->latest()->limit(5);
+            }]),
+            'isAuthenticated' => (bool) $user,
+            'isInspector' => $isInspector,
         ]);
+    }
+
+    public function createInspection(Asset $asset)
+    {
+        $user = auth()->user();
+        $canInspect = $user && $user->hasAnyRole(['admin', 'super-admin']);
+
+        return Inertia::render('Assets/CreateInspection', [
+            'title' => 'Nueva Inspección',
+            'asset' => $asset->load('organization'),
+            'checklist' => config('asset_inspection_checklist.checklist'),
+            'canInspect' => $canInspect,
+        ]);
+    }
+
+    public function storeInspection(\App\Http\Requests\StoreAssetInspectionRequest $request, Asset $asset)
+    {
+        // Verificar que el usuario tenga permisos de inspector
+        if (! auth()->user() || ! auth()->user()->hasAnyRole(['admin', 'super-admin'])) {
+            abort(403, 'No autorizado para realizar inspecciones');
+        }
+
+        $data = $request->validated();
+        $data['asset_id'] = $asset->id;
+
+        \App\Models\AssetInspection::create($data);
+
+        return redirect()
+            ->route('assets.inspect', $asset)
+            ->with('success', 'Inspección registrada exitosamente');
     }
 
     private function generateQrWithLabel(Asset $asset): string
@@ -163,11 +200,11 @@ class AssetController extends Controller
         $labelHeight = 40;
         $padding = 15;
         $borderWidth = 2;
-        
+
         // Dimensiones totales con padding
         $contentWidth = $qrWidth + ($padding * 2);
         $contentHeight = $qrHeight + $labelHeight + ($padding * 2);
-        
+
         $fontSize = 16;
 
         // Crear un nuevo SVG que contenga el QR y el label con borde
@@ -178,7 +215,7 @@ class AssetController extends Controller
         $svg .= '<rect width="'.$contentWidth.'" height="'.$contentHeight.'" fill="white"/>';
 
         // Borde negro alrededor de todo
-        $svg .= '<rect x="'.($borderWidth/2).'" y="'.($borderWidth/2).'" width="'.($contentWidth - $borderWidth).'" height="'.($contentHeight - $borderWidth).'" fill="none" stroke="#000000" stroke-width="'.$borderWidth.'"/>';
+        $svg .= '<rect x="'.($borderWidth / 2).'" y="'.($borderWidth / 2).'" width="'.($contentWidth - $borderWidth).'" height="'.($contentHeight - $borderWidth).'" fill="none" stroke="#000000" stroke-width="'.$borderWidth.'"/>';
 
         // Agregar el QR code centrado con padding
         $qrInnerSvg = preg_replace('/<\?xml.*?\?>/s', '', $qrCode);

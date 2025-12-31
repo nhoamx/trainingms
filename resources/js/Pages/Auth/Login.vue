@@ -2,9 +2,17 @@
 import { ref } from "vue";
 import { useForm } from "@inertiajs/vue3";
 
+const props = defineProps({
+    redirect: {
+        type: String,
+        default: null,
+    },
+});
+
 const form = useForm({
     email: "",
     password: "",
+    redirect: props.redirect,
 });
 
 const submit = async () => {

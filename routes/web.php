@@ -417,6 +417,8 @@ Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])
 
 // Ruta pública para inspección de activos (extintores)
 Route::get('/assets/{asset}/inspect', [\App\Http\Controllers\AssetController::class, 'inspect'])->name('assets.inspect');
+Route::get('/assets/{asset}/inspections/create', [\App\Http\Controllers\AssetController::class, 'createInspection'])->name('assets.inspections.create');
+Route::post('/assets/{asset}/inspections', [\App\Http\Controllers\AssetController::class, 'storeInspection'])->name('assets.inspections.store');
 
 // Rutas públicas para las plantillas OMR de evaluación presencial
 Route::prefix('omr')->name('omr.')->group(function () {

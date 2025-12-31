@@ -12,9 +12,11 @@ class AuthController extends Controller
     /*
      * Show the login form.
      */
-    public function showLogin()
+    public function showLogin(Request $request)
     {
-        return Inertia::render('Auth/Login');
+        return Inertia::render('Auth/Login', [
+            'redirect' => $request->query('redirect'),
+        ]);
     }
 
     /**
@@ -33,6 +35,11 @@ class AuthController extends Controller
 
         if (Auth::attempt($request->only('email', 'password'))) {
             $request->session()->regenerate();
+
+            // Si hay un redirect especificado, redirigir ahí
+            if ($request->has('redirect') && $request->redirect) {
+                return redirect($request->redirect);
+            }
 
             return redirect()->route('dashboard');
         }

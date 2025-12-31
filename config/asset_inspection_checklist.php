@@ -1,0 +1,33 @@
+<?php
+
+return [
+    'checklist' => [
+        1 => 'Ubicación asignada',
+        2 => 'Lugar visible, fácil acceso y libre de obstáculos',
+        3 => 'Señalizados',
+        4 => 'Sello o fleje de garantía',
+        5 => 'Aguja de manómetro en zona verde',
+        6 => 'Carátula legible, visible, collarín sin alteración',
+        7 => 'Más de 5 años desde la última prueba hidrostática',
+        8 => 'Evidencia de corrosión, o superficie rugosa en el interior',
+        9 => 'Pérdida de la pintura exterior y corrosión',
+        10 => 'Soporta la prueba hidrostática o corrosión severa',
+        11 => 'Ha sido expuesto al fuego',
+        12 => 'Presenta golpes',
+        13 => 'Boquilla o difusor y manguera limpias',
+        14 => 'Obstruidas en su interior',
+        15 => 'Presenta cuarteaduras o cortes',
+        16 => 'Están correctamente acopladas y firmes sus conexiones',
+        17 => 'No le faltan partes y están en buenas condiciones',
+        18 => 'Cuenta con su carga completa',
+        19 => 'No ha sido operado',
+        20 => 'Las instrucciones de uso (emergencia y tipo de fuego) sean legibles y correctas',
+        21 => 'El mes y año del último servicio de mantenimiento realizado',
+        22 => 'Nombre, denominación o razón social, domicilio y teléfono del prestador de servicios',
+        23 => 'Capacidad nominal en kilogramos o litros, y el agente extintor',
+        24 => 'Instrucciones de operación, breves y de fácil comprensión',
+        25 => 'Clase de fuego al que está destinado',
+        26 => 'Un extintor por cada 300 metros cuadrados de superficie',
+        27 => 'Altura no mayor de 1.50 m, medidos desde el nivel del piso hasta la parte más alta del extintor',
+    ],
+];

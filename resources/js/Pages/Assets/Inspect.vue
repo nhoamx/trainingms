@@ -1,13 +1,24 @@
 <script setup>
-import { Head } from '@inertiajs/vue3'
-import { FireIcon, MapPinIcon, BuildingOfficeIcon } from '@heroicons/vue/24/outline'
+import { ref } from 'vue'
+import { Head, Link } from '@inertiajs/vue3'
+import { FireIcon, MapPinIcon, BuildingOfficeIcon, ClipboardDocumentCheckIcon, ArrowRightOnRectangleIcon } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     asset: {
         type: Object,
         required: true,
     },
+    isAuthenticated: {
+        type: Boolean,
+        default: false,
+    },
+    isInspector: {
+        type: Boolean,
+        default: false,
+    },
 })
+
+
 </script>
 
 <template>
@@ -84,6 +95,63 @@ const props = defineProps({
                     </div>
                 </div>
 
+                <!-- Botón para nueva inspección (solo para inspectores autenticados) -->
+                <div v-if="isInspector" class="mt-6">
+                    <Link
+                        :href="route('assets.inspections.create', asset.id)"
+                        class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                    >
+                        <ClipboardDocumentCheckIcon class="h-5 w-5" />
+                        Nueva Inspección
+                    </Link>
+                </div>
+
+                <!-- Mensaje para usuarios no autenticados -->
+                <div v-else-if="!isAuthenticated" class="mt-6 rounded-md bg-yellow-50 p-4 border border-yellow-200">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <ArrowRightOnRectangleIcon class="h-5 w-5 text-yellow-400" />
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <h3 class="text-sm font-medium text-yellow-800">Iniciar Sesión para Inspeccionar</h3>
+                            <div class="mt-2 text-sm text-yellow-700">
+                                <p class="mb-3">
+                                    Para realizar una inspección de este extintor, debe iniciar sesión con una cuenta de inspector autorizado.
+                                </p>
+                                <Link
+                                    :href="route('login') + '?redirect=' + encodeURIComponent(route('assets.inspections.create', asset.id))"
+                                    class="inline-flex items-center gap-2 rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-500"
+                                >
+                                    <ArrowRightOnRectangleIcon class="h-4 w-4" />
+                                    Iniciar Sesión
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historial de inspecciones -->
+                <div v-if="asset.inspections && asset.inspections.length > 0" class="mt-6 bg-white shadow sm:rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-base font-semibold leading-6 text-gray-900 mb-4">
+                            Últimas Inspecciones
+                        </h3>
+                        <ul role="list" class="divide-y divide-gray-200">
+                            <li v-for="inspection in asset.inspections" :key="inspection.id" class="py-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">{{ inspection.inspector_name }}</p>
+                                        <p class="text-sm text-gray-500">{{ new Date(inspection.inspection_date).toLocaleDateString('es-MX') }}</p>
+                                    </div>
+                                    <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                        Completada
+                                    </span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
                 <div class="mt-6 rounded-md bg-blue-50 p-4">
                     <div class="flex">
                         <div class="flex-shrink-0">
@@ -96,7 +164,9 @@ const props = defineProps({
                             <div class="mt-2 text-sm text-blue-700">
                                 <p>
                                     Este extintor está registrado para inspección bajo la norma NOM-002-STPS.
-                                    El sistema de inspecciones estará disponible próximamente.
+                                    <span v-if="isInspector">Utiliza el botón "Nueva Inspección" para registrar una revisión.</span>
+                                    <span v-else-if="isAuthenticated">Solo inspectores autorizados pueden realizar revisiones.</span>
+                                    <span v-else>Inicia sesión como inspector para realizar revisiones.</span>
                                 </p>
                             </div>
                         </div>
