@@ -17,7 +17,9 @@ class AssetFactory extends Factory
     {
         return [
             'organization_id' => Organization::factory(),
-            'asset_type' => 'extintor',
+            'asset_type' => fake()->randomElement(['PQS', 'CO2', 'Agua', 'Espuma', 'Agente Limpio']),
+            'asset_category' => 'extintor',
+            'consecutive_number' => fake()->unique()->numerify('###'),
             'serial_number' => 'EXT-'.fake()->unique()->numerify('####'),
             'location' => fake()->randomElement(['Oficina Principal', 'Almacén', 'Pasillo Principal', 'Recepción']).' - '.fake()->randomElement(['Pasillo 1', 'Pasillo 2', 'Entrada', 'Salida de emergencia']),
             'capacity' => fake()->randomElement(['5 lbs', '10 lbs', '20 lbs', '30 lbs']),
@@ -28,7 +30,7 @@ class AssetFactory extends Factory
     public function extintor(): static
     {
         return $this->state(fn (array $attributes) => [
-            'asset_type' => 'extintor',
+            'asset_category' => 'extintor',
         ]);
     }
 }

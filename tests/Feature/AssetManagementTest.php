@@ -160,4 +160,93 @@ class AssetManagementTest extends TestCase
 
         $this->assertTrue($asset->organization->is($this->organization));
     }
+
+    public function test_consecutive_number_is_unique_per_organization(): void
+    {
+        $org1 = Organization::factory()->create();
+        $org2 = Organization::factory()->create();
+
+        // Crear asset con consecutive_number "001" en org1
+        $asset1 = Asset::factory()->create([
+            'organization_id' => $org1->id,
+            'consecutive_number' => '001',
+        ]);
+
+        // Debería permitir el mismo consecutive_number en org2
+        $asset2 = Asset::factory()->create([
+            'organization_id' => $org2->id,
+            'consecutive_number' => '001',
+        ]);
+
+        $this->assertDatabaseHas('assets', [
+            'id' => $asset1->id,
+            'organization_id' => $org1->id,
+            'consecutive_number' => '001',
+        ]);
+
+        $this->assertDatabaseHas('assets', [
+            'id' => $asset2->id,
+            'organization_id' => $org2->id,
+            'consecutive_number' => '001',
+        ]);
+
+        // Intentar crear otro asset con "001" en org1 debería fallar
+        $this->expectException(\Illuminate\Database\QueryException::class);
+        Asset::factory()->create([
+            'organization_id' => $org1->id,
+            'consecutive_number' => '001',
+        ]);
+    }
+
+    public function test_cannot_create_asset_with_duplicate_consecutive_number_in_same_organization(): void
+    {
+        Asset::factory()->create([
+            'organization_id' => $this->organization->id,
+            'consecutive_number' => '001',
+        ]);
+
+        $response = $this->actingAs($this->adminUser)
+            ->post(route('organizations.assets.store', $this->organization), [
+                'asset_category' => 'extintor',
+                'consecutive_number' => '001',
+                'serial_number' => 'EXT-TEST-002',
+                'location' => 'Test Location',
+            ]);
+
+        $response->assertSessionHasErrors(['consecutive_number']);
+    }
+
+    public function test_can_create_asset_with_same_consecutive_number_in_different_organizations(): void
+    {
+        $org1 = Organization::factory()->create();
+        $org2 = Organization::factory()->create();
+
+        Asset::factory()->create([
+            'organization_id' => $org1->id,
+            'consecutive_number' => '001',
+        ]);
+
+        $response = $this->actingAs($this->adminUser)
+            ->post(route('organizations.assets.store', $org2), [
+                'asset_category' => 'extintor',
+                'consecutive_number' => '001',
+                'serial_number' => 'EXT-TEST-002',
+                'location' => 'Test Location',
+            ]);
+
+        $response->assertRedirect(route('organizations.assets.index', $org2));
+        $this->assertDatabaseHas('assets', [
+            'organization_id' => $org2->id,
+            'consecutive_number' => '001',
+        ]);
+    }
+
+    public function test_can_download_import_template(): void
+    {
+        $response = $this->actingAs($this->adminUser)
+            ->get(route('organizations.assets.template', $this->organization));
+
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }
 }

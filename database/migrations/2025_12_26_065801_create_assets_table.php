@@ -14,15 +14,18 @@ return new class extends Migration
         Schema::create('assets', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('organization_id')->constrained()->cascadeOnDelete();
-            $table->string('asset_type');
-            $table->string('serial_number');
-            $table->string('location');
+            $table->string('consecutive_number');
+            $table->string('serial_number')->nullable();
+            $table->string('asset_type')->nullable();
+            $table->string('asset_category')->nullable();
+            $table->string('location')->nullable();
             $table->string('capacity')->nullable();
             $table->string('fire_class')->nullable();
             $table->timestamps();
 
             $table->index(['organization_id', 'asset_type']);
             $table->unique(['organization_id', 'serial_number']);
+            $table->unique(['organization_id', 'consecutive_number']);
         });
     }
 

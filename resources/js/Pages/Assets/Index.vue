@@ -1,8 +1,10 @@
 <script setup>
+import { ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import { ChevronRightIcon, QrCodeIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline'
+import { ChevronRightIcon, QrCodeIcon, ArrowDownTrayIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline'
 import Dashboard from '../../Layouts/Dashboard.vue'
 import EmptyState from '../../Components/EmptyState.vue'
+import ImportDataModal from '../../Components/ImportDataModal.vue'
 
 const props = defineProps({
     organization: {
@@ -14,6 +16,8 @@ const props = defineProps({
         default: () => [],
     },
 })
+
+const showImportModal = ref(false)
 
 function downloadQr(asset) {
     window.location.href = route('organizations.assets.qr.download', {
@@ -71,6 +75,14 @@ function downloadAllQr() {
                         <ArrowDownTrayIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
                         Descargar todos los QR
                     </button>
+                    <button
+                        @click="showImportModal = true"
+                        type="button"
+                        class="relative inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                    >
+                        <ArrowUpTrayIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                        Importar extintores
+                    </button>
                     <Link
                         :href="route('organizations.assets.create', organization)"
                         class="relative inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
@@ -95,6 +107,9 @@ function downloadAllQr() {
                 <thead>
                     <tr>
                         <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                            N° Consecutivo
+                        </th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                             Número de Serie
                         </th>
                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
@@ -102,6 +117,9 @@ function downloadAllQr() {
                         </th>
                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                             Capacidad
+                        </th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                            Tipo
                         </th>
                         <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                             Clase de Fuego
@@ -114,6 +132,9 @@ function downloadAllQr() {
                 <tbody class="divide-y divide-gray-200">
                     <tr v-for="asset in assets" :key="asset.id" class="hover:bg-gray-50">
                         <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                            {{ asset.consecutive_number }}
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                             {{ asset.serial_number }}
                         </td>
                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
@@ -121,6 +142,9 @@ function downloadAllQr() {
                         </td>
                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                             {{ asset.capacity || '-' }}
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {{ asset.asset_type || '-' }}
                         </td>
                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                             {{ asset.fire_class || '-' }}
@@ -148,5 +172,15 @@ function downloadAllQr() {
                 </tbody>
             </table>
         </div>
+
+        <!-- Import Modal -->
+        <ImportDataModal
+            :show="showImportModal"
+            title="Importar Extintores"
+            :has-data="assets.length > 0"
+            :download-route="route('organizations.assets.template', organization.id)"
+            :upload-route="route('organizations.assets.import', organization.id)"
+            @close="showImportModal = false"
+        />
     </Dashboard>
 </template>

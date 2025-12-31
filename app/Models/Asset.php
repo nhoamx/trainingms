@@ -14,6 +14,8 @@ class Asset extends Model
     protected $fillable = [
         'organization_id',
         'asset_type',
+        'asset_category',
+        'consecutive_number',
         'serial_number',
         'location',
         'capacity',

@@ -327,6 +327,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{asset}/qr', [\App\Http\Controllers\AssetController::class, 'qrCode'])->name('qr');
             Route::get('/{asset}/qr/download', [\App\Http\Controllers\AssetController::class, 'downloadQr'])->name('qr.download');
             Route::get('/qr/download-all', [\App\Http\Controllers\AssetController::class, 'downloadAllQr'])->name('qr.download-all');
+            Route::get('/template', [\App\Http\Controllers\AssetController::class, 'downloadTemplate'])->name('template');
+            Route::post('/import', [\App\Http\Controllers\AssetController::class, 'importAssets'])->name('import');
         });
 
         // Rutas para puestos de ocupación

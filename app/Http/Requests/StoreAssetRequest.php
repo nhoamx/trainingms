@@ -13,10 +13,19 @@ class StoreAssetRequest extends FormRequest
 
     public function rules(): array
     {
+        $organizationId = $this->route('organization')->id;
+
         return [
-            'asset_type' => ['required', 'string', 'max:50'],
+            'asset_type' => ['nullable', 'string', 'max:50'],
+            'asset_category' => ['required', 'string', 'max:50'],
+            'consecutive_number' => [
+                'required',
+                'string',
+                'max:50',
+                'unique:assets,consecutive_number,NULL,id,organization_id,'.$organizationId,
+            ],
             'serial_number' => ['required', 'string', 'max:100'],
-            'location' => ['required', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:255'],
             'capacity' => ['nullable', 'string', 'max:50'],
             'fire_class' => ['nullable', 'string', 'max:50'],
         ];
@@ -25,9 +34,10 @@ class StoreAssetRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'asset_type.required' => 'El tipo de activo es requerido.',
+            'asset_category.required' => 'La categoría del activo es requerida.',
+            'consecutive_number.required' => 'El número consecutivo es requerido.',
+            'consecutive_number.unique' => 'El número consecutivo ya existe en esta organización.',
             'serial_number.required' => 'El número de serie es requerido.',
-            'location.required' => 'La ubicación es requerida.',
         ];
     }
 }

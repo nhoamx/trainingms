@@ -44,6 +44,13 @@ const props = defineProps({
                             </div>
 
                             <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                                <dt class="text-sm font-medium text-gray-500">Número Consecutivo</dt>
+                                <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                    {{ asset.consecutive_number }}
+                                </dd>
+                            </div>
+
+                            <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
                                 <dt class="text-sm font-medium text-gray-500 flex items-center gap-2">
                                     <MapPinIcon class="h-5 w-5 text-gray-400" />
                                     Ubicación
@@ -57,6 +64,13 @@ const props = defineProps({
                                 <dt class="text-sm font-medium text-gray-500">Capacidad</dt>
                                 <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
                                     {{ asset.capacity || 'No especificada' }}
+                                </dd>
+                            </div>
+
+                            <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                                <dt class="text-sm font-medium text-gray-500">Tipo de Extintor</dt>
+                                <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                    {{ asset.asset_type || 'No especificado' }}
                                 </dd>
                             </div>
 
