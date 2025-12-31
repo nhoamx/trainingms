@@ -17,7 +17,7 @@ class AssetController extends Controller
     {
         $assets = $organization->assets()
             ->where('asset_category', 'extintor')
-            ->orderBy('created_at', 'desc')
+            ->orderByRaw('CAST(consecutive_number AS UNSIGNED)')
             ->get();
 
         return Inertia::render('Assets/Index', [
