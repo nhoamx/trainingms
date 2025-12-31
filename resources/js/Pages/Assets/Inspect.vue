@@ -68,6 +68,41 @@ const closeInspectionDetail = () => {
                         </div>
                     </div>
                 </div>
+
+                <!-- Botón para nueva inspección (solo para inspectores autenticados) -->
+                <div v-if="isInspector" class="mt-6">
+                    <Link
+                        :href="route('assets.inspections.create', asset.id)"
+                        class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                    >
+                        <ClipboardDocumentCheckIcon class="h-5 w-5" />
+                        Nueva Inspección
+                    </Link>
+                </div>
+
+                <!-- Mensaje para usuarios no autenticados -->
+                <div v-else-if="!isAuthenticated" class="mt-6 rounded-md bg-yellow-50 p-4 border border-yellow-200">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <ArrowRightOnRectangleIcon class="h-5 w-5 text-yellow-400" />
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <h3 class="text-sm font-medium text-yellow-800">Iniciar Sesión para Inspeccionar</h3>
+                            <div class="mt-2 text-sm text-yellow-700">
+                                <p class="mb-3">
+                                    Para realizar una inspección de este extintor, debe iniciar sesión con una cuenta de inspector autorizado.
+                                </p>
+                                <Link
+                                    :href="route('login') + '?redirect=' + encodeURIComponent(route('assets.inspections.create', asset.id))"
+                                    class="inline-flex items-center gap-2 rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-500"
+                                >
+                                    <ArrowRightOnRectangleIcon class="h-4 w-4" />
+                                    Iniciar Sesión
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </header>
 
             <main class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -122,41 +157,6 @@ const closeInspectionDetail = () => {
                                 </dd>
                             </div>
                         </dl>
-                    </div>
-                </div>
-
-                <!-- Botón para nueva inspección (solo para inspectores autenticados) -->
-                <div v-if="isInspector" class="mt-6">
-                    <Link
-                        :href="route('assets.inspections.create', asset.id)"
-                        class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
-                    >
-                        <ClipboardDocumentCheckIcon class="h-5 w-5" />
-                        Nueva Inspección
-                    </Link>
-                </div>
-
-                <!-- Mensaje para usuarios no autenticados -->
-                <div v-else-if="!isAuthenticated" class="mt-6 rounded-md bg-yellow-50 p-4 border border-yellow-200">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <ArrowRightOnRectangleIcon class="h-5 w-5 text-yellow-400" />
-                        </div>
-                        <div class="ml-3 flex-1">
-                            <h3 class="text-sm font-medium text-yellow-800">Iniciar Sesión para Inspeccionar</h3>
-                            <div class="mt-2 text-sm text-yellow-700">
-                                <p class="mb-3">
-                                    Para realizar una inspección de este extintor, debe iniciar sesión con una cuenta de inspector autorizado.
-                                </p>
-                                <Link
-                                    :href="route('login') + '?redirect=' + encodeURIComponent(route('assets.inspections.create', asset.id))"
-                                    class="inline-flex items-center gap-2 rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-500"
-                                >
-                                    <ArrowRightOnRectangleIcon class="h-4 w-4" />
-                                    Iniciar Sesión
-                                </Link>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
