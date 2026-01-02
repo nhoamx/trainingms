@@ -206,7 +206,7 @@ class AssetController extends Controller
         $contentWidth = $qrWidth + ($padding * 2);
         $contentHeight = $qrHeight + $labelHeight + ($padding * 2);
 
-        $fontSize = 16;
+        $fontSize = 18;
 
         // Crear un nuevo SVG que contenga el QR y el label con borde
         $svg = '<?xml version="1.0" encoding="UTF-8"?>';
