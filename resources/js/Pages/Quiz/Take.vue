@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
+import { useAudioUrls } from '@/composables/useAudioUrls';
 import QuizLayout from '@/Layouts/QuizLayout.vue';
 import ProgressBar from '@/Components/Quiz/ProgressBar.vue';
 import ViewModeToggle from '@/Components/Quiz/ViewModeToggle.vue';
@@ -345,46 +346,8 @@ const progress = computed(() => {
 const viewMode = ref('comfortable'); // 'comfortable' o 'compact'
 const isSubmitting = ref(false);
 
-// URLs de audio para las preguntas (puede venir del servidor o ser vacío)
-const audioUrls = computed(() => {
-    const urls = {};
-    const exampleUrl = '/assets/audios/example.mpeg';
-    
-    // Generar URLs para preguntas generales (Referencia III)
-    const generalQuestions = props.quiz?.questions?.general || {};
-    Object.keys(generalQuestions).forEach((key, idx) => {
-        urls[`general_${key}`] = exampleUrl;
-    });
-    
-    // Generar URLs para preguntas condicionales
-    const conditionalQuestions = props.quiz?.questions?.conditional || {};
-    Object.keys(conditionalQuestions).forEach((key, idx) => {
-        urls[`conditional_${key}`] = exampleUrl;
-    });
-    
-    // Generar URLs para eventos traumáticos
-    const traumaticQuestions = props.quiz?.questions?.traumatic || [];
-    if (Array.isArray(traumaticQuestions)) {
-        traumaticQuestions.forEach((_, idx) => {
-            urls[`traumatic_${idx}`] = exampleUrl;
-        });
-    }
-    
-    // Generar URLs para referencia_i
-    const referencia_i = props.quiz?.reference_i;
-    if (Array.isArray(referencia_i)) {
-        referencia_i.forEach((_, idx) => {
-            urls[`referencia_i_${idx}`] = exampleUrl;
-        });
-    }
-    
-    // Fallback para índices simples
-    for (let i = 0; i < 100; i++) {
-        urls[i] = exampleUrl;
-    }
-    
-    return urls;
-});
+// URLs de audio para las preguntas usando el composable
+const audioUrls = useAudioUrls(props.quiz);
 
 const canAccessSubsection = (subsection) => {
     const subsectionOrder = ['general', 'conditional', 'traumatic'];

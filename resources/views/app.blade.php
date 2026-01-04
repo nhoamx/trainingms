@@ -6,6 +6,11 @@
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     @vite(['resources/js/app.js', 'resources/css/app.css'])
     @inertiaHead
+    <!-- Audio Configuration -->
+    <script>
+        window.__AUDIO_BASE_URL = '{{ config("audio.base_url") }}';
+        window.__AUDIO_ENABLED = {{ config("audio.enabled") ? "true" : "false" }};
+    </script>
 </head>
 <body class="h-full">
 @inertia
