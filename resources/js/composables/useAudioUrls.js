@@ -10,7 +10,11 @@ export function useAudioUrls(quiz) {
     return computed(() => {
         const urls = {};
         
-        if (!quiz) return urls;
+        const audioEnabled = typeof window !== 'undefined' ? window.__AUDIO_ENABLED !== false : true;
+
+        if (!quiz || !audioEnabled || !window.__AUDIO_BASE_URL) {
+            return urls;
+        }
         
         const { questions, reference_i } = quiz;
         
