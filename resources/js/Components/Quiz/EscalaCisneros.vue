@@ -30,7 +30,11 @@
                 <div class="flex items-start justify-between gap-3 mb-3">
                     <label class="block text-sm font-medium text-slate-700 flex-grow">{{ idx + 1 }}: {{ question }}</label>
                     <div class="flex-shrink-0 w-48">
-                        <AudioPlayer :audio-url="getAudioUrl(`cisneros_${idx + 1}`)" />
+                        <AudioPlayer
+                            :audio-url="getAudioUrl(`cisneros_${idx + 1}`)"
+                            @ended="handleAudioEnded(`cisneros_${idx + 1}`)"
+                            @error="handleAudioError(`cisneros_${idx + 1}`)"
+                        />
                     </div>
                 </div>
                 <div class="flex flex-col gap-2">
@@ -43,6 +47,7 @@
                                 :name="'abc-' + idx"
                                 :value="option"
                                 :checked="modelValue['persona' + (idx + 1)] === option"
+                                :disabled="isDisabled(`cisneros_${idx + 1}`)"
                                 @change="updateField('persona' + (idx + 1), option)"
                                 class="form-radio h-4 w-4 text-slate-800"
                             >
@@ -58,6 +63,7 @@
                                 :name="'freq-' + idx"
                                 :value="option"
                                 :checked="modelValue['frecuencia' + (idx + 1)] == option"
+                                :disabled="isDisabled(`cisneros_${idx + 1}`)"
                                 @change="updateField('frecuencia' + (idx + 1), option)"
                                 class="form-radio h-4 w-4 text-slate-800"
                             >
@@ -71,6 +77,7 @@
 </template>
 
 <script setup>
+import { ref, watch } from 'vue';
 import AudioPlayer from './AudioPlayer.vue';
 
 const props = defineProps({
@@ -85,6 +92,32 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+const unlocked = ref({});
+
+const primeUnlockState = () => {
+    const next = { ...unlocked.value };
+    cisnerosQuestions.forEach((_, idx) => {
+        const key = `cisneros_${idx + 1}`;
+        const hasAudio = Boolean(getAudioUrl(key));
+        if (!(key in next)) {
+            next[key] = !hasAudio;
+        }
+    });
+    unlocked.value = next;
+};
+
+watch(cisnerosQuestions, primeUnlockState, { immediate: true });
+
+const isDisabled = (key) => unlocked.value[key] === false;
+
+const handleAudioEnded = (key) => {
+    unlocked.value = { ...unlocked.value, [key]: true };
+};
+
+const handleAudioError = (key) => {
+    unlocked.value = { ...unlocked.value, [key]: true };
+};
 
 const updateField = (field, value) => {
     emit('update:modelValue', {

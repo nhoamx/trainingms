@@ -15,7 +15,11 @@
                     <div class="flex items-start justify-between gap-3 mb-4">
                         <p class="text-slate-900 flex-grow">{{ question }}</p>
                         <div class="flex-shrink-0 w-48">
-                            <AudioPlayer :audio-url="getAudioUrl(`${category}_${index}`)" />
+                            <AudioPlayer
+                                :audio-url="getAudioUrl(`${category}_${index}`)"
+                                @ended="handleAudioEnded(`${category}_${index}`)"
+                                @error="handleAudioError(`${category}_${index}`)"
+                            />
                         </div>
                     </div>
                     <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
@@ -29,6 +33,7 @@
                                 :name="`trauma_follow_${category}_${index}`"
                                 :value="option.value"
                                 :checked="modelValue[`${category}_${index}`] === option.value"
+                                :disabled="isDisabled(`${category}_${index}`)"
                                 @change="updateAnswer(`${category}_${index}`, option.value)"
                                 class="form-radio h-4 w-4 text-slate-800"
                             >
@@ -42,6 +47,7 @@
 </template>
 
 <script setup>
+import { ref, watch } from 'vue';
 import AudioPlayer from './AudioPlayer.vue';
 
 const props = defineProps({
@@ -64,6 +70,34 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+const unlocked = ref({});
+
+const primeUnlockState = () => {
+    const next = { ...unlocked.value };
+    Object.entries(props.followUpQuestions).forEach(([category, questions]) => {
+        questions.forEach((_, index) => {
+            const key = `${category}_${index}`;
+            const hasAudio = Boolean(getAudioUrl(key));
+            if (!(key in next)) {
+                next[key] = !hasAudio;
+            }
+        });
+    });
+    unlocked.value = next;
+};
+
+watch(() => props.followUpQuestions, primeUnlockState, { immediate: true });
+
+const isDisabled = (key) => unlocked.value[key] === false;
+
+const handleAudioEnded = (key) => {
+    unlocked.value = { ...unlocked.value, [key]: true };
+};
+
+const handleAudioError = (key) => {
+    unlocked.value = { ...unlocked.value, [key]: true };
+};
 
 const getAudioUrl = (key) => {
     return props.audioUrls?.[key] || null;

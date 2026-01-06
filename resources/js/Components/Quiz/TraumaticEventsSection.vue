@@ -10,7 +10,11 @@
                 <div class="flex items-start justify-between gap-3 mb-4">
                     <p class="text-slate-900 flex-grow">{{ index }}. {{ question }}</p>
                     <div class="flex-shrink-0 w-48">
-                        <AudioPlayer :audio-url="getAudioUrl(index)" />
+                        <AudioPlayer
+                            :audio-url="getAudioUrl(index)"
+                            @ended="handleAudioEnded(index)"
+                            @error="handleAudioError(index)"
+                        />
                     </div>
                 </div>
                 <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
@@ -24,6 +28,7 @@
                             :name="`${namePrefix}_${index}`"
                             :value="option.value"
                             :checked="modelValue?.[index] === option.value"
+                            :disabled="isDisabled(index)"
                             @change="updateAnswer(index, option.value)"
                             class="form-radio h-4 w-4 text-slate-800"
                         >
@@ -36,7 +41,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import AudioPlayer from './AudioPlayer.vue';
 
 const props = defineProps({
@@ -68,9 +73,39 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
+const unlocked = ref({});
+
+const primeUnlockState = () => {
+    const next = { ...unlocked.value };
+    const questionKeys = Array.isArray(props.questions)
+        ? props.questions.map((_, idx) => idx)
+        : Object.keys(props.questions);
+    questionKeys.forEach((index) => {
+        const hasAudio = Boolean(getAudioUrl(index));
+        if (!(index in next)) {
+            next[index] = !hasAudio;
+        }
+    });
+    unlocked.value = next;
+};
+
+onMounted(() => {
+    primeUnlockState();
+});
+
 // Obtener la URL del audio para una pregunta
 const getAudioUrl = (index) => {
     return props.audioUrls?.[index] || null;
+};
+
+const isDisabled = (index) => unlocked.value[index] === false;
+
+const handleAudioEnded = (index) => {
+    unlocked.value = { ...unlocked.value, [index]: true };
+};
+
+const handleAudioError = (index) => {
+    unlocked.value = { ...unlocked.value, [index]: true };
 };
 
 // Inicializa todas las preguntas traumáticas como null si no existen

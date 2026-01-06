@@ -35,7 +35,11 @@
                 <div class="flex items-start justify-between gap-3 mb-4">
                     <p class="text-slate-900 flex-grow">{{ qIndex }}. {{ question }}</p>
                     <div class="flex-shrink-0 w-48">
-                        <AudioPlayer :audio-url="getAudioUrl(qIndex)" />
+                        <AudioPlayer
+                            :audio-url="getAudioUrl(qIndex)"
+                            @ended="handleAudioEnded(qIndex)"
+                            @error="handleAudioError(qIndex)"
+                        />
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -49,6 +53,7 @@
                             :name="`question_${qIndex}`"
                             :value="option.value"
                             :checked="modelValue[qIndex] === option.value"
+                            :disabled="isDisabled(qIndex)"
                             @change="updateAnswer(qIndex, option.value)"
                             class="form-radio h-4 w-4 text-slate-800"
                         >
@@ -61,7 +66,7 @@
 </template>
 
 <script setup>
-import { watch } from 'vue';
+import { ref, watch } from 'vue';
 import AudioPlayer from './AudioPlayer.vue';
 
 const props = defineProps({
@@ -88,6 +93,33 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+const unlocked = ref({});
+
+const primeUnlockState = () => {
+    const next = { ...unlocked.value };
+    Object.entries(props.conditionalSections).forEach(([key, section]) => {
+        Object.keys(section.questions).forEach((qKey) => {
+            const hasAudio = Boolean(getAudioUrl(qKey));
+            if (!(qKey in next)) {
+                next[qKey] = !hasAudio;
+            }
+        });
+    });
+    unlocked.value = next;
+};
+
+watch(() => props.conditionalSections, primeUnlockState, { immediate: true });
+
+const isDisabled = (questionId) => unlocked.value[questionId] === false;
+
+const handleAudioEnded = (questionId) => {
+    unlocked.value = { ...unlocked.value, [questionId]: true };
+};
+
+const handleAudioError = (questionId) => {
+    unlocked.value = { ...unlocked.value, [questionId]: true };
+};
 
 const getAudioUrl = (questionId) => {
     return props.audioUrls?.[questionId] || null;

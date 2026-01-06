@@ -90,6 +90,8 @@
 <script setup>
 import { ref, watch } from 'vue';
 
+const emit = defineEmits(['ready', 'ended', 'error', 'started']);
+
 const props = defineProps({
     audioUrl: {
         type: String,
@@ -182,6 +184,7 @@ const stopAudio = () => {
  */
 const handlePlay = () => {
     isPlaying.value = true;
+    emit('started');
 };
 
 /**
@@ -207,6 +210,7 @@ const handleCanPlay = () => {
     isLoading.value = false;
     hasError.value = false;
     isVisible.value = true;
+    emit('ready');
 };
 
 /**
@@ -218,6 +222,7 @@ const handleError = () => {
     isPlaying.value = false;
     isVisible.value = false;
     console.warn(`Failed to load audio: ${props.audioUrl}`);
+    emit('error');
 };
 
 /**
@@ -225,6 +230,7 @@ const handleError = () => {
  */
 const handleEnded = () => {
     isPlaying.value = false;
+    emit('ended');
 };
 </script>
 
