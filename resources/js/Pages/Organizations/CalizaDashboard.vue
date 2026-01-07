@@ -137,7 +137,7 @@ import Dashboard from '../../Layouts/Dashboard.vue';
 import CompanyDataTab from '@/Components/Organization/CompanyDataTab.vue';
 import DemographicDataTab from '@/Components/Organization/DemographicDataTab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
-import { useTranslations } from '@/composables/useTranslations';
+import { useTranslations } from '@/Composables/useTranslations';
 
 const { t } = useTranslations();
 

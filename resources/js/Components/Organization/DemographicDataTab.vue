@@ -166,7 +166,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import { Chart, registerables } from 'chart.js';
-import { useTranslations } from '@/composables/useTranslations';
+import { useTranslations } from '@/Composables/useTranslations';
 
 Chart.register(...registerables);
 

@@ -51,6 +51,16 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/organizacion/{organization}/dashboard', [\App\Http\Controllers\OrganizationDashboardController::class, 'show'])
         ->name('organization.dashboard');
 
+    // Specific evaluation type dashboard routes
+    Route::get('/organizacion/{organization}/dashboard/clima-laboral', [\App\Http\Controllers\OrganizationDashboardController::class, 'showLikertDashboard'])
+        ->name('organization.dashboard.clima-laboral');
+
+    Route::get('/organizacion/{organization}/dashboard/nom-035', [\App\Http\Controllers\OrganizationDashboardController::class, 'showCalizaDashboard'])
+        ->name('organization.dashboard.nom-035');
+
+    Route::get('/organizacion/{organization}/dashboard/nom-002', [\App\Http\Controllers\OrganizationDashboardController::class, 'showNom002Dashboard'])
+        ->name('organization.dashboard.nom-002');
+
     // Online results routes
     Route::get('/organization/{id}/online-results', [App\Http\Controllers\OnlineResultsController::class, 'index'])->name('organization.online-results');
     Route::get('/organization/{id}/online-results/report', [App\Http\Controllers\OnlineResultsController::class, 'report'])->name('organization.online-results.report');

@@ -213,7 +213,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useTranslations } from '@/composables/useTranslations';
+import { useTranslations } from '@/Composables/useTranslations';
 
 interface Props {
   organizationId: string;

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Asset;
 use App\Models\DemographicData;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
@@ -17,7 +18,7 @@ class OrganizationDataService
     public function getCompanyData(Organization $organization): array
     {
         return [
-            'logo' => asset('storage/'.$organization->logo),
+            'logo' => $organization->logo ? asset('storage/'.$organization->logo) : null,
             'general' => [
                 'name' => $organization->name,
                 'razon_social' => $organization->razon_social,
@@ -167,16 +168,49 @@ class OrganizationDataService
      */
     public function getDashboardData(Organization $organization, ?string $evaluationType = 'likert'): array
     {
-        return [
+        $data = [
             'organization' => [
                 'id' => $organization->id,
                 'name' => $organization->name,
-                'logo' => asset('storage/'.$organization->logo),
+                'logo' => $organization->logo ? asset('storage/'.$organization->logo) : null,
             ],
             'company_data' => $this->getCompanyData($organization),
             'demographic_summary' => $this->getDemographicSummary($organization),
             'demographic_details' => $this->getDemographicDetails($organization, $evaluationType),
         ];
+
+        // Solo para NOM-002: incluir inventario de activos (extintores)
+        if ($evaluationType === 'nom002') {
+            $data['assets'] = $this->getAssetsData($organization);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Obtiene el inventario de activos (extintores) con su estado y enlace al reporte/inspección
+     */
+    protected function getAssetsData(Organization $organization): array
+    {
+        $assets = $organization->assets()
+            ->where('asset_category', 'extintor')
+            ->with(['inspections' => function ($query) {
+                $query->latest()->limit(1);
+            }])
+            ->orderByRaw('CAST(consecutive_number AS UNSIGNED)')
+            ->get();
+
+        return $assets->map(function (Asset $asset) {
+            $latestInspection = $asset->inspections->first();
+
+            return [
+                'id' => $asset->id,
+                'name' => $asset->location ?? ('Extintor '.$asset->consecutive_number),
+                'type' => $asset->asset_type ?? $asset->fire_class ?? 'Extintor',
+                'status' => $latestInspection ? 'Completado' : 'Pendiente',
+                'reportUrl' => route('assets.inspect', $asset),
+            ];
+        })->toArray();
     }
 
     /**

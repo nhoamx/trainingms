@@ -24,26 +24,99 @@ class OrganizationDashboardController extends Controller
 
     /**
      * Muestra el dashboard de la organización
+     *
+     * Determina dinámicamente qué tipo(s) de evaluación tiene la organización
+     * y redirige al dashboard correspondiente o muestra un selector si hay múltiples
      */
     public function show(Organization $organization): Response
     {
         $this->authorize('viewOrganizationDashboard', $organization);
 
-        // Check if this is Caliza organization (NOM-035 report)
-        $calizaOrganizationId = config('organizations.caliza.id');
-        if ($organization->id === $calizaOrganizationId) {
-            return $this->showCalizaDashboard($organization);
+        // Get evaluation types for this organization
+        $evaluationTypes = $this->getEvaluationTypesForOrganization($organization);
+
+        // If only one evaluation type (or no config, defaults to Likert), show that dashboard
+        if (count($evaluationTypes) === 1) {
+            $evaluationType = reset($evaluationTypes);
+
+            return $this->showDashboardForType($organization, $evaluationType);
         }
 
-        // Default: Likert/Clima Laboral dashboard
-        return $this->showLikertDashboard($organization);
+        // If multiple evaluation types, show selection landing page
+        return $this->showEvaluationTypeSelector($organization, $evaluationTypes);
+    }
+
+    /**
+     * Get evaluation types configured for the organization
+     *
+     * @return array Array of evaluation type configurations
+     */
+    protected function getEvaluationTypesForOrganization(Organization $organization): array
+    {
+        $evaluationTypes = config('evaluation_types', []);
+        $organizationTypes = [];
+
+        foreach ($evaluationTypes as $typeKey => $typeConfig) {
+            if (in_array($organization->id, $typeConfig['organizations'] ?? [])) {
+                $organizationTypes[$typeKey] = $typeConfig;
+            }
+        }
+
+        // If no evaluation types are configured, return Likert as default
+        if (empty($organizationTypes)) {
+            return [
+                'clima_laboral' => $evaluationTypes['clima_laboral'] ?? [],
+            ];
+        }
+
+        return $organizationTypes;
+    }
+
+    /**
+     * Show the evaluation type selector landing page
+     */
+    protected function showEvaluationTypeSelector(Organization $organization, array $evaluationTypes): Response
+    {
+        return Inertia::render('Organizations/EvaluationTypeSelector', [
+            'title' => 'Seleccionar Tipo de Evaluación',
+            'organization' => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+            ],
+            'evaluationTypes' => array_map(function ($type) use ($organization) {
+                return [
+                    'id' => $type['id'],
+                    'name' => $type['name'],
+                    'description' => $type['description'],
+                    'route' => route($type['route'], $organization->id),
+                ];
+            }, $evaluationTypes),
+        ]);
+    }
+
+    /**
+     * Show dashboard for a specific evaluation type
+     */
+    protected function showDashboardForType(Organization $organization, array $evaluationType): Response
+    {
+        $typeId = $evaluationType['id'];
+
+        return match ($typeId) {
+            'nom_035' => $this->showCalizaDashboard($organization),
+            'clima_laboral' => $this->showLikertDashboard($organization),
+            'nom_002' => $this->showNom002Dashboard($organization),
+            default => $this->showLikertDashboard($organization),
+        };
     }
 
     /**
      * Muestra el dashboard de Caliza (NOM-035)
+     * Public method for route binding
      */
-    protected function showCalizaDashboard(Organization $organization): Response
+    public function showCalizaDashboard(Organization $organization): Response
     {
+        $this->authorize('viewOrganizationDashboard', $organization);
+
         $data = $this->organizationDataService->getDashboardData($organization, 'nom035');
 
         // Obtener evaluaciones NOM-035 completadas con datos demográficos
@@ -76,9 +149,12 @@ class OrganizationDashboardController extends Controller
 
     /**
      * Muestra el dashboard de Likert/Clima Laboral
+     * Public method for route binding
      */
-    protected function showLikertDashboard(Organization $organization): Response
+    public function showLikertDashboard(Organization $organization): Response
     {
+        $this->authorize('viewOrganizationDashboard', $organization);
+
         $data = $this->organizationDataService->getDashboardData($organization, 'likert');
 
         // Obtener evaluaciones con datos demográficos y calcular score
@@ -127,6 +203,44 @@ class OrganizationDashboardController extends Controller
 
         return Inertia::render('Organizations/Dashboard', [
             'title' => 'Clima Laboral',
+            'dashboardData' => $data,
+            'evaluations' => $evaluations,
+        ]);
+    }
+
+    /**
+     * Muestra el dashboard de NOM-002
+     * Public method for route binding
+     */
+    public function showNom002Dashboard(Organization $organization): Response
+    {
+        $this->authorize('viewOrganizationDashboard', $organization);
+
+        $data = $this->organizationDataService->getDashboardData($organization, 'nom002');
+
+        // Obtener evaluaciones NOM-002 completadas con datos demográficos
+        $evaluations = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('evaluation_type', 'nom_002')
+            ->where('processing_status', 'completed')
+            ->with(['demographicData', 'comments'])
+            ->get()
+            ->map(function ($evaluation) {
+                return [
+                    'id' => $evaluation->id,
+                    'evaluation_type' => $evaluation->evaluation_type,
+                    'personal_folio' => $evaluation->personal_folio,
+                    'demographicData' => $evaluation->demographicData ? [
+                        'gender' => $evaluation->demographicData->gender,
+                        'contract_type' => $evaluation->demographicData->contract_type,
+                        'position' => $evaluation->demographicData->position,
+                        'department' => $evaluation->demographicData->department,
+                        'work_schedule' => $evaluation->demographicData->work_schedule,
+                    ] : null,
+                ];
+            });
+
+        return Inertia::render('Organizations/Nom002Dashboard', [
+            'title' => 'NOM-002-STPS-2010',
             'dashboardData' => $data,
             'evaluations' => $evaluations,
         ]);

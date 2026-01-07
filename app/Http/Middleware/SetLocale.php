@@ -37,7 +37,7 @@ class SetLocale
      */
     protected function determineLocale(Request $request): string
     {
-        // Priority: 1) Query param, 2) Session, 3) Browser preference, 4) Default
+        // Priority: 1) Query param, 2) Session, 3) Default to Spanish
         if ($request->has('lang') && in_array($request->query('lang'), $this->supportedLocales)) {
             return $request->query('lang');
         }
@@ -46,12 +46,7 @@ class SetLocale
             return Session::get('locale');
         }
 
-        // Check browser's Accept-Language header
-        $browserLocale = $request->getPreferredLanguage($this->supportedLocales);
-        if ($browserLocale && in_array($browserLocale, $this->supportedLocales)) {
-            return $browserLocale;
-        }
-
-        return config('app.locale', 'es');
+        // Default to Spanish
+        return 'es';
     }
 }

@@ -62,7 +62,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useTranslations } from '@/composables/useTranslations'
+import { useTranslations } from '@/Composables/useTranslations'
 
 const { locale, setLocale, t } = useTranslations()
 

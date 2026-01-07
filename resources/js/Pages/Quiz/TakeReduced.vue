@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
-import { useAudioUrls } from '@/composables/useAudioUrls';
+import { useAudioUrls } from '@/Composables/useAudioUrls';
 import QuizLayout from '@/Layouts/QuizLayout.vue';
 import ProgressBar from '@/Components/Quiz/ProgressBar.vue';
 import ViewModeToggle from '@/Components/Quiz/ViewModeToggle.vue';

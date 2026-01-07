@@ -54,7 +54,7 @@
 
 
 <script setup lang="ts">
-import { useTranslations } from '@/composables/useTranslations';
+import { useTranslations } from '@/Composables/useTranslations';
 
 const { t } = useTranslations();
 

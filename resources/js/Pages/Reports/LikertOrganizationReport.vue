@@ -810,7 +810,7 @@ import Dashboard from '@/Layouts/Dashboard.vue'
 import { Chart, registerables } from 'chart.js'
 import { Link, router } from '@inertiajs/vue3'
 import axios from 'axios'
-import { useTranslations } from '@/composables/useTranslations'
+import { useTranslations } from '@/Composables/useTranslations'
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue'
 
 Chart.register(...registerables)

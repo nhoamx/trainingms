@@ -376,7 +376,7 @@ import FodaDataTab from '@/Components/Organization/FodaDataTab.vue';
 import RecommendationsP3Tab from '@/Components/Organization/RecommendationsP3Tab.vue';
 import ReportTab from '@/Components/Organization/ReportTab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
-import { useTranslations } from '@/composables/useTranslations';
+import { useTranslations } from '@/Composables/useTranslations';
 
 const { t } = useTranslations();
 
