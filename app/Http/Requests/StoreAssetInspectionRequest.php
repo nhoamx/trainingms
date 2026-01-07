@@ -16,8 +16,10 @@ class StoreAssetInspectionRequest extends FormRequest
         return [
             'inspector_name' => ['required', 'string', 'max:255'],
             'inspection_date' => ['required', 'date'],
+            'extinguisher_weight' => ['nullable', 'string', 'max:50'],
             'checklist_results' => ['required', 'array'],
             'checklist_results.*.date' => ['nullable', 'date'],
+            'checklist_results.*.status' => ['nullable', 'string', 'in:ok,issue'],
             'checklist_results.*.result' => ['nullable', 'string', 'max:500'],
             'anomalies_followup' => ['nullable', 'string'],
         ];

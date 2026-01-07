@@ -20,6 +20,7 @@ const props = defineProps({
 const form = useForm({
     inspector_name: '',
     inspection_date: new Date().toISOString().split('T')[0],
+    extinguisher_weight: '',
     checklist_results: {},
     anomalies_followup: '',
 })
@@ -29,6 +30,7 @@ const currentDate = new Date().toISOString().split('T')[0]
 Object.keys(props.checklist).forEach(key => {
     form.checklist_results[key] = {
         date: currentDate,
+        status: 'ok',
         result: '',
     }
 })
@@ -95,6 +97,22 @@ const submit = () => {
                                 {{ form.errors.inspection_date }}
                             </p>
                         </div>
+
+                        <div>
+                            <label for="extinguisher_weight" class="block text-sm font-medium text-gray-700 mb-1">
+                                Peso del Extintor (kg)
+                            </label>
+                            <input
+                                id="extinguisher_weight"
+                                v-model="form.extinguisher_weight"
+                                type="text"
+                                placeholder="Ej: 4.5 kg"
+                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 text-base py-3 px-4"
+                            />
+                            <p v-if="form.errors.extinguisher_weight" class="mt-1 text-sm text-red-600">
+                                {{ form.errors.extinguisher_weight }}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -134,15 +152,46 @@ const submit = () => {
                             </div>
 
                             <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-2">
+                                    Estado
+                                </label>
+                                <div class="flex gap-4">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input
+                                            :id="'status_ok_' + index"
+                                            v-model="form.checklist_results[index].status"
+                                            type="radio"
+                                            :name="'status_' + index"
+                                            value="ok"
+                                            class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
+                                        />
+                                        <span class="ml-2 text-sm text-gray-700">Todo OK</span>
+                                    </label>
+                                    <label class="flex items-center cursor-pointer">
+                                        <input
+                                            :id="'status_issue_' + index"
+                                            v-model="form.checklist_results[index].status"
+                                            type="radio"
+                                            :name="'status_' + index"
+                                            value="issue"
+                                            class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300"
+                                        />
+                                        <span class="ml-2 text-sm text-gray-700">Hay problema</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div v-if="form.checklist_results[index].status === 'issue'">
                                 <label :for="'result_' + index" class="block text-xs font-medium text-gray-600 mb-1">
-                                    Resultados / Anomalías
+                                    Detalle del Problema <span class="text-red-500">*</span>
                                 </label>
                                 <textarea
                                     :id="'result_' + index"
                                     v-model="form.checklist_results[index].result"
                                     rows="3"
                                     class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 text-base py-2.5 px-3"
-                                    placeholder="Observaciones..."
+                                    placeholder="Describa el problema encontrado..."
+                                    required
                                 />
                             </div>
                         </div>

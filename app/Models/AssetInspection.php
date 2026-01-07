@@ -15,6 +15,7 @@ class AssetInspection extends Model
         'asset_id',
         'inspector_name',
         'inspection_date',
+        'extinguisher_weight',
         'checklist_results',
         'anomalies_followup',
     ];

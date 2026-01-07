@@ -216,35 +216,62 @@ const closeInspectionDetail = () => {
                                     <p class="text-sm font-medium text-gray-500">Fecha de Inspección</p>
                                     <p class="text-sm text-gray-900">{{ new Date(selectedInspection.inspection_date).toLocaleDateString('es-MX') }}</p>
                                 </div>
+                                <div v-if="selectedInspection.extinguisher_weight">
+                                    <p class="text-sm font-medium text-gray-500">Peso del Extintor</p>
+                                    <p class="text-sm text-gray-900">{{ selectedInspection.extinguisher_weight }}</p>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Checklist results -->
                         <div class="mb-4">
                             <h4 class="text-sm font-medium text-gray-900 mb-3">Procedimientos de Revisión</h4>
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200 border border-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">No.</th>
-                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Resultado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        <tr 
-                                            v-for="(item, index) in selectedInspection.checklist_results" 
-                                            :key="index"
-                                            class="hover:bg-gray-50"
-                                        >
-                                            <td class="px-3 py-2 text-sm text-gray-900">{{ index }}</td>
-                                            <td class="px-3 py-2 text-sm text-gray-900">
-                                                {{ item.date ? new Date(item.date).toLocaleDateString('es-MX') : '-' }}
-                                            </td>
-                                            <td class="px-3 py-2 text-sm text-gray-900">{{ item.result || '-' }}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <div class="space-y-3">
+                                <div 
+                                    v-for="(item, index) in selectedInspection.checklist_results" 
+                                    :key="index"
+                                    class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                                >
+                                    <div class="flex items-start gap-3">
+                                        <div class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                            <span class="text-sm font-semibold text-red-600">{{ index }}</span>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <p class="text-sm font-medium text-gray-900">Procedimiento {{ index }}</p>
+                                                <!-- Mostrar badge solo si existe el campo status -->
+                                                <span 
+                                                    v-if="item.status === 'ok'"
+                                                    class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20"
+                                                >
+                                                    ✓ Todo OK
+                                                </span>
+                                                <span 
+                                                    v-else-if="item.status === 'issue'"
+                                                    class="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20"
+                                                >
+                                                    ⚠ Problema
+                                                </span>
+                                                <span 
+                                                    v-else-if="item.result"
+                                                    class="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-600/20"
+                                                >
+                                                    Con observación
+                                                </span>
+                                            </div>
+                                            <div class="text-xs text-gray-500 mb-2">
+                                                <span class="font-medium">Fecha:</span> {{ item.date ? new Date(item.date).toLocaleDateString('es-MX') : '-' }}
+                                            </div>
+                                            <!-- Mostrar resultado si existe, ya sea inspección antigua o nueva con problema -->
+                                            <div v-if="item.result" class="mt-2 p-3 rounded-lg" :class="item.status === 'issue' ? 'bg-red-50' : 'bg-gray-50'">
+                                                <p class="text-xs font-medium mb-1" :class="item.status === 'issue' ? 'text-red-800' : 'text-gray-800'">
+                                                    {{ item.status === 'issue' ? 'Detalle del Problema:' : 'Observación:' }}
+                                                </p>
+                                                <p class="text-sm whitespace-pre-wrap" :class="item.status === 'issue' ? 'text-red-700' : 'text-gray-700'">{{ item.result }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
