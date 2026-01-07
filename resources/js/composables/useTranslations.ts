@@ -4,6 +4,7 @@ import { computed } from 'vue'
 /**
  * Composable for handling translations in Vue components.
  * Uses translations shared from Laravel via Inertia.
+ * @returns Translation utilities
  */
 export function useTranslations() {
   const page = usePage()
