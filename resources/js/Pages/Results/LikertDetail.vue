@@ -500,7 +500,7 @@ import { Link } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import Dashboard from '@/Layouts/Dashboard.vue'
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue'
-import { useTranslations } from '@/Composables/useTranslations'
+import { useTranslations } from '@/composables/useTranslations'
 
 const { t } = useTranslations()
 

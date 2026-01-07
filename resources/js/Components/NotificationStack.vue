@@ -85,7 +85,7 @@ import {
     ArrowPathIcon
 } from '@heroicons/vue/24/outline'
 import { XMarkIcon } from '@heroicons/vue/20/solid'
-import { useNotifications } from '@/Composables/useNotifications'
+import { useNotifications } from '@/composables/useNotifications'
 
 const props = defineProps<{
     userId?: string

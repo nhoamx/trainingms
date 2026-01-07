@@ -417,6 +417,6 @@
     </div>
 </template>
 <script setup lang="ts">
-import { useTranslations } from '@/Composables/useTranslations';
+import { useTranslations } from '@/composables/useTranslations';
 const { t } = useTranslations();
 </script>

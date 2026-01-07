@@ -484,7 +484,7 @@ import Dashboard from "../../Layouts/Dashboard.vue";
 import EditNameModal from '../../Components/PaperEvaluation/EditNameModal.vue';
 import EditFolioModal from '../../Components/PaperEvaluation/EditFolioModal.vue';
 import EditDemographicDataModal from '../../Components/PaperEvaluation/EditDemographicDataModal.vue';
-import { useTranslations } from '@/Composables/useTranslations';
+import { useTranslations } from '@/composables/useTranslations';
 import type {
     Organization,
     Evaluation,

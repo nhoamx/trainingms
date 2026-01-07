@@ -206,7 +206,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import { Chart, registerables } from 'chart.js';
-import { useTranslations } from '@/Composables/useTranslations';
+import { useTranslations } from '@/composables/useTranslations';
 import Analisis from '@/Components/Organization/Analisis/Planta3/Analisis.vue';
 import AnalisisPlanta1 from '@/Components/Organization/Analisis/Planta1/AnalisisPlanta1.vue';
 
