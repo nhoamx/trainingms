@@ -134,7 +134,7 @@ import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Dashboard from '@/Layouts/Dashboard.vue'
 import CompanyDataTab from '@/Components/Organization/CompanyDataTab.vue'
-import { useTranslations } from '@/Composables/useTranslations.ts'
+import { useTranslations } from '@/composables/useTranslations.ts'
 
 const { t } = useTranslations()
 
