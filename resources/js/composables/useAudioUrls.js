@@ -2,6 +2,7 @@ import { computed } from 'vue';
 
 /**
  * Composable para generar URLs de audio para preguntas de quiz
+ * Maneja la generación dinámica de URLs de archivos de audio
  * 
  * @param {Object} quiz - Objeto del quiz con la estructura de preguntas
  * @returns {Object} audioUrls - Objeto computed con las URLs de audio mapeadas
