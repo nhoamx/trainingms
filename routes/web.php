@@ -274,6 +274,8 @@ Route::middleware(['auth'])->group(function () {
                 ->name('diagnostic');
             Route::get('/ejecutivo/{organization}', [\App\Http\Controllers\ReportPdfController::class, 'downloadExecutiveReport'])
                 ->name('executive');
+            Route::get('/nom002/{organization}', [\App\Http\Controllers\ReportPdfController::class, 'downloadNom002Report'])
+                ->name('nom002');
         });
 
         // Word Report Routes

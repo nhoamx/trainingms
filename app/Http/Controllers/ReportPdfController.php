@@ -589,4 +589,72 @@ class ReportPdfController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Generate and download NOM-002 report PDF (fire extinguishers monthly review)
+     */
+    public function downloadNom002Report(Request $request, string $organizationId)
+    {
+        try {
+            // Authorization check
+            $user = $request->user();
+            if (! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
+                return response()->json([
+                    'error' => 'No autorizado para generar reportes',
+                ], 403);
+            }
+
+            $organization = Organization::findOrFail($organizationId);
+
+            // Get all extinguishers with their latest inspection
+            $assets = \App\Models\Asset::where('organization_id', $organizationId)
+                ->with(['inspections' => function ($query) {
+                    $query->latest('inspection_date')->limit(1);
+                }])
+                ->orderByRaw('CAST(consecutive_number AS UNSIGNED)')
+                ->get();
+
+            // Get checklist configuration
+            $checklist = config('asset_inspection_checklist.checklist', []);
+
+            // Render HTML view
+            $html = view('pdfs.nom002-report-browsershot', [
+                'organization' => $organization,
+                'assets' => $assets,
+                'checklist' => $checklist,
+                'generatedDate' => now()->format('d/m/Y'),
+            ])->render();
+
+            // If preview parameter is present, return HTML view instead of PDF
+            if ($request->has('preview')) {
+                return response($html)->header('Content-Type', 'text/html');
+            }
+
+            // Generate PDF using Browsershot
+            $filename = 'informe-nom002-'.$organization->name.'-'.now()->format('Y-m-d').'.pdf';
+            $tempPath = storage_path('app/temp/'.$filename);
+
+            // Ensure temp directory exists
+            if (! file_exists(storage_path('app/temp'))) {
+                mkdir(storage_path('app/temp'), 0755, true);
+            }
+
+            // Configure and generate PDF
+            $this->configureBrowsershot($html)->save($tempPath);
+
+            // Return PDF for download
+            return response()->download($tempPath, $filename, [
+                'Content-Type' => 'application/pdf',
+            ])->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            Log::error('Error generating NOM-002 report PDF: '.$e->getMessage(), [
+                'organization_id' => $organizationId,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'error' => 'Error al generar el reporte NOM-002: '.$e->getMessage(),
+            ], 500);
+        }
+    }
 }

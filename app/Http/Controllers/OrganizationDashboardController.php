@@ -241,6 +241,7 @@ class OrganizationDashboardController extends Controller
 
         return Inertia::render('Organizations/Nom002Dashboard', [
             'title' => 'NOM-002-STPS-2010',
+            'organization' => $organization,
             'dashboardData' => $data,
             'evaluations' => $evaluations,
         ]);
