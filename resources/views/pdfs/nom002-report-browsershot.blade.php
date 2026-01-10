@@ -354,64 +354,46 @@
             padding: 2px 1px;
         }
 
-        /* Anomalies Section - Enhanced */
-        .anomaly-card {
-            margin-bottom: 8px;
-            padding: 10px;
-            background: white;
-            border-radius: 4px;
-            border-left: 3px solid #dc2626;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+        /* Anomalies Section - Simple Linear Format */
+        .anomaly-item {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
             page-break-inside: avoid;
         }
 
-        .anomaly-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 5px;
+        .anomaly-item:last-child {
+            border-bottom: none;
         }
 
-        .anomaly-icon {
-            width: 22px;
-            height: 22px;
-            background: #fee2e2;
-            border-radius: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #dc2626;
-            font-weight: bold;
-            font-size: 11pt;
-        }
-
-        .anomaly-title {
+        .anomaly-item-title {
             font-weight: 700;
-            font-size: 8.5pt;
-            color: #1f2937;
-            flex: 1;
+            font-size: 9pt;
+            color: #1e40af;
+            margin-bottom: 4px;
         }
 
-        .anomaly-content {
+        .anomaly-location {
             font-size: 8pt;
-            color: #4b5563;
-            line-height: 1.4;
-            margin-bottom: 5px;
-            padding-left: 30px;
+            color: #475569;
+            margin-bottom: 4px;
         }
 
-        .anomaly-meta {
-            font-size: 7pt;
-            color: #6b7280;
-            padding-left: 30px;
-            display: flex;
-            gap: 12px;
+        .anomaly-location strong {
+            font-weight: 600;
+            color: #1f2937;
         }
 
-        .anomaly-meta-item {
-            display: flex;
-            align-items: center;
-            gap: 3px;
+        .anomaly-description {
+            font-size: 8pt;
+            color: #1f2937;
+            line-height: 1.5;
+            margin-bottom: 0;
+        }
+
+        .anomaly-description strong {
+            font-weight: 600;
+            color: #1f2937;
         }
 
         .no-anomalies {
@@ -585,7 +567,6 @@
         <!-- Inspection Matrix Section -->
         <div class="content-section">
             <div class="section-header">
-                <div class="section-icon">📋</div>
                 <div class="section-title">Matriz de Inspección Mensual</div>
             </div>
             
@@ -670,7 +651,6 @@
         @if($assets->count() > 0)
             <div class="content-section">
                 <div class="section-header">
-                    <div class="section-icon">⚠️</div>
                     <div class="section-title">Anomalías y Seguimiento</div>
                 </div>
                 @php
@@ -679,30 +659,31 @@
                 @foreach($assets as $asset)
                     @php
                         $latestInspection = $asset->inspections->first();
+                        $anomalies = [];
+                        
+                        // Extract anomalies from checklist_results
+                        if ($latestInspection && isset($latestInspection->checklist_results)) {
+                            foreach ($latestInspection->checklist_results as $index => $result) {
+                                if (isset($result['status']) && $result['status'] === 'issue' && !empty($result['result'])) {
+                                    $anomalies[] = [
+                                        'index' => $index,
+                                        'description' => $result['result']
+                                    ];
+                                }
+                            }
+                        }
                     @endphp
-                    @if($latestInspection && !empty($latestInspection->anomalies_followup))
+                    @if(count($anomalies) > 0)
                         @php
                             $hasAnomalies = true;
                         @endphp
-                        <div class="anomaly-card">
-                            <div class="anomaly-header">
-                                <div class="anomaly-icon">⚠</div>
-                                <div class="anomaly-title">
-                                    Extintor {{ $asset->consecutive_number }} - {{ $asset->location }}
-                                </div>
+                        @foreach($anomalies as $anomaly)
+                            <div class="anomaly-item">
+                                <div class="anomaly-item-title">Extintor {{ $asset->consecutive_number }}</div>
+                                <div class="anomaly-location"><strong>Ubicación:</strong> {{ $asset->location }}</div>
+                                <div class="anomaly-description"><strong>Anomalía:</strong> {{ $anomaly['description'] }}</div>
                             </div>
-                            <div class="anomaly-content">
-                                {{ $latestInspection->anomalies_followup }}
-                            </div>
-                            <div class="anomaly-meta">
-                                <div class="anomaly-meta-item">
-                                    <strong>Inspector:</strong> {{ $latestInspection->inspector_name }}
-                                </div>
-                                <div class="anomaly-meta-item">
-                                    <strong>Fecha:</strong> {{ $latestInspection->inspection_date->format('d/m/Y') }}
-                                </div>
-                            </div>
-                        </div>
+                        @endforeach
                     @endif
                 @endforeach
                 
