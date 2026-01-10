@@ -7,7 +7,7 @@
     <style>
         @page {
             size: letter;
-            margin: 12mm 15mm;
+            margin: 10mm 12mm;
         }
 
         * {
@@ -18,22 +18,25 @@
 
         body {
             font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-            font-size: 10pt;
+            font-size: 9pt;
             color: #1f2937;
-            line-height: 1.5;
-            width: 8.5in;
-            max-width: 8.5in;
+            line-height: 1.4;
+            width: 100%;
+            max-width: 7.5in;
+            margin: 0 auto;
             background: white;
+            padding: 5mm;
         }
 
         /* Header Styles - Modern Design */
         .report-header {
             background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 25px;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 12px;
             color: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            page-break-after: avoid;
         }
 
         .header-content {
@@ -45,25 +48,25 @@
         .header-left {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 12px;
             flex: 1;
         }
 
         .logo-container {
             background: white;
-            padding: 12px;
-            border-radius: 6px;
+            padding: 8px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: 100px;
-            max-width: 100px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 70px;
+            max-width: 70px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .logo-container img {
-            max-width: 85px;
-            max-height: 85px;
+            max-width: 60px;
+            max-height: 60px;
             object-fit: contain;
         }
 
@@ -72,38 +75,38 @@
         }
 
         .org-name {
-            font-size: 13pt;
+            font-size: 11pt;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             letter-spacing: 0.3px;
         }
 
         .report-title {
-            font-size: 16pt;
+            font-size: 13pt;
             font-weight: 800;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .report-subtitle {
-            font-size: 8.5pt;
+            font-size: 7.5pt;
             opacity: 0.95;
-            line-height: 1.4;
-            max-width: 500px;
+            line-height: 1.3;
+            max-width: 450px;
         }
 
         .header-metadata {
             background: rgba(255,255,255,0.15);
-            padding: 15px;
-            border-radius: 6px;
-            min-width: 140px;
+            padding: 10px;
+            border-radius: 4px;
+            min-width: 110px;
             backdrop-filter: blur(10px);
         }
 
         .metadata-item {
-            margin-bottom: 8px;
-            font-size: 9pt;
+            margin-bottom: 5px;
+            font-size: 8pt;
         }
 
         .metadata-item:last-child {
@@ -113,48 +116,48 @@
         .metadata-label {
             font-weight: 600;
             opacity: 0.9;
-            font-size: 8pt;
+            font-size: 7pt;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .metadata-value {
             font-weight: 700;
-            font-size: 10pt;
-            margin-top: 2px;
+            font-size: 9pt;
+            margin-top: 1px;
         }
 
         /* Stats Bar */
         .stats-bar {
             display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-            padding: 15px;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding: 10px;
             background: #f8fafc;
-            border-radius: 8px;
-            border-left: 4px solid #1e40af;
+            border-radius: 6px;
+            border-left: 3px solid #1e40af;
         }
 
         .stat-item {
             flex: 1;
             text-align: center;
-            padding: 10px;
+            padding: 6px;
             background: white;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
         .stat-value {
-            font-size: 20pt;
+            font-size: 16pt;
             font-weight: 800;
             color: #1e40af;
             line-height: 1;
         }
 
         .stat-label {
-            font-size: 8pt;
+            font-size: 7pt;
             color: #64748b;
-            margin-top: 5px;
+            margin-top: 3px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 600;
@@ -162,34 +165,34 @@
 
         /* Content sections */
         .content-section {
-            margin-bottom: 25px;
-            page-break-inside: avoid;
+            margin-bottom: 15px;
         }
 
         .section-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #1e40af;
+            gap: 8px;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #1e40af;
+            page-break-after: avoid;
         }
 
         .section-icon {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             background: #1e40af;
-            border-radius: 4px;
+            border-radius: 3px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: bold;
-            font-size: 12pt;
+            font-size: 10pt;
         }
 
         .section-title {
-            font-size: 13pt;
+            font-size: 11pt;
             font-weight: 700;
             color: #1e40af;
             text-transform: uppercase;
@@ -199,31 +202,32 @@
         /* Legend - Enhanced */
         .legend {
             display: flex;
-            gap: 20px;
-            margin-bottom: 15px;
-            padding: 12px 15px;
+            gap: 15px;
+            margin-bottom: 8px;
+            padding: 8px 12px;
             background: linear-gradient(to right, #f0f9ff, #e0f2fe);
-            border-radius: 6px;
-            border-left: 4px solid #0ea5e9;
+            border-radius: 4px;
+            border-left: 3px solid #0ea5e9;
             justify-content: center;
+            page-break-after: avoid;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 9pt;
+            gap: 5px;
+            font-size: 8pt;
             font-weight: 600;
         }
 
         .legend-badge {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14pt;
+            font-size: 11pt;
             font-weight: bold;
         }
 
@@ -245,18 +249,18 @@
         /* Inspection Matrix Table - Enhanced */
         .matrix-table {
             width: 100%;
-            border-collapse: separate;
+            border-collapse: collapse;
             border-spacing: 0;
-            font-size: 8pt;
-            border-radius: 8px;
+            font-size: 7pt;
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         }
 
         .matrix-table th,
         .matrix-table td {
             border: 1px solid #e2e8f0;
-            padding: 6px 4px;
+            padding: 3px 2px;
             text-align: center;
             vertical-align: middle;
         }
@@ -265,62 +269,62 @@
             background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
             color: white;
             font-weight: 700;
-            font-size: 7pt;
-            padding: 8px 4px;
+            font-size: 6.5pt;
+            padding: 5px 2px;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
         }
 
         .matrix-table .subheader-row th {
             background: #3b82f6;
-            font-size: 6.5pt;
-            padding: 6px 2px;
+            font-size: 5.5pt;
+            padding: 4px 1px;
         }
 
         .matrix-table tbody tr:nth-child(even) {
             background-color: #f8fafc;
         }
 
-        .matrix-table tbody tr:hover {
-            background-color: #f1f5f9;
+        .matrix-table tbody tr {
+            page-break-inside: avoid;
         }
 
         .matrix-table .extinguisher-col {
             background: linear-gradient(to right, #eff6ff, #f0f9ff);
             font-weight: 700;
             text-align: left;
-            padding-left: 10px;
-            min-width: 90px;
+            padding-left: 6px;
+            min-width: 70px;
             color: #1e40af;
-            font-size: 9pt;
+            font-size: 7.5pt;
         }
 
         .matrix-table .location-col {
             text-align: left;
-            padding-left: 8px;
-            font-size: 7.5pt;
+            padding-left: 5px;
+            font-size: 6.5pt;
             color: #475569;
-            max-width: 120px;
+            max-width: 100px;
         }
 
         .matrix-table .date-col {
-            font-size: 7.5pt;
+            font-size: 6.5pt;
             color: #64748b;
             font-weight: 600;
         }
 
         .check-cell {
-            padding: 4px !important;
+            padding: 2px !important;
         }
 
         .check-icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 20px;
-            height: 20px;
-            border-radius: 3px;
-            font-size: 12pt;
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+            font-size: 9pt;
             font-weight: bold;
         }
 
@@ -336,7 +340,7 @@
 
         .check-no-data {
             color: #94a3b8;
-            font-size: 10pt;
+            font-size: 8pt;
             font-weight: 600;
         }
 
@@ -345,120 +349,121 @@
             writing-mode: vertical-rl;
             text-orientation: mixed;
             white-space: nowrap;
-            max-height: 140px;
-            font-size: 6pt;
-            padding: 4px 2px;
+            max-height: 100px;
+            font-size: 5.5pt;
+            padding: 2px 1px;
         }
 
         /* Anomalies Section - Enhanced */
         .anomaly-card {
-            margin-bottom: 12px;
-            padding: 15px;
+            margin-bottom: 8px;
+            padding: 10px;
             background: white;
-            border-radius: 6px;
-            border-left: 4px solid #dc2626;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-radius: 4px;
+            border-left: 3px solid #dc2626;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.06);
             page-break-inside: avoid;
         }
 
         .anomaly-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
+            gap: 8px;
+            margin-bottom: 5px;
         }
 
         .anomaly-icon {
-            width: 28px;
-            height: 28px;
+            width: 22px;
+            height: 22px;
             background: #fee2e2;
-            border-radius: 4px;
+            border-radius: 3px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #dc2626;
             font-weight: bold;
-            font-size: 14pt;
+            font-size: 11pt;
         }
 
         .anomaly-title {
             font-weight: 700;
-            font-size: 10pt;
+            font-size: 8.5pt;
             color: #1f2937;
             flex: 1;
         }
 
         .anomaly-content {
-            font-size: 9pt;
+            font-size: 8pt;
             color: #4b5563;
-            line-height: 1.5;
-            margin-bottom: 8px;
-            padding-left: 38px;
+            line-height: 1.4;
+            margin-bottom: 5px;
+            padding-left: 30px;
         }
 
         .anomaly-meta {
-            font-size: 8pt;
+            font-size: 7pt;
             color: #6b7280;
-            padding-left: 38px;
+            padding-left: 30px;
             display: flex;
-            gap: 15px;
+            gap: 12px;
         }
 
         .anomaly-meta-item {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
         }
 
         .no-anomalies {
             text-align: center;
-            padding: 25px;
+            padding: 15px;
             background: linear-gradient(to right, #dcfce7, #d1fae5);
-            border-radius: 8px;
-            border: 2px solid #86efac;
+            border-radius: 6px;
+            border: 1px solid #86efac;
         }
 
         .no-anomalies-icon {
-            font-size: 32pt;
+            font-size: 24pt;
             color: #16a34a;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
 
         .no-anomalies-text {
             font-weight: 700;
             color: #166534;
-            font-size: 11pt;
+            font-size: 9pt;
         }
 
         .empty-state {
             text-align: center;
-            padding: 40px 20px;
+            padding: 20px 15px;
             background: #f8fafc;
-            border-radius: 8px;
-            border: 2px dashed #cbd5e1;
+            border-radius: 6px;
+            border: 1px dashed #cbd5e1;
         }
 
         .empty-state-icon {
-            font-size: 36pt;
+            font-size: 28pt;
             color: #94a3b8;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
         }
 
         .empty-state-text {
             color: #64748b;
-            font-size: 11pt;
+            font-size: 9pt;
             font-weight: 600;
         }
 
         /* Footer - Enhanced */
         .footer {
-            margin-top: 30px;
-            padding: 15px 20px;
+            margin-top: 15px;
+            padding: 10px 15px;
             background: linear-gradient(to right, #f8fafc, #f1f5f9);
-            border-top: 3px solid #1e40af;
-            border-radius: 6px;
-            font-size: 8pt;
+            border-top: 2px solid #1e40af;
+            border-radius: 4px;
+            font-size: 7pt;
             color: #64748b;
+            page-break-inside: avoid;
         }
 
         .footer-content {
@@ -473,7 +478,61 @@
 
         .footer-right {
             text-align: right;
-            font-size: 7.5pt;
+            font-size: 6.5pt;
+        }
+
+        /* Page break control */
+        .avoid-break {
+            page-break-inside: avoid;
+        }
+
+        .break-before {
+            page-break-before: always;
+        }
+
+        .break-after {
+            page-break-after: always;
+        }
+
+        /* Print optimization */
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                padding: 0;
+            }
+            
+            .report-header {
+                page-break-after: avoid;
+            }
+            
+            .section-header {
+                page-break-after: avoid;
+            }
+            
+            .legend {
+                page-break-after: avoid;
+            }
+            
+            .matrix-table {
+                page-break-before: avoid;
+            }
+            
+            .matrix-table thead {
+                display: table-header-group;
+            }
+            
+            .matrix-table tbody tr {
+                page-break-inside: avoid;
+            }
+            
+            .anomaly-card {
+                page-break-inside: avoid;
+            }
+            
+            .footer {
+                page-break-inside: avoid;
+            }
         }
     </style>
 </head>
