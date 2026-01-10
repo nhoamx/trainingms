@@ -74,7 +74,6 @@
               <div v-if="organization?.id" class="flex flex-col sm:flex-row gap-2">
                 <!-- Vista previa solo para admins y super-admins -->
                 <a
-                  v-if="canViewPreview"
                   :href="`/reportes/pdf/nom002/${organization.id}?preview`"
                   target="_blank"
                   rel="noopener noreferrer"

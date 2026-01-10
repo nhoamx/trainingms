@@ -255,7 +255,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('responses.personal');
 
     // Rutas para Admin y Super Admin
-    Route::middleware(['role:admin|super-admin'])->group(function () {
+    Route::middleware(['role:admin|super-admin|organization'])->group(function () {
 
         // Delete (cancel) paper evaluation
         Route::delete('/organizacion/{organization}/evaluacion/{evaluation}', [ResultsController::class, 'destroyEvaluation'])
