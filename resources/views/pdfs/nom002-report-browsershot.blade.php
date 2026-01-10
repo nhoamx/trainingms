@@ -522,7 +522,8 @@
                 return $inspection && !empty($inspection->anomalies_followup);
             })->count();
         @endphp
-        @!-- Inspection Matrix Section -->
+        
+        <!-- Inspection Matrix Section -->
         <div class="content-section">
             <div class="section-header">
                 <div class="section-icon">📋</div>
@@ -540,35 +541,16 @@
                     <span>No Conforme (Problema)</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-badge neutral">-</div
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" style="color: #16a34a;">
-                        {{ number_format(($inspectedCount / $totalExtinguishers) * 100, 1) }}%
-                    </div>
-                    <div class="stat-label">Cobertura</div>
-                </div>
-            </div>
-        @endif
-        <div class="content-section">
-            <div class="section-title">Matriz de Inspección Mensual de Extintores</div>
-            
-            <!-- Legend -->
-            <div class="legend">
-                <div class="legend-item">
-                    <span class="legend-symbol" style="color: #16a34a;">✓</span>
-                    <span>Conforme (OK)</span>
-                </div>
-                <div class="legend-item">
-                    <span class="legend-symbol" style="color: #dc2626;">✗</span>
-                    <span>No Conforme (Problema)</span>
-                </div>
-                <div class="legend-item">
-                    <span class="legend-symbol" style="color: #9ca3af;">-</span>
+                    <div class="legend-badge neutral">-</div>
                     <span>Sin inspección</span>
                 </div>
             </div>
->
+            
+            <!-- Table or Empty State -->
+            @if($assets->count() > 0)
+                <table class="matrix-table">
+                    <thead>
+                        <tr class="header-row">
                             <th rowspan="2">Extintor</th>
                             <th rowspan="2">Ubicación</th>
                             <th rowspan="2">Última Inspección</th>
@@ -621,10 +603,11 @@
                 <div class="empty-state">
                     <div class="empty-state-icon">🧯</div>
                     <div class="empty-state-text">No hay extintores registrados para esta organización</div>
-                </divable>
-            @else
-                <p style="text-align: center; color: #666; padding: 20px;">
-                    No hay extiSection -->
+                </div>
+            @endif
+        </div>
+        
+        <!-- Anomalías y Seguimiento Section -->
         @if($assets->count() > 0)
             <div class="content-section">
                 <div class="section-header">
@@ -661,7 +644,19 @@
                                 </div>
                             </div>
                         </div>
-             Enhanced Footer -->
+                    @endif
+                @endforeach
+                
+                @if(!$hasAnomalies)
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <div class="empty-state-text">No se han reportado anomalías en las inspecciones</div>
+                    </div>
+                @endif
+            </div>
+        @endif
+        
+        <!-- Enhanced Footer -->
         <div class="footer">
             <div class="footer-content">
                 <div class="footer-left">
@@ -673,9 +668,6 @@
                     <div>Condiciones de Seguridad - Prevención y Protección contra Incendios</div>
                 </div>
             </div>
-        </div>
-    </div<p>Documento generado el {{ $generatedDate }}</p>
-            <p>{{ $organization->name }} - Reporte NOM-002-STPS-2010</p>
         </div>
     </div>
 
