@@ -72,7 +72,9 @@
                 <p class="text-gray-600 mt-1">{{ t('Inventario de activos e inspecciones registradas') }}</p>
               </div>
               <div v-if="organization?.id" class="flex flex-col sm:flex-row gap-2">
+                <!-- Vista previa solo para admins y super-admins -->
                 <a
+                  v-if="canViewPreview"
                   :href="`/reportes/pdf/nom002/${organization.id}?preview`"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -155,12 +157,13 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
 import Dashboard from '@/Layouts/Dashboard.vue'
 import CompanyDataTab from '@/Components/Organization/CompanyDataTab.vue'
 import { useTranslations } from '@/composables/useTranslations'
 
 const { t } = useTranslations()
+const page = usePage()
 
 const props = defineProps({
   title: String,
@@ -179,6 +182,13 @@ const props = defineProps({
 })
 
 const activeTab = ref('company')
+
+// Check if user can view preview (only admin and super-admin)
+const canViewPreview = computed(() => {
+  const auth = page.props.auth
+  const userRoles = auth?.user?.roles || []
+  return userRoles.some(role => role.name === 'admin' || role.name === 'super-admin')
+})
 
 const orgName = computed(() => props.dashboardData?.organization?.name || props.organization?.name || t('Organización'))
 const orgLogo = computed(() => props.dashboardData?.organization?.logo || props.organization?.logo || null)

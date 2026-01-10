@@ -50,9 +50,20 @@ class ReportPdfController extends Controller
         try {
             // Authorization check
             $user = $request->user();
-            if (! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
+            $isAdmin = $user->hasRole('admin') || $user->hasRole('super-admin');
+            $isOwnOrganization = $user->organization_id === $organizationId;
+
+            // Preview only for admins
+            if ($request->has('preview') && ! $isAdmin) {
                 return response()->json([
-                    'error' => 'No autorizado para generar reportes',
+                    'error' => 'No autorizado para ver preview de reportes',
+                ], 403);
+            }
+
+            // Download for admins or organization users with their own organization
+            if (! $isAdmin && ! $isOwnOrganization) {
+                return response()->json([
+                    'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
             }
 
@@ -113,9 +124,20 @@ class ReportPdfController extends Controller
         try {
             // Authorization check
             $user = $request->user();
-            if (! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
+            $isAdmin = $user->hasRole('admin') || $user->hasRole('super-admin');
+            $isOwnOrganization = $user->organization_id === $organizationId;
+
+            // Preview only for admins
+            if ($request->has('preview') && ! $isAdmin) {
                 return response()->json([
-                    'error' => 'No autorizado para generar reportes',
+                    'error' => 'No autorizado para ver preview de reportes',
+                ], 403);
+            }
+
+            // Download for admins or organization users with their own organization
+            if (! $isAdmin && ! $isOwnOrganization) {
+                return response()->json([
+                    'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
             }
 
@@ -180,9 +202,20 @@ class ReportPdfController extends Controller
         try {
             // Authorization check
             $user = $request->user();
-            if (! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
+            $isAdmin = $user->hasRole('admin') || $user->hasRole('super-admin');
+            $isOwnOrganization = $user->organization_id === $organizationId;
+
+            // Preview only for admins
+            if ($request->has('preview') && ! $isAdmin) {
                 return response()->json([
-                    'error' => 'No autorizado para generar reportes',
+                    'error' => 'No autorizado para ver preview de reportes',
+                ], 403);
+            }
+
+            // Download for admins or organization users with their own organization
+            if (! $isAdmin && ! $isOwnOrganization) {
+                return response()->json([
+                    'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
             }
 
@@ -367,9 +400,13 @@ class ReportPdfController extends Controller
         try {
             // Authorization check
             $user = $request->user();
-            if (! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
+            $isAdmin = $user->hasRole('admin') || $user->hasRole('super-admin');
+            $isOwnOrganization = $user->organization_id === $organizationId;
+
+            // Download for admins or organization users with their own organization
+            if (! $isAdmin && ! $isOwnOrganization) {
                 return response()->json([
-                    'error' => 'No autorizado para generar reportes',
+                    'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
             }
 
@@ -560,9 +597,13 @@ class ReportPdfController extends Controller
         try {
             // Authorization check
             $user = $request->user();
-            if (! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
+            $isAdmin = $user->hasRole('admin') || $user->hasRole('super-admin');
+            $isOwnOrganization = $user->organization_id === $organizationId;
+
+            // Download for admins or organization users with their own organization
+            if (! $isAdmin && ! $isOwnOrganization) {
                 return response()->json([
-                    'error' => 'No autorizado para generar reportes',
+                    'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
             }
 
@@ -598,9 +639,20 @@ class ReportPdfController extends Controller
         try {
             // Authorization check
             $user = $request->user();
-            if (! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
+            $isAdmin = $user->hasRole('admin') || $user->hasRole('super-admin');
+            $isOwnOrganization = $user->organization_id === $organizationId;
+
+            // Preview only for admins
+            if ($request->has('preview') && ! $isAdmin) {
                 return response()->json([
-                    'error' => 'No autorizado para generar reportes',
+                    'error' => 'No autorizado para ver preview de reportes',
+                ], 403);
+            }
+
+            // Download for admins or organization users with their own organization
+            if (! $isAdmin && ! $isOwnOrganization) {
+                return response()->json([
+                    'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
             }
 
