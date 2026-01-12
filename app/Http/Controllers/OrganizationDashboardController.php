@@ -124,6 +124,9 @@ class OrganizationDashboardController extends Controller
         $domainStatistics = $this->domainCalculationService->calculateDomainStatistics($organization);
         $categoryStatistics = $this->domainCalculationService->calculateCategoryStatistics($organization);
 
+        // Obtener datos para análisis con filtros demográficos
+        $analysisData = $this->domainCalculationService->getEvaluationsWithDemographicsAndScores($organization);
+
         // Obtener evaluaciones NOM-035 completadas con datos demográficos
         $evaluations = PaperEvaluation::where('organization_id', $organization->id)
             ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros'])
@@ -150,6 +153,7 @@ class OrganizationDashboardController extends Controller
             'dashboardData' => $data,
             'domainStatistics' => $domainStatistics,
             'categoryStatistics' => $categoryStatistics,
+            'analysisData' => $analysisData,
             'evaluations' => $evaluations,
         ]);
     }

@@ -104,31 +104,82 @@
             </div>
             <h3 class="text-2xl font-bold text-purple-900">Analizar Resultados</h3>
           </div>
-          <div class="bg-white rounded-lg p-6">
-            <div class="flex items-center justify-center p-8 border-2 border-dashed border-purple-300 rounded-lg">
-              <div class="text-center">
-                <Cog6ToothIcon class="w-12 h-12 text-purple-400 mx-auto mb-3 animate-spin" />
-                <p class="text-purple-700 font-medium">En desarrollo</p>
-                <p class="text-sm text-purple-600 mt-1">Análisis estadístico y clasificación de niveles de riesgo</p>
+
+          <!-- Filtros Demográficos -->
+          <div v-if="props.analysisData && props.analysisData.evaluations.length > 0" class="space-y-6">
+            <AnalysisFilters
+              :demographics="props.analysisData.demographics"
+              v-model="analysisFilters"
+            />
+
+            <!-- Toggle Dominios/Categorías -->
+            <div class="bg-white rounded-lg p-4 border border-slate-200">
+              <div class="flex items-center gap-4">
+                <span class="text-sm font-medium text-slate-700">Vista:</span>
+                <div class="flex gap-2">
+                  <button
+                    @click="analysisViewMode = 'domains'"
+                    :class="[
+                      'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                      analysisViewMode === 'domains'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ]"
+                  >
+                    Dominios
+                  </button>
+                  <button
+                    @click="analysisViewMode = 'categories'"
+                    :class="[
+                      'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                      analysisViewMode === 'categories'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ]"
+                  >
+                    Categorías
+                  </button>
+                </div>
+                <div class="ml-auto text-sm text-slate-600">
+                  <span class="font-semibold">{{ filteredEvaluations.length }}</span> evaluaciones filtradas
+                </div>
+              </div>
+            </div>
+
+            <!-- Distribución y Gráfica -->
+            <div class="bg-white rounded-lg p-6 border border-slate-200">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Cards de distribución -->
+                <div>
+                  <RiskDistributionCards
+                    :distribution="filteredDistribution"
+                    :colors="props.analysisData.colors"
+                    :labels="props.analysisData.labels"
+                  />
+                </div>
+
+                <!-- Gráfica de pastel -->
+                <div>
+                  <RiskPieChart
+                    :distribution="filteredDistribution"
+                    :colors="props.analysisData.colors"
+                    :labels="props.analysisData.labels"
+                    :title="analysisViewMode === 'domains' ? 'Distribución por Dominios' : 'Distribución por Categorías'"
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow">
-            <div class="flex items-center gap-3 mb-4">
-              <ChartPieIcon class="w-6 h-6 text-purple-600" />
-              <h4 class="font-bold text-slate-900">Estadísticas</h4>
+          <!-- Sin datos -->
+          <div v-else class="bg-white rounded-lg p-6">
+            <div class="flex items-center justify-center p-8 border-2 border-dashed border-purple-300 rounded-lg">
+              <div class="text-center">
+                <ChartPieIcon class="w-12 h-12 text-purple-400 mx-auto mb-3" />
+                <p class="text-purple-700 font-medium">Sin datos disponibles</p>
+                <p class="text-sm text-purple-600 mt-1">No se han encontrado evaluaciones de Referencia III para analizar</p>
+              </div>
             </div>
-            <p class="text-sm text-slate-600">Análisis cuantitativo de los datos recopilados</p>
-          </div>
-          <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow">
-            <div class="flex items-center gap-3 mb-4">
-              <DocumentChartBarIcon class="w-6 h-6 text-purple-600" />
-              <h4 class="font-bold text-slate-900">Reportes</h4>
-            </div>
-            <p class="text-sm text-slate-600">Generación de informes con hallazgos y conclusiones</p>
           </div>
         </div>
       </div>
@@ -175,9 +226,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import DomainCharts from './Charts/DomainCharts.vue';
 import CategoryCharts from './Charts/CategoryCharts.vue';
+import AnalysisFilters from './Charts/AnalysisFilters.vue';
+import RiskDistributionCards from './Charts/RiskDistributionCards.vue';
+import RiskPieChart from './Charts/RiskPieChart.vue';
 import {
   ChartBarIcon,
   MagnifyingGlassIcon,
@@ -205,17 +259,103 @@ interface CategoryStatistics {
   labels: Record<string, string>;
 }
 
+interface Evaluation {
+  id: string;
+  folio: string;
+  personal_folio: string;
+  evaluee_name: string;
+  demographics: {
+    genero: string;
+    puesto: string;
+    area: string;
+    turno: string;
+  };
+  domain_scores: Record<string, { score: number; risk_level: string }>;
+  category_scores: Record<string, { score: number; risk_level: string; domain: string }>;
+}
+
+interface AnalysisData {
+  evaluations: Evaluation[];
+  demographics: {
+    generos: string[];
+    puestos: string[];
+    areas: string[];
+    turnos: string[];
+  };
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
 interface Props {
   domainStatistics?: DomainStatistics;
   categoryStatistics?: CategoryStatistics;
+  analysisData?: AnalysisData;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   domainStatistics: () => ({ domains: {}, total_evaluations: 0, colors: {}, labels: {} }),
   categoryStatistics: () => ({ categories: {}, total_evaluations: 0, colors: {}, labels: {} }),
+  analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
 });
 
 const activeSubTab = ref('identificar');
+
+// Analysis state
+const analysisViewMode = ref<'domains' | 'categories'>('domains');
+const analysisFilters = ref({
+  genero: '',
+  puesto: '',
+  area: '',
+  turno: '',
+});
+
+// Filtered evaluations based on demographic filters
+const filteredEvaluations = computed(() => {
+  if (!props.analysisData) return [];
+  
+  return props.analysisData.evaluations.filter(evaluation => {
+    if (analysisFilters.value.genero && evaluation.demographics.genero !== analysisFilters.value.genero) {
+      return false;
+    }
+    if (analysisFilters.value.puesto && evaluation.demographics.puesto !== analysisFilters.value.puesto) {
+      return false;
+    }
+    if (analysisFilters.value.area && evaluation.demographics.area !== analysisFilters.value.area) {
+      return false;
+    }
+    if (analysisFilters.value.turno && evaluation.demographics.turno !== analysisFilters.value.turno) {
+      return false;
+    }
+    return true;
+  });
+});
+
+// Recalculate distribution based on filtered evaluations
+const filteredDistribution = computed(() => {
+  const distribution: Record<string, number> = {
+    nulo: 0,
+    bajo: 0,
+    medio: 0,
+    alto: 0,
+    muy_alto: 0,
+  };
+
+  if (analysisViewMode.value === 'domains') {
+    filteredEvaluations.value.forEach(evaluation => {
+      Object.values(evaluation.domain_scores).forEach((domainScore: any) => {
+        distribution[domainScore.risk_level]++;
+      });
+    });
+  } else {
+    filteredEvaluations.value.forEach(evaluation => {
+      Object.values(evaluation.category_scores).forEach((categoryScore: any) => {
+        distribution[categoryScore.risk_level]++;
+      });
+    });
+  }
+
+  return distribution;
+});
 
 const subTabs = [
   { key: 'identificar', label: 'Identificar', icon: MagnifyingGlassIcon },

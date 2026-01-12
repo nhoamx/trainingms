@@ -266,6 +266,110 @@ class Nom035DomainCalculationService
     }
 
     /**
+     * Get evaluations with demographics and scores for analysis.
+     */
+    public function getEvaluationsWithDemographicsAndScores(Organization $organization): array
+    {
+        // Fetch evaluations with demographic data
+        $evaluations = PaperEvaluation::where('organization_id', $organization->id)
+            ->whereNotNull('referencia_iii_answers')
+            ->where('processing_status', 'completed')
+            ->with(['demographicData:id,paper_evaluation_id,gender,position,department,work_schedule,contract_type'])
+            ->select(['id', 'folio', 'personal_folio', 'evaluee_name', 'referencia_iii_answers', 'organization_id'])
+            ->get();
+
+        $evaluationsData = [];
+        $availableDemographics = [
+            'generos' => [],
+            'puestos' => [],
+            'areas' => [],
+            'turnos' => [],
+        ];
+
+        $domainConfig = config('question_dimensions');
+        $riskLevels = config('nom035_risk_levels');
+
+        foreach ($evaluations as $evaluation) {
+            $demographics = [
+                'genero' => $evaluation->demographicData->gender ?? 'No especificado',
+                'puesto' => $evaluation->demographicData->position ?? 'No especificado',
+                'area' => $evaluation->demographicData->department ?? 'No especificado',
+                'turno' => $evaluation->demographicData->work_schedule ?? 'No especificado',
+            ];
+
+            // Collect unique demographic values
+            if (! in_array($demographics['genero'], $availableDemographics['generos'])) {
+                $availableDemographics['generos'][] = $demographics['genero'];
+            }
+            if (! in_array($demographics['puesto'], $availableDemographics['puestos'])) {
+                $availableDemographics['puestos'][] = $demographics['puesto'];
+            }
+            if (! in_array($demographics['area'], $availableDemographics['areas'])) {
+                $availableDemographics['areas'][] = $demographics['area'];
+            }
+            if (! in_array($demographics['turno'], $availableDemographics['turnos'])) {
+                $availableDemographics['turnos'][] = $demographics['turno'];
+            }
+
+            // Calculate domain scores
+            $domainScores = [];
+            foreach ($domainConfig as $domainName => $categories) {
+                $score = $this->calculateDomainScore(
+                    $evaluation->referencia_iii_answers,
+                    $categories
+                );
+                $riskLevel = $this->getRiskLevel($score, $domainName, $riskLevels);
+
+                $domainScores[$domainName] = [
+                    'score' => $score,
+                    'risk_level' => $riskLevel,
+                ];
+            }
+
+            // Calculate category scores
+            $categoryScores = [];
+            foreach ($domainConfig as $domainName => $categories) {
+                foreach ($categories as $categoryName => $subcategories) {
+                    $score = $this->calculateCategoryScore(
+                        $evaluation->referencia_iii_answers,
+                        $subcategories
+                    );
+                    $riskLevel = $this->getRiskLevel($score, $domainName, $riskLevels);
+
+                    $categoryScores[$categoryName] = [
+                        'score' => $score,
+                        'risk_level' => $riskLevel,
+                        'domain' => $domainName,
+                    ];
+                }
+            }
+
+            $evaluationsData[] = [
+                'id' => $evaluation->id,
+                'folio' => $evaluation->folio,
+                'personal_folio' => $evaluation->personal_folio,
+                'evaluee_name' => $evaluation->evaluee_name,
+                'demographics' => $demographics,
+                'domain_scores' => $domainScores,
+                'category_scores' => $categoryScores,
+            ];
+        }
+
+        // Sort demographic values
+        sort($availableDemographics['generos']);
+        sort($availableDemographics['puestos']);
+        sort($availableDemographics['areas']);
+        sort($availableDemographics['turnos']);
+
+        return [
+            'evaluations' => $evaluationsData,
+            'demographics' => $availableDemographics,
+            'colors' => $riskLevels['colors'],
+            'labels' => $riskLevels['labels'],
+        ];
+    }
+
+    /**
      * Retornar estructura vacía de categorías cuando no hay evaluaciones
      */
     private function getEmptyCategoryStatistics(): array
