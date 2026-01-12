@@ -76,7 +76,7 @@
 
             <!-- Etapas -->
             <div v-show="activeTab === 'etapas'" class="animate-fade-in">
-              <StagesTab />
+              <StagesTab :domain-statistics="props.domainStatistics" :category-statistics="props.categoryStatistics" />
             </div>
 
             <!-- Referencia -->
@@ -177,6 +177,20 @@ interface DashboardData {
   demographic_details: DemographicDetails;
 }
 
+interface DomainStatistics {
+  domains: Record<string, unknown>;
+  total_evaluations: number;
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
+interface CategoryStatistics {
+  categories: Record<string, unknown>;
+  total_evaluations: number;
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
 interface Evaluation {
   id: string;
   evaluation_type?: string;
@@ -186,10 +200,14 @@ interface Evaluation {
 
 interface Props {
   dashboardData: DashboardData;
+  domainStatistics?: DomainStatistics;
+  categoryStatistics?: CategoryStatistics;
   evaluations?: Evaluation[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  domainStatistics: () => ({ domains: {}, total_evaluations: 0, colors: {}, labels: {} }),
+  categoryStatistics: () => ({ categories: {}, total_evaluations: 0, colors: {}, labels: {} }),
   evaluations: () => [],
 });
 
@@ -211,7 +229,6 @@ const translatedTabs = computed(() =>
 );
 
 const activeTab = ref<string>('empresa');
-const evaluations = ref<Evaluation[]>(props.evaluations || []);
 </script>
 
 <style scoped>

@@ -44,12 +44,34 @@
             </div>
             <h3 class="text-2xl font-bold text-blue-900">Identificar Riesgos Psicosociales</h3>
           </div>
-          <div class="bg-white rounded-lg p-6">
+          
+          <!-- Mostrar gráficas de dominios si hay datos -->
+          <div v-if="props.domainStatistics && Object.keys(props.domainStatistics.domains || {}).length > 0" class="bg-white rounded-lg p-6 mb-6">
+            <DomainCharts 
+              :domains="props.domainStatistics.domains"
+              :total-evaluations="props.domainStatistics.total_evaluations"
+              :colors="props.domainStatistics.colors"
+              :labels="props.domainStatistics.labels"
+            />
+          </div>
+          
+          <!-- Mostrar gráficas de categorías -->
+          <div class="bg-white rounded-lg p-6 mb-6">
+            <CategoryCharts 
+              :categories="props.categoryStatistics?.categories || {}"
+              :total-evaluations="props.categoryStatistics?.total_evaluations || 0"
+              :colors="props.categoryStatistics?.colors || {}"
+              :labels="props.categoryStatistics?.labels || {}"
+            />
+          </div>
+          
+          <!-- Mostrar mensaje de desarrollo si no hay datos -->
+          <div v-if="!props.domainStatistics || Object.keys(props.domainStatistics.domains || {}).length === 0" class="bg-white rounded-lg p-6">
             <div class="flex items-center justify-center p-8 border-2 border-dashed border-blue-300 rounded-lg">
               <div class="text-center">
                 <Cog6ToothIcon class="w-12 h-12 text-blue-400 mx-auto mb-3 animate-spin" />
-                <p class="text-blue-700 font-medium">En desarrollo</p>
-                <p class="text-sm text-blue-600 mt-1">Herramientas de identificación de factores de riesgo</p>
+                <p class="text-blue-700 font-medium">Sin datos disponibles</p>
+                <p class="text-sm text-blue-600 mt-1">No se han encontrado evaluaciones de Referencia III para mostrar estadísticas</p>
               </div>
             </div>
           </div>
@@ -154,6 +176,8 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import DomainCharts from './Charts/DomainCharts.vue';
+import CategoryCharts from './Charts/CategoryCharts.vue';
 import {
   ChartBarIcon,
   MagnifyingGlassIcon,
@@ -166,6 +190,30 @@ import {
   ArrowPathIcon,
   Cog6ToothIcon,
 } from '@heroicons/vue/24/outline';
+
+interface DomainStatistics {
+  domains: Record<string, unknown>;
+  total_evaluations: number;
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
+interface CategoryStatistics {
+  categories: Record<string, unknown>;
+  total_evaluations: number;
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
+interface Props {
+  domainStatistics?: DomainStatistics;
+  categoryStatistics?: CategoryStatistics;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  domainStatistics: () => ({ domains: {}, total_evaluations: 0, colors: {}, labels: {} }),
+  categoryStatistics: () => ({ categories: {}, total_evaluations: 0, colors: {}, labels: {} }),
+});
 
 const activeSubTab = ref('identificar');
 

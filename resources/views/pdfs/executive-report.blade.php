@@ -526,7 +526,7 @@
             <tbody>
                 @php
                     $ranges = [
-                        'Nulo' => 'Nulo o despreciable: ≤6',
+                        'Nulo' => 'Nulo: ≤6',
                         'Bajo' => 'Bajo: ≥7 y ≤9',
                         'Medio' => 'Medio: ≥10 y ≤12',
                         'Alto' => 'Alto: ≥13 y ≤15',

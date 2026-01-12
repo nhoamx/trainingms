@@ -1,0 +1,85 @@
+<?php
+
+return [
+    'colors' => [
+        'nulo' => '#10b981', // green-500
+        'bajo' => '#84cc16', // lime-500
+        'medio' => '#f59e0b', // amber-500
+        'alto' => '#f97316', // orange-500
+        'muy_alto' => '#ef4444', // red-500
+    ],
+
+    'labels' => [
+        'nulo' => 'Nulo',
+        'bajo' => 'Bajo',
+        'medio' => 'Medio',
+        'alto' => 'Alto',
+        'muy_alto' => 'Muy Alto',
+    ],
+
+    // Rangos de calificación por dominio según NOM-035-STPS-2018
+    'domains' => [
+        'Ambiente de trabajo' => [
+            'max_score' => 20, // 5 preguntas * 4 puntos máximo
+            'levels' => [
+                'nulo' => ['min' => 0, 'max' => 3],
+                'bajo' => ['min' => 4, 'max' => 6],
+                'medio' => ['min' => 7, 'max' => 9],
+                'alto' => ['min' => 10, 'max' => 12],
+                'muy_alto' => ['min' => 13, 'max' => 20],
+            ],
+        ],
+        'Factores propios de la actividad' => [
+            'max_score' => 60, // 15 preguntas base + 4 condicionales
+            'levels' => [
+                'nulo' => ['min' => 0, 'max' => 9],
+                'bajo' => ['min' => 10, 'max' => 18],
+                'medio' => ['min' => 19, 'max' => 27],
+                'alto' => ['min' => 28, 'max' => 36],
+                'muy_alto' => ['min' => 37, 'max' => 60],
+            ],
+        ],
+        'Organización del tiempo de trabajo' => [
+            'max_score' => 24, // 6 preguntas * 4 puntos máximo
+            'levels' => [
+                'nulo' => ['min' => 0, 'max' => 3],
+                'bajo' => ['min' => 4, 'max' => 7],
+                'medio' => ['min' => 8, 'max' => 11],
+                'alto' => ['min' => 12, 'max' => 15],
+                'muy_alto' => ['min' => 16, 'max' => 24],
+            ],
+        ],
+        'Liderazgo y relaciones en el trabajo' => [
+            'max_score' => 76, // 19 preguntas base + 4 condicionales
+            'levels' => [
+                'nulo' => ['min' => 0, 'max' => 11],
+                'bajo' => ['min' => 12, 'max' => 23],
+                'medio' => ['min' => 24, 'max' => 35],
+                'alto' => ['min' => 36, 'max' => 47],
+                'muy_alto' => ['min' => 48, 'max' => 76],
+            ],
+        ],
+        'Entorno organizacional' => [
+            'max_score' => 32, // 8 preguntas * 4 puntos máximo
+            'levels' => [
+                'nulo' => ['min' => 0, 'max' => 4],
+                'bajo' => ['min' => 5, 'max' => 10],
+                'medio' => ['min' => 11, 'max' => 15],
+                'alto' => ['min' => 16, 'max' => 21],
+                'muy_alto' => ['min' => 22, 'max' => 32],
+            ],
+        ],
+    ],
+
+    // Calificación final global
+    'global' => [
+        'max_score' => 288, // Suma de todos los dominios
+        'levels' => [
+            'nulo' => ['min' => 0, 'max' => 43],
+            'bajo' => ['min' => 44, 'max' => 86],
+            'medio' => ['min' => 87, 'max' => 129],
+            'alto' => ['min' => 130, 'max' => 172],
+            'muy_alto' => ['min' => 173, 'max' => 288],
+        ],
+    ],
+];
