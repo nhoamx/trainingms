@@ -19,7 +19,8 @@ class OrganizationDashboardController extends Controller
      */
     public function __construct(
         protected OrganizationDataService $organizationDataService,
-        protected LikertScoreService $likertScoreService
+        protected LikertScoreService $likertScoreService,
+        protected \App\Services\Nom035DomainCalculationService $domainCalculationService
     ) {}
 
     /**
@@ -119,6 +120,13 @@ class OrganizationDashboardController extends Controller
 
         $data = $this->organizationDataService->getDashboardData($organization, 'nom035');
 
+        // Calcular estadísticas por dominio y categoría
+        $domainStatistics = $this->domainCalculationService->calculateDomainStatistics($organization);
+        $categoryStatistics = $this->domainCalculationService->calculateCategoryStatistics($organization);
+
+        // Obtener datos para análisis con filtros demográficos
+        $analysisData = $this->domainCalculationService->getEvaluationsWithDemographicsAndScores($organization);
+
         // Obtener evaluaciones NOM-035 completadas con datos demográficos
         $evaluations = PaperEvaluation::where('organization_id', $organization->id)
             ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros'])
@@ -143,6 +151,9 @@ class OrganizationDashboardController extends Controller
         return Inertia::render('Organizations/CalizaDashboard', [
             'title' => 'NOM-035-STPS-2018',
             'dashboardData' => $data,
+            'domainStatistics' => $domainStatistics,
+            'categoryStatistics' => $categoryStatistics,
+            'analysisData' => $analysisData,
             'evaluations' => $evaluations,
         ]);
     }

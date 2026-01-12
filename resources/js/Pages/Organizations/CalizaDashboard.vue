@@ -76,7 +76,11 @@
 
             <!-- Etapas -->
             <div v-show="activeTab === 'etapas'" class="animate-fade-in">
-              <StagesTab />
+              <StagesTab 
+                :domain-statistics="props.domainStatistics" 
+                :category-statistics="props.categoryStatistics"
+                :analysis-data="props.analysisData"
+              />
             </div>
 
             <!-- Referencia -->
@@ -177,6 +181,45 @@ interface DashboardData {
   demographic_details: DemographicDetails;
 }
 
+interface DomainStatistics {
+  domains: Record<string, unknown>;
+  total_evaluations: number;
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
+interface CategoryStatistics {
+  categories: Record<string, unknown>;
+  total_evaluations: number;
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
+interface AnalysisData {
+  evaluations: Array<{
+    id: string;
+    folio: string;
+    personal_folio: string;
+    evaluee_name: string;
+    demographics: {
+      genero: string;
+      puesto: string;
+      area: string;
+      turno: string;
+    };
+    domain_scores: Record<string, { score: number; risk_level: string }>;
+    category_scores: Record<string, { score: number; risk_level: string; domain: string }>;
+  }>;
+  demographics: {
+    generos: string[];
+    puestos: string[];
+    areas: string[];
+    turnos: string[];
+  };
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
 interface Evaluation {
   id: string;
   evaluation_type?: string;
@@ -186,10 +229,16 @@ interface Evaluation {
 
 interface Props {
   dashboardData: DashboardData;
+  domainStatistics?: DomainStatistics;
+  categoryStatistics?: CategoryStatistics;
+  analysisData?: AnalysisData;
   evaluations?: Evaluation[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  domainStatistics: () => ({ domains: {}, total_evaluations: 0, colors: {}, labels: {} }),
+  categoryStatistics: () => ({ categories: {}, total_evaluations: 0, colors: {}, labels: {} }),
+  analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
   evaluations: () => [],
 });
 
@@ -211,7 +260,6 @@ const translatedTabs = computed(() =>
 );
 
 const activeTab = ref<string>('empresa');
-const evaluations = ref<Evaluation[]>(props.evaluations || []);
 </script>
 
 <style scoped>

@@ -28,7 +28,7 @@
             <thead>
                 <tr>
                     <th style="text-align: left; width: 30%;">Calificación Total del Dominio</th>
-                    <th style="width: 14%;">Nulo o despreciable<br>(Cdom&lt;7)</th>
+                    <th style="width: 14%;">Nulo<br>(Cdom&lt;7)</th>
                     <th style="width: 14%;">Bajo<br>(6&lt;=Cdom&lt;10)</th>
                     <th style="width: 14%;">Medio<br>(9&lt;=Cdom&lt;13)</th>
                     <th style="width: 14%;">Alto<br>(12&lt;=Cdom&lt;16)</th>

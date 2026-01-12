@@ -21,7 +21,7 @@
               <HeartIcon class="w-6 h-6 text-red-600" />
               <h3 class="text-2xl font-bold text-red-900">Guía de Referencia I</h3>
             </div>
-            <p class="text-sm text-red-700 mt-1">Identificación de trabajadores con PTSD</p>
+            <p class="text-sm text-red-700 mt-1">Identificación de trabajadores con ATS</p>
           </div>
         </div>
         <div class="bg-white rounded-lg p-4 space-y-3 border border-red-100">
