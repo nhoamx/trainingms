@@ -341,21 +341,38 @@ const filteredDistribution = computed(() => {
   };
 
   if (analysisViewMode.value === 'domains') {
+    // Count evaluations by their highest risk level across all domains
     filteredEvaluations.value.forEach(evaluation => {
-      Object.values(evaluation.domain_scores).forEach((domainScore: any) => {
-        distribution[domainScore.risk_level]++;
-      });
+      const riskLevels = Object.values(evaluation.domain_scores).map((score: any) => score.risk_level);
+      const highestRisk = getHighestRiskLevel(riskLevels);
+      distribution[highestRisk]++;
     });
   } else {
+    // Count evaluations by their highest risk level across all categories
     filteredEvaluations.value.forEach(evaluation => {
-      Object.values(evaluation.category_scores).forEach((categoryScore: any) => {
-        distribution[categoryScore.risk_level]++;
-      });
+      const riskLevels = Object.values(evaluation.category_scores).map((score: any) => score.risk_level);
+      const highestRisk = getHighestRiskLevel(riskLevels);
+      distribution[highestRisk]++;
     });
   }
 
   return distribution;
 });
+
+// Helper function to get the highest risk level from an array
+const getHighestRiskLevel = (levels: string[]): string => {
+  const hierarchy = ['nulo', 'bajo', 'medio', 'alto', 'muy_alto'];
+  let maxIndex = 0;
+  
+  levels.forEach(level => {
+    const index = hierarchy.indexOf(level);
+    if (index > maxIndex) {
+      maxIndex = index;
+    }
+  });
+  
+  return hierarchy[maxIndex];
+};
 
 const subTabs = [
   { key: 'identificar', label: 'Identificar', icon: MagnifyingGlassIcon },
