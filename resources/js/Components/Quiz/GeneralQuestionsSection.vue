@@ -13,9 +13,6 @@
                         @ended="handleAudioEnded(question.id)"
                         @error="handleAudioError(question.id)"
                     />
-                    <VideoPlayer
-                        :video-url="getVideoUrl(question.id)"
-                    />
                 </div>
             </div>
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -42,7 +39,6 @@
 <script setup>
 import { ref, watch } from 'vue';
 import AudioPlayer from './AudioPlayer.vue';
-import VideoPlayer from './VideoPlayer.vue';
 
 const props = defineProps({
     paginatedQuestions: {
@@ -65,10 +61,6 @@ const props = defineProps({
         type: Object,
         default: () => ({})
     },
-    videoUrls: {
-        type: Object,
-        default: () => ({})
-    }
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -103,10 +95,6 @@ const handleAudioError = (questionId) => {
 
 const getAudioUrl = (questionId) => {
     return props.audioUrls?.[questionId] || null;
-};
-
-const getVideoUrl = (questionId) => {
-    return props.videoUrls?.[questionId] || null;
 };
 
 const updateAnswer = (questionId, value) => {

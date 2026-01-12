@@ -15,9 +15,6 @@
                             @ended="handleAudioEnded(index)"
                             @error="handleAudioError(index)"
                         />
-                        <VideoPlayer
-                            :video-url="getVideoUrl(index)"
-                        />
                     </div>
                 </div>
                 <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
@@ -46,7 +43,6 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import AudioPlayer from './AudioPlayer.vue';
-import VideoPlayer from './VideoPlayer.vue';
 
 const props = defineProps({
     title: {
@@ -73,10 +69,6 @@ const props = defineProps({
         type: Object,
         default: () => ({})
     },
-    videoUrls: {
-        type: Object,
-        default: () => ({})
-    }
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -104,10 +96,6 @@ onMounted(() => {
 // Obtener la URL del audio para una pregunta
 const getAudioUrl = (index) => {
     return props.audioUrls?.[index] || null;
-};
-
-const getVideoUrl = (index) => {
-    return props.videoUrls?.[index] || null;
 };
 
 const isDisabled = (index) => unlocked.value[index] === false;
