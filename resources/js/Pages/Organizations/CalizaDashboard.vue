@@ -16,7 +16,7 @@
             <div v-else class="flex-shrink-0">
               <div>
                 <h1 class="text-4xl font-bold text-gray-900">{{ dashboardData.organization.name }}</h1>
-                <p class="mt-2 text-gray-600">{{ t('Organization Dashboard') }}</p>
+                <p class="mt-2 text-gray-600">NOM-035-STPS-2018</p>
               </div>
             </div>
             <!-- Language Switcher -->
@@ -49,80 +49,39 @@
         <!-- Tab Content -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200">
           <div class="p-6 sm:p-8">
-            <!-- Datos de Empresa -->
-            <div v-show="activeTab === 'company'" class="animate-fade-in">
-              <CompanyDataTab :company-data="dashboardData.company_data" />
+            <!-- Empresa -->
+            <div v-show="activeTab === 'empresa'" class="animate-fade-in">
+              <EmpresaTab :company-data="dashboardData.company_data" :organization="dashboardData.organization" />
             </div>
 
-            <!-- Datos Demográficos -->
-            <div v-show="activeTab === 'demographic'" class="animate-fade-in">
-              <DemographicDataTab
-                :demographic-details="dashboardData.demographic_details"
-                :evaluations="evaluations"
-              />
+            <!-- Comité -->
+            <div v-show="activeTab === 'comite'" class="animate-fade-in">
+              <CommitteeTab :company-data="dashboardData.company_data" />
             </div>
 
-            <!-- Resultados -->
-            <div v-show="activeTab === 'results'" class="animate-fade-in">
-              <div class="text-center py-16">
-                <div class="text-6xl mb-4">🚧</div>
-                <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Document in Preparation') }}</p>
-                <p class="text-gray-600">{{ t('Results are being processed. They will be available soon.') }}</p>
-              </div>
+            <!-- Sensibilización -->
+            <div v-show="activeTab === 'sensibilizacion'" class="animate-fade-in">
+              <SensibilizationTab />
             </div>
 
-            <!-- Análisis -->
-            <div v-show="activeTab === 'analysis'" class="animate-fade-in">
-              <div class="text-center py-16">
-                <div class="text-6xl mb-4">🚧</div>
-                <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Document in Preparation') }}</p>
-                <p class="text-gray-600">{{ t('Analysis is being prepared. It will be available soon.') }}</p>
-              </div>
+            <!-- Política -->
+            <div v-show="activeTab === 'politica'" class="animate-fade-in">
+              <PolicyTab />
             </div>
 
-            <!-- Recomendaciones -->
-            <div v-show="activeTab === 'recommendations'" class="animate-fade-in">
-              <div class="text-center py-16">
-                <div class="text-6xl mb-4">🚧</div>
-                <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Document in Preparation') }}</p>
-                <p class="text-gray-600">{{ t('Recommendations are being developed. They will be available soon.') }}</p>
-              </div>
+            <!-- Evaluación -->
+            <div v-show="activeTab === 'evaluacion'" class="animate-fade-in">
+              <EvaluationTab :evaluations="evaluations" />
             </div>
 
-            <!-- Informe -->
-            <div v-show="activeTab === 'report'" class="animate-fade-in">
-              <div class="text-center py-16">
-                <div class="text-6xl mb-4">🚧</div>
-                <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Document in Preparation') }}</p>
-                <p class="text-gray-600">{{ t('Report is being compiled. It will be available soon.') }}</p>
-              </div>
+            <!-- Etapas -->
+            <div v-show="activeTab === 'etapas'" class="animate-fade-in">
+              <StagesTab />
             </div>
 
-            <!-- Evidencias -->
-            <div v-show="activeTab === 'evidence'" class="animate-fade-in">
-              <div class="text-center py-16">
-                <div class="text-6xl mb-4">🚧</div>
-                <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Document in Preparation') }}</p>
-                <p class="text-gray-600">{{ t('Evidence documentation is being prepared. It will be available soon.') }}</p>
-              </div>
-            </div>
-
-            <!-- FODA -->
-            <div v-show="activeTab === 'foda'" class="animate-fade-in">
-              <div class="text-center py-16">
-                <div class="text-6xl mb-4">🚧</div>
-                <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Document in Preparation') }}</p>
-                <p class="text-gray-600">{{ t('SWOT analysis is being developed. It will be available soon.') }}</p>
-              </div>
-            </div>
-
-            <!-- Conclusiones -->
-            <div v-show="activeTab === 'conclusions'" class="animate-fade-in">
-              <div class="text-center py-16">
-                <div class="text-6xl mb-4">🚧</div>
-                <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Document in Preparation') }}</p>
-                <p class="text-gray-600">{{ t('Conclusions are being prepared. They will be available soon.') }}</p>
-              </div>
+            <!-- Referencia -->
+            <div v-show="activeTab === 'referencia'" class="animate-fade-in">
+              <ReferenceTab />
             </div>
           </div>
         </div>
@@ -134,8 +93,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import Dashboard from '../../Layouts/Dashboard.vue';
-import CompanyDataTab from '@/Components/Organization/CompanyDataTab.vue';
-import DemographicDataTab from '@/Components/Organization/DemographicDataTab.vue';
+import EmpresaTab from '@/Components/Organization/Nom035/EmpresaTab.vue';
+import CommitteeTab from '@/Components/Organization/Nom035/CommitteeTab.vue';
+import SensibilizationTab from '@/Components/Organization/Nom035/SensibilizationTab.vue';
+import PolicyTab from '@/Components/Organization/Nom035/PolicyTab.vue';
+import EvaluationTab from '@/Components/Organization/Nom035/EvaluationTab.vue';
+import StagesTab from '@/Components/Organization/Nom035/StagesTab.vue';
+import ReferenceTab from '@/Components/Organization/Nom035/ReferenceTab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
 import { useTranslations } from '@/composables/useTranslations';
 
@@ -155,47 +119,68 @@ interface DemographicDetails {
   total_evaluations: number;
 }
 
+interface CompanyData {
+  general: {
+    name: string | null;
+    razon_social: string | null;
+    rfc: string | null;
+    registro_patronal: string | null;
+    actividad_principal: string | null;
+    folio_organization: number | null;
+  };
+  address: {
+    calle_numero: string | null;
+    colonia: string | null;
+    codigo_postal: string | null;
+    municipio: string | null;
+    estado: string | null;
+  };
+  contact: {
+    nombre: string | null;
+    puesto: string | null;
+    email: string | null;
+    movil: string | null;
+  };
+  responsible: {
+    nombre: string | null;
+    puesto: string | null;
+    email: string | null;
+    movil: string | null;
+  };
+  workforce?: {
+    total_trabajadores: number | null;
+    total_hombres: number | null;
+    total_mujeres: number | null;
+  };
+  sample?: {
+    muestra_aplicada: number | null;
+    muestra_hombres: number | null;
+    muestra_mujeres: number | null;
+    justificacion_muestra: string | null;
+  };
+  committee?: {
+    comite_integrantes: number | null;
+    comite_mujeres: number | null;
+    comite_hombres: number | null;
+  };
+  evaluation_date?: string | null;
+}
+
 interface DashboardData {
   organization: {
     id: string;
     name: string;
     logo: string | null;
   };
-  company_data: {
-    general: {
-      name: string | null;
-      razon_social: string | null;
-      rfc: string | null;
-      registro_patronal: string | null;
-      actividad_principal: string | null;
-      folio_organization: number | null;
-    };
-    address: {
-      calle_numero: string | null;
-      colonia: string | null;
-      codigo_postal: string | null;
-      municipio: string | null;
-      estado: string | null;
-    };
-    contact: {
-      nombre: string | null;
-      puesto: string | null;
-      email: string | null;
-      movil: string | null;
-    };
-    responsible: {
-      nombre: string | null;
-      puesto: string | null;
-      email: string | null;
-      movil: string | null;
-    };
-  };
+  company_data: CompanyData;
   demographic_summary: Record<string, unknown>;
   demographic_details: DemographicDetails;
 }
 
 interface Evaluation {
   id: string;
+  evaluation_type?: string;
+  personal_folio?: string;
   demographicData?: Record<string, unknown>;
 }
 
@@ -209,15 +194,13 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const tabs: Tab[] = [
-  { key: 'company', labelKey: 'Company Data' },
-  { key: 'demographic', labelKey: 'Demographic Data' },
-  { key: 'results', labelKey: 'Results' },
-  { key: 'analysis', labelKey: 'Analysis' },
-  { key: 'recommendations', labelKey: 'Recommendations' },
-  { key: 'report', labelKey: 'Report' },
-  { key: 'evidence', labelKey: 'Evidence' },
-  { key: 'foda', labelKey: 'SWOT' },
-  { key: 'conclusions', labelKey: 'Conclusions' },
+  { key: 'empresa', labelKey: 'Empresa' },
+  { key: 'comite', labelKey: 'Comité' },
+  { key: 'sensibilizacion', labelKey: 'Sensibilización' },
+  { key: 'politica', labelKey: 'Política' },
+  { key: 'evaluacion', labelKey: 'Evaluación' },
+  { key: 'etapas', labelKey: 'Etapas' },
+  { key: 'referencia', labelKey: 'Referencia' },
 ];
 
 const translatedTabs = computed(() =>
@@ -227,7 +210,7 @@ const translatedTabs = computed(() =>
   }))
 );
 
-const activeTab = ref<string>('company');
+const activeTab = ref<string>('empresa');
 const evaluations = ref<Evaluation[]>(props.evaluations || []);
 </script>
 
