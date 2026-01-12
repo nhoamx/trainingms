@@ -20,6 +20,7 @@ The platform processes evaluations through dual workflows: online quiz submissio
 - **Clima Laboral (Work Climate)**: Organizational climate assessment using Likert scales
   - Evaluates work environment, leadership, and organizational culture
   - Scoring system with levels: Muy desfavorable, Desfavorable, Medio, Favorable, Muy favorable
+- **NOM-002-STPS-2010**: Norma Oficial Mexicana para la Prevención y Protección contra Incendios en Centros de Trabajo
 
 #### Core Entities
 - **Organizations**: Companies conducting evaluations with their employees

@@ -38,6 +38,7 @@ return [
         'page' => 'Organizations/CalizaDashboard',
         'organizations' => [
             'a0315c7c-d7a2-4969-b51e-d126fa6da1af', // CORPORACION INDUSTRIAL DE CALIZA
+            'a0317959-15f7-4d4a-a2d3-82aaae4c032a', // SEVEN
         ],
     ],
 
