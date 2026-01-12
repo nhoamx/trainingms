@@ -34,11 +34,14 @@
             >
                 <div class="flex items-start justify-between gap-3 mb-4">
                     <p class="text-slate-900 flex-grow">{{ qIndex }}. {{ question }}</p>
-                    <div class="flex-shrink-0 w-48">
+                    <div class="flex-shrink-0 flex gap-2">
                         <AudioPlayer
                             :audio-url="getAudioUrl(qIndex)"
                             @ended="handleAudioEnded(qIndex)"
                             @error="handleAudioError(qIndex)"
+                        />
+                        <VideoPlayer
+                            :video-url="getVideoUrl(qIndex)"
                         />
                     </div>
                 </div>
@@ -68,6 +71,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import AudioPlayer from './AudioPlayer.vue';
+import VideoPlayer from './VideoPlayer.vue';
 
 const props = defineProps({
     conditionalSections: {
@@ -87,6 +91,10 @@ const props = defineProps({
         required: true
     },
     audioUrls: {
+        type: Object,
+        default: () => ({})
+    },
+    videoUrls: {
         type: Object,
         default: () => ({})
     }
@@ -123,6 +131,10 @@ const handleAudioError = (questionId) => {
 
 const getAudioUrl = (questionId) => {
     return props.audioUrls?.[questionId] || null;
+};
+
+const getVideoUrl = (questionId) => {
+    return props.videoUrls?.[questionId] || null;
 };
 
 // Watch para inicializar preguntas condicionales como null si el filtro es "No"

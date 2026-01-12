@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import { useAudioUrls } from '@/composables/useAudioUrls';
+import { useVideoUrls } from '@/composables/useVideoUrls';
 import QuizLayout from '@/Layouts/QuizLayout.vue';
 import ProgressBar from '@/Components/Quiz/ProgressBar.vue';
 import ViewModeToggle from '@/Components/Quiz/ViewModeToggle.vue';
@@ -158,6 +159,9 @@ const isSubmitting = ref(false);
 // URLs de audio para las preguntas usando el composable
 const audioUrls = useAudioUrls(props.quiz);
 
+// URLs de video para las preguntas usando el composable
+const videoUrls = useVideoUrls(props.quiz);
+
 // Helpers para la sección de acontecimientos traumáticos
 const traumaticQuestions = computed(() => props.quiz?.questions?.acontecimientos_traumaticos?.questions || []);
 const traumaticAnswers = computed(() => answers.value.acontecimientos_traumaticos || {});
@@ -281,6 +285,7 @@ const submitEvaluation = () => {
                             :answer-options="answerOptions.yesNo"
                             name-prefix="trauma"
                             :audio-urls="audioUrls"
+                            :video-urls="videoUrls"
                         />
                     </div>
 
@@ -291,6 +296,7 @@ const submitEvaluation = () => {
                             v-model="answers.referencia_i"
                             :answer-options="answerOptions.yesNo"
                             :audio-urls="audioUrls"
+                            :video-urls="videoUrls"
                         />
                     </div>
 

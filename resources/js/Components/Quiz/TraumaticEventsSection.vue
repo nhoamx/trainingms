@@ -9,11 +9,14 @@
             >
                 <div class="flex items-start justify-between gap-3 mb-4">
                     <p class="text-slate-900 flex-grow">{{ index }}. {{ question }}</p>
-                    <div class="flex-shrink-0 w-48">
+                    <div class="flex-shrink-0 flex gap-2">
                         <AudioPlayer
                             :audio-url="getAudioUrl(index)"
                             @ended="handleAudioEnded(index)"
                             @error="handleAudioError(index)"
+                        />
+                        <VideoPlayer
+                            :video-url="getVideoUrl(index)"
                         />
                     </div>
                 </div>
@@ -43,6 +46,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import AudioPlayer from './AudioPlayer.vue';
+import VideoPlayer from './VideoPlayer.vue';
 
 const props = defineProps({
     title: {
@@ -66,6 +70,10 @@ const props = defineProps({
         required: true
     },
     audioUrls: {
+        type: Object,
+        default: () => ({})
+    },
+    videoUrls: {
         type: Object,
         default: () => ({})
     }
@@ -96,6 +104,10 @@ onMounted(() => {
 // Obtener la URL del audio para una pregunta
 const getAudioUrl = (index) => {
     return props.audioUrls?.[index] || null;
+};
+
+const getVideoUrl = (index) => {
+    return props.videoUrls?.[index] || null;
 };
 
 const isDisabled = (index) => unlocked.value[index] === false;

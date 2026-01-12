@@ -11,6 +11,11 @@
         window.__AUDIO_BASE_URL = '{{ config("audio.base_url") }}';
         window.__AUDIO_ENABLED = {{ config("audio.enabled") ? "true" : "false" }};
     </script>
+    <!-- Video Configuration -->
+    <script>
+        window.__VIDEO_BASE_URL = '{{ config("video.base_url") }}';
+        window.__VIDEO_ENABLED = {{ config("video.enabled") ? "true" : "false" }};
+    </script>
 </head>
 <body class="h-full">
 @inertia

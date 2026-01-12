@@ -53,7 +53,7 @@
 
                     <!-- Sección Escala Cisneros -->
                     <div v-if="currentSection === 'escala_cisneros'" class="space-y-6">
-                        <EscalaCisneros v-model="answers.escala_cisneros" :audio-urls="audioUrls" />
+                        <EscalaCisneros v-model="answers.escala_cisneros" :audio-urls="audioUrls" :video-urls="videoUrls" />
                     </div>
 
                     <!-- Sección Acontecimientos Traumáticos -->
@@ -61,12 +61,12 @@
                         <TraumaticEventsSection
                             :title="quiz.questions?.acontecimientos_traumaticos?.title || 'Acontecimientos Traumáticos'"
                             :questions="traumaticQuestions" v-model="answers.acontecimientos_traumaticos"
-                            :answer-options="answerOptions.yesNo" name-prefix="trauma" :audio-urls="audioUrls" />
+                            :answer-options="answerOptions.yesNo" name-prefix="trauma" :audio-urls="audioUrls" :video-urls="videoUrls" />
                     </div>
 
                     <div v-if="currentSection === 'referencia_i'" class="space-y-6">
                         <FollowUpQuestionsSection :follow-up-questions="quiz.reference_i" v-model="answers.referencia_i"
-                            :answer-options="answerOptions.yesNo" :audio-urls="audioUrls" />
+                            :answer-options="answerOptions.yesNo" :audio-urls="audioUrls" :video-urls="videoUrls" />
                     </div>
 
                     <!-- Sección Final -->
@@ -106,6 +106,7 @@ import { ref, computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import { useAudioUrls } from '@/composables/useAudioUrls';
+import { useVideoUrls } from '@/composables/useVideoUrls';
 import QuizLayout from '@/Layouts/QuizLayout.vue';
 import ProgressBar from '@/Components/Quiz/ProgressBar.vue';
 import ViewModeToggle from '@/Components/Quiz/ViewModeToggle.vue';
@@ -235,6 +236,9 @@ const isSubmitting = ref(false);
 
 // URLs de audio para las preguntas usando el composable
 const audioUrls = useAudioUrls(props.quiz);
+
+// URLs de video para las preguntas usando el composable
+const videoUrls = useVideoUrls(props.quiz);
 
 const submitEvaluation = () => {
     isSubmitting.value = true;

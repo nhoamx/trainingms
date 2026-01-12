@@ -7,11 +7,14 @@
     >
             <div class="flex items-start justify-between gap-3 mb-4">
                 <p class="text-slate-900 flex-grow">{{ question.id }}. {{ question.text }}</p>
-                <div class="flex-shrink-0 w-48">
+                <div class="flex-shrink-0 flex gap-2">
                     <AudioPlayer
                         :audio-url="getAudioUrl(question.id)"
                         @ended="handleAudioEnded(question.id)"
                         @error="handleAudioError(question.id)"
+                    />
+                    <VideoPlayer
+                        :video-url="getVideoUrl(question.id)"
                     />
                 </div>
             </div>
@@ -39,6 +42,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import AudioPlayer from './AudioPlayer.vue';
+import VideoPlayer from './VideoPlayer.vue';
 
 const props = defineProps({
     paginatedQuestions: {
@@ -58,6 +62,10 @@ const props = defineProps({
         default: 'comfortable'
     },
     audioUrls: {
+        type: Object,
+        default: () => ({})
+    },
+    videoUrls: {
         type: Object,
         default: () => ({})
     }
@@ -95,6 +103,10 @@ const handleAudioError = (questionId) => {
 
 const getAudioUrl = (questionId) => {
     return props.audioUrls?.[questionId] || null;
+};
+
+const getVideoUrl = (questionId) => {
+    return props.videoUrls?.[questionId] || null;
 };
 
 const updateAnswer = (questionId, value) => {

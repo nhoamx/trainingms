@@ -29,11 +29,14 @@
             <div v-for="(question, idx) in cisnerosQuestions" :key="idx" class="mb-6">
                 <div class="flex items-start justify-between gap-3 mb-3">
                     <label class="block text-sm font-medium text-slate-700 flex-grow">{{ idx + 1 }}: {{ question }}</label>
-                    <div class="flex-shrink-0 w-48">
+                    <div class="flex-shrink-0 flex gap-2">
                         <AudioPlayer
                             :audio-url="getAudioUrl(`cisneros_${idx + 1}`)"
                             @ended="handleAudioEnded(`cisneros_${idx + 1}`)"
                             @error="handleAudioError(`cisneros_${idx + 1}`)"
+                        />
+                        <VideoPlayer
+                            :video-url="getVideoUrl(`cisneros_${idx + 1}`)"
                         />
                     </div>
                 </div>
@@ -79,6 +82,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import AudioPlayer from './AudioPlayer.vue';
+import VideoPlayer from './VideoPlayer.vue';
 
 const props = defineProps({
     modelValue: {
@@ -86,6 +90,10 @@ const props = defineProps({
         required: true
     },
     audioUrls: {
+        type: Object,
+        default: () => ({})
+    },
+    videoUrls: {
         type: Object,
         default: () => ({})
     }
@@ -128,6 +136,10 @@ const updateField = (field, value) => {
 
 const getAudioUrl = (questionId) => {
     return props.audioUrls?.[questionId] || null;
+};
+
+const getVideoUrl = (questionId) => {
+    return props.videoUrls?.[questionId] || null;
 };
 
 const cisnerosQuestions = [
