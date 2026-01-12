@@ -14,7 +14,7 @@
     <!-- Resumen de Evaluaciones -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <StatCard label="Total de Evaluaciones" :value="totalEvaluations" icon="ClipboardDocumentListIcon" color="blue" />
-      <StatCard label="Referencia I (TEPT)" :value="evaluationsByType.referencia_i" icon="DocumentIcon" color="red" />
+      <StatCard label="Referencia I (ATS)" :value="evaluationsByType.referencia_i" icon="DocumentIcon" color="red" />
       <StatCard label="Referencia III (Factores)" :value="evaluationsByType.referencia_iii" icon="AdjustmentsHorizontalIcon" color="orange" />
       <StatCard label="Escala Cisneros (Acoso)" :value="evaluationsByType.cisneros" icon="ShieldCheckIcon" color="purple" />
     </div>
@@ -33,9 +33,9 @@
             <DocumentTextIcon class="w-5 h-5 text-red-600" />
             <h4 class="font-bold text-slate-900">Guía de Referencia I</h4>
           </div>
-          <p class="text-sm text-slate-600 mb-4">Identificación de trabajadores con TEPT y eventos traumáticos severos</p>
+          <p class="text-sm text-slate-600 mb-4">Identificación de trabajadores con ATS (Acontecimiento Traumáticos Severos)</p>
           <div class="flex items-center justify-between">
-            <span class="text-xs font-medium text-red-600 bg-red-50 px-3 py-1.5 rounded-full">Evaluación TEPT</span>
+            <span class="text-xs font-medium text-red-600 bg-red-50 px-3 py-1.5 rounded-full">Evaluación ATS</span>
             <span class="text-lg font-bold text-red-600">{{ evaluationsByType.referencia_i }}</span>
           </div>
         </div>
