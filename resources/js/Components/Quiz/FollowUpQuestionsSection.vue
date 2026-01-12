@@ -12,18 +12,13 @@
                     :key="index"
                     class="bg-white p-4 rounded-lg border border-slate-100"
                 >
-                    <div class="flex items-start justify-between gap-3 mb-4">
-                        <p class="text-slate-900 flex-grow">{{ question }}</p>
-                        <div class="flex-shrink-0 flex gap-2">
-                            <AudioPlayer
-                                :audio-url="getAudioUrl(`${category}_${index}`)"
-                                @ended="handleAudioEnded(`${category}_${index}`)"
-                                @error="handleAudioError(`${category}_${index}`)"
-                            />
-                            <VideoPlayer
-                                :video-url="getVideoUrl(`${category}_${index}`)"
-                            />
-                        </div>
+                    <p class="text-slate-900 mb-4">{{ question }}</p>
+                    <div class="flex gap-2 mb-4">
+                        <AudioPlayer
+                            :audio-url="getAudioUrl(`${category}_${index}`)"
+                            @ended="handleAudioEnded(`${category}_${index}`)"
+                            @error="handleAudioError(`${category}_${index}`)"
+                        />
                     </div>
                     <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
                         <label
@@ -52,7 +47,6 @@
 <script setup>
 import { ref, watch } from 'vue';
 import AudioPlayer from './AudioPlayer.vue';
-import VideoPlayer from './VideoPlayer.vue';
 
 const props = defineProps({
     followUpQuestions: {
@@ -68,10 +62,6 @@ const props = defineProps({
         required: true
     },
     audioUrls: {
-        type: Object,
-        default: () => ({})
-    },
-    videoUrls: {
         type: Object,
         default: () => ({})
     }
@@ -109,10 +99,6 @@ const handleAudioError = (key) => {
 
 const getAudioUrl = (key) => {
     return props.audioUrls?.[key] || null;
-};
-
-const getVideoUrl = (key) => {
-    return props.videoUrls?.[key] || null;
 };
 
 const updateAnswer = (key, value) => {
