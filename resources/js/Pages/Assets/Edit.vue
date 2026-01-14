@@ -263,6 +263,14 @@ function deleteAsset() {
                 <p class="mt-4 text-xs text-center text-gray-500">
                     Este código QR identifica al extintor y puede ser escaneado para futuras inspecciones.
                 </p>
+                <div class="mt-6 text-center">
+                    <Link
+                        :href="route('assets.inspect', asset.id)"
+                        class="text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+                    >
+                        Ver página de inspección →
+                    </Link>
+                </div>
             </div>
         </div>
 
