@@ -8,10 +8,14 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
     const isLocal = env.APP_ENV === 'local';
 
-    const serverConfig = isLocal ? {
+    const certKeyPath = 'C:\\Users\\alfredo\\.config\\herd\\config\\valet\\Certificates\\trainingms.test.key';
+    const certPath = 'C:\\Users\\alfredo\\.config\\herd\\config\\valet\\Certificates\\trainingms.test.crt';
+    const certsExist = fs.existsSync(certKeyPath) && fs.existsSync(certPath);
+
+    const serverConfig = isLocal && certsExist ? {
         https: {
-            key: fs.readFileSync('C:\\Users\\alfredo\\.config\\herd\\config\\valet\\Certificates\\trainingms.test.key'),
-            cert: fs.readFileSync('C:\\Users\\alfredo\\.config\\herd\\config\\valet\\Certificates\\trainingms.test.crt'),
+            key: fs.readFileSync(certKeyPath),
+            cert: fs.readFileSync(certPath),
         },
         cors: {
             origin: 'https://trainingms.test',
