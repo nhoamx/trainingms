@@ -204,9 +204,28 @@ const navigation = computed(() => {
     const isOrganizationUser = user.value.roles?.some(role => role.name === 'organization');
 
     if (isOrganizationUser) {
-        return [
+        // For organization users, get their organization ID
+        const orgId = user.value.organization_id;
+        console.log('Organization User - orgId:', orgId, 'Type:', typeof orgId);
+        
+        const navItems = [
             { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
         ];
+        
+        // Only add company data link if organization ID exists
+        if (orgId) {
+            console.log('Adding company data link with orgId:', orgId);
+            navItems.push({ 
+                name: 'Datos de la empresa', 
+                href: route('company-data.edit', orgId), 
+                current: route().current('company-data.*') 
+            });
+        } else {
+            console.log('No orgId found, skipping company data link');
+        }
+        
+        console.log('Final navItems:', navItems);
+        return navItems;
     }
 
     return [

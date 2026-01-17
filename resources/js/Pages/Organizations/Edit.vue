@@ -105,6 +105,11 @@ const deleteType = ref('') // 'position' o 'area'
 const showImportPositionsModal = ref(false)
 const showImportAreasModal = ref(false)
 
+// Form for policy approved upload (admin only)
+const policyApprovedForm = useForm({
+    policy_approved: null,
+})
+
 // Función para cambiar entre pestañas
 const changeTab = (tab) => {
     activeTab.value = tab
@@ -301,6 +306,23 @@ const handleImportAreasSuccess = () => {
     router.reload({ only: ['organization'] })
 }
 
+// Handle policy approved upload (admin only)
+const handlePolicyApprovedUpload = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+        policyApprovedForm.policy_approved = file
+        policyApprovedForm.post(route('company-data.policy.upload-approved', organization.id), {
+            preserveScroll: true,
+            forceFormData: true,
+            onSuccess: () => {
+                policyApprovedForm.reset()
+                event.target.value = null
+                router.reload({ only: ['organization'] })
+            },
+        })
+    }
+}
+
 </script>
 
 <template>
@@ -344,6 +366,14 @@ const handleImportAreasSuccess = () => {
                         :class="activeTab === 'folios' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700'"
                     >
                         Folios
+                    </button>
+                    <button
+                        v-if="isAdmin"
+                        @click="changeTab('policy')"
+                        class="px-3 py-2 text-sm font-medium rounded-md transition-colors"
+                        :class="activeTab === 'policy' ? 'bg-orange-100 text-orange-700' : 'text-gray-500 hover:text-gray-700'"
+                    >
+                        Política
                     </button>
                     <button
                         v-if="isAdmin"
@@ -776,6 +806,74 @@ const handleImportAreasSuccess = () => {
 
             <div v-else-if="activeTab === 'folios'" class="space-y-6">
                 <Folios :organization="organization" />
+            </div>
+
+            <!-- Pestaña de Política (solo admin) -->
+            <div v-else-if="activeTab === 'policy' && isAdmin" class="space-y-6">
+                <div class="border-b border-gray-900/10 pb-6">
+                    <h2 class="text-base font-semibold leading-7 text-gray-900">Documentos de Política</h2>
+                    <p class="mt-1 text-sm leading-6 text-gray-600">
+                        Descarga el borrador de la organización y sube la versión aprobada.
+                    </p>
+                    
+                    <div class="mt-6 space-y-6">
+                        <!-- Draft Policy Download -->
+                        <div v-if="organization.policy_draft_path" class="border rounded-lg p-6 bg-blue-50">
+                            <h3 class="text-md font-medium text-gray-900 mb-3">Borrador de Política (Organización)</h3>
+                            <p class="text-sm text-gray-600 mb-4">
+                                La organización ha subido un borrador de política para revisión.
+                            </p>
+                            <a 
+                                :href="route('company-data.policy.download-draft', organization.id)"
+                                class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+                            >
+                                <ArrowUpTrayIcon class="h-5 w-5" />
+                                Descargar Borrador
+                            </a>
+                        </div>
+                        <div v-else class="border rounded-lg p-6 bg-gray-50">
+                            <p class="text-sm text-gray-600">La organización aún no ha subido un borrador de política.</p>
+                        </div>
+
+                        <!-- Approved Policy Upload/Download -->
+                        <div class="border rounded-lg p-6 bg-green-50">
+                            <h3 class="text-md font-medium text-gray-900 mb-3">Política Aprobada (Administrador)</h3>
+                            
+                            <div v-if="organization.policy_approved_path" class="mb-4">
+                                <div class="flex items-center justify-between bg-white p-4 rounded border border-green-200 mb-4">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Política aprobada disponible</p>
+                                        <p v-if="organization.policy_approved_at" class="text-xs text-gray-500 mt-1">
+                                            Aprobada el {{ new Date(organization.policy_approved_at).toLocaleDateString('es-MX') }}
+                                        </p>
+                                    </div>
+                                    <a
+                                        :href="route('company-data.policy.download-approved', organization.id)"
+                                        class="inline-flex items-center gap-2 text-sm text-green-600 hover:text-green-700 font-medium"
+                                    >
+                                        <ArrowUpTrayIcon class="h-4 w-4" />
+                                        Descargar
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    {{ organization.policy_approved_path ? 'Reemplazar política aprobada' : 'Subir política aprobada' }}
+                                </label>
+                                <input
+                                    type="file"
+                                    @change="handlePolicyApprovedUpload"
+                                    accept=".pdf,.doc,.docx"
+                                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                                />
+                                <p class="mt-1 text-xs text-gray-500">
+                                    PDF, DOC o DOCX. Máximo 10MB.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Pestaña de Exportar Clima (solo admin) -->

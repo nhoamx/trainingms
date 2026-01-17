@@ -190,6 +190,32 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/perfil', [UserController::class, 'showProfile'])->name('profile');
     Route::post('/perfil', [UserController::class, 'updateProfile'])->name('profile.update');
 
+    // Company Data routes (for organization users)
+    Route::get('/organizacion/{organization}/datos-empresa', [\App\Http\Controllers\CompanyDataController::class, 'edit'])
+        ->name('company-data.edit')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::post('/organizacion/{organization}/datos-empresa', [\App\Http\Controllers\CompanyDataController::class, 'update'])
+        ->name('company-data.update')
+        ->middleware('can:view-organization-results,organization');
+
+    // Policy document routes
+    Route::post('/organizacion/{organization}/politica/borrador', [\App\Http\Controllers\CompanyDataController::class, 'uploadPolicyDraft'])
+        ->name('company-data.policy.upload-draft')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::post('/organizacion/{organization}/politica/aprobada', [\App\Http\Controllers\CompanyDataController::class, 'uploadPolicyApproved'])
+        ->name('company-data.policy.upload-approved')
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
+
+    Route::get('/organizacion/{organization}/politica/borrador/descargar', [\App\Http\Controllers\CompanyDataController::class, 'downloadPolicyDraft'])
+        ->name('company-data.policy.download-draft')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::get('/organizacion/{organization}/politica/aprobada/descargar', [\App\Http\Controllers\CompanyDataController::class, 'downloadPolicyApproved'])
+        ->name('company-data.policy.download-approved')
+        ->middleware('can:view-organization-results,organization');
+
     // Rutas accesibles para usuarios de organización y administradores
     Route::get('/organizacion/{organization}/resultados', [ResultsController::class, 'listResults'])
         ->name('organization.results.list')
