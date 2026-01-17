@@ -110,4 +110,9 @@ class Organization extends Model
     {
         return $this->instruments()->where('name', $instrumentName)->exists();
     }
+
+    public function committeeMembers()
+    {
+        return $this->hasMany(CommitteeMember::class);
+    }
 }

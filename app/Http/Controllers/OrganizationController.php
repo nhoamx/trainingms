@@ -61,6 +61,7 @@ class OrganizationController extends Controller
         $organization->load([
             'occupationPositions',
             'departmentAreas',
+            'committeeMembers',
             'folioBatches' => function ($query) {
                 $query->withCount([
                     'folios as used_count' => function ($q) {
@@ -83,6 +84,10 @@ class OrganizationController extends Controller
         $logoFile = $data['logo'] ?? null;
         unset($data['logo']);
 
+        // Extract committee_members before filling the organization
+        $committeeMembers = $data['committee_members'] ?? null;
+        unset($data['committee_members']);
+
         $organization->fill($data);
 
         if ($logoFile) {
@@ -94,6 +99,24 @@ class OrganizationController extends Controller
         }
 
         $organization->save();
+
+        // Handle committee members
+        if ($committeeMembers !== null) {
+            // Delete existing committee members
+            $organization->committeeMembers()->delete();
+
+            // Create new committee members
+            foreach ($committeeMembers as $member) {
+                if (!empty($member['nombre'])) {
+                    $organization->committeeMembers()->create([
+                        'nombre' => $member['nombre'],
+                        'departamento' => $member['departamento'] ?? null,
+                        'puesto' => $member['puesto'] ?? null,
+                        'factor' => $member['factor'] ?? null,
+                    ]);
+                }
+            }
+        }
 
         return redirect()->route('organizations.edit', $organization)
             ->with('flash', [

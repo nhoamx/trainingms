@@ -68,6 +68,19 @@ const form = useForm({
     comite_integrantes: organization.comite_integrantes ?? '',
     comite_hombres: organization.comite_hombres ?? '',
     comite_mujeres: organization.comite_mujeres ?? '',
+    // Committee members
+    committee_members: organization.committee_members && organization.committee_members.length > 0
+        ? organization.committee_members.map(member => ({
+            nombre: member.nombre || '',
+            departamento: member.departamento || '',
+            puesto: member.puesto || '',
+            factor: member.factor || '',
+        }))
+        : [
+            { nombre: '', departamento: '', puesto: '', factor: '' },
+            { nombre: '', departamento: '', puesto: '', factor: '' },
+            { nombre: '', departamento: '', puesto: '', factor: '' },
+        ],
     // Fecha y justificación
     fecha_aplicacion: organization.fecha_aplicacion || '',
     justificacion_muestra: organization.justificacion_muestra || '',
@@ -216,6 +229,21 @@ const addArea = () => {
         },
     })
 }
+// Funciones para manejo de committee members
+
+const addCommitteeMember = () => {
+    form.committee_members.push({
+        nombre: '',
+        departamento: '',
+        puesto: '',
+        factor: '',
+    })
+}
+
+const removeCommitteeMember = (index) => {
+    form.committee_members.splice(index, 1)
+}
+
 // Funciones para manejo de archivos
 
 function handleFileDrop(e) {
@@ -509,6 +537,85 @@ const handleImportAreasSuccess = () => {
                                 <div class="sm:col-span-2">
                                     <FormInput type="number" label="Mujeres" id="comite_mujeres" name="comite_mujeres" v-model="form.comite_mujeres" :error="form.errors.comite_mujeres" />
                                 </div>
+
+                                <!-- Integrantes del Comité (detalle) -->
+                                <div class="col-span-full">
+                                    <div class="flex justify-between items-center">
+                                        <h3 class="text-sm font-semibold text-gray-900">Integrantes del Comité (Detalle)</h3>
+                                        <button
+                                            type="button"
+                                            @click="addCommitteeMember"
+                                            class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                                        >
+                                            <PlusIcon class="-ml-0.5 mr-1.5 h-4 w-4" aria-hidden="true" />
+                                            Agregar integrante
+                                        </button>
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-600">Agrega la información de cada integrante del comité.</p>
+                                </div>
+
+                                <!-- Lista de integrantes del comité -->
+                                <div v-for="(member, index) in form.committee_members" :key="index" class="col-span-full">
+                                    <div class="border rounded-lg p-4 bg-gray-50 relative">
+                                        <div class="flex justify-between items-start mb-4">
+                                            <h4 class="text-sm font-medium text-gray-700">Integrante {{ index + 1 }}</h4>
+                                            <button
+                                                v-if="form.committee_members.length > 1"
+                                                type="button"
+                                                @click="removeCommitteeMember(index)"
+                                                class="rounded-full bg-white p-1 text-gray-400 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
+                                            >
+                                                <TrashIcon class="h-5 w-5" aria-hidden="true" />
+                                            </button>
+                                        </div>
+                                        <div class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+                                            <div>
+                                                <label :for="`member_nombre_${index}`" class="block text-sm font-medium text-gray-700">Nombre *</label>
+                                                <input
+                                                    :id="`member_nombre_${index}`"
+                                                    v-model="member.nombre"
+                                                    type="text"
+                                                    placeholder="Nombre completo"
+                                                    class="mt-1 block w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600"
+                                                />
+                                                <p v-if="form.errors[`committee_members.${index}.nombre`]" class="mt-1 text-xs text-red-500">
+                                                    {{ form.errors[`committee_members.${index}.nombre`] }}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label :for="`member_departamento_${index}`" class="block text-sm font-medium text-gray-700">Departamento</label>
+                                                <input
+                                                    :id="`member_departamento_${index}`"
+                                                    v-model="member.departamento"
+                                                    type="text"
+                                                    placeholder="Departamento o área"
+                                                    class="mt-1 block w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label :for="`member_puesto_${index}`" class="block text-sm font-medium text-gray-700">Puesto</label>
+                                                <input
+                                                    :id="`member_puesto_${index}`"
+                                                    v-model="member.puesto"
+                                                    type="text"
+                                                    placeholder="Puesto o cargo"
+                                                    class="mt-1 block w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label :for="`member_factor_${index}`" class="block text-sm font-medium text-gray-700">Factor</label>
+                                                <input
+                                                    :id="`member_factor_${index}`"
+                                                    v-model="member.factor"
+                                                    type="text"
+                                                    placeholder="Factor de riesgo"
+                                                    class="mt-1 block w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Fechas -->
                                 <div class="sm:col-span-3">
                                     <FormInput type="date" label="Fecha de aplicación" id="fecha_aplicacion" name="fecha_aplicacion" v-model="form.fecha_aplicacion" :error="form.errors.fecha_aplicacion" />
