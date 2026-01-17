@@ -14,7 +14,9 @@ class MissingFoliosGapDetectionTest extends TestCase
     use DatabaseTransactions;
 
     protected User $user;
+
     protected User $adminUser;
+
     protected Organization $organization;
 
     protected function setUp(): void
@@ -56,7 +58,7 @@ class MissingFoliosGapDetectionTest extends TestCase
         // GAP: folios 65-80 (16 folios missing)
         // Range 3: folios 81-100 (20 folios)
         // Total: 78 uploaded, 22 missing in gaps
-        
+
         // First range: 1-39
         for ($i = 1; $i <= 39; $i++) {
             PaperEvaluation::factory()->create([
@@ -98,7 +100,7 @@ class MissingFoliosGapDetectionTest extends TestCase
             ->get(route('organization.results.list', ['organization' => $this->organization->id]));
 
         $response->assertStatus(200);
-        
+
         // Verify that missing folios are detected
         $response->assertInertia(fn ($page) => $page
             ->has('missingFolios', 1)
@@ -137,7 +139,7 @@ class MissingFoliosGapDetectionTest extends TestCase
             ->get(route('organization.results.list', ['organization' => $this->organization->id]));
 
         $response->assertStatus(200);
-        
+
         // Verify admin sees isAdmin flag
         $response->assertInertia(fn ($page) => $page
             ->where('isAdmin', true)
@@ -174,7 +176,7 @@ class MissingFoliosGapDetectionTest extends TestCase
             ->get(route('organization.results.list', ['organization' => $this->organization->id]));
 
         $response->assertStatus(200);
-        
+
         // Organization users see the data but not the isAdmin flag
         $response->assertInertia(fn ($page) => $page
             ->where('isAdmin', false)
@@ -212,7 +214,7 @@ class MissingFoliosGapDetectionTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
-        
+
         // Verify CSV content contains the missing folio
         $content = $response->streamedContent();
         $this->assertStringContainsString('0011', $content);
@@ -255,7 +257,7 @@ class MissingFoliosGapDetectionTest extends TestCase
             ->get(route('organization.results.list', ['organization' => $this->organization->id]));
 
         $response->assertStatus(200);
-        
+
         // No gaps should be detected
         $response->assertInertia(fn ($page) => $page
             ->has('missingFolios', 0)
@@ -277,7 +279,7 @@ class MissingFoliosGapDetectionTest extends TestCase
             ->get(route('organization.results.list', ['organization' => $this->organization->id]));
 
         $response->assertStatus(200);
-        
+
         // No gaps should be detected with only 1 evaluation
         $response->assertInertia(fn ($page) => $page
             ->has('missingFolios', 0)
@@ -287,7 +289,7 @@ class MissingFoliosGapDetectionTest extends TestCase
     public function test_detects_single_gap_in_sequence(): void
     {
         // Create evaluations: 0001-0010, skip 0011, then 0012-0020
-        
+
         // First range: 0001-0010
         for ($i = 1; $i <= 10; $i++) {
             PaperEvaluation::factory()->create([
@@ -316,7 +318,7 @@ class MissingFoliosGapDetectionTest extends TestCase
             ->get(route('organization.results.list', ['organization' => $this->organization->id]));
 
         $response->assertStatus(200);
-        
+
         // Verify that the single missing folio is detected
         $response->assertInertia(fn ($page) => $page
             ->has('missingFolios', 1)
@@ -342,7 +344,7 @@ class MissingFoliosGapDetectionTest extends TestCase
             ->get(route('organization.results.list', ['organization' => $this->organization->id]));
 
         $response->assertStatus(200);
-        
+
         // No gaps should be detected because we only look within the uploaded range
         $response->assertInertia(fn ($page) => $page
             ->has('missingFolios', 0)
