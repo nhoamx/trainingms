@@ -107,7 +107,7 @@ class OrganizationController extends Controller
 
             // Create new committee members
             foreach ($committeeMembers as $member) {
-                if (!empty($member['nombre'])) {
+                if (! empty($member['nombre'])) {
                     $organization->committeeMembers()->create([
                         'nombre' => $member['nombre'],
                         'departamento' => $member['departamento'] ?? null,
