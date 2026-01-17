@@ -54,7 +54,7 @@ class UpdateOrganizationRequest extends FormRequest
             'justificacion_muestra' => ['nullable', 'string'],
             // Committee members
             'committee_members' => ['nullable', 'array'],
-            'committee_members.*.nombre' => ['required', 'string', 'max:255'],
+            'committee_members.*.nombre' => ['nullable', 'string', 'max:255'],
             'committee_members.*.departamento' => ['nullable', 'string', 'max:255'],
             'committee_members.*.puesto' => ['nullable', 'string', 'max:255'],
             'committee_members.*.factor' => ['nullable', 'string', 'max:255'],

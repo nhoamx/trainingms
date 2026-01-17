@@ -208,29 +208,7 @@ class CommitteeMemberTest extends TestCase
         ]);
     }
 
-    public function test_validation_requires_nombre_for_committee_members(): void
-    {
-        $user = User::factory()->create();
-        $organization = Organization::factory()->create();
-
-        $this->actingAs($user);
-
-        $response = $this->put(route('organizations.update', $organization), [
-            'name' => 'Test Organization',
-            'committee_members' => [
-                [
-                    'nombre' => '', // Empty nombre should fail validation
-                    'departamento' => 'Recursos Humanos',
-                    'puesto' => 'Coordinador',
-                    'factor' => 'Estrés laboral',
-                ],
-            ],
-        ]);
-
-        $response->assertSessionHasErrors('committee_members.0.nombre');
-    }
-
-    public function test_empty_committee_members_are_not_saved(): void
+    public function test_empty_nombre_members_are_not_saved(): void
     {
         $user = User::factory()->create();
         $organization = Organization::factory()->create();
@@ -247,7 +225,33 @@ class CommitteeMemberTest extends TestCase
                     'factor' => 'Stress',
                 ],
                 [
-                    'nombre' => '', // Empty member should not be saved
+                    'nombre' => '', // Empty nombre should not be saved
+                    'departamento' => 'Finance',
+                    'puesto' => 'Analyst',
+                    'factor' => 'Workload',
+                ],
+            ],
+        ]);
+
+        $organization->refresh();
+        // Only one member should be saved (the one with valid nombre)
+        $this->assertCount(1, $organization->committeeMembers);
+        $this->assertEquals('Valid Member', $organization->committeeMembers[0]->nombre);
+    }
+
+    public function test_all_fields_nullable_except_organization_id(): void
+    {
+        $user = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $this->actingAs($user);
+
+        // Submit with completely empty member objects
+        $response = $this->put(route('organizations.update', $organization), [
+            'name' => 'Test Organization',
+            'committee_members' => [
+                [
+                    'nombre' => '',
                     'departamento' => '',
                     'puesto' => '',
                     'factor' => '',
@@ -255,10 +259,11 @@ class CommitteeMemberTest extends TestCase
             ],
         ]);
 
+        // Should not have validation errors
+        $response->assertSessionHasNoErrors();
+
         $organization->refresh();
-        // Only one member should be saved (the valid one)
-        // Note: validation will catch this, so we need to adjust the test
-        // Actually, the validation requires nombre, so this should fail
-        $response->assertSessionHasErrors('committee_members.1.nombre');
+        // No members should be saved since nombre is empty
+        $this->assertCount(0, $organization->committeeMembers);
     }
 }
