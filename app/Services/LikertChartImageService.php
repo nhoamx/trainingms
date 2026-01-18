@@ -1598,7 +1598,7 @@ HTML;
     protected function renderGenderCrossChartHtml(array $crossData, ?string $title = null): string
     {
         $categories = array_keys($crossData);
-
+        
         // Collect all unique genders
         $allGenders = [];
         foreach ($crossData as $genderData) {
@@ -1607,14 +1607,14 @@ HTML;
             }
         }
         $genders = array_keys($allGenders);
-
+        
         // Gender colors
         $genderColors = [
             'Masculino' => '#3b82f6', // blue-500
             'Femenino' => '#ec4899',  // pink-500
             'No especificado' => '#9ca3af', // gray-400
         ];
-
+        
         // Build datasets for each gender
         $datasets = [];
         foreach ($genders as $gender) {
@@ -1629,7 +1629,7 @@ HTML;
                 'borderRadius' => 4,
             ];
         }
-
+        
         $categoriesJson = json_encode($categories);
         $datasetsJson = json_encode($datasets);
         $titleHtml = $title ? "<h2 class=\"chart-title\">{$title}</h2>" : '';
@@ -1816,20 +1816,20 @@ HTML;
         $data = [];
         $maxScores = [];
         $fullTexts = [];
-
+        
         foreach ($questionScores as $q) {
             $labels[] = $q['label'];
             $data[] = $q['score'];
             $maxScores[] = $q['maxScore'];
             $fullTexts[] = $q['fullText'] ?? '';
         }
-
+        
         // Calculate percentages for color gradient
         $percentages = [];
         foreach ($data as $i => $score) {
             $percentages[] = $maxScores[$i] > 0 ? ($score / $maxScores[$i]) * 100 : 0;
         }
-
+        
         // Generate colors based on percentage (red to green)
         $colors = [];
         foreach ($percentages as $pct) {
@@ -1843,7 +1843,7 @@ HTML;
                 $colors[] = '#dc2626'; // red-600
             }
         }
-
+        
         $labelsJson = json_encode($labels);
         $dataJson = json_encode($data);
         $maxScoresJson = json_encode($maxScores);
