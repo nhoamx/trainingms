@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
-import { useForm } from '@inertiajs/vue3'
-import { DocumentArrowUpIcon, DocumentArrowDownIcon, CheckCircleIcon } from '@heroicons/vue/24/solid'
+import { useForm, router } from '@inertiajs/vue3'
+import { DocumentArrowUpIcon, DocumentArrowDownIcon, CheckCircleIcon, PlusIcon, TrashIcon, XMarkIcon, UserGroupIcon } from '@heroicons/vue/24/solid'
 import Dashboard from '../../Layouts/Dashboard.vue'
 import Alert from '../../Components/Alert.vue'
 import FormInput from "../../Components/FormInput.vue"
@@ -10,6 +10,10 @@ const props = defineProps({
     organization: {
         type: Object,
         required: true,
+    },
+    committeeMembers: {
+        type: Array,
+        default: () => [],
     },
 })
 
@@ -70,6 +74,63 @@ const policyApprovedForm = useForm({
 
 // Active tab state
 const activeTab = ref('empresa')
+
+// Committee member modal state
+const showCommitteeMemberModal = ref(false)
+const memberToDelete = ref(null)
+const showDeleteConfirmModal = ref(false)
+
+// Form for committee member
+const committeeMemberForm = useForm({
+    name: '',
+    department_area: '',
+    position: '',
+    factor: '',
+})
+
+// Open modal to add committee member
+const openCommitteeMemberModal = () => {
+    committeeMemberForm.reset()
+    committeeMemberForm.clearErrors()
+    showCommitteeMemberModal.value = true
+}
+
+// Close committee member modal
+const closeCommitteeMemberModal = () => {
+    showCommitteeMemberModal.value = false
+    committeeMemberForm.reset()
+}
+
+// Submit committee member
+const submitCommitteeMember = () => {
+    committeeMemberForm.post(route('committee-members.store', props.organization.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            closeCommitteeMemberModal()
+            router.reload({ only: ['committeeMembers'] })
+        },
+    })
+}
+
+// Confirm delete committee member
+const confirmDeleteMember = (member) => {
+    memberToDelete.value = member
+    showDeleteConfirmModal.value = true
+}
+
+// Delete committee member
+const deleteMember = () => {
+    if (memberToDelete.value) {
+        router.delete(route('committee-members.destroy', [props.organization.id, memberToDelete.value.id]), {
+            preserveScroll: true,
+            onSuccess: () => {
+                showDeleteConfirmModal.value = false
+                memberToDelete.value = null
+                router.reload({ only: ['committeeMembers'] })
+            },
+        })
+    }
+}
 
 // Submit company data
 const submitCompanyData = () => {
@@ -305,7 +366,7 @@ const handlePolicyApprovedUpload = (event) => {
             <!-- Comité Tab -->
             <div v-show="activeTab === 'comite'" class="space-y-8">
                 <form @submit.prevent="submitCompanyData">
-                    <div class="pb-8">
+                    <div class="">
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">Integrantes del Comité</h2>
                         <p class="text-sm text-gray-600 mb-6">
                             Información sobre la composición del comité de seguridad y salud en el trabajo.
@@ -324,7 +385,7 @@ const handlePolicyApprovedUpload = (event) => {
                     </div>
 
                     <!-- Submit Button -->
-                    <div class="flex justify-end">
+                    <div class="flex justify-end my-8">
                         <button
                             type="submit"
                             :disabled="form.processing"
@@ -334,6 +395,85 @@ const handlePolicyApprovedUpload = (event) => {
                         </button>
                     </div>
                 </form>
+
+                <!-- Committee Members Section -->
+                <div class="border-t border-gray-900/10 pt-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Miembros del Comité</h3>
+                            <p class="text-sm text-gray-600 mt-1">
+                                Gestiona los miembros individuales del comité y sus responsabilidades.
+                            </p>
+                        </div>
+                        <button
+                            @click="openCommitteeMemberModal"
+                            type="button"
+                            class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                        >
+                            <PlusIcon class="h-5 w-5" />
+                            Agregar Miembro
+                        </button>
+                    </div>
+
+                    <!-- Committee Members Table -->
+                    <div v-if="committeeMembers && committeeMembers.length > 0" class="overflow-hidden bg-white shadow ring-1 ring-gray-200 sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puesto</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Factor</th>
+                                    <th scope="col" class="relative px-6 py-3">
+                                        <span class="sr-only">Acciones</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr v-for="member in committeeMembers" :key="member.id" class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {{ member.name }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        {{ member.department_area }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        {{ member.position }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        {{ member.factor }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button
+                                            @click="confirmDeleteMember(member)"
+                                            type="button"
+                                            class="text-red-600 hover:text-red-900 transition-colors"
+                                        >
+                                            <TrashIcon class="h-5 w-5" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div v-else class="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <UserGroupIcon class="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 class="mt-2 text-sm font-semibold text-gray-900">No hay miembros registrados</h3>
+                        <p class="mt-1 text-sm text-gray-500">Comienza agregando un miembro del comité.</p>
+                        <div class="mt-6">
+                            <button
+                                @click="openCommitteeMemberModal"
+                                type="button"
+                                class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                            >
+                                <PlusIcon class="h-5 w-5" />
+                                Agregar Primer Miembro
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Política Tab -->
@@ -417,6 +557,107 @@ const handlePolicyApprovedUpload = (event) => {
                                 Aún no hay una política aprobada. El administrador subirá la versión aprobada una vez revisada.
                             </p>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Committee Member Modal -->
+            <div v-if="showCommitteeMemberModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Agregar Miembro del Comité</h3>
+                        <button @click="closeCommitteeMemberModal" type="button" class="text-gray-400 hover:text-gray-500">
+                            <XMarkIcon class="h-6 w-6" />
+                        </button>
+                    </div>
+                    
+                    <form @submit.prevent="submitCommitteeMember" class="space-y-4">
+                        <div>
+                            <FormInput 
+                                v-model="committeeMemberForm.name" 
+                                label="Nombre" 
+                                :error="committeeMemberForm.errors.name" 
+                                required 
+                            />
+                        </div>
+                        <div>
+                            <FormInput 
+                                v-model="committeeMemberForm.department_area" 
+                                label="Área" 
+                                :error="committeeMemberForm.errors.department_area" 
+                                required 
+                            />
+                        </div>
+                        <div>
+                            <FormInput 
+                                v-model="committeeMemberForm.position" 
+                                label="Puesto" 
+                                :error="committeeMemberForm.errors.position" 
+                                required 
+                            />
+                        </div>
+                        <div>
+                            <FormInput 
+                                v-model="committeeMemberForm.factor" 
+                                label="Factor" 
+                                :error="committeeMemberForm.errors.factor" 
+                                required 
+                            />
+                        </div>
+                        
+                        <div class="flex justify-end gap-3 mt-6">
+                            <button
+                                @click="closeCommitteeMemberModal"
+                                type="button"
+                                class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="committeeMemberForm.processing"
+                                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+                            >
+                                {{ committeeMemberForm.processing ? 'Guardando...' : 'Guardar' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Delete Confirmation Modal -->
+            <div v-if="showDeleteConfirmModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                            <h3 class="text-lg font-semibold leading-6 text-gray-900">Eliminar Miembro</h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    ¿Estás seguro de que deseas eliminar a <strong>{{ memberToDelete?.name }}</strong>? Esta acción no se puede deshacer.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-5 sm:mt-4 flex justify-end gap-3">
+                        <button 
+                            @click="showDeleteConfirmModal = false" 
+                            type="button"
+                            class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            @click="deleteMember" 
+                            type="button"
+                            class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
+                        >
+                            Eliminar
+                        </button>
                     </div>
                 </div>
             </div>

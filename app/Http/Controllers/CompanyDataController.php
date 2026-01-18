@@ -57,6 +57,7 @@ class CompanyDataController extends Controller
                 'policy_approved_path',
                 'policy_approved_at',
             ]),
+            'committeeMembers' => $organization->committeeMembers,
         ]);
     }
 

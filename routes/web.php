@@ -216,6 +216,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('company-data.policy.download-approved')
         ->middleware('can:view-organization-results,organization');
 
+    // Committee Member routes
+    Route::post('/organizacion/{organization}/comite/miembros', [\App\Http\Controllers\CommitteeMemberController::class, 'store'])
+        ->name('committee-members.store')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::delete('/organizacion/{organization}/comite/miembros/{committeeMember}', [\App\Http\Controllers\CommitteeMemberController::class, 'destroy'])
+        ->name('committee-members.destroy')
+        ->middleware('can:view-organization-results,organization');
+
     // Rutas accesibles para usuarios de organización y administradores
     Route::get('/organizacion/{organization}/resultados', [ResultsController::class, 'listResults'])
         ->name('organization.results.list')
