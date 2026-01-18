@@ -16,6 +16,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    checklist: {
+        type: Object,
+        required: true,
+    },
 })
 
 const selectedInspection = ref(null)
@@ -238,7 +242,7 @@ const closeInspectionDetail = () => {
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center justify-between mb-2">
-                                                <p class="text-sm font-medium text-gray-900">Procedimiento {{ index }}</p>
+                                                <p class="text-sm font-medium text-gray-900">{{ checklist[index] }}</p>
                                                 <!-- Mostrar badge solo si existe el campo status -->
                                                 <span 
                                                     v-if="item.status === 'ok'"

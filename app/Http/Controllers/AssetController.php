@@ -157,6 +157,7 @@ class AssetController extends Controller
             }]),
             'isAuthenticated' => (bool) $user,
             'isInspector' => $isInspector,
+            'checklist' => config('asset_inspection_checklist.checklist'),
         ]);
     }
 
