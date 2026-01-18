@@ -121,6 +121,7 @@ class AssetManagementTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('Assets/Inspect')
             ->has('asset')
+            ->has('checklist')
         );
     }
 
