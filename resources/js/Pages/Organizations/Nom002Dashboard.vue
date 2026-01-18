@@ -118,7 +118,10 @@
                 <thead class="bg-gray-50">
                   <tr>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      {{ t('Activo') }}
+                      {{ t('Localización') }}
+                    </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      {{ t('Número de extintor') }}
                     </th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       {{ t('Tipo') }}
@@ -132,8 +135,9 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="asset in assets" :key="asset.id || asset.name">
-                    <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ asset.name || t('Sin nombre') }}</td>
+                  <tr v-for="asset in assets" :key="asset.id">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ asset.location || t('Sin ubicación') }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ asset.consecutive_number || 'N/A' }}</td>
                     <td class="px-4 py-3 text-sm text-gray-700">{{ asset.type || 'N/A' }}</td>
                     <td class="px-4 py-3 text-sm">
                       <span
