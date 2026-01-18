@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useForm, Link, router } from '@inertiajs/vue3'
-import { ChevronRightIcon, QrCodeIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { ChevronRightIcon, QrCodeIcon, TrashIcon, PencilIcon, EyeIcon, ChevronLeftIcon, ChevronRightIcon as ChevronRightPagination } from '@heroicons/vue/24/outline'
 import Dashboard from '../../Layouts/Dashboard.vue'
 
 const props = defineProps({
@@ -12,6 +12,10 @@ const props = defineProps({
     asset: {
         type: Object,
         required: true,
+    },
+    inspections: {
+        type: Object,
+        default: () => ({ data: [], links: [], current_page: 1 }),
     },
 })
 
@@ -36,6 +40,19 @@ function submit() {
         organization: props.organization.id,
         asset: props.asset.id
     }))
+}
+
+function formatDate(date) {
+    return new Date(date).toLocaleDateString('es-MX', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    })
+}
+
+function countIssues(checklist_results) {
+    if (!checklist_results) return 0
+    return Object.values(checklist_results).filter(item => item.status === 'issue').length
 }
 
 function downloadQr() {
@@ -263,6 +280,132 @@ function deleteAsset() {
                 <p class="mt-4 text-xs text-center text-gray-500">
                     Este código QR identifica al extintor y puede ser escaneado para futuras inspecciones.
                 </p>
+                <div class="mt-6 text-center">
+                    <Link
+                        :href="route('assets.inspect', asset.id)"
+                        class="text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+                    >
+                        Ver página de inspección →
+                    </Link>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial de Inspecciones -->
+        <div v-if="inspections.data && inspections.data.length > 0" class="mt-6 bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-semibold leading-6 text-gray-900">
+                        Historial de Inspecciones
+                    </h3>
+                    <Link
+                        :href="route('assets.inspect', asset.id)"
+                        class="text-sm text-indigo-600 hover:text-indigo-500 flex items-center gap-1"
+                    >
+                        Ver todas
+                        <ChevronRightIcon class="h-4 w-4" />
+                    </Link>
+                </div>
+                
+                <!-- Table -->
+                <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+                    <table class="min-w-full divide-y divide-gray-300">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                                    Fecha
+                                </th>
+                                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                    Inspector
+                                </th>
+                                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                    Estado
+                                </th>
+                                <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                                    <span class="sr-only">Acciones</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 bg-white">
+                            <tr v-for="inspection in inspections.data" :key="inspection.id" class="hover:bg-gray-50">
+                                <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                                    {{ formatDate(inspection.inspection_date) }}
+                                </td>
+                                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                    {{ inspection.inspector_name }}
+                                </td>
+                                <td class="whitespace-nowrap px-3 py-4 text-sm">
+                                    <span v-if="countIssues(inspection.checklist_results) === 0" class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                        ✓ Todo OK
+                                    </span>
+                                    <span v-else class="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+                                        {{ countIssues(inspection.checklist_results) }} problema(s)
+                                    </span>
+                                </td>
+                                <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                                    <div class="flex justify-end gap-3">
+                                        <Link
+                                            :href="route('assets.inspect', asset.id)"
+                                            class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900"
+                                            title="Ver detalles"
+                                        >
+                                            <EyeIcon class="h-5 w-5" />
+                                        </Link>
+                                        <Link
+                                            :href="route('assets.inspections.edit', inspection.id)"
+                                            class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-900"
+                                            title="Editar"
+                                        >
+                                            <PencilIcon class="h-5 w-5" />
+                                        </Link>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <nav v-if="inspections.links && inspections.links.length > 3" class="flex items-center justify-between border-t border-gray-200 px-4 sm:px-0 mt-6">
+                    <div class="flex w-0 flex-1">
+                        <Link
+                            v-if="inspections.prev_page_url"
+                            :href="inspections.prev_page_url"
+                            class="inline-flex items-center border-t-2 border-transparent pr-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                            preserve-scroll
+                        >
+                            <ChevronLeftIcon class="mr-3 h-5 w-5 text-gray-400" aria-hidden="true" />
+                            Anterior
+                        </Link>
+                    </div>
+                    <div class="hidden md:flex">
+                        <Link
+                            v-for="(link, index) in inspections.links.slice(1, -1)"
+                            :key="index"
+                            :href="link.url"
+                            :class="[
+                                link.active
+                                    ? 'border-indigo-500 text-indigo-600'
+                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',
+                                'inline-flex items-center border-t-2 px-4 pt-4 text-sm font-medium'
+                            ]"
+                            preserve-scroll
+                        >
+                            {{ link.label }}
+                        </Link>
+                    </div>
+                    <div class="flex w-0 flex-1 justify-end">
+                        <Link
+                            v-if="inspections.next_page_url"
+                            :href="inspections.next_page_url"
+                            class="inline-flex items-center border-t-2 border-transparent pl-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                            preserve-scroll
+                        >
+                            Siguiente
+                            <ChevronRightPagination class="ml-3 h-5 w-5 text-gray-400" aria-hidden="true" />
+                        </Link>
+                    </div>
+                </nav>
             </div>
         </div>
 

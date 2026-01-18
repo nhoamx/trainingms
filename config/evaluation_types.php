@@ -39,6 +39,7 @@ return [
         'organizations' => [
             'a0315c7c-d7a2-4969-b51e-d126fa6da1af', // CORPORACION INDUSTRIAL DE CALIZA
             'a0317959-15f7-4d4a-a2d3-82aaae4c032a', // SEVEN
+            'a0d2175b-4c4e-4e6b-bc5d-6faef772b10d', // Empresa DEMO
         ],
     ],
 

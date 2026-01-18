@@ -38,35 +38,69 @@
       <!-- Identificar Tab -->
       <div v-if="activeSubTab === 'identificar'" class="space-y-6">
         <div class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-8 border border-blue-200 hover:shadow-lg transition-shadow">
-          <div class="flex items-center gap-3 mb-6">
+          <!-- <div class="flex items-center gap-3 mb-6">
             <div class="p-2 bg-blue-100 rounded-lg">
               <MagnifyingGlassIcon class="w-6 h-6 text-blue-600" />
             </div>
             <h3 class="text-2xl font-bold text-blue-900">Identificar Riesgos Psicosociales</h3>
+          </div> -->
+          
+          <!-- Contenido si hay datos -->
+          <div v-if="props.domainStatistics && Object.keys(props.domainStatistics.domains || {}).length > 0" class="space-y-6">
+            <!-- Toggle Dominios/Categorías -->
+            <div class="bg-white rounded-lg p-4 border border-slate-200">
+              <div class="flex items-center gap-4">
+                <span class="text-sm font-medium text-slate-700">Vista:</span>
+                <div class="flex gap-2">
+                  <button
+                    @click="identificarViewMode = 'domains'"
+                    :class="[
+                      'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                      identificarViewMode === 'domains'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ]"
+                  >
+                    Dominios
+                  </button>
+                  <button
+                    @click="identificarViewMode = 'categories'"
+                    :class="[
+                      'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                      identificarViewMode === 'categories'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ]"
+                  >
+                    Categorías
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gráficas de dominios -->
+            <div v-if="identificarViewMode === 'domains'" class="bg-white rounded-lg p-6">
+              <DomainCharts 
+                :domains="props.domainStatistics.domains"
+                :total-evaluations="props.domainStatistics.total_evaluations"
+                :colors="props.domainStatistics.colors"
+                :labels="props.domainStatistics.labels"
+              />
+            </div>
+            
+            <!-- Gráficas de categorías -->
+            <div v-if="identificarViewMode === 'categories'" class="bg-white rounded-lg p-6">
+              <CategoryCharts 
+                :categories="props.categoryStatistics?.categories || {}"
+                :total-evaluations="props.categoryStatistics?.total_evaluations || 0"
+                :colors="props.categoryStatistics?.colors || {}"
+                :labels="props.categoryStatistics?.labels || {}"
+              />
+            </div>
           </div>
           
-          <!-- Mostrar gráficas de dominios si hay datos -->
-          <div v-if="props.domainStatistics && Object.keys(props.domainStatistics.domains || {}).length > 0" class="bg-white rounded-lg p-6 mb-6">
-            <DomainCharts 
-              :domains="props.domainStatistics.domains"
-              :total-evaluations="props.domainStatistics.total_evaluations"
-              :colors="props.domainStatistics.colors"
-              :labels="props.domainStatistics.labels"
-            />
-          </div>
-          
-          <!-- Mostrar gráficas de categorías -->
-          <div class="bg-white rounded-lg p-6 mb-6">
-            <CategoryCharts 
-              :categories="props.categoryStatistics?.categories || {}"
-              :total-evaluations="props.categoryStatistics?.total_evaluations || 0"
-              :colors="props.categoryStatistics?.colors || {}"
-              :labels="props.categoryStatistics?.labels || {}"
-            />
-          </div>
-          
-          <!-- Mostrar mensaje de desarrollo si no hay datos -->
-          <div v-if="!props.domainStatistics || Object.keys(props.domainStatistics.domains || {}).length === 0" class="bg-white rounded-lg p-6">
+          <!-- Mostrar mensaje si no hay datos -->
+          <div v-else class="bg-white rounded-lg p-6">
             <div class="flex items-center justify-center p-8 border-2 border-dashed border-blue-300 rounded-lg">
               <div class="text-center">
                 <Cog6ToothIcon class="w-12 h-12 text-blue-400 mx-auto mb-3 animate-spin" />
@@ -300,6 +334,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const activeSubTab = ref('identificar');
 
+// Identificar state
+const identificarViewMode = ref<'domains' | 'categories'>('domains');
+
 // Analysis state
 const analysisViewMode = ref<'domains' | 'categories'>('domains');
 const analysisFilters = ref({
@@ -341,21 +378,38 @@ const filteredDistribution = computed(() => {
   };
 
   if (analysisViewMode.value === 'domains') {
+    // Count evaluations by their highest risk level across all domains
     filteredEvaluations.value.forEach(evaluation => {
-      Object.values(evaluation.domain_scores).forEach((domainScore: any) => {
-        distribution[domainScore.risk_level]++;
-      });
+      const riskLevels = Object.values(evaluation.domain_scores).map((score: any) => score.risk_level);
+      const highestRisk = getHighestRiskLevel(riskLevels);
+      distribution[highestRisk]++;
     });
   } else {
+    // Count evaluations by their highest risk level across all categories
     filteredEvaluations.value.forEach(evaluation => {
-      Object.values(evaluation.category_scores).forEach((categoryScore: any) => {
-        distribution[categoryScore.risk_level]++;
-      });
+      const riskLevels = Object.values(evaluation.category_scores).map((score: any) => score.risk_level);
+      const highestRisk = getHighestRiskLevel(riskLevels);
+      distribution[highestRisk]++;
     });
   }
 
   return distribution;
 });
+
+// Helper function to get the highest risk level from an array
+const getHighestRiskLevel = (levels: string[]): string => {
+  const hierarchy = ['nulo', 'bajo', 'medio', 'alto', 'muy_alto'];
+  let maxIndex = 0;
+  
+  levels.forEach(level => {
+    const index = hierarchy.indexOf(level);
+    if (index > maxIndex) {
+      maxIndex = index;
+    }
+  });
+  
+  return hierarchy[maxIndex];
+};
 
 const subTabs = [
   { key: 'identificar', label: 'Identificar', icon: MagnifyingGlassIcon },

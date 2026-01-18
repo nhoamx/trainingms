@@ -43,12 +43,16 @@ class Organization extends Model
         'comite_mujeres',
         'fecha_aplicacion',
         'justificacion_muestra',
+        'policy_draft_path',
+        'policy_approved_path',
+        'policy_approved_at',
     ];
 
     protected function casts(): array
     {
         return [
             'fecha_aplicacion' => 'date',
+            'policy_approved_at' => 'datetime',
             'total_trabajadores' => 'integer',
             'total_hombres' => 'integer',
             'total_mujeres' => 'integer',
@@ -94,6 +98,11 @@ class Organization extends Model
     public function quizzes()
     {
         return $this->hasMany(Quiz::class);
+    }
+
+    public function committeeMembers()
+    {
+        return $this->hasMany(CommitteeMember::class);
     }
 
     public function instruments()

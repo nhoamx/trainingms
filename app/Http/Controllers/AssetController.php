@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreAssetRequest;
+use App\Http\Requests\StoreBatchAssetInspectionsRequest;
+use App\Http\Requests\UpdateAssetInspectionRequest;
 use App\Http\Requests\UpdateAssetRequest;
 use App\Models\Asset;
+use App\Models\AssetInspection;
 use App\Models\Organization;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
@@ -49,10 +52,15 @@ class AssetController extends Controller
 
     public function edit(Organization $organization, Asset $asset)
     {
+        $inspections = $asset->inspections()
+            ->latest('inspection_date')
+            ->paginate(10);
+
         return Inertia::render('Assets/Edit', [
             'title' => 'Editar Extintor',
             'organization' => $organization,
             'asset' => $asset,
+            'inspections' => $inspections,
         ]);
     }
 
@@ -180,6 +188,118 @@ class AssetController extends Controller
         return redirect()
             ->route('assets.inspect', $asset)
             ->with('success', 'Inspección registrada exitosamente');
+    }
+
+    public function batchCreateInspections(StoreBatchAssetInspectionsRequest $request, Organization $organization)
+    {
+        $validated = $request->validated();
+        $inspectionDate = $validated['inspection_date'];
+        $inspectorName = auth()->user()->name;
+
+        // Obtener todos los assets de tipo extintor de esta organización
+        $assets = $organization->assets()
+            ->where('asset_category', 'extintor')
+            ->get();
+
+        // Obtener checklist de configuración
+        $checklist = config('asset_inspection_checklist.checklist');
+
+        $inspectionsCreated = 0;
+        $inspectionsSkipped = 0;
+
+        foreach ($assets as $asset) {
+            // Verificar si ya existe una inspección para este asset en esta fecha
+            $existingInspection = \App\Models\AssetInspection::where('asset_id', $asset->id)
+                ->whereDate('inspection_date', $inspectionDate)
+                ->exists();
+
+            if ($existingInspection) {
+                $inspectionsSkipped++;
+
+                continue;
+            }
+
+            // Generar checklist_results con todos los items en estado "ok"
+            $checklistResults = [];
+            foreach (range(1, 27) as $itemNumber) {
+                $checklistResults[$itemNumber] = [
+                    'date' => $inspectionDate,
+                    'status' => 'ok',
+                    'result' => null,
+                ];
+            }
+
+            // Crear la inspección
+            \App\Models\AssetInspection::create([
+                'asset_id' => $asset->id,
+                'inspector_name' => $inspectorName,
+                'inspection_date' => $inspectionDate,
+                'checklist_results' => $checklistResults,
+                'anomalies_followup' => null,
+            ]);
+
+            $inspectionsCreated++;
+        }
+
+        $message = "Se crearon {$inspectionsCreated} inspecciones exitosamente.";
+        if ($inspectionsSkipped > 0) {
+            $message .= " Se omitieron {$inspectionsSkipped} extintores que ya tenían inspección en esa fecha.";
+        }
+
+        return redirect()
+            ->route('organizations.assets.index', $organization)
+            ->with('success', $message);
+    }
+
+    public function editInspection(AssetInspection $inspection)
+    {
+        $user = auth()->user();
+        $canEdit = $user && $user->hasAnyRole(['admin', 'super-admin']);
+
+        if (! $canEdit) {
+            abort(403, 'No autorizado para editar inspecciones');
+        }
+
+        $asset = $inspection->asset->load('organization');
+
+        return Inertia::render('Assets/EditInspection', [
+            'title' => 'Editar Inspección',
+            'asset' => $asset,
+            'inspection' => $inspection,
+            'checklist' => config('asset_inspection_checklist.checklist'),
+        ]);
+    }
+
+    public function updateInspection(UpdateAssetInspectionRequest $request, AssetInspection $inspection)
+    {
+        $inspection->update($request->validated());
+
+        return redirect()
+            ->route('organizations.assets.edit', [
+                'organization' => $inspection->asset->organization_id,
+                'asset' => $inspection->asset_id,
+            ])
+            ->with('success', 'Inspección actualizada exitosamente');
+    }
+
+    public function destroyInspection(AssetInspection $inspection)
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->hasAnyRole(['admin', 'super-admin'])) {
+            abort(403, 'No autorizado para eliminar inspecciones');
+        }
+
+        $organizationId = $inspection->asset->organization_id;
+        $assetId = $inspection->asset_id;
+
+        $inspection->delete();
+
+        return redirect()
+            ->route('organizations.assets.edit', [
+                'organization' => $organizationId,
+                'asset' => $assetId,
+            ])
+            ->with('success', 'Inspección eliminada exitosamente');
     }
 
     private function generateQrWithLabel(Asset $asset): string

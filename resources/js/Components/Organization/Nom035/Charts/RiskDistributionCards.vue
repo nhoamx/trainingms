@@ -60,8 +60,7 @@ const getPercentage = (level: string): string => {
 
 // Determinar si usar texto negro o blanco según el color de fondo
 const getTextColor = (level: string): string => {
-  // Niveles con colores claros usan texto negro
-  const lightLevels = ['nulo', 'bajo'];
-  return lightLevels.includes(level) ? 'text-slate-900' : 'text-white';
+  // Solo el nivel Medio (amarillo) usa texto negro por ser color claro
+  return level === 'medio' ? 'text-slate-900' : 'text-white';
 };
 </script>

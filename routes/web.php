@@ -190,6 +190,41 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/perfil', [UserController::class, 'showProfile'])->name('profile');
     Route::post('/perfil', [UserController::class, 'updateProfile'])->name('profile.update');
 
+    // Company Data routes (for organization users)
+    Route::get('/organizacion/{organization}/datos-empresa', [\App\Http\Controllers\CompanyDataController::class, 'edit'])
+        ->name('company-data.edit')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::post('/organizacion/{organization}/datos-empresa', [\App\Http\Controllers\CompanyDataController::class, 'update'])
+        ->name('company-data.update')
+        ->middleware('can:view-organization-results,organization');
+
+    // Policy document routes
+    Route::post('/organizacion/{organization}/politica/borrador', [\App\Http\Controllers\CompanyDataController::class, 'uploadPolicyDraft'])
+        ->name('company-data.policy.upload-draft')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::post('/organizacion/{organization}/politica/aprobada', [\App\Http\Controllers\CompanyDataController::class, 'uploadPolicyApproved'])
+        ->name('company-data.policy.upload-approved')
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
+
+    Route::get('/organizacion/{organization}/politica/borrador/descargar', [\App\Http\Controllers\CompanyDataController::class, 'downloadPolicyDraft'])
+        ->name('company-data.policy.download-draft')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::get('/organizacion/{organization}/politica/aprobada/descargar', [\App\Http\Controllers\CompanyDataController::class, 'downloadPolicyApproved'])
+        ->name('company-data.policy.download-approved')
+        ->middleware('can:view-organization-results,organization');
+
+    // Committee Member routes
+    Route::post('/organizacion/{organization}/comite/miembros', [\App\Http\Controllers\CommitteeMemberController::class, 'store'])
+        ->name('committee-members.store')
+        ->middleware('can:view-organization-results,organization');
+
+    Route::delete('/organizacion/{organization}/comite/miembros/{committeeMember}', [\App\Http\Controllers\CommitteeMemberController::class, 'destroy'])
+        ->name('committee-members.destroy')
+        ->middleware('can:view-organization-results,organization');
+
     // Rutas accesibles para usuarios de organización y administradores
     Route::get('/organizacion/{organization}/resultados', [ResultsController::class, 'listResults'])
         ->name('organization.results.list')
@@ -341,6 +376,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/qr/download-all', [\App\Http\Controllers\AssetController::class, 'downloadAllQr'])->name('qr.download-all');
             Route::get('/template', [\App\Http\Controllers\AssetController::class, 'downloadTemplate'])->name('template');
             Route::post('/import', [\App\Http\Controllers\AssetController::class, 'importAssets'])->name('import');
+            Route::post('/batch-inspections', [\App\Http\Controllers\AssetController::class, 'batchCreateInspections'])->name('batch-inspections');
         });
 
         // Rutas para puestos de ocupación
@@ -431,6 +467,13 @@ Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])
 Route::get('/assets/{asset}/inspect', [\App\Http\Controllers\AssetController::class, 'inspect'])->name('assets.inspect');
 Route::get('/assets/{asset}/inspections/create', [\App\Http\Controllers\AssetController::class, 'createInspection'])->name('assets.inspections.create');
 Route::post('/assets/{asset}/inspections', [\App\Http\Controllers\AssetController::class, 'storeInspection'])->name('assets.inspections.store');
+
+// Rutas autenticadas para edición de inspecciones
+Route::middleware('auth')->group(function () {
+    Route::get('/assets/inspections/{inspection}/edit', [\App\Http\Controllers\AssetController::class, 'editInspection'])->name('assets.inspections.edit');
+    Route::put('/assets/inspections/{inspection}', [\App\Http\Controllers\AssetController::class, 'updateInspection'])->name('assets.inspections.update');
+    Route::delete('/assets/inspections/{inspection}', [\App\Http\Controllers\AssetController::class, 'destroyInspection'])->name('assets.inspections.destroy');
+});
 
 // Rutas públicas para las plantillas OMR de evaluación presencial
 Route::prefix('omr')->name('omr.')->group(function () {

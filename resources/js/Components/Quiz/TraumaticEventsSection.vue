@@ -7,15 +7,13 @@
                 :key="index"
                 class="bg-white p-4 rounded-lg border border-slate-100"
             >
-                <div class="flex items-start justify-between gap-3 mb-4">
-                    <p class="text-slate-900 flex-grow">{{ index }}. {{ question }}</p>
-                    <div class="flex-shrink-0 w-48">
-                        <AudioPlayer
-                            :audio-url="getAudioUrl(index)"
-                            @ended="handleAudioEnded(index)"
-                            @error="handleAudioError(index)"
-                        />
-                    </div>
+                <p class="text-slate-900 mb-4">{{ index }}. {{ question }}</p>
+                <div class="flex gap-2 mb-4">
+                    <AudioPlayer
+                        :audio-url="getAudioUrl(index)"
+                        @ended="handleAudioEnded(index)"
+                        @error="handleAudioError(index)"
+                    />
                 </div>
                 <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
                     <label
@@ -68,7 +66,7 @@ const props = defineProps({
     audioUrls: {
         type: Object,
         default: () => ({})
-    }
+    },
 });
 
 const emit = defineEmits(['update:modelValue']);

@@ -2,11 +2,11 @@
 
 return [
     'colors' => [
-        'nulo' => '#10b981', // green-500
-        'bajo' => '#84cc16', // lime-500
-        'medio' => '#f59e0b', // amber-500
-        'alto' => '#f97316', // orange-500
-        'muy_alto' => '#ef4444', // red-500
+        'nulo' => '#3B82F6', // blue-500 - Azul
+        'bajo' => '#10B981', // green-500 - Verde
+        'medio' => '#F59E0B', // amber-500 - Amarillo
+        'alto' => '#F97316', // orange-500 - Naranja
+        'muy_alto' => '#EF4444', // red-500 - Rojo
     ],
 
     'labels' => [

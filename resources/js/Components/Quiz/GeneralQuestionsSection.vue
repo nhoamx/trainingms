@@ -5,15 +5,13 @@
         class="border-b border-slate-100 last:border-0 pb-6 last:pb-0 mb-6"
         :class="{ 'bg-slate-50 p-4 rounded-lg': viewMode === 'comfortable' }"
     >
-            <div class="flex items-start justify-between gap-3 mb-4">
-                <p class="text-slate-900 flex-grow">{{ question.id }}. {{ question.text }}</p>
-                <div class="flex-shrink-0 w-48">
-                    <AudioPlayer
-                        :audio-url="getAudioUrl(question.id)"
-                        @ended="handleAudioEnded(question.id)"
-                        @error="handleAudioError(question.id)"
-                    />
-                </div>
+            <p class="text-slate-900 mb-4">{{ question.id }}. {{ question.text }}</p>
+            <div class="flex gap-2 mb-4">
+                <AudioPlayer
+                    :audio-url="getAudioUrl(question.id)"
+                    @ended="handleAudioEnded(question.id)"
+                    @error="handleAudioError(question.id)"
+                />
             </div>
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
             <label
@@ -60,7 +58,7 @@ const props = defineProps({
     audioUrls: {
         type: Object,
         default: () => ({})
-    }
+    },
 });
 
 const emit = defineEmits(['update:modelValue']);
