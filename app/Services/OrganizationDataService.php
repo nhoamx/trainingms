@@ -205,7 +205,8 @@ class OrganizationDataService
 
             return [
                 'id' => $asset->id,
-                'name' => $asset->location ?? ('Extintor '.$asset->consecutive_number),
+                'location' => $asset->location ?? 'Sin ubicación',
+                'consecutive_number' => $asset->consecutive_number,
                 'type' => $asset->asset_type ?? $asset->fire_class ?? 'Extintor',
                 'status' => $latestInspection ? 'Completado' : 'Pendiente',
                 'reportUrl' => route('assets.inspect', $asset),
