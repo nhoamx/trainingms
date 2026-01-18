@@ -468,6 +468,13 @@ Route::get('/assets/{asset}/inspect', [\App\Http\Controllers\AssetController::cl
 Route::get('/assets/{asset}/inspections/create', [\App\Http\Controllers\AssetController::class, 'createInspection'])->name('assets.inspections.create');
 Route::post('/assets/{asset}/inspections', [\App\Http\Controllers\AssetController::class, 'storeInspection'])->name('assets.inspections.store');
 
+// Rutas autenticadas para edición de inspecciones
+Route::middleware('auth')->group(function () {
+    Route::get('/assets/inspections/{inspection}/edit', [\App\Http\Controllers\AssetController::class, 'editInspection'])->name('assets.inspections.edit');
+    Route::put('/assets/inspections/{inspection}', [\App\Http\Controllers\AssetController::class, 'updateInspection'])->name('assets.inspections.update');
+    Route::delete('/assets/inspections/{inspection}', [\App\Http\Controllers\AssetController::class, 'destroyInspection'])->name('assets.inspections.destroy');
+});
+
 // Rutas públicas para las plantillas OMR de evaluación presencial
 Route::prefix('omr')->name('omr.')->group(function () {
     Route::get('/referencia-i', [OMRController::class, 'referenciaI'])->name('referencia-i');
