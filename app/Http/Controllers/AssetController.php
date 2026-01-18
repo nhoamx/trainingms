@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreAssetRequest;
+use App\Http\Requests\StoreBatchAssetInspectionsRequest;
 use App\Http\Requests\UpdateAssetRequest;
 use App\Models\Asset;
 use App\Models\Organization;
@@ -180,6 +181,67 @@ class AssetController extends Controller
         return redirect()
             ->route('assets.inspect', $asset)
             ->with('success', 'Inspección registrada exitosamente');
+    }
+
+    public function batchCreateInspections(StoreBatchAssetInspectionsRequest $request, Organization $organization)
+    {
+        $validated = $request->validated();
+        $inspectionDate = $validated['inspection_date'];
+        $inspectorName = auth()->user()->name;
+
+        // Obtener todos los assets de tipo extintor de esta organización
+        $assets = $organization->assets()
+            ->where('asset_category', 'extintor')
+            ->get();
+
+        // Obtener checklist de configuración
+        $checklist = config('asset_inspection_checklist.checklist');
+
+        $inspectionsCreated = 0;
+        $inspectionsSkipped = 0;
+
+        foreach ($assets as $asset) {
+            // Verificar si ya existe una inspección para este asset en esta fecha
+            $existingInspection = \App\Models\AssetInspection::where('asset_id', $asset->id)
+                ->whereDate('inspection_date', $inspectionDate)
+                ->exists();
+
+            if ($existingInspection) {
+                $inspectionsSkipped++;
+
+                continue;
+            }
+
+            // Generar checklist_results con todos los items en estado "ok"
+            $checklistResults = [];
+            foreach (range(1, 27) as $itemNumber) {
+                $checklistResults[$itemNumber] = [
+                    'date' => $inspectionDate,
+                    'status' => 'ok',
+                    'result' => null,
+                ];
+            }
+
+            // Crear la inspección
+            \App\Models\AssetInspection::create([
+                'asset_id' => $asset->id,
+                'inspector_name' => $inspectorName,
+                'inspection_date' => $inspectionDate,
+                'checklist_results' => $checklistResults,
+                'anomalies_followup' => null,
+            ]);
+
+            $inspectionsCreated++;
+        }
+
+        $message = "Se crearon {$inspectionsCreated} inspecciones exitosamente.";
+        if ($inspectionsSkipped > 0) {
+            $message .= " Se omitieron {$inspectionsSkipped} extintores que ya tenían inspección en esa fecha.";
+        }
+
+        return redirect()
+            ->route('organizations.assets.index', $organization)
+            ->with('success', $message);
     }
 
     private function generateQrWithLabel(Asset $asset): string

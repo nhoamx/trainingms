@@ -376,6 +376,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/qr/download-all', [\App\Http\Controllers\AssetController::class, 'downloadAllQr'])->name('qr.download-all');
             Route::get('/template', [\App\Http\Controllers\AssetController::class, 'downloadTemplate'])->name('template');
             Route::post('/import', [\App\Http\Controllers\AssetController::class, 'importAssets'])->name('import');
+            Route::post('/batch-inspections', [\App\Http\Controllers\AssetController::class, 'batchCreateInspections'])->name('batch-inspections');
         });
 
         // Rutas para puestos de ocupación
