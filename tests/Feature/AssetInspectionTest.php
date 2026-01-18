@@ -26,6 +26,7 @@ class AssetInspectionTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('Assets/Inspect')
             ->has('asset')
+            ->has('checklist')
             ->where('isAuthenticated', false)
             ->where('isInspector', false)
         );
