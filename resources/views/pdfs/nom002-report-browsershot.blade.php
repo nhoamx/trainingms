@@ -540,15 +540,15 @@
                 <div class="header-metadata">
                     <div class="metadata-item">
                         <div class="metadata-label">Emisión</div>
-                        <div class="metadata-value">18/04/2023</div>
+                        <div class="metadata-value">{{ $emissionDate }}</div>
                     </div>
                     <div class="metadata-item">
                         <div class="metadata-label">Revisión</div>
-                        <div class="metadata-value">1</div>
+                        <div class="metadata-value">{{ $revisionNumber }}</div>
                     </div>
                     <div class="metadata-item">
                         <div class="metadata-label">Generado</div>
-                        <div class="metadata-value">{{ now()->format('d/m/Y') }}</div>
+                        <div class="metadata-value">{{ $generatedDate }}</div>
                     </div>
                 </div>
             </div>

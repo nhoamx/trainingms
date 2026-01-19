@@ -621,12 +621,27 @@ class ReportPdfController extends Controller
             // Get checklist configuration
             $checklist = config('asset_inspection_checklist.checklist', []);
 
+            // Calculate emission date (first inspection date) and revision number (count of unique inspection dates)
+            $firstInspectionDate = \App\Models\AssetInspection::whereHas('asset', function ($query) use ($organizationId) {
+                $query->where('organization_id', $organizationId);
+            })->min('inspection_date');
+
+            $revisionNumber = \App\Models\AssetInspection::whereHas('asset', function ($query) use ($organizationId) {
+                $query->where('organization_id', $organizationId);
+            })->distinct('inspection_date')->count('inspection_date');
+
+            // Format emission date or use default
+            $emissionDate = $firstInspectionDate ? \Carbon\Carbon::parse($firstInspectionDate)->format('d/m/Y') : '18/04/2023';
+            $revisionNumber = $revisionNumber > 0 ? $revisionNumber : 1;
+
             // Render HTML view
             $html = view('pdfs.nom002-report-browsershot', [
                 'organization' => $organization,
                 'assets' => $assets,
                 'checklist' => $checklist,
                 'generatedDate' => now()->format('d/m/Y'),
+                'emissionDate' => $emissionDate,
+                'revisionNumber' => $revisionNumber,
             ])->render();
 
             // If preview parameter is present, return HTML view instead of PDF
