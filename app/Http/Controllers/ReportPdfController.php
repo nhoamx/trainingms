@@ -48,11 +48,10 @@ class ReportPdfController extends Controller
     public function downloadDemographicReport(Request $request, string $organizationId)
     {
         try {
-            // Authorization check - only users with assigned organization
-            $user = $request->user();
-            $isOwnOrganization = $user->organization_id === $organizationId;
+            $organization = Organization::findOrFail($organizationId);
 
-            if (! $isOwnOrganization) {
+            // Authorization check using policy
+            if (! $request->user()->can('viewOrganizationResults', $organization)) {
                 return response()->json([
                     'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
@@ -113,11 +112,10 @@ class ReportPdfController extends Controller
     public function downloadDiagnosticReport(Request $request, string $organizationId)
     {
         try {
-            // Authorization check - only users with assigned organization
-            $user = $request->user();
-            $isOwnOrganization = $user->organization_id === $organizationId;
+            $organization = Organization::findOrFail($organizationId);
 
-            if (! $isOwnOrganization) {
+            // Authorization check using policy
+            if (! $request->user()->can('viewOrganizationResults', $organization)) {
                 return response()->json([
                     'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
@@ -182,11 +180,10 @@ class ReportPdfController extends Controller
     public function downloadExecutiveReport(Request $request, string $organizationId)
     {
         try {
-            // Authorization check - only users with assigned organization
-            $user = $request->user();
-            $isOwnOrganization = $user->organization_id === $organizationId;
+            $organization = Organization::findOrFail($organizationId);
 
-            if (! $isOwnOrganization) {
+            // Authorization check using policy
+            if (! $request->user()->can('viewOrganizationResults', $organization)) {
                 return response()->json([
                     'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
@@ -371,18 +368,23 @@ class ReportPdfController extends Controller
     protected function initiateWordReportGeneration(Request $request, string $organizationId, string $reportType)
     {
         try {
-            // Authorization check - only users with assigned organization
-            $user = $request->user();
-            $isOwnOrganization = $user->organization_id === $organizationId;
+            // Verify organization exists
+            $organization = Organization::find($organizationId);
 
-            if (! $isOwnOrganization) {
+            if (! $organization) {
+                return response()->json([
+                    'error' => 'Organización no encontrada',
+                ], 404);
+            }
+
+            // Authorization check using policy
+            if (! $request->user()->can('viewOrganizationResults', $organization)) {
                 return response()->json([
                     'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
             }
 
-            // Verify organization exists
-            $organization = Organization::find($organizationId);
+            $user = $request->user();
             if (! $organization) {
                 return response()->json([
                     'error' => 'Organización no encontrada',
@@ -566,18 +568,14 @@ class ReportPdfController extends Controller
     public function downloadExcelReport(Request $request, string $organizationId)
     {
         try {
-            // Authorization check - only users with assigned organization
-            $user = $request->user();
-            $isOwnOrganization = $user->organization_id === $organizationId;
+            $organization = Organization::findOrFail($organizationId);
 
-            if (! $isOwnOrganization) {
+            // Authorization check using policy
+            if (! $request->user()->can('viewOrganizationResults', $organization)) {
                 return response()->json([
                     'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
             }
-
-            // Verify organization exists
-            $organization = Organization::findOrFail($organizationId);
 
             // Generate filename
             $filename = 'evaluaciones_'.$organization->name.'_'.now()->format('Y-m-d_His').'.xlsx';
@@ -606,17 +604,14 @@ class ReportPdfController extends Controller
     public function downloadNom002Report(Request $request, string $organizationId)
     {
         try {
-            // Authorization check - only users with assigned organization
-            $user = $request->user();
-            $isOwnOrganization = $user->organization_id === $organizationId;
+            $organization = Organization::findOrFail($organizationId);
 
-            if (! $isOwnOrganization) {
+            // Authorization check using policy
+            if (! $request->user()->can('viewOrganizationResults', $organization)) {
                 return response()->json([
                     'error' => 'No autorizado para generar reportes de esta organización',
                 ], 403);
             }
-
-            $organization = Organization::findOrFail($organizationId);
 
             // Get all extinguishers with their latest inspection
             $assets = \App\Models\Asset::where('organization_id', $organizationId)
