@@ -146,36 +146,111 @@
               v-model="analysisFilters"
             />
 
-            <!-- Toggle Dominios/Categorías -->
+            <!-- Toggle Dominios/Categorías y Selector de Dominio -->
             <div class="bg-white rounded-lg p-4 border border-slate-200">
-              <div class="flex items-center gap-4">
-                <span class="text-sm font-medium text-slate-700">Vista:</span>
-                <div class="flex gap-2">
-                  <button
-                    @click="analysisViewMode = 'domains'"
-                    :class="[
-                      'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                      analysisViewMode === 'domains'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    ]"
-                  >
-                    Dominios
-                  </button>
-                  <button
-                    @click="analysisViewMode = 'categories'"
-                    :class="[
-                      'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                      analysisViewMode === 'categories'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    ]"
-                  >
-                    Categorías
-                  </button>
+              <div class="flex flex-col gap-4">
+                <!-- Vista Toggle -->
+                <div class="flex items-center gap-4">
+                  <span class="text-sm font-medium text-slate-700">Vista:</span>
+                  <div class="flex gap-2">
+                    <button
+                      @click="analysisViewMode = 'domains'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        analysisViewMode === 'domains'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Dominios
+                    </button>
+                    <button
+                      @click="analysisViewMode = 'categories'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        analysisViewMode === 'categories'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Categorías
+                    </button>
+                  </div>
+                  <div class="ml-auto text-sm text-slate-600">
+                    <span class="font-semibold">{{ filteredEvaluations.length }}</span> evaluaciones filtradas
+                  </div>
                 </div>
-                <div class="ml-auto text-sm text-slate-600">
-                  <span class="font-semibold">{{ filteredEvaluations.length }}</span> evaluaciones filtradas
+
+                <!-- Domain Selector (only in domains view) -->
+                <div v-if="analysisViewMode === 'domains' && sortedDomainsByRisk.length > 0" class="flex items-center gap-4">
+                  <span class="text-sm font-medium text-slate-700">Dominio:</span>
+                  <select
+                    v-model="selectedDomain"
+                    class="flex-1 px-4 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  >
+                    <option value="">Global (Todos los dominios)</option>
+                    <option
+                      v-for="{ domainName } in sortedDomainsByRisk"
+                      :key="domainName"
+                      :value="domainName"
+                    >
+                      {{ domainName }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Category Selector (only in categories view) -->
+                <div v-if="analysisViewMode === 'categories' && sortedCategoriesByRisk.length > 0" class="flex items-center gap-4">
+                  <span class="text-sm font-medium text-slate-700">Categoría:</span>
+                  <select
+                    v-model="selectedCategory"
+                    class="flex-1 px-4 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  >
+                    <option value="">Global (Todas las categorías)</option>
+                    <option
+                      v-for="{ categoryName } in sortedCategoriesByRisk"
+                      :key="categoryName"
+                      :value="categoryName"
+                    >
+                      {{ categoryName }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Chart Type Toggle -->
+                <div class="flex items-center gap-4">
+                  <span class="text-sm font-medium text-slate-700">Tipo de Gráfica:</span>
+                  <div class="flex gap-2">
+                    <button
+                      @click="chartType = 'pie'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
+                        chartType === 'pie'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
+                      </svg>
+                      Pastel
+                    </button>
+                    <button
+                      @click="chartType = 'bar'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
+                        chartType === 'bar'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                      </svg>
+                      Barras
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -193,13 +268,21 @@
                   />
                 </div>
 
-                <!-- Gráfica de pastel -->
+                <!-- Gráfica de pastel o barras -->
                 <div>
                   <RiskPieChart
+                    v-if="chartType === 'pie'"
                     :distribution="filteredDistribution"
                     :colors="props.analysisData.colors"
                     :labels="props.analysisData.labels"
-                    :title="analysisViewMode === 'domains' ? 'Distribución por Dominios' : 'Distribución por Categorías'"
+                    :title="analysisViewMode === 'domains' ? (selectedDomain || 'Distribución Global') : (selectedCategory || 'Distribución Global')"
+                  />
+                  <RiskBarChart
+                    v-else
+                    :distribution="filteredDistribution"
+                    :colors="props.analysisData.colors"
+                    :labels="props.analysisData.labels"
+                    :title="analysisViewMode === 'domains' ? (selectedDomain || 'Distribución Global') : (selectedCategory || 'Distribución Global')"
                   />
                 </div>
               </div>
@@ -231,6 +314,9 @@
                 <span :class="getRiskLevelColorClass(selectedRiskLevel)">
                   {{ selectedRiskLevel }}
                 </span>
+                <span v-if="selectedDomain" class="text-slate-500 ml-2">en {{ selectedDomain }}</span>
+                <span v-else-if="selectedCategory" class="text-slate-500 ml-2">en {{ selectedCategory }}</span>
+                <span v-else class="text-slate-500 ml-2">(Global)</span>
               </p>
             </div>
             <button
@@ -454,6 +540,7 @@ import CategoryCharts from './Charts/CategoryCharts.vue';
 import AnalysisFilters from './Charts/AnalysisFilters.vue';
 import RiskDistributionCards from './Charts/RiskDistributionCards.vue';
 import RiskPieChart from './Charts/RiskPieChart.vue';
+import RiskBarChart from './Charts/RiskBarChart.vue';
 import {
   ChartBarIcon,
   MagnifyingGlassIcon,
@@ -529,6 +616,9 @@ const identificarViewMode = ref<'domains' | 'categories'>('domains');
 
 // Analysis state
 const analysisViewMode = ref<'domains' | 'categories'>('domains');
+const selectedDomain = ref<string>(''); // Empty string means "Global" (all domains)
+const selectedCategory = ref<string>(''); // Empty string means "Global" (all categories)
+const chartType = ref<'pie' | 'bar'>('pie'); // Chart type toggle
 const analysisFilters = ref({
   genero: '',
   puesto: '',
@@ -573,22 +663,132 @@ const filteredDistribution = computed(() => {
   };
 
   if (analysisViewMode.value === 'domains') {
-    // Count evaluations by their highest risk level across all domains
-    filteredEvaluations.value.forEach(evaluation => {
-      const riskLevels = Object.values(evaluation.domain_scores).map((score: any) => score.risk_level);
-      const highestRisk = getHighestRiskLevel(riskLevels);
-      distribution[highestRisk]++;
-    });
+    // If a specific domain is selected, show only that domain's distribution
+    if (selectedDomain.value) {
+      filteredEvaluations.value.forEach(evaluation => {
+        if (evaluation.domain_scores && evaluation.domain_scores[selectedDomain.value]) {
+          const riskLevel = evaluation.domain_scores[selectedDomain.value].risk_level;
+          distribution[riskLevel]++;
+        }
+      });
+    } else {
+      // Count evaluations by their highest risk level across all domains
+      filteredEvaluations.value.forEach(evaluation => {
+        const riskLevels = Object.values(evaluation.domain_scores).map((score: any) => score.risk_level);
+        const highestRisk = getHighestRiskLevel(riskLevels);
+        distribution[highestRisk]++;
+      });
+    }
   } else {
-    // Count evaluations by their highest risk level across all categories
-    filteredEvaluations.value.forEach(evaluation => {
-      const riskLevels = Object.values(evaluation.category_scores).map((score: any) => score.risk_level);
-      const highestRisk = getHighestRiskLevel(riskLevels);
-      distribution[highestRisk]++;
-    });
+    // If a specific category is selected, show only that category's distribution
+    if (selectedCategory.value) {
+      filteredEvaluations.value.forEach(evaluation => {
+        if (evaluation.category_scores && evaluation.category_scores[selectedCategory.value]) {
+          const riskLevel = evaluation.category_scores[selectedCategory.value].risk_level;
+          distribution[riskLevel]++;
+        }
+      });
+    } else {
+      // Count evaluations by their highest risk level across all categories
+      filteredEvaluations.value.forEach(evaluation => {
+        const riskLevels = Object.values(evaluation.category_scores).map((score: any) => score.risk_level);
+        const highestRisk = getHighestRiskLevel(riskLevels);
+        distribution[highestRisk]++;
+      });
+    }
   }
 
   return distribution;
+});
+
+// Calculate risk distribution for each individual domain
+const perDomainDistributions = computed(() => {
+  const distributions: Record<string, Record<string, number>> = {};
+  
+  // Initialize distribution structure for each domain
+  const initializeDistribution = () => ({
+    nulo: 0,
+    bajo: 0,
+    medio: 0,
+    alto: 0,
+    muy_alto: 0,
+  });
+  
+  // Count risk levels per domain from filtered evaluations
+  filteredEvaluations.value.forEach(evaluation => {
+    if (evaluation.domain_scores) {
+      Object.entries(evaluation.domain_scores).forEach(([domainName, scoreData]: [string, any]) => {
+        if (!distributions[domainName]) {
+          distributions[domainName] = initializeDistribution();
+        }
+        distributions[domainName][scoreData.risk_level]++;
+      });
+    }
+  });
+  
+  return distributions;
+});
+
+// Calculate risk distribution for each individual category
+const perCategoryDistributions = computed(() => {
+  const distributions: Record<string, Record<string, number>> = {};
+  
+  // Initialize distribution structure for each category
+  const initializeDistribution = () => ({
+    nulo: 0,
+    bajo: 0,
+    medio: 0,
+    alto: 0,
+    muy_alto: 0,
+  });
+  
+  // Count risk levels per category from filtered evaluations
+  filteredEvaluations.value.forEach(evaluation => {
+    if (evaluation.category_scores) {
+      Object.entries(evaluation.category_scores).forEach(([categoryName, scoreData]: [string, any]) => {
+        if (!distributions[categoryName]) {
+          distributions[categoryName] = initializeDistribution();
+        }
+        distributions[categoryName][scoreData.risk_level]++;
+      });
+    }
+  });
+  
+  return distributions;
+});
+
+// Sort domains by highest risk detected (muy_alto first, then alto, etc.)
+const sortedDomainsByRisk = computed(() => {
+  const hierarchy = ['muy_alto', 'alto', 'medio', 'bajo', 'nulo'];
+  
+  return Object.entries(perDomainDistributions.value)
+    .map(([domainName, distribution]) => {
+      // Calculate a risk score for sorting
+      let riskScore = 0;
+      hierarchy.forEach((level, index) => {
+        riskScore += distribution[level] * (hierarchy.length - index);
+      });
+      
+      return { domainName, distribution, riskScore };
+    })
+    .sort((a, b) => b.riskScore - a.riskScore);
+});
+
+// Sort categories by highest risk detected (muy_alto first, then alto, etc.)
+const sortedCategoriesByRisk = computed(() => {
+  const hierarchy = ['muy_alto', 'alto', 'medio', 'bajo', 'nulo'];
+  
+  return Object.entries(perCategoryDistributions.value)
+    .map(([categoryName, distribution]) => {
+      // Calculate a risk score for sorting
+      let riskScore = 0;
+      hierarchy.forEach((level, index) => {
+        riskScore += distribution[level] * (hierarchy.length - index);
+      });
+      
+      return { categoryName, distribution, riskScore };
+    })
+    .sort((a, b) => b.riskScore - a.riskScore);
 });
 
 // Helper function to get the highest risk level from an array
@@ -615,26 +815,43 @@ const showRiskDetailsModal = (level: string) => {
   
   filteredEvaluations.value.forEach(evaluation => {
     let evaluationRiskLevel: string;
+    let score = 0;
     
     if (analysisViewMode.value === 'domains') {
-      const riskLevels = Object.values(evaluation.domain_scores).map((score: any) => score.risk_level);
-      evaluationRiskLevel = getHighestRiskLevel(riskLevels);
-    } else {
-      const riskLevels = Object.values(evaluation.category_scores).map((score: any) => score.risk_level);
-      evaluationRiskLevel = getHighestRiskLevel(riskLevels);
-    }
-    
-    if (evaluationRiskLevel === level) {
-      // Get the score based on view mode
-      let score = 0;
-      if (analysisViewMode.value === 'domains') {
+      // If a specific domain is selected, check only that domain
+      if (selectedDomain.value) {
+        if (evaluation.domain_scores && evaluation.domain_scores[selectedDomain.value]) {
+          evaluationRiskLevel = evaluation.domain_scores[selectedDomain.value].risk_level;
+          score = evaluation.domain_scores[selectedDomain.value].score;
+        } else {
+          return; // Skip if domain not found
+        }
+      } else {
+        // Global: check highest risk across all domains
+        const riskLevels = Object.values(evaluation.domain_scores).map((score: any) => score.risk_level);
+        evaluationRiskLevel = getHighestRiskLevel(riskLevels);
         const scores = Object.values(evaluation.domain_scores).map((s: any) => s.score);
         score = Math.max(...scores);
+      }
+    } else {
+      // If a specific category is selected, check only that category
+      if (selectedCategory.value) {
+        if (evaluation.category_scores && evaluation.category_scores[selectedCategory.value]) {
+          evaluationRiskLevel = evaluation.category_scores[selectedCategory.value].risk_level;
+          score = evaluation.category_scores[selectedCategory.value].score;
+        } else {
+          return; // Skip if category not found
+        }
       } else {
+        // Global: check highest risk across all categories
+        const riskLevels = Object.values(evaluation.category_scores).map((score: any) => score.risk_level);
+        evaluationRiskLevel = getHighestRiskLevel(riskLevels);
         const scores = Object.values(evaluation.category_scores).map((s: any) => s.score);
         score = Math.max(...scores);
       }
-      
+    }
+    
+    if (evaluationRiskLevel === level) {
       matchingPersonal.push({
         personal_folio: evaluation.personal_folio,
         score: score,
