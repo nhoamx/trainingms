@@ -189,6 +189,7 @@
                     :distribution="filteredDistribution"
                     :colors="props.analysisData.colors"
                     :labels="props.analysisData.labels"
+                    @showDetails="showRiskDetailsModal"
                   />
                 </div>
 
@@ -218,8 +219,194 @@
         </div>
       </div>
 
+      <!-- Modal de Detalles por Nivel de Riesgo -->
+      <div v-if="showRiskModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+          <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-900">
+                Personal por Nivel de Riesgo
+              </h3>
+              <p class="text-sm text-slate-600 mt-1">
+                <span :class="getRiskLevelColorClass(selectedRiskLevel)">
+                  {{ selectedRiskLevel }}
+                </span>
+              </p>
+            </div>
+            <button
+              @click="closeRiskModal"
+              class="text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div class="p-6 overflow-y-auto flex-grow">
+            <div v-if="filteredRiskPersonal.length > 0" class="space-y-3">
+              <div class="mb-4">
+                <p class="text-sm text-slate-600">
+                  Total: <span class="font-semibold text-slate-900">{{ filteredRiskPersonal.length }}</span> personas
+                </p>
+              </div>
+              <div class="border rounded-lg overflow-hidden">
+                <div class="bg-slate-50 px-4 py-3 border-b border-slate-200">
+                  <div class="grid grid-cols-3 gap-4">
+                    <div class="text-sm font-semibold text-slate-700">Folio</div>
+                    <div class="text-sm font-semibold text-slate-700">Puntaje</div>
+                    <div class="text-sm font-semibold text-slate-700">Acciones</div>
+                  </div>
+                </div>
+                <div class="divide-y divide-slate-200 max-h-96 overflow-y-auto">
+                  <div
+                    v-for="item in filteredRiskPersonal"
+                    :key="item.personal_folio"
+                    class="px-4 py-3 hover:bg-slate-50 transition-colors"
+                  >
+                    <div class="grid grid-cols-3 gap-4 items-center">
+                      <div class="text-sm font-medium text-slate-900">
+                        {{ item.personal_folio }}
+                      </div>
+                      <div class="text-sm text-slate-600">
+                        {{ item.score }} pts
+                      </div>
+                      <div>
+                        <Link
+                          :href="route('organization.results.detail', {
+                            organization: organizationId,
+                            personalFolio: item.personal_folio
+                          })"
+                          class="text-indigo-600 hover:text-indigo-800 text-sm font-medium hover:underline"
+                        >
+                          Ver detalles →
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div v-else class="text-center py-8">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p class="text-slate-500">No hay personal en este nivel de riesgo</p>
+            </div>
+          </div>
+          
+          <div class="p-6 border-t border-slate-200 flex justify-end">
+            <button
+              @click="closeRiskModal"
+              class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg transition-colors font-medium"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Participantes Tab -->
+      <div v-if="activeSubTab === 'participantes'" class="space-y-6">
+        <div class="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-8 border border-teal-200 hover:shadow-lg transition-shadow">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="p-2 bg-teal-100 rounded-lg">
+              <UserGroupIcon class="w-6 h-6 text-teal-600" />
+            </div>
+            <h3 class="text-2xl font-bold text-teal-900">Informe de Participantes</h3>
+          </div>
+
+          <div v-if="props.analysisData && props.analysisData.evaluations.length > 0" class="space-y-6">
+            <!-- Conteo de participantes -->
+            <div class="bg-white rounded-lg p-4 border border-slate-200">
+              <div class="text-sm text-slate-700">
+                <span class="font-medium">Total de participantes:</span>
+                <span class="font-bold text-teal-600 ml-2">{{ participantsWithScores.length }}</span>
+              </div>
+            </div>
+
+            <!-- Lista de participantes -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+              <div v-if="participantsWithScores.length === 0" class="p-6 text-center text-slate-500">
+                No se encontraron datos de participantes
+              </div>
+
+              <ul v-else class="divide-y divide-slate-200">
+                <li
+                  v-for="(participant, index) in participantsWithScores"
+                  :key="participant.personal_folio"
+                  class="hover:bg-slate-50 transition-colors duration-150 p-0"
+                >
+                  <Link
+                    :href="route('organization.results.detail', {
+                      organization: organizationId,
+                      personalFolio: participant.personal_folio
+                    })"
+                    target="_blank"
+                    class="flex justify-between items-center p-4 w-full h-full no-underline text-inherit hover:no-underline"
+                  >
+                    <div class="flex items-center space-x-3">
+                      <div class="bg-teal-100 text-teal-800 font-bold rounded-full h-8 w-8 flex items-center justify-center">
+                        {{ index + 1 }}
+                      </div>
+                      <span class="font-medium text-slate-900">Folio {{ participant.personal_folio }}</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                      <div class="hidden sm:block w-32 border-b border-dotted border-slate-300"></div>
+                      <div :class="getScoreClass(participant.score)" class="px-3 py-1 rounded-full text-white font-medium min-w-[80px] text-center">
+                        {{ participant.score }} pts
+                      </div>
+                    </div>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Leyenda de colores para niveles de riesgo -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+              <h4 class="font-medium text-slate-900 mb-4">Niveles de Riesgo</h4>
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-4 h-4 bg-blue-500 rounded-full"></span>
+                  <span class="text-sm text-slate-600">Nulo (0-49)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-4 h-4 bg-green-500 rounded-full"></span>
+                  <span class="text-sm text-slate-600">Bajo (50-74)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-4 h-4 bg-amber-500 rounded-full"></span>
+                  <span class="text-sm text-slate-600">Medio (75-98)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-4 h-4 bg-orange-500 rounded-full"></span>
+                  <span class="text-sm text-slate-600">Alto (99-139)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-4 h-4 bg-red-500 rounded-full"></span>
+                  <span class="text-sm text-slate-600">Muy Alto (140+)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sin datos -->
+          <div v-else class="bg-white rounded-lg p-6">
+            <div class="flex items-center justify-center p-8 border-2 border-dashed border-teal-300 rounded-lg">
+              <div class="text-center">
+                <UserGroupIcon class="w-12 h-12 text-teal-400 mx-auto mb-3" />
+                <p class="text-teal-700 font-medium">Sin datos disponibles</p>
+                <p class="text-sm text-teal-600 mt-1">No se han encontrado evaluaciones de participantes para mostrar</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Prevenir Tab -->
       <div v-if="activeSubTab === 'prevenir'" class="space-y-6">
+
         <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-8 border border-emerald-200 hover:shadow-lg transition-shadow">
           <div class="flex items-center gap-3 mb-6">
             <div class="p-2 bg-emerald-100 rounded-lg">
@@ -261,6 +448,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { Link } from '@inertiajs/vue3';
 import DomainCharts from './Charts/DomainCharts.vue';
 import CategoryCharts from './Charts/CategoryCharts.vue';
 import AnalysisFilters from './Charts/AnalysisFilters.vue';
@@ -324,12 +512,14 @@ interface Props {
   domainStatistics?: DomainStatistics;
   categoryStatistics?: CategoryStatistics;
   analysisData?: AnalysisData;
+  organizationId?: string | number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   domainStatistics: () => ({ domains: {}, total_evaluations: 0, colors: {}, labels: {} }),
   categoryStatistics: () => ({ categories: {}, total_evaluations: 0, colors: {}, labels: {} }),
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
+  organizationId: () => '',
 });
 
 const activeSubTab = ref('identificar');
@@ -345,6 +535,11 @@ const analysisFilters = ref({
   area: '',
   turno: '',
 });
+
+// Modal state for risk details
+const showRiskModal = ref(false);
+const selectedRiskLevel = ref<string>('');
+const filteredRiskPersonal = ref<any[]>([]);
 
 // Filtered evaluations based on demographic filters
 const filteredEvaluations = computed(() => {
@@ -411,9 +606,103 @@ const getHighestRiskLevel = (levels: string[]): string => {
   return hierarchy[maxIndex];
 };
 
+// Function to show risk details modal
+const showRiskDetailsModal = (level: string) => {
+  selectedRiskLevel.value = level;
+  
+  // Get all evaluations that match the selected risk level
+  const matchingPersonal: any[] = [];
+  
+  filteredEvaluations.value.forEach(evaluation => {
+    let evaluationRiskLevel: string;
+    
+    if (analysisViewMode.value === 'domains') {
+      const riskLevels = Object.values(evaluation.domain_scores).map((score: any) => score.risk_level);
+      evaluationRiskLevel = getHighestRiskLevel(riskLevels);
+    } else {
+      const riskLevels = Object.values(evaluation.category_scores).map((score: any) => score.risk_level);
+      evaluationRiskLevel = getHighestRiskLevel(riskLevels);
+    }
+    
+    if (evaluationRiskLevel === level) {
+      // Get the score based on view mode
+      let score = 0;
+      if (analysisViewMode.value === 'domains') {
+        const scores = Object.values(evaluation.domain_scores).map((s: any) => s.score);
+        score = Math.max(...scores);
+      } else {
+        const scores = Object.values(evaluation.category_scores).map((s: any) => s.score);
+        score = Math.max(...scores);
+      }
+      
+      matchingPersonal.push({
+        personal_folio: evaluation.personal_folio,
+        score: score,
+      });
+    }
+  });
+  
+  filteredRiskPersonal.value = matchingPersonal;
+  showRiskModal.value = true;
+};
+
+// Function to close risk details modal
+const closeRiskModal = () => {
+  showRiskModal.value = false;
+  selectedRiskLevel.value = '';
+  filteredRiskPersonal.value = [];
+};
+
+// Computed property for participants with their scores
+const participantsWithScores = computed(() => {
+  if (!props.analysisData || props.analysisData.evaluations.length === 0) {
+    return [];
+  }
+
+  const participants = props.analysisData.evaluations.map((evaluation: any) => {
+    // Use the total_score from backend calculation
+    const score = evaluation.total_score ?? 0;
+    
+    // Get highest risk level across all domains
+    const riskLevels = Object.values(evaluation.domain_scores).map((s: any) => s.risk_level);
+    const riskLevel = getHighestRiskLevel(riskLevels);
+
+    return {
+      personal_folio: evaluation.personal_folio,
+      score: score,
+      risk_level: riskLevel,
+    };
+  });
+
+  // Sort by score in descending order (highest to lowest)
+  return participants.sort((a, b) => b.score - a.score);
+});
+
+// Function to get score color class - aligned with nom035_risk_levels.php config
+const getScoreClass = (score: number): string => {
+  if (score <= 49) return 'bg-blue-500';        // Nulo
+  if (score <= 74) return 'bg-green-500';       // Bajo
+  if (score <= 98) return 'bg-amber-500';       // Medio
+  if (score <= 139) return 'bg-orange-500';     // Alto
+  return 'bg-red-500';                          // Muy Alto
+};
+
+// Map risk level to appropriate color class
+const getRiskLevelColorClass = (level: string): string => {
+  const classMap: Record<string, string> = {
+    'nulo': 'text-blue-700 font-semibold',
+    'bajo': 'text-green-700 font-semibold',
+    'medio': 'text-amber-700 font-semibold',
+    'alto': 'text-orange-700 font-semibold',
+    'muy_alto': 'text-red-700 font-semibold',
+  };
+  return classMap[level.toLowerCase()] || 'font-semibold';
+};
+
 const subTabs = [
   { key: 'identificar', label: 'Identificar', icon: MagnifyingGlassIcon },
   { key: 'analizar', label: 'Analizar', icon: ChartBarIcon },
+  { key: 'participantes', label: 'Participantes', icon: UserGroupIcon },
   { key: 'prevenir', label: 'Prevenir', icon: ShieldCheckIcon },
 ];
 </script>

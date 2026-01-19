@@ -75,11 +75,11 @@ return [
     'global' => [
         'max_score' => 288, // Suma de todos los dominios
         'levels' => [
-            'nulo' => ['min' => 0, 'max' => 43],
-            'bajo' => ['min' => 44, 'max' => 86],
-            'medio' => ['min' => 87, 'max' => 129],
-            'alto' => ['min' => 130, 'max' => 172],
-            'muy_alto' => ['min' => 173, 'max' => 288],
+            'nulo' => ['min' => 0, 'max' => 49],
+            'bajo' => ['min' => 50, 'max' => 74],
+            'medio' => ['min' => 75, 'max' => 98],
+            'alto' => ['min' => 99, 'max' => 139],
+            'muy_alto' => ['min' => 140, 'max' => 288],
         ],
     ],
 ];

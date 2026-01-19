@@ -270,12 +270,12 @@ class Nom035DomainCalculationService
      */
     public function getEvaluationsWithDemographicsAndScores(Organization $organization): array
     {
-        // Fetch evaluations with demographic data
+        // Fetch evaluations with demographic data and conditional data
         $evaluations = PaperEvaluation::where('organization_id', $organization->id)
             ->whereNotNull('referencia_iii_answers')
             ->where('processing_status', 'completed')
             ->with(['demographicData:id,paper_evaluation_id,gender,position,department,work_schedule,contract_type'])
-            ->select(['id', 'folio', 'personal_folio', 'evaluee_name', 'referencia_iii_answers', 'organization_id'])
+            ->select(['id', 'folio', 'personal_folio', 'evaluee_name', 'referencia_iii_answers', 'referencia_iii_conditional', 'organization_id'])
             ->get();
 
         $evaluationsData = [];
@@ -344,6 +344,9 @@ class Nom035DomainCalculationService
                 }
             }
 
+            // Calculate total score (same as calculateReferenciaIIIScores)
+            $totalScore = $this->calculateTotalScore($evaluation);
+
             $evaluationsData[] = [
                 'id' => $evaluation->id,
                 'folio' => $evaluation->folio,
@@ -352,6 +355,7 @@ class Nom035DomainCalculationService
                 'demographics' => $demographics,
                 'domain_scores' => $domainScores,
                 'category_scores' => $categoryScores,
+                'total_score' => $totalScore,
             ];
         }
 
@@ -405,5 +409,65 @@ class Nom035DomainCalculationService
             'colors' => $riskLevels['colors'],
             'labels' => $riskLevels['labels'],
         ];
+    }
+
+    /**
+     * Calculate total score by summing all answer values (including conditional questions)
+     * This matches the logic in PaperEvaluationScoreService::calculateReferenciaIIIScores()
+     */
+    private function calculateTotalScore(PaperEvaluation $evaluation): int
+    {
+        $answers = $evaluation->referencia_iii_answers ?? [];
+        $conditionalAnswers = $evaluation->referencia_iii_conditional ?? [];
+        $answerValues = config('answer_values');
+        $totalScore = 0;
+
+        // Check if person is a manager (answered "SI" to management question)
+        $isManager = isset($conditionalAnswers['management']['condition'])
+            && $conditionalAnswers['management']['condition'] === 'SI';
+
+        // Get management questions if applicable
+        $managementQuestions = [];
+        if ($isManager && isset($conditionalAnswers['management']['questions'])) {
+            $managementQuestions = $conditionalAnswers['management']['questions'];
+        }
+
+        // Process all regular questions (1-68)
+        foreach ($answers as $questionNumber => $answer) {
+            if ($answer === null) {
+                continue;
+            }
+
+            // Skip management questions - they're handled separately
+            if (in_array($questionNumber, [69, 70, 71, 72])) {
+                continue;
+            }
+
+            // Determine if question is in group 1 or 2
+            $questionKey = str_pad($questionNumber, 2, '0', STR_PAD_LEFT);
+            $group = in_array($questionKey, $answerValues['group1']['questions'])
+                ? 'group1'
+                : 'group2';
+
+            $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
+        }
+
+        // Process management questions (69-72) if person is a manager
+        if ($isManager && ! empty($managementQuestions)) {
+            foreach ($managementQuestions as $questionNumber => $answer) {
+                if ($answer === null) {
+                    continue;
+                }
+
+                $questionKey = str_pad($questionNumber, 2, '0', STR_PAD_LEFT);
+                $group = in_array($questionKey, $answerValues['group1']['questions'])
+                    ? 'group1'
+                    : 'group2';
+
+                $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
+            }
+        }
+
+        return $totalScore;
     }
 }

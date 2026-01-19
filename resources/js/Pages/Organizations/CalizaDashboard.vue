@@ -83,6 +83,7 @@
                 :domain-statistics="props.domainStatistics" 
                 :category-statistics="props.categoryStatistics"
                 :analysis-data="props.analysisData"
+                :organization-id="props.dashboardData.organization.id"
               />
             </div>
 

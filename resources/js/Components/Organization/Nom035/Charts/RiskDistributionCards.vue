@@ -7,7 +7,8 @@
     <div
       v-for="level in orderedLevels"
       :key="level"
-      class="px-4 py-4 rounded-lg shadow-sm transition-all hover:shadow-md"
+      @click="() => emits('showDetails', level)"
+      class="px-4 py-4 rounded-lg shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-105"
       :style="{ backgroundColor: colors[level] }"
     >
       <div class="flex items-center justify-between">
@@ -44,6 +45,9 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const emits = defineEmits<{
+  showDetails: [level: string];
+}>();
 
 // Orden de severidad: nulo -> muy_alto
 const orderedLevels = ['nulo', 'bajo', 'medio', 'alto', 'muy_alto'];

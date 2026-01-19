@@ -392,10 +392,10 @@
         </div>
 
         <!-- Tab: Dimensión -->
-        <div v-show="activeAnalysisTab === 'dimension'" class="space-y-6">
+        <!-- <div v-show="activeAnalysisTab === 'dimension'" class="space-y-6">
           <h4 class="text-lg font-bold text-slate-900 mb-4">Dimensiones – Rangos de calificación</h4>
 
-        </div>
+        </div> -->
       </div>
     </div>
 
@@ -447,7 +447,7 @@ const analysisTabs = [
   { key: 'calificacion', label: 'Calificación final' },
   { key: 'categoria', label: 'Categoría' },
   { key: 'dominio', label: 'Dominio' },
-  { key: 'dimension', label: 'Dimensión' },
+  //{ key: 'dimension', label: 'Dimensión' },
 ];
 
 const totalEvaluations = computed(() => props.evaluations?.length || 0);
