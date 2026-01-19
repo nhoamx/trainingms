@@ -129,7 +129,7 @@ class OrganizationDashboardController extends Controller
 
         // Obtener evaluaciones NOM-035 completadas con datos demográficos
         $evaluations = PaperEvaluation::where('organization_id', $organization->id)
-            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros'])
+            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])
             ->where('processing_status', 'completed')
             ->with(['demographicData', 'comments'])
             ->get()
@@ -148,6 +148,9 @@ class OrganizationDashboardController extends Controller
                 ];
             });
 
+        // Get unique evaluation types used by this organization
+        $availableEvaluationTypes = $this->getAvailableEvaluationTypes($organization);
+
         return Inertia::render('Organizations/CalizaDashboard', [
             'title' => 'NOM-035-STPS-2018',
             'dashboardData' => $data,
@@ -155,6 +158,7 @@ class OrganizationDashboardController extends Controller
             'categoryStatistics' => $categoryStatistics,
             'analysisData' => $analysisData,
             'evaluations' => $evaluations,
+            'availableEvaluationTypes' => $availableEvaluationTypes,
         ]);
     }
 
@@ -256,5 +260,71 @@ class OrganizationDashboardController extends Controller
             'dashboardData' => $data,
             'evaluations' => $evaluations,
         ]);
+    }
+
+    /**
+     * Get available evaluation types for an organization based on actual data
+     *
+     * Returns an array with evaluation type information configured for display
+     */
+    private function getAvailableEvaluationTypes(Organization $organization): array
+    {
+        // Get all distinct evaluation types for this organization
+        $evaluationTypes = PaperEvaluation::where('organization_id', $organization->id)
+            ->where('processing_status', 'completed')
+            ->distinct()
+            ->pluck('evaluation_type')
+            ->toArray();
+
+        // Define configuration for each evaluation type
+        $typeConfigurations = [
+            'referencia_i' => [
+                'key' => 'referencia_i',
+                'label' => 'Referencia I (ATS)',
+                'description' => 'Identificación de trabajadores con ATS (Acontecimiento Traumáticos Severos)',
+                'badge' => 'Evaluación ATS',
+                'color' => 'red',
+                'icon' => 'DocumentTextIcon',
+            ],
+            'referencia_iii' => [
+                'key' => 'referencia_iii',
+                'label' => 'Referencia III',
+                'description' => 'Identificación de factores de riesgo psicosocial en el trabajo',
+                'badge' => 'Factores de Riesgo',
+                'color' => 'amber',
+                'icon' => 'AdjustmentsHorizontalIcon',
+            ],
+            'referencia_v' => [
+                'key' => 'referencia_v',
+                'label' => 'Referencia V',
+                'description' => 'Datos demográficos y características del entorno de trabajo',
+                'badge' => 'Datos Demográficos',
+                'color' => 'green',
+                'icon' => 'UserGroupIcon',
+            ],
+            'cisneros' => [
+                'key' => 'cisneros',
+                'label' => 'Escala Cisneros',
+                'description' => 'Evaluación de violencia laboral, acoso y mobbing',
+                'badge' => 'Violencia Laboral',
+                'color' => 'orange',
+                'icon' => 'ShieldCheckIcon',
+            ],
+        ];
+
+        // Filter configurations to only include types that exist in the organization
+        $availableTypes = [];
+        foreach ($evaluationTypes as $type) {
+            if (isset($typeConfigurations[$type])) {
+                $availableTypes[] = $typeConfigurations[$type];
+            }
+        }
+
+        // If no evaluation types found, return empty array
+        if (empty($availableTypes)) {
+            return [];
+        }
+
+        return $availableTypes;
     }
 }

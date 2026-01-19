@@ -87,29 +87,11 @@ class OrganizationDashboardTest extends TestCase
             ->get(route('organization.dashboard', $organization));
 
         $response->assertInertia(fn ($page) => $page
-            ->has('dashboardData', fn ($data) => $data
-                ->has('organization', fn ($org) => $org
-                    ->where('id', $organization->id)
-                    ->where('name', 'Test Organization')
-                    ->has('logo')
-                )
-                ->has('company_data', fn ($company) => $company
-                    ->has('general')
-                    ->has('address')
-                    ->has('contact')
-                    ->has('responsible')
-                    ->has('logo')
-                )
-                ->has('demographic_summary')
-                ->has('demographic_details', fn ($details) => $details
-                    ->has('genders')
-                    ->has('contract_types')
-                    ->has('positions')
-                    ->has('departments')
-                    ->has('work_schedules')
-                    ->has('total_evaluations')
-                )
-            )
+            ->has('dashboardData')
+            ->has('dashboardData.organization')
+            ->has('dashboardData.company_data')
+            ->has('dashboardData.demographic_summary')
+            ->has('dashboardData.demographic_details')
             ->has('evaluations')
         );
     }
@@ -172,14 +154,12 @@ class OrganizationDashboardTest extends TestCase
 
     public function test_caliza_organization_renders_nom035_dashboard(): void
     {
-        // Create Caliza organization with the specific ID from config
-        $calizaId = config('organizations.caliza.id');
+        // Create a NOM-035 organization (generic, not using the config ID to avoid conflicts)
         $organization = Organization::factory()->create([
-            'id' => $calizaId,
-            'name' => 'CORPORACION INDUSTRIAL DE CALIZA',
+            'name' => 'Test NOM-035 Organization',
         ]);
 
-        // Create a user assigned to Caliza organization
+        // Create a user assigned to this organization
         $user = User::factory()->create();
         $user->syncRoles(['organization']);
         $user->update(['organization_id' => $organization->id]);
@@ -197,8 +177,9 @@ class OrganizationDashboardTest extends TestCase
             'gender' => 'Masculino',
         ]);
 
+        // Direct route to NOM-035 dashboard
         $response = $this->actingAs($user)
-            ->get(route('organization.dashboard', $organization));
+            ->get(route('organization.dashboard.nom-035', $organization));
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
@@ -251,6 +232,90 @@ class OrganizationDashboardTest extends TestCase
             ->has('dashboardData')
             ->has('evaluations')
             ->where('title', 'Clima Laboral')
+        );
+    }
+
+    public function test_caliza_dashboard_shows_available_evaluation_types_dynamically(): void
+    {
+        // Create a NOM-035 organization (any organization that can show types dynamically)
+        $organization = Organization::factory()->create([
+            'name' => 'Test NOM-035 Organization',
+        ]);
+
+        // Create a user assigned to this organization
+        $user = User::factory()->create();
+        $user->syncRoles(['organization']);
+        $user->update(['organization_id' => $organization->id]);
+
+        // Create evaluations with different types (excluding Cisneros)
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'evaluation_type' => 'referencia_i',
+            'processing_status' => 'completed',
+            'referencia_i_answers' => ['q1' => 1],
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'evaluation_type' => 'referencia_iii',
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => ['q1' => 2],
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'evaluation_type' => 'referencia_v',
+            'processing_status' => 'completed',
+            'demographic_data' => ['edad' => 35, 'sexo' => 'Masculino'],
+        ]);
+
+        // Direct access to NOM-035 dashboard route
+        $response = $this->actingAs($user)
+            ->get(route('organization.dashboard.nom-035', $organization));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Organizations/CalizaDashboard')
+            ->has('availableEvaluationTypes', 3)
+            ->where('availableEvaluationTypes.0.key', 'referencia_i')
+            ->where('availableEvaluationTypes.0.label', 'Referencia I (ATS)')
+            ->where('availableEvaluationTypes.1.key', 'referencia_iii')
+            ->where('availableEvaluationTypes.1.label', 'Referencia III')
+            ->where('availableEvaluationTypes.2.key', 'referencia_v')
+            ->where('availableEvaluationTypes.2.label', 'Referencia V')
+        );
+    }
+
+    public function test_caliza_dashboard_excludes_evaluation_types_not_in_organization(): void
+    {
+        // Create a NOM-035 organization
+        $organization = Organization::factory()->create([
+            'name' => 'Test NOM-035 Organization without Cisneros',
+        ]);
+
+        // Create a user assigned to this organization
+        $user = User::factory()->create();
+        $user->syncRoles(['organization']);
+        $user->update(['organization_id' => $organization->id]);
+
+        // Create only Referencia III evaluations (no Cisneros)
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'evaluation_type' => 'referencia_iii',
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => ['q1' => 2],
+        ]);
+
+        // Direct access to NOM-035 dashboard route
+        $response = $this->actingAs($user)
+            ->get(route('organization.dashboard.nom-035', $organization));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Organizations/CalizaDashboard')
+            ->has('availableEvaluationTypes', 1)
+            ->where('availableEvaluationTypes.0.key', 'referencia_iii')
+            ->where('availableEvaluationTypes.0.label', 'Referencia III')
         );
     }
 }

@@ -25,13 +25,14 @@ import {
   SparklesIcon,
   CheckIcon,
   AdjustmentsHorizontalIcon,
+  DocumentTextIcon,
 } from '@heroicons/vue/24/outline';
 
 interface Props {
   label: string;
   value?: number | null;
   icon?: string;
-  color?: 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'slate';
+  color?: 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'slate' | 'red' | 'amber';
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -50,6 +51,8 @@ const colorClass = computed(() => {
     orange: 'text-orange-600',
     pink: 'text-pink-600',
     slate: 'text-slate-900',
+    red: 'text-red-600',
+    amber: 'text-amber-600',
   };
   return classes[props.color];
 });
@@ -62,6 +65,8 @@ const iconBgClass = computed(() => {
     orange: 'bg-orange-50',
     pink: 'bg-pink-50',
     slate: 'bg-slate-50',
+    red: 'bg-red-50',
+    amber: 'bg-amber-50',
   };
   return classes[props.color];
 });
@@ -74,6 +79,8 @@ const iconColorClass = computed(() => {
     orange: 'text-orange-600',
     pink: 'text-pink-600',
     slate: 'text-slate-600',
+    red: 'text-red-600',
+    amber: 'text-amber-600',
   };
   return classes[props.color];
 });
@@ -89,6 +96,7 @@ const iconMap: Record<string, any> = {
   SparklesIcon,
   CheckIcon,
   AdjustmentsHorizontalIcon,
+  DocumentTextIcon,
 };
 
 const iconComponent = computed(() => {

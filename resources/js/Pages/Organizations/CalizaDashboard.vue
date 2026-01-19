@@ -71,7 +71,10 @@
 
             <!-- Evaluación -->
             <div v-show="activeTab === 'evaluacion'" class="animate-fade-in">
-              <EvaluationTab :evaluations="evaluations" />
+              <EvaluationTab 
+                :evaluations="evaluations"
+                :available-evaluation-types="props.availableEvaluationTypes"
+              />
             </div>
 
             <!-- Etapas -->
@@ -227,12 +230,22 @@ interface Evaluation {
   demographicData?: Record<string, unknown>;
 }
 
+interface EvaluationType {
+  key: string;
+  label: string;
+  description: string;
+  badge: string;
+  color: string;
+  icon: string;
+}
+
 interface Props {
   dashboardData: DashboardData;
   domainStatistics?: DomainStatistics;
   categoryStatistics?: CategoryStatistics;
   analysisData?: AnalysisData;
   evaluations?: Evaluation[];
+  availableEvaluationTypes?: EvaluationType[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -240,6 +253,7 @@ const props = withDefaults(defineProps<Props>(), {
   categoryStatistics: () => ({ categories: {}, total_evaluations: 0, colors: {}, labels: {} }),
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
   evaluations: () => [],
+  availableEvaluationTypes: () => [],
 });
 
 const tabs: Tab[] = [
