@@ -57,7 +57,6 @@ class ReportPdfController extends Controller
                 ], 403);
             }
 
-            $organization = Organization::findOrFail($organizationId);
             $demographicData = $this->reportPdfService->getDemographicDistributionData($organizationId);
 
             if (empty($demographicData)) {
@@ -121,7 +120,6 @@ class ReportPdfController extends Controller
                 ], 403);
             }
 
-            $organization = Organization::findOrFail($organizationId);
             $diagnosticData = $this->reportPdfService->getDiagnosticResultsData($organizationId);
             $demographicData = $this->reportPdfService->getDemographicDistributionData($organizationId);
             $traumaticEventsData = $this->reportPdfService->getTraumaticEventsData($organizationId);
@@ -189,7 +187,6 @@ class ReportPdfController extends Controller
                 ], 403);
             }
 
-            $organization = Organization::findOrFail($organizationId);
             $executiveData = $this->reportPdfService->getExecutiveReportData($organizationId);
             $demographicData = $this->reportPdfService->getDemographicDistributionData($organizationId);
 
