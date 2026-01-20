@@ -30,10 +30,25 @@ class OrganizationBulkUpdateImport implements ToCollection, WithHeadingRow, With
             $rowNumber = $index + 2; // Excel row number (0-indexed + header)
 
             try {
-                // Normalizar valores (trim whitespace)
+                // Normalizar valores (trim whitespace y convertir a string si es necesario)
                 $row = $row->map(function ($value) {
+                    // Convertir null a string vacío
+                    if ($value === null) {
+                        return '';
+                    }
+                    // Convertir números a string
+                    if (is_numeric($value)) {
+                        return (string) $value;
+                    }
+
+                    // Trim de strings
                     return is_string($value) ? trim($value) : $value;
                 });
+
+                // Omitir filas completamente vacías
+                if ($this->isRowEmpty($row)) {
+                    continue;
+                }
 
                 // Validar que el nombre comercial coincida con la organización actual
                 $nombreComercial = $row['nombre_comercial'] ?? null;
@@ -100,6 +115,17 @@ class OrganizationBulkUpdateImport implements ToCollection, WithHeadingRow, With
                 $this->skippedCount++;
             }
         }
+    }
+
+    /**
+     * Detecta si una fila está completamente vacía
+     */
+    protected function isRowEmpty(Collection $row): bool
+    {
+        // Verificar si todos los valores están vacíos
+        return $row->filter(function ($value) {
+            return $value !== null && $value !== '' && $value !== 0;
+        })->isEmpty();
     }
 
     /**
@@ -185,28 +211,28 @@ class OrganizationBulkUpdateImport implements ToCollection, WithHeadingRow, With
     public function rules(): array
     {
         return [
-            'nombre_comercial' => 'required|string|max:255',
-            'razon_social' => 'nullable|string|max:255',
-            'rfc' => 'nullable|string|max:13',
-            'registro_patronal' => 'nullable|string|max:50',
-            'actividad_economica' => 'nullable|string|max:255',
-            'numero_de_trabajadores' => 'nullable|integer|min:0',
-            'hombres' => 'nullable|integer|min:0',
-            'mujeres' => 'nullable|integer|min:0',
-            // Dirección fiscal
-            'calle' => 'nullable|string|max:255',
-            'numero' => 'nullable|string|max:50',
-            'cp' => 'nullable|string|max:10',
-            'colonia_parque_industrial' => 'nullable|string|max:255',
-            'estado' => 'nullable|string|max:100',
-            'municipio' => 'nullable|string|max:100',
-            // Dirección física
-            'calle_2' => 'nullable|string|max:255',
-            'numero_2' => 'nullable|string|max:50',
-            'cp_2' => 'nullable|string|max:10',
-            'colonia_parque_industrial_2' => 'nullable|string|max:255',
-            'estado_2' => 'nullable|string|max:100',
-            'municipio_2' => 'nullable|string|max:100',
+            'nombre_comercial' => 'required|max:255',
+            'razon_social' => 'nullable|max:255',
+            'rfc' => 'nullable|max:13',
+            'registro_patronal' => 'nullable|max:50',
+            'actividad_economica' => 'nullable|max:255',
+            'numero_de_trabajadores' => 'nullable|numeric|min:0',
+            'hombres' => 'nullable|numeric|min:0',
+            'mujeres' => 'nullable|numeric|min:0',
+            // Dirección fiscal (sin tipo string para aceptar números que Excel convierte)
+            'calle' => 'nullable|max:255',
+            'numero' => 'nullable|max:50',
+            'cp' => 'nullable|max:10',
+            'colonia_parque_industrial' => 'nullable|max:255',
+            'estado' => 'nullable|max:100',
+            'municipio' => 'nullable|max:100',
+            // Dirección física (sin tipo string para aceptar números que Excel convierte)
+            'calle_2' => 'nullable|max:255',
+            'numero_2' => 'nullable|max:50',
+            'cp_2' => 'nullable|max:10',
+            'colonia_parque_industrial_2' => 'nullable|max:255',
+            'estado_2' => 'nullable|max:100',
+            'municipio_2' => 'nullable|max:100',
         ];
     }
 
