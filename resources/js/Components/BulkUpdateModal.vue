@@ -275,19 +275,41 @@ watch(() => page.props.flash, (flash) => {
     if (flash && uploading.value) {
         uploading.value = false
         
-        if (flash.success) {
+        // Check if flash has the type/title/message structure
+        if (flash.type && flash.message) {
+            if (flash.type === 'success' || flash.type === 'warning') {
+                successMessage.value = flash.message
+                selectedFile.value = null
+            } else {
+                uploadError.value = flash.message
+            }
+            
+            // Get bulk_errors from flash or from page.props.bulk_errors
+            updateErrors.value = page.props.bulk_errors || []
+            
+            // Auto close after showing success
+            if (flash.type === 'success') {
+                setTimeout(() => {
+                    emit('success')
+                    emit('close')
+                    successMessage.value = null
+                    updateErrors.value = []
+                }, 3000)
+            }
+        } 
+        // Legacy format support
+        else if (flash.success) {
             successMessage.value = flash.message
             updateErrors.value = flash.bulk_errors || []
             selectedFile.value = null
             
-            // Auto close after showing success
             setTimeout(() => {
                 emit('success')
                 emit('close')
                 successMessage.value = null
                 updateErrors.value = []
             }, 3000)
-        } else {
+        } else if (flash.message) {
             uploadError.value = flash.message
             updateErrors.value = flash.bulk_errors || []
         }

@@ -219,19 +219,19 @@ class OrganizationController extends Controller
             $summary['skipped']
         );
 
-        if (! empty($summary['errors'])) {
-            $message .= '<br>Errores:<br>'.implode('<br>', array_slice($summary['errors'], 0, 5));
-            if (count($summary['errors']) > 5) {
-                $message .= '<br>... y '.(count($summary['errors']) - 5).' errores más';
-            }
-        }
-
-        return back()->with([
+        $flashData = [
             'flash' => [
                 'type' => empty($summary['errors']) ? 'success' : 'warning',
                 'title' => 'Importación de Datos',
                 'message' => $message,
             ],
-        ]);
+        ];
+
+        // Agregar errores si existen
+        if (! empty($summary['errors'])) {
+            $flashData['bulk_errors'] = $summary['errors'];
+        }
+
+        return back()->with($flashData);
     }
 }
