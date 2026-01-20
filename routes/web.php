@@ -361,6 +361,8 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{organization}/delete', 'forceDelete')->name('organizations.force-delete')->withTrashed();
             Route::put('/{organization}/restore', 'restore')->name('organizations.restore')->withTrashed();
             Route::get('/{organization}/export-likert-answers', 'exportLikertAnswers')->name('organizations.export-likert-answers');
+            Route::get('/{organization}/bulk-template', 'downloadBulkTemplate')->name('organizations.bulk-template');
+            Route::post('/{organization}/bulk-import', 'importBulkData')->name('organizations.bulk-import');
         });
 
         // Rutas para extintores (NOM-002)
@@ -398,6 +400,14 @@ Route::middleware(['auth'])->group(function () {
             ->name('department-areas.template');
         Route::post('/department-areas/{organization}/import', [\App\Http\Controllers\DepartmentAreaController::class, 'import'])
             ->name('department-areas.import');
+
+        // Rutas para direcciones de organizaciones
+        Route::post('/organization-addresses', [\App\Http\Controllers\OrganizationAddressController::class, 'store'])
+            ->name('organization-addresses.store');
+        Route::delete('/organization-addresses/{address}', [\App\Http\Controllers\OrganizationAddressController::class, 'destroy'])
+            ->name('organization-addresses.destroy');
+        Route::post('/organization-addresses/{address}/set-primary', [\App\Http\Controllers\OrganizationAddressController::class, 'setPrimary'])
+            ->name('organization-addresses.set-primary');
 
         Route::controller(ResultsController::class)->prefix('/resultados')->group(function () {
             Route::get('/', 'index')->name('results.index');

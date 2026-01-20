@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreOrganizationRequest;
 use App\Http\Requests\UpdateOrganizationRequest;
 use App\Models\Organization;
+use App\Services\OrganizationAddressService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OrganizationController extends Controller
 {
@@ -61,6 +64,9 @@ class OrganizationController extends Controller
         $organization->load([
             'occupationPositions',
             'departmentAreas',
+            'addresses' => function ($query) {
+                $query->orderBy('is_primary', 'desc')->orderBy('type');
+            },
             'folioBatches' => function ($query) {
                 $query->withCount([
                     'folios as used_count' => function ($q) {
@@ -171,9 +177,61 @@ class OrganizationController extends Controller
     {
         $filename = 'respuestas_likert_'.str_replace(' ', '_', $organization->name).'_'.now()->format('Y-m-d').'.xlsx';
 
-        return \Maatwebsite\Excel\Facades\Excel::download(
+        return Excel::download(
             new \App\Exports\LikertAnswersExport($organization->id, $organization->name),
             $filename
         );
+    }
+
+    /**
+     * Descargar template de Excel para actualización masiva de organización y direcciones
+     */
+    public function downloadBulkTemplate(Organization $organization): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $filename = 'organizacion_direcciones_'.$organization->folio_organization.'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(
+            new \App\Exports\OrganizationDataExport($organization),
+            $filename
+        );
+    }
+
+    /**
+     * Importar datos masivos de organización y direcciones desde Excel
+     */
+    public function importBulkData(Request $request, Organization $organization)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls', 'max:10240'],
+        ]);
+
+        $addressService = new OrganizationAddressService;
+        $import = new \App\Imports\OrganizationBulkUpdateImport($organization, $addressService);
+
+        Excel::import($import, $request->file('file'));
+
+        $summary = $import->getSummary();
+
+        $message = sprintf(
+            'Organizaciones actualizadas: %d, Direcciones procesadas: %d, Omitidos: %d',
+            $summary['updated'],
+            $summary['addresses'],
+            $summary['skipped']
+        );
+
+        if (! empty($summary['errors'])) {
+            $message .= '<br>Errores:<br>'.implode('<br>', array_slice($summary['errors'], 0, 5));
+            if (count($summary['errors']) > 5) {
+                $message .= '<br>... y '.(count($summary['errors']) - 5).' errores más';
+            }
+        }
+
+        return back()->with([
+            'flash' => [
+                'type' => empty($summary['errors']) ? 'success' : 'warning',
+                'title' => 'Importación de Datos',
+                'message' => $message,
+            ],
+        ]);
     }
 }

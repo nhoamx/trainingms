@@ -99,11 +99,24 @@ const areaForm = useForm({
 // Estado para mostrar/ocultar modal de confirmación
 const showDeleteModal = ref(false)
 const itemToDelete = ref(null)
-const deleteType = ref('') // 'position' o 'area'
+const deleteType = ref('') // 'position', 'area', o 'address'
 
 // Estado para modales de importación
 const showImportPositionsModal = ref(false)
 const showImportAreasModal = ref(false)
+const showImportAddressesModal = ref(false)
+
+// Formulario para direcciones
+const addressForm = useForm({
+    organization_id: organization.id,
+    type: 'fiscal',
+    calle_numero: '',
+    colonia: '',
+    codigo_postal: '',
+    municipio: '',
+    estado: '',
+    is_primary: false,
+})
 
 // Form for policy approved upload (admin only)
 const policyApprovedForm = useForm({
@@ -187,6 +200,20 @@ const confirmDelete = () => {
                 itemToDelete.value = null
             }
         })
+    } else if (deleteType.value === 'address') {
+        router.delete(route('organization-addresses.destroy', itemToDelete.value.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                showDeleteModal.value = false
+                itemToDelete.value = null
+                router.reload({ only: ['organization'] })
+            },
+            onError: (errors) => {
+                alert('Error al eliminar la dirección: ' + Object.values(errors).join('\n'))
+                showDeleteModal.value = false
+                itemToDelete.value = null
+            }
+        })
     }
 }
 
@@ -221,6 +248,47 @@ const addArea = () => {
         },
     })
 }
+
+// Funciones para direcciones
+const addAddress = () => {
+    // Validación simple - al menos un campo debe estar lleno
+    const hasData = addressForm.calle_numero || addressForm.colonia || addressForm.codigo_postal || 
+                    addressForm.municipio || addressForm.estado
+    
+    if (!hasData) {
+        addressForm.setError('calle_numero', 'Al menos un campo de dirección es requerido.')
+        return
+    }
+    
+    addressForm.post(route('organization-addresses.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            router.reload({ only: ['organization'] })
+            addressForm.reset()
+            // Restore organization_id after reset
+            addressForm.organization_id = organization.id
+        },
+        onError: (errors) => {
+            console.error('Error al agregar dirección:', errors)
+        },
+    })
+}
+
+const deleteAddress = (address) => {
+    itemToDelete.value = address
+    deleteType.value = 'address'
+    showDeleteModal.value = true
+}
+
+const setPrimaryAddress = (address) => {
+    router.post(route('organization-addresses.set-primary', address.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            router.reload({ only: ['organization'] })
+        },
+    })
+}
+
 // Funciones para manejo de archivos
 
 function handleFileDrop(e) {
@@ -306,6 +374,11 @@ const handleImportAreasSuccess = () => {
     router.reload({ only: ['organization'] })
 }
 
+const handleImportAddressesSuccess = () => {
+    showImportAddressesModal.value = false
+    router.reload({ only: ['organization'] })
+}
+
 // Handle policy approved upload (admin only)
 const handlePolicyApprovedUpload = (event) => {
     const file = event.target.files[0]
@@ -366,6 +439,13 @@ const handlePolicyApprovedUpload = (event) => {
                         :class="activeTab === 'folios' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700'"
                     >
                         Folios
+                    </button>
+                    <button
+                        @click="changeTab('addresses')"
+                        class="px-3 py-2 text-sm font-medium rounded-md transition-colors"
+                        :class="activeTab === 'addresses' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'"
+                    >
+                        Direcciones
                     </button>
                     <button
                         v-if="isAdmin"
@@ -808,6 +888,176 @@ const handlePolicyApprovedUpload = (event) => {
                 <Folios :organization="organization" />
             </div>
 
+            <!-- Pestaña de Direcciones -->
+            <div v-else-if="activeTab === 'addresses'" class="space-y-6">
+                <div class="border-b border-gray-900/10 pb-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-base font-semibold text-gray-900">Direcciones de la organización</h2>
+                            <p class="mt-1 text-sm text-gray-600">Gestiona las direcciones fiscales y físicas de esta organización.</p>
+                        </div>
+                        <button
+                            @click="showImportAddressesModal = true"
+                            class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+                        >
+                            <ArrowUpTrayIcon class="-ml-0.5 mr-1.5 h-4 w-4" aria-hidden="true" />
+                            Importar desde Excel
+                        </button>
+                    </div>
+                    
+                    <!-- Formulario para agregar nueva dirección -->
+                    <div class="mt-6 border rounded-lg p-4 bg-gray-50">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">Agregar nueva dirección</h3>
+                        <form @submit.prevent="addAddress" class="space-y-4">
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label for="address-type" class="block text-sm font-medium text-gray-700">Tipo de Dirección</label>
+                                    <select
+                                        id="address-type"
+                                        v-model="addressForm.type"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                    >
+                                        <option value="fiscal">Fiscal</option>
+                                        <option value="fisica">Física</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="address-calle" class="block text-sm font-medium text-gray-700">Calle y Número</label>
+                                    <input
+                                        type="text"
+                                        id="address-calle"
+                                        v-model="addressForm.calle_numero"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                        :class="{ 'border-red-300': addressForm.errors.calle_numero }"
+                                    />
+                                    <p v-if="addressForm.errors.calle_numero" class="mt-1 text-sm text-red-600">
+                                        {{ addressForm.errors.calle_numero }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label for="address-colonia" class="block text-sm font-medium text-gray-700">Colonia</label>
+                                    <input
+                                        type="text"
+                                        id="address-colonia"
+                                        v-model="addressForm.colonia"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label for="address-cp" class="block text-sm font-medium text-gray-700">Código Postal</label>
+                                    <input
+                                        type="text"
+                                        id="address-cp"
+                                        v-model="addressForm.codigo_postal"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label for="address-municipio" class="block text-sm font-medium text-gray-700">Municipio</label>
+                                    <input
+                                        type="text"
+                                        id="address-municipio"
+                                        v-model="addressForm.municipio"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label for="address-estado" class="block text-sm font-medium text-gray-700">Estado</label>
+                                    <input
+                                        type="text"
+                                        id="address-estado"
+                                        v-model="addressForm.estado"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <input
+                                    id="address-primary"
+                                    v-model="addressForm.is_primary"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <label for="address-primary" class="ml-2 block text-sm text-gray-900">
+                                    Marcar como dirección principal (Matriz)
+                                </label>
+                            </div>
+                            <div class="flex justify-end">
+                                <button
+                                    type="submit"
+                                    class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                                    :disabled="addressForm.processing"
+                                >
+                                    <PlusIcon class="-ml-0.5 mr-1.5 h-4 w-4" aria-hidden="true" />
+                                    {{ addressForm.processing ? 'Agregando...' : 'Agregar Dirección' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Lista de direcciones existentes -->
+                    <div class="mt-6">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">Direcciones registradas</h3>
+                        <div v-if="organization.addresses && organization.addresses.length > 0" class="overflow-hidden bg-white shadow sm:rounded-md">
+                            <ul role="list" class="divide-y divide-gray-200">
+                                <li v-for="address in organization.addresses" :key="address.id" class="px-4 py-4 sm:px-6">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <span
+                                                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                                    :class="address.type === 'fiscal' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'"
+                                                >
+                                                    {{ address.type === 'fiscal' ? 'Fiscal' : 'Física' }}
+                                                </span>
+                                                <span
+                                                    v-if="address.is_primary"
+                                                    class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800"
+                                                >
+                                                    Matriz
+                                                </span>
+                                            </div>
+                                            <div class="text-sm text-gray-900">
+                                                <p v-if="address.calle_numero" class="font-medium">{{ address.calle_numero }}</p>
+                                                <p v-if="address.colonia">{{ address.colonia }}</p>
+                                                <p v-if="address.codigo_postal || address.municipio || address.estado">
+                                                    {{ [address.codigo_postal, address.municipio, address.estado].filter(Boolean).join(', ') }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button
+                                                v-if="!address.is_primary"
+                                                @click="setPrimaryAddress(address)"
+                                                class="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-600/20 hover:bg-yellow-100"
+                                            >
+                                                Marcar como Matriz
+                                            </button>
+                                            <button
+                                                @click="deleteAddress(address)"
+                                                class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 hover:bg-red-100"
+                                            >
+                                                <TrashIcon class="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div v-else class="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <p class="mt-2 text-sm text-gray-500">No hay direcciones registradas</p>
+                                <p class="mt-1 text-xs text-gray-400">Agrega una nueva dirección usando el formulario de arriba</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Pestaña de Política (solo admin) -->
             <div v-else-if="activeTab === 'policy' && isAdmin" class="space-y-6">
                 <div class="border-b border-gray-900/10 pb-6">
@@ -970,6 +1220,18 @@ const handlePolicyApprovedUpload = (event) => {
                 upload-button-text="Importar Departamentos"
                 @close="showImportAreasModal = false"
                 @success="handleImportAreasSuccess"
+            />
+
+            <!-- Modal de importación de direcciones -->
+            <ImportDataModal
+                :show="showImportAddressesModal"
+                title="Importar Datos de Organización y Direcciones"
+                :download-route="route('organizations.bulk-template', organization.id)"
+                :upload-route="route('organizations.bulk-import', organization.id)"
+                :has-data="true"
+                upload-button-text="Importar Datos"
+                @close="showImportAddressesModal = false"
+                @success="handleImportAddressesSuccess"
             />
         </div>
     </Dashboard>
