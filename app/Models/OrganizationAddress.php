@@ -14,6 +14,8 @@ class OrganizationAddress extends Model
     protected $fillable = [
         'organization_id',
         'type',
+        'nombre_comercial',
+        'razon_social',
         'calle_numero',
         'colonia',
         'codigo_postal',

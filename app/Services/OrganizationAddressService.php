@@ -35,6 +35,8 @@ class OrganizationAddressService
         if ($address) {
             // Actualizar dirección existente
             $address->update([
+                'nombre_comercial' => $data['nombre_comercial'] ?? null,
+                'razon_social' => $data['razon_social'] ?? null,
                 'calle_numero' => $data['calle_numero'] ?? null,
                 'colonia' => $data['colonia'] ?? null,
                 'codigo_postal' => $data['codigo_postal'] ?? null,
@@ -46,6 +48,8 @@ class OrganizationAddressService
             // Crear nueva dirección
             $address = $organization->addresses()->create([
                 'type' => $type,
+                'nombre_comercial' => $data['nombre_comercial'] ?? null,
+                'razon_social' => $data['razon_social'] ?? null,
                 'calle_numero' => $data['calle_numero'] ?? null,
                 'colonia' => $data['colonia'] ?? null,
                 'codigo_postal' => $data['codigo_postal'] ?? null,

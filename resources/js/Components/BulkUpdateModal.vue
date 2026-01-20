@@ -183,14 +183,28 @@
                             </div>
                             <div class="ml-3 flex-1">
                                 <p class="text-sm font-medium text-green-800">{{ successMessage }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warning Message -->
+                    <div v-if="warningMessage" class="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <p class="text-sm font-medium text-yellow-800">{{ warningMessage }}</p>
                                 <div v-if="updateErrors.length > 0" class="mt-3">
-                                    <p class="text-xs font-semibold text-yellow-700 mb-2">
-                                        Advertencias ({{ updateErrors.length }}):
+                                    <p class="text-xs font-semibold text-yellow-800 mb-2">
+                                        Problemas encontrados ({{ updateErrors.length }}):
                                     </p>
-                                    <div class="bg-yellow-50 rounded border border-yellow-200 p-3 max-h-60 overflow-y-auto">
+                                    <div class="bg-white rounded border border-yellow-300 p-3 max-h-60 overflow-y-auto">
                                         <ul class="text-xs text-yellow-700 space-y-1">
                                             <li v-for="(error, index) in updateErrors" :key="index" class="flex items-start">
-                                                <span class="text-yellow-400 mr-2">•</span>
+                                                <span class="text-yellow-500 mr-2">•</span>
                                                 <span>{{ error }}</span>
                                             </li>
                                         </ul>
@@ -281,6 +295,7 @@ const selectedFile = ref(null)
 const selectedSource = ref(null) // null = all, 'paper' = physical, 'online' = online
 const uploadError = ref(null)
 const successMessage = ref(null)
+const warningMessage = ref(null)
 const updateErrors = ref([])
 const fileInput = ref(null)
 
@@ -291,24 +306,23 @@ watch(() => page.props.flash, (flash) => {
         
         // Check if flash has the type/title/message structure
         if (flash.type && flash.message) {
-            if (flash.type === 'success' || flash.type === 'warning') {
+            if (flash.type === 'success') {
                 successMessage.value = flash.message
                 selectedFile.value = null
-            } else {
-                uploadError.value = flash.message
-            }
-            
-            // Get bulk_errors from flash or from page.props.bulk_errors
-            updateErrors.value = page.props.bulk_errors || []
-            
-            // Auto close after showing success
-            if (flash.type === 'success') {
+                updateErrors.value = []
+                
                 setTimeout(() => {
                     emit('success')
                     emit('close')
                     successMessage.value = null
-                    updateErrors.value = []
                 }, 3000)
+            } else if (flash.type === 'warning') {
+                warningMessage.value = flash.message
+                updateErrors.value = page.props.bulk_errors || []
+                // No auto-close on warning, user needs to review errors
+            } else {
+                uploadError.value = flash.message
+                updateErrors.value = page.props.bulk_errors || []
             }
         } 
         // Legacy format support
@@ -337,6 +351,7 @@ watch(() => props.show, (isOpen) => {
         selectedSource.value = null
         uploadError.value = null
         successMessage.value = null
+        warningMessage.value = null
         updateErrors.value = []
     }
 })

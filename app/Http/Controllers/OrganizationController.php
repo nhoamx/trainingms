@@ -206,12 +206,24 @@ class OrganizationController extends Controller
         ]);
 
         try {
+            \Log::info('Iniciando importación masiva', [
+                'organization_id' => $organization->id,
+                'organization_name' => $organization->name,
+                'file_name' => $request->file('file')->getClientOriginalName(),
+                'file_size' => $request->file('file')->getSize(),
+            ]);
+
             $addressService = new OrganizationAddressService;
             $import = new \App\Imports\OrganizationBulkUpdateImport($organization, $addressService);
 
             Excel::import($import, $request->file('file'));
 
             $summary = $import->getSummary();
+
+            \Log::info('Importación completada', [
+                'organization_id' => $organization->id,
+                'summary' => $summary,
+            ]);
 
             $message = sprintf(
                 'Organizaciones actualizadas: %d, Direcciones procesadas: %d, Omitidos: %d',
@@ -220,20 +232,18 @@ class OrganizationController extends Controller
                 $summary['skipped']
             );
 
-            $flashData = [
-                'flash' => [
-                    'type' => empty($summary['errors']) ? 'success' : 'warning',
-                    'title' => 'Importación de Datos',
-                    'message' => $message,
-                ],
-            ];
+            $response = back()->with('flash', [
+                'type' => empty($summary['errors']) ? 'success' : 'warning',
+                'title' => 'Importación de Datos',
+                'message' => $message,
+            ]);
 
             // Agregar errores si existen
             if (! empty($summary['errors'])) {
-                $flashData['bulk_errors'] = $summary['errors'];
+                $response->with('bulk_errors', $summary['errors']);
             }
 
-            return back()->with($flashData);
+            return $response;
 
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             // Errores de validación de Excel
@@ -241,33 +251,43 @@ class OrganizationController extends Controller
             $errors = [];
 
             foreach ($failures as $failure) {
-                $errors[] = sprintf(
+                $error = sprintf(
                     'Fila %d, Columna %s: %s',
                     $failure->row(),
                     $failure->attribute(),
                     implode(', ', $failure->errors())
                 );
+                $errors[] = $error;
             }
 
-            return back()->with([
-                'flash' => [
+            \Log::error('Error de validación en importación', [
+                'organization_id' => $organization->id,
+                'errors' => $errors,
+            ]);
+
+            return back()
+                ->with('flash', [
                     'type' => 'error',
                     'title' => 'Error de Validación',
                     'message' => 'Se encontraron errores en el archivo de Excel. Por favor revisa los detalles.',
-                ],
-                'bulk_errors' => $errors,
-            ]);
+                ])
+                ->with('bulk_errors', $errors);
 
         } catch (\Exception $e) {
             // Otros errores generales
-            return back()->with([
-                'flash' => [
+            \Log::error('Error general en importación', [
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()
+                ->with('flash', [
                     'type' => 'error',
                     'title' => 'Error al Procesar el Archivo',
                     'message' => 'Ocurrió un error al procesar el archivo.',
-                ],
-                'bulk_errors' => [$e->getMessage()],
-            ]);
+                ])
+                ->with('bulk_errors', [$e->getMessage()]);
         }
     }
 }

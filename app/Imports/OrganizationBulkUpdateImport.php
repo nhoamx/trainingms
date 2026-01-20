@@ -26,8 +26,17 @@ class OrganizationBulkUpdateImport implements ToCollection, WithHeadingRow, With
 
     public function collection(Collection $rows): void
     {
+        \Log::info('Iniciando procesamiento de filas', [
+            'organization_id' => $this->organization->id,
+            'total_rows' => $rows->count(),
+        ]);
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2; // Excel row number (0-indexed + header)
+
+            \Log::debug("Procesando fila {$rowNumber}", [
+                'row_data' => $row->toArray(),
+            ]);
 
             try {
                 // Normalizar valores (trim whitespace y convertir a string si es necesario)
@@ -45,24 +54,13 @@ class OrganizationBulkUpdateImport implements ToCollection, WithHeadingRow, With
                     return is_string($value) ? trim($value) : $value;
                 });
 
+                \Log::debug("Fila {$rowNumber} normalizada", [
+                    'normalized_data' => $row->toArray(),
+                ]);
+
                 // Omitir filas completamente vacías
                 if ($this->isRowEmpty($row)) {
-                    continue;
-                }
-
-                // Validar que el nombre comercial coincida con la organización actual
-                $nombreComercial = $row['nombre_comercial'] ?? null;
-
-                if (empty($nombreComercial)) {
-                    $this->errors[] = "Fila {$rowNumber}: El nombre comercial es requerido";
-                    $this->skippedCount++;
-
-                    continue;
-                }
-
-                if (strcasecmp($this->organization->name, $nombreComercial) !== 0) {
-                    $this->errors[] = "Fila {$rowNumber}: El nombre comercial '{$nombreComercial}' no coincide con la organización '{$this->organization->name}'";
-                    $this->skippedCount++;
+                    \Log::info("Fila {$rowNumber} está vacía, omitiendo");
 
                     continue;
                 }
@@ -108,13 +106,31 @@ class OrganizationBulkUpdateImport implements ToCollection, WithHeadingRow, With
 
                 if ($orgUpdated || $fiscalCreated || $fisicaAddress) {
                     $this->updatedOrgsCount++;
+                    \Log::info("Fila {$rowNumber} procesada exitosamente", [
+                        'org_updated' => $orgUpdated,
+                        'fiscal_created' => $fiscalCreated,
+                        'fisica_created' => (bool) $fisicaAddress,
+                    ]);
                 }
 
             } catch (\Exception $e) {
-                $this->errors[] = "Fila {$rowNumber}: {$e->getMessage()}";
+                $error = "Fila {$rowNumber}: {$e->getMessage()}";
+                $this->errors[] = $error;
                 $this->skippedCount++;
+                \Log::error($error, [
+                    'exception' => get_class($e),
+                    'trace' => $e->getTraceAsString(),
+                ]);
             }
         }
+
+        \Log::info('Procesamiento de filas completado', [
+            'organization_id' => $this->organization->id,
+            'updated' => $this->updatedOrgsCount,
+            'addresses' => $this->updatedAddressesCount,
+            'skipped' => $this->skippedCount,
+            'errors_count' => count($this->errors),
+        ]);
     }
 
     /**
@@ -191,6 +207,10 @@ class OrganizationBulkUpdateImport implements ToCollection, WithHeadingRow, With
         $estado = $row[$columnMap['estado']] ?? null;
         $municipio = $row[$columnMap['municipio']] ?? null;
 
+        // Extraer nombre comercial y razón social (mismos para ambas direcciones)
+        $nombreComercial = $row['nombre_comercial'] ?? null;
+        $razonSocial = $row['razon_social'] ?? null;
+
         // Verificar si todos están vacíos
         if (empty($calle) && empty($numero) && empty($cp) && empty($colonia) && empty($estado) && empty($municipio)) {
             return null;
@@ -200,6 +220,8 @@ class OrganizationBulkUpdateImport implements ToCollection, WithHeadingRow, With
         $calleNumero = trim(($calle ?? '').' '.($numero ?? ''));
 
         return [
+            'nombre_comercial' => $nombreComercial,
+            'razon_social' => $razonSocial,
             'calle_numero' => $calleNumero ?: null,
             'colonia' => $colonia,
             'codigo_postal' => $cp,
@@ -211,7 +233,7 @@ class OrganizationBulkUpdateImport implements ToCollection, WithHeadingRow, With
     public function rules(): array
     {
         return [
-            'nombre_comercial' => 'required|max:255',
+            'nombre_comercial' => 'nullable|max:255',
             'razon_social' => 'nullable|max:255',
             'rfc' => 'nullable|max:13',
             'registro_patronal' => 'nullable|max:50',
@@ -239,7 +261,6 @@ class OrganizationBulkUpdateImport implements ToCollection, WithHeadingRow, With
     public function customValidationMessages(): array
     {
         return [
-            'nombre_comercial.required' => 'El nombre comercial es requerido',
             'nombre_comercial.max' => 'El nombre comercial no debe exceder 255 caracteres',
             'rfc.max' => 'El RFC no debe exceder 13 caracteres',
         ];

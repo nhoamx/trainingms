@@ -101,6 +101,9 @@ const showDeleteModal = ref(false)
 const itemToDelete = ref(null)
 const deleteType = ref('') // 'position', 'area', o 'address'
 
+// Estado para controlar las direcciones expandidas
+const expandedAddresses = ref(new Set())
+
 // Estado para modales de importación
 const showImportPositionsModal = ref(false)
 const showImportAreasModal = ref(false)
@@ -110,6 +113,8 @@ const showImportAddressesModal = ref(false)
 const addressForm = useForm({
     organization_id: organization.id,
     type: 'fiscal',
+    nombre_comercial: '',
+    razon_social: '',
     calle_numero: '',
     colonia: '',
     codigo_postal: '',
@@ -287,6 +292,15 @@ const setPrimaryAddress = (address) => {
             router.reload({ only: ['organization'] })
         },
     })
+}
+
+// Función para alternar expansión de dirección
+const toggleAddressExpansion = (addressId) => {
+    if (expandedAddresses.value.has(addressId)) {
+        expandedAddresses.value.delete(addressId)
+    } else {
+        expandedAddresses.value.add(addressId)
+    }
 }
 
 // Funciones para manejo de archivos
@@ -909,6 +923,50 @@ const handlePolicyApprovedUpload = (event) => {
                     <div class="mt-6 border rounded-lg p-4 bg-gray-50">
                         <h3 class="text-sm font-medium text-gray-700 mb-3">Agregar nueva dirección</h3>
                         <form @submit.prevent="addAddress" class="space-y-4">
+                            <!-- Información Comercial -->
+                            <div class="border-b pb-4">
+                                <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                    <svg class="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                    Información Comercial (Opcional)
+                                </h4>
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label for="address-nombre-comercial" class="block text-sm font-medium text-gray-700">Nombre Comercial</label>
+                                        <input
+                                            type="text"
+                                            id="address-nombre-comercial"
+                                            v-model="addressForm.nombre_comercial"
+                                            placeholder="Ej: MONTERREY CEDIS Y CDC"
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                        />
+                                        <p class="mt-1 text-xs text-gray-500">Nombre con el que opera esta ubicación</p>
+                                    </div>
+                                    <div>
+                                        <label for="address-razon-social" class="block text-sm font-medium text-gray-700">Razón Social</label>
+                                        <input
+                                            type="text"
+                                            id="address-razon-social"
+                                            v-model="addressForm.razon_social"
+                                            placeholder="Ej: Empresa S.A. de C.V."
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                        />
+                                        <p class="mt-1 text-xs text-gray-500">Razón social registrada para esta ubicación</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Datos de Dirección -->
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                    <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    Datos de Dirección
+                                </h4>
+                            </div>
                             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                     <label for="address-type" class="block text-sm font-medium text-gray-700">Tipo de Dirección</label>
@@ -998,12 +1056,20 @@ const handlePolicyApprovedUpload = (event) => {
                     <!-- Lista de direcciones existentes -->
                     <div class="mt-6">
                         <h3 class="text-sm font-medium text-gray-700 mb-3">Direcciones registradas</h3>
-                        <div v-if="organization.addresses && organization.addresses.length > 0" class="overflow-hidden bg-white shadow sm:rounded-md">
-                            <ul role="list" class="divide-y divide-gray-200">
-                                <li v-for="address in organization.addresses" :key="address.id" class="px-4 py-4 sm:px-6">
+                        <div v-if="organization.addresses && organization.addresses.length > 0" class="space-y-3">
+                            <div 
+                                v-for="address in organization.addresses" 
+                                :key="address.id" 
+                                class="overflow-hidden bg-white shadow rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+                            >
+                                <!-- Encabezado clickeable -->
+                                <div 
+                                    @click="toggleAddressExpansion(address.id)"
+                                    class="px-4 py-4 sm:px-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                                >
                                     <div class="flex items-center justify-between">
-                                        <div class="flex-1">
-                                            <div class="flex items-center gap-2 mb-2">
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2 mb-3">
                                                 <span
                                                     class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                                                     :class="address.type === 'fiscal' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'"
@@ -1014,35 +1080,145 @@ const handlePolicyApprovedUpload = (event) => {
                                                     v-if="address.is_primary"
                                                     class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800"
                                                 >
-                                                    Matriz
+                                                    ⭐ Matriz
                                                 </span>
                                             </div>
-                                            <div class="text-sm text-gray-900">
-                                                <p v-if="address.calle_numero" class="font-medium">{{ address.calle_numero }}</p>
-                                                <p v-if="address.colonia">{{ address.colonia }}</p>
-                                                <p v-if="address.codigo_postal || address.municipio || address.estado">
-                                                    {{ [address.codigo_postal, address.municipio, address.estado].filter(Boolean).join(', ') }}
-                                                </p>
+                                            
+                                            <!-- Información Comercial en vista previa -->
+                                            <div v-if="address.nombre_comercial || address.razon_social" class="mb-3 space-y-1">
+                                                <div v-if="address.nombre_comercial" class="flex items-start gap-2">
+                                                    <svg class="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                                    </svg>
+                                                    <div>
+                                                        <p class="text-xs font-medium text-purple-600 uppercase tracking-wide">Nombre Comercial</p>
+                                                        <p class="text-base font-bold text-gray-900">{{ address.nombre_comercial }}</p>
+                                                    </div>
+                                                </div>
+                                                <div v-if="address.razon_social" class="flex items-start gap-2">
+                                                    <svg class="h-5 w-5 text-purple-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    <div>
+                                                        <p class="text-xs font-medium text-purple-500 uppercase tracking-wide">Razón Social</p>
+                                                        <p class="text-sm font-semibold text-gray-700">{{ address.razon_social }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Dirección resumida -->
+                                            <div class="flex items-start gap-2">
+                                                <svg class="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                                <div class="text-sm">
+                                                    <p v-if="address.calle_numero" class="font-medium text-gray-900">{{ address.calle_numero }}</p>
+                                                    <p class="text-gray-600">
+                                                        {{ [address.colonia, address.codigo_postal, address.municipio, address.estado].filter(Boolean).join(' • ') }}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="flex gap-2">
-                                            <button
-                                                v-if="!address.is_primary"
-                                                @click="setPrimaryAddress(address)"
-                                                class="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-600/20 hover:bg-yellow-100"
+                                        <div class="flex items-center gap-2 ml-4">
+                                            <!-- Indicador de expansión -->
+                                            <svg 
+                                                class="h-5 w-5 text-gray-400 transition-transform"
+                                                :class="{ 'rotate-180': expandedAddresses.has(address.id) }"
+                                                fill="none" 
+                                                viewBox="0 0 24 24" 
+                                                stroke="currentColor"
                                             >
-                                                Marcar como Matriz
-                                            </button>
-                                            <button
-                                                @click="deleteAddress(address)"
-                                                class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 hover:bg-red-100"
-                                            >
-                                                <TrashIcon class="h-4 w-4" />
-                                            </button>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
                                         </div>
                                     </div>
-                                </li>
-                            </ul>
+                                </div>
+
+                                <!-- Contenido expandible -->
+                                <div 
+                                    v-show="expandedAddresses.has(address.id)"
+                                    class="px-4 py-4 sm:px-6 bg-gray-50 border-t border-gray-200"
+                                >
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <!-- Información Comercial -->
+                                        <div v-if="address.nombre_comercial || address.razon_social" class="col-span-full">
+                                            <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                <svg class="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                                </svg>
+                                                Información Comercial
+                                            </h4>
+                                            <div class="bg-white rounded-md p-3 space-y-2">
+                                                <div v-if="address.nombre_comercial">
+                                                    <span class="text-xs font-medium text-gray-500">Nombre Comercial:</span>
+                                                    <p class="text-sm text-gray-900 font-medium">{{ address.nombre_comercial }}</p>
+                                                </div>
+                                                <div v-if="address.razon_social">
+                                                    <span class="text-xs font-medium text-gray-500">Razón Social:</span>
+                                                    <p class="text-sm text-gray-900">{{ address.razon_social }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Dirección Completa -->
+                                        <div class="col-span-full">
+                                            <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                                Dirección Completa
+                                            </h4>
+                                            <div class="bg-white rounded-md p-3 space-y-2">
+                                                <div v-if="address.calle_numero">
+                                                    <span class="text-xs font-medium text-gray-500">Calle y Número:</span>
+                                                    <p class="text-sm text-gray-900">{{ address.calle_numero }}</p>
+                                                </div>
+                                                <div v-if="address.colonia">
+                                                    <span class="text-xs font-medium text-gray-500">Colonia:</span>
+                                                    <p class="text-sm text-gray-900">{{ address.colonia }}</p>
+                                                </div>
+                                                <div class="grid grid-cols-3 gap-2">
+                                                    <div v-if="address.codigo_postal">
+                                                        <span class="text-xs font-medium text-gray-500">C.P.:</span>
+                                                        <p class="text-sm text-gray-900">{{ address.codigo_postal }}</p>
+                                                    </div>
+                                                    <div v-if="address.municipio">
+                                                        <span class="text-xs font-medium text-gray-500">Municipio:</span>
+                                                        <p class="text-sm text-gray-900">{{ address.municipio }}</p>
+                                                    </div>
+                                                    <div v-if="address.estado">
+                                                        <span class="text-xs font-medium text-gray-500">Estado:</span>
+                                                        <p class="text-sm text-gray-900">{{ address.estado }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Acciones -->
+                                    <div class="flex justify-end gap-2 pt-3 border-t border-gray-200">
+                                        <button
+                                            v-if="!address.is_primary"
+                                            @click.stop="setPrimaryAddress(address)"
+                                            class="inline-flex items-center gap-1 rounded-md bg-yellow-50 px-3 py-2 text-sm font-medium text-yellow-800 ring-1 ring-inset ring-yellow-600/20 hover:bg-yellow-100 transition-colors"
+                                        >
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Marcar como Matriz
+                                        </button>
+                                        <button
+                                            @click.stop="deleteAddress(address)"
+                                            class="inline-flex items-center gap-1 rounded-md bg-red-50 px-3 py-2 text-sm font-medium text-red-700 ring-1 ring-inset ring-red-600/10 hover:bg-red-100 transition-colors"
+                                        >
+                                            <TrashIcon class="h-4 w-4" />
+                                            Eliminar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div v-else class="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                             <div class="flex flex-col items-center justify-center">

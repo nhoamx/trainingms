@@ -18,6 +18,8 @@ class OrganizationAddressController extends Controller
         $validated = $request->validate([
             'organization_id' => ['required', 'exists:organizations,id'],
             'type' => ['required', 'in:fiscal,fisica'],
+            'nombre_comercial' => ['nullable', 'string', 'max:255'],
+            'razon_social' => ['nullable', 'string', 'max:255'],
             'calle_numero' => ['nullable', 'string', 'max:255'],
             'colonia' => ['nullable', 'string', 'max:255'],
             'codigo_postal' => ['nullable', 'string', 'max:10'],
