@@ -17,6 +17,8 @@ class OrganizationDataService
      */
     public function getCompanyData(Organization $organization): array
     {
+        $primaryAddress = $organization->primaryAddress;
+
         return [
             'logo' => $organization->logo ? asset('storage/'.$organization->logo) : null,
             'general' => [
@@ -28,11 +30,11 @@ class OrganizationDataService
                 'folio_organization' => $organization->folio_organization,
             ],
             'address' => [
-                'calle_numero' => $organization->calle_numero,
-                'colonia' => $organization->colonia,
-                'codigo_postal' => $organization->codigo_postal,
-                'municipio' => $organization->municipio,
-                'estado' => $organization->estado,
+                'calle_numero' => $primaryAddress?->calle_numero ?? $organization->calle_numero,
+                'colonia' => $primaryAddress?->colonia ?? $organization->colonia,
+                'codigo_postal' => $primaryAddress?->codigo_postal ?? $organization->codigo_postal,
+                'municipio' => $primaryAddress?->municipio ?? $organization->municipio,
+                'estado' => $primaryAddress?->estado ?? $organization->estado,
             ],
             'contact' => [
                 'nombre' => $organization->contacto_nombre,
