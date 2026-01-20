@@ -13,7 +13,6 @@ defineProps({
         <div class="min-h-screen bg-gray-50">
             <header class="bg-slate-800 shadow-sm">
                 <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-                    <img src="/favicon.ico" alt="Logo" class="h-8 w-auto inline-block mr-2">
                     <h1 class="text-xl font-medium text-gray-200 inline-block align-middle">
                          Identificación de los factores de riesgo psicosocial y evaluación del entorno organizacional en el centro de trabajo.
                     </h1>

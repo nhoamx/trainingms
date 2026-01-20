@@ -449,21 +449,43 @@ const submitEvaluation = () => {
             <!-- Contenido principal -->
             <div class="bg-white rounded-lg shadow-sm border border-slate-200">
                 <div class="p-4 sm:p-6">
-                    <!-- Encabezado -->
+                    <!-- Encabezado con Indicaciones -->
                     <div class="mb-8">
-                        <h1 class="text-xl font-medium text-slate-900">CUESTIONARIO PARA IDENTIFICAR LOS FACTORES DE RIESGO PSICOSOCIAL Y EVALUAR EL ENTORNO ORGANIZACIONAL EN LOS CENTROS DE TRABAJO</h1>
-                        <div class="mt-4 flex flex-wrap gap-2">
-                            <div
-                                v-for="(section, key) in {
-                                    referencia_v: 'Datos Personales',
-                                    referencia_iii: 'Cuestionario Principal',
-                                    referencia_i: 'Preguntas Adicionales'
-                                }"
-                                :key="key"
-                                class="px-3 py-1.5 text-sm rounded-full transition-colors"
-                                :class="currentSection === key ? 'bg-slate-100 text-slate-800' : 'bg-slate-50 text-slate-600'"
-                            >
-                                {{ section }}
+                        <div class="bg-gradient-to-r from-slate-50 to-slate-100 border-l-4 border-slate-800 rounded-lg p-4 sm:p-6">
+                            <h1 class="text-lg sm:text-xl font-semibold text-slate-900 mb-4">Indicaciones</h1>
+                            <ol class="space-y-3 list-decimal list-inside text-sm sm:text-base text-slate-700">
+                                <li class="leading-relaxed">
+                                    <span class="font-medium">Contestarás tres cuestionarios</span> (Guías de referencia)
+                                </li>
+                                <li class="leading-relaxed">
+                                    Contestar <span class="font-medium">objetivamente con sinceridad</span> tu percepción de <span class="font-medium">dos meses a la fecha</span>, tomando en cuenta el departamento y actividades que realizas.
+                                </li>
+                                <li class="leading-relaxed">
+                                    En <span class="font-medium">algunas preguntas deberás escuchar el audio</span> antes de contestar.
+                                </li>
+                                <li class="leading-relaxed">
+                                    <span class="font-medium">Son 4 opciones de respuesta</span>, elige solo una de las siguientes:
+                                </li>
+                            </ol>
+                            <div class="mt-4 pt-4 border-t border-slate-300">
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                                    <div class="flex items-center gap-2 bg-white rounded-md p-2 sm:p-3 border border-slate-200">
+                                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex-shrink-0">A</span>
+                                        <span class="text-xs sm:text-sm text-slate-700 font-medium">Siempre</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 bg-white rounded-md p-2 sm:p-3 border border-slate-200">
+                                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-700 text-xs font-bold flex-shrink-0">B</span>
+                                        <span class="text-xs sm:text-sm text-slate-700 font-medium">Casi siempre</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 bg-white rounded-md p-2 sm:p-3 border border-slate-200">
+                                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold flex-shrink-0">C</span>
+                                        <span class="text-xs sm:text-sm text-slate-700 font-medium">Algunas veces</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 bg-white rounded-md p-2 sm:p-3 border border-slate-200">
+                                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-700 text-xs font-bold flex-shrink-0">D</span>
+                                        <span class="text-xs sm:text-sm text-slate-700 font-medium">Casi nunca</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
