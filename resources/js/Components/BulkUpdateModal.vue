@@ -181,13 +181,20 @@
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                                 </svg>
                             </div>
-                            <div class="ml-3">
+                            <div class="ml-3 flex-1">
                                 <p class="text-sm font-medium text-green-800">{{ successMessage }}</p>
-                                <div v-if="updateErrors.length > 0" class="mt-2">
-                                    <p class="text-xs font-medium text-green-700">Advertencias:</p>
-                                    <ul class="mt-1 text-xs text-green-600 list-disc list-inside">
-                                        <li v-for="(error, index) in updateErrors" :key="index">{{ error }}</li>
-                                    </ul>
+                                <div v-if="updateErrors.length > 0" class="mt-3">
+                                    <p class="text-xs font-semibold text-yellow-700 mb-2">
+                                        Advertencias ({{ updateErrors.length }}):
+                                    </p>
+                                    <div class="bg-yellow-50 rounded border border-yellow-200 p-3 max-h-60 overflow-y-auto">
+                                        <ul class="text-xs text-yellow-700 space-y-1">
+                                            <li v-for="(error, index) in updateErrors" :key="index" class="flex items-start">
+                                                <span class="text-yellow-400 mr-2">•</span>
+                                                <span>{{ error }}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -201,13 +208,20 @@
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
                                 </svg>
                             </div>
-                            <div class="ml-3">
+                            <div class="ml-3 flex-1">
                                 <p class="text-sm font-medium text-red-800">{{ uploadError }}</p>
-                                <div v-if="updateErrors.length > 0" class="mt-2">
-                                    <p class="text-xs font-medium text-red-700">Errores encontrados:</p>
-                                    <ul class="mt-1 text-xs text-red-600 list-disc list-inside max-h-40 overflow-y-auto">
-                                        <li v-for="(error, index) in updateErrors" :key="index">{{ error }}</li>
-                                    </ul>
+                                <div v-if="updateErrors.length > 0" class="mt-3">
+                                    <p class="text-xs font-semibold text-red-700 mb-2">
+                                        Errores encontrados ({{ updateErrors.length }}):
+                                    </p>
+                                    <div class="bg-white rounded border border-red-200 p-3 max-h-60 overflow-y-auto">
+                                        <ul class="text-xs text-red-600 space-y-1">
+                                            <li v-for="(error, index) in updateErrors" :key="index" class="flex items-start">
+                                                <span class="text-red-400 mr-2">•</span>
+                                                <span>{{ error }}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
