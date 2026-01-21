@@ -1,6 +1,6 @@
 <template>
     <div class="bg-slate-50 p-4 rounded-lg">
-        <h3 class="font-medium text-slate-900 mb-4">Datos Personales</h3>
+        <h3 class="font-medium text-slate-900 mb-4">Datos del trabajador</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <!-- Sexo -->
             <div class="space-y-2">

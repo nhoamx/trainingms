@@ -314,6 +314,7 @@ class QuizController extends Controller
                     'organization' => $organizationData,
                     'questions' => [
                         'general' => config('referencia_iii.general'),
+                        'general_blocks' => config('referencia_iii.general_blocks'),
                         'conditional_sections' => config('referencia_iii.conditional_sections'),
                         'acontecimientos_traumaticos' => config('referencia_iii.acontecimientos_traumaticos'),
                     ],

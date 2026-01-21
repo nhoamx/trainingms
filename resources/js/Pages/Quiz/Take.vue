@@ -19,8 +19,7 @@ import FinalSection from '@/Components/Quiz/FinalSection.vue';
 
 const currentSection = ref('referencia_v');
 const showTraumaticQuestions = ref(false);
-const currentPage = ref(1);
-const questionsPerPage = 10;
+const currentBlockIndex = ref(0);
 const currentSubsection = ref('general'); // 'general', 'conditional', 'traumatic'
 
 const props = defineProps({
@@ -85,20 +84,18 @@ const isReferenciaVComplete = computed(() => {
 });
 
 const isGeneralQuestionsComplete = computed(() => {
-    const generalQuestions = props.quiz?.questions?.general || {};
     const generalAnswers = answers.value.referencia_iii || {};
     
-    // Si estamos paginando, solo validar las preguntas de la página actual
+    // Si estamos en bloques, solo validar el bloque actual
     if (currentSection.value === 'referencia_iii' && currentSubsection.value === 'general') {
-        const start = (currentPage.value - 1) * questionsPerPage;
-        const end = start + questionsPerPage;
-        const currentPageQuestionKeys = Object.keys(generalQuestions).slice(start, end);
+        if (!currentBlock.value) return false;
         
-        return currentPageQuestionKeys.every(key => generalAnswers[key] !== undefined);
+        return currentBlock.value.questions.every(q => generalAnswers[q.id] !== undefined);
     }
     
     // Validación completa si no estamos en la subsección general
-    return Object.keys(generalQuestions).every(key => generalAnswers[key] !== undefined);
+    const allGeneralQuestions = props.quiz?.questions?.general || {};
+    return Object.keys(allGeneralQuestions).every(key => generalAnswers[key] !== undefined);
 });
 
 const isConditionalQuestionsComplete = computed(() => {
@@ -154,7 +151,7 @@ const canAdvanceFromCurrentSection = computed(() => {
     return true;
 });
 
-// Computed properties for pagination
+// Computed properties for blocks
 const sections = computed(() => {
     if (currentSection.value === 'referencia_iii' && props.quiz?.questions) {
         return ['general', 'conditional', 'traumatic'];
@@ -162,79 +159,40 @@ const sections = computed(() => {
     return [];
 });
 
-const totalPages = computed(() => {
-    if (currentSection.value === 'referencia_iii') {
-        if (currentSubsection.value === 'general' && props.quiz?.questions?.general) {
-            const totalQuestions = Object.keys(props.quiz.questions.general).length;
-            return Math.ceil(totalQuestions / questionsPerPage);
-        } else if (currentSubsection.value === 'conditional' && props.quiz?.questions?.conditional_sections) {
-            return 1; // Una página para preguntas condicionales
-        } else if (currentSubsection.value === 'traumatic' && props.quiz?.questions?.acontecimientos_traumaticos) {
-            return 1; // Una página para acontecimientos traumáticos
-        }
+const currentBlock = computed(() => {
+    if (props.quiz?.questions?.general_blocks && currentBlockIndex.value < props.quiz.questions.general_blocks.length) {
+        const block = props.quiz.questions.general_blocks[currentBlockIndex.value];
+        return {
+            ...block,
+            blockNumber: currentBlockIndex.value + 1,
+            totalBlocks: props.quiz.questions.general_blocks.length,
+            questions: block.questions.map(qId => ({
+                id: qId,
+                text: props.quiz.questions.general[qId]
+            }))
+        };
     }
-    return 1;
+    return null;
 });
-
-const paginatedQuestions = computed(() => {
-    if (currentSection.value === 'referencia_iii' && currentSubsection.value === 'general' && props.quiz?.questions?.general) {
-        const start = (currentPage.value - 1) * questionsPerPage;
-        const end = start + questionsPerPage;
-        const questions = Object.entries(props.quiz.questions.general)
-            .slice(start, end)
-            .map(([key, value]) => ({
-                id: key,
-                text: value
-            }));
-        return questions;
-    }
-    return [];
-});
-
-const nextPage = () => {
-    if (currentPage.value < totalPages.value) {
-        currentPage.value++;
-    } else {
-        // Si estamos en la última página de la subsección actual
-        const currentIndex = sections.value.indexOf(currentSubsection.value);
-        if (currentIndex < sections.value.length - 1) {
-            currentSubsection.value = sections.value[currentIndex + 1];
-            currentPage.value = 1;
-        }
-    }
-};
-
-const previousPage = () => {
-    if (currentPage.value > 1) {
-        currentPage.value--;
-    } else {
-        // Si estamos en la primera página de la subsección actual
-        const currentIndex = sections.value.indexOf(currentSubsection.value);
-        if (currentIndex > 0) {
-            currentSubsection.value = sections.value[currentIndex - 1];
-            // Establecer la página a la última de la subsección anterior
-            if (currentSubsection.value === 'general') {
-                const totalGeneralQuestions = Object.keys(props.quiz.questions.general).length;
-                currentPage.value = Math.ceil(totalGeneralQuestions / questionsPerPage);
-            } else {
-                currentPage.value = 1;
-            }
-        }
-    }
-};
 
 const nextSection = () => {
     if (currentSection.value === 'referencia_v') {
         currentSection.value = 'referencia_iii';
         currentSubsection.value = 'general';
-        currentPage.value = 1;
+        currentBlockIndex.value = 0;
         // Scroll suave hacia arriba
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (currentSection.value === 'referencia_iii') {
-        if (currentSubsection.value === 'general' && currentPage.value < totalPages.value) {
-            // Si estamos en preguntas generales y hay más páginas, avanzar a la siguiente página
-            currentPage.value++;
-            // Scroll suave hacia arriba
+        if (currentSubsection.value === 'general') {
+            // Si hay más bloques, avanzar al siguiente bloque
+            if (currentBlockIndex.value < (props.quiz?.questions?.general_blocks?.length || 1) - 1) {
+                currentBlockIndex.value++;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+            // Si estamos en el último bloque, pasar a la siguiente subsección
+            currentSubsection.value = 'conditional';
+            currentBlockIndex.value = 0;
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
@@ -243,7 +201,7 @@ const nextSection = () => {
         if (currentIndex < sections.value.length - 1) {
             // Si hay más subsecciones, vamos a la siguiente
             currentSubsection.value = sections.value[currentIndex + 1];
-            currentPage.value = 1;
+            currentBlockIndex.value = 0;
             // Scroll suave hacia arriba
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
@@ -253,7 +211,7 @@ const nextSection = () => {
         checkTraumaticEvents();
         if (showTraumaticQuestions.value) {
             currentSection.value = 'referencia_i';
-            currentPage.value = 1;
+            currentBlockIndex.value = 0;
             currentSubsection.value = 'general';
         } else {
             currentSection.value = 'final';
@@ -274,42 +232,41 @@ const previousSection = () => {
         } else {
             currentSection.value = 'referencia_iii';
             currentSubsection.value = 'traumatic';
-            currentPage.value = 1;
+            currentBlockIndex.value = 0;
         }
         // Scroll suave hacia arriba
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (currentSection.value === 'referencia_i') {
         currentSection.value = 'referencia_iii';
         currentSubsection.value = 'traumatic';
-        currentPage.value = 1;
+        currentBlockIndex.value = 0;
         // Scroll suave hacia arriba
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (currentSection.value === 'referencia_iii') {
         // Dentro de la sección referencia_iii
-        if (currentSubsection.value === 'general' && currentPage.value > 1) {
-            // Si estamos en preguntas generales y no estamos en la primera página
-            currentPage.value--;
+        if (currentSubsection.value === 'general' && currentBlockIndex.value > 0) {
+            // Si estamos en preguntas generales y no estamos en el primer bloque
+            currentBlockIndex.value--;
             // Scroll suave hacia arriba
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-            // Si estamos en la primera página de una subsección
+            // Si estamos en el primer bloque de una subsección
             const currentIndex = sections.value.indexOf(currentSubsection.value);
             if (currentIndex > 0) {
                 // Si no estamos en la primera subsección
                 currentSubsection.value = sections.value[currentIndex - 1];
-                // Establecer la página a la última de la subsección anterior
+                // Establecer el bloque a la última de la subsección anterior
                 if (currentSubsection.value === 'general') {
-                    const totalGeneralQuestions = Object.keys(props.quiz.questions.general).length;
-                    currentPage.value = Math.ceil(totalGeneralQuestions / questionsPerPage);
+                    currentBlockIndex.value = (props.quiz?.questions?.general_blocks?.length || 1) - 1;
                 } else {
-                    currentPage.value = 1;
+                    currentBlockIndex.value = 0;
                 }
                 // Scroll suave hacia arriba
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
                 // Si estamos en la primera subsección de referencia_iii, volvemos a referencia_v
                 currentSection.value = 'referencia_v';
-                currentPage.value = 1;
+                currentBlockIndex.value = 0;
                 // Scroll suave hacia arriba
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
@@ -432,7 +389,7 @@ const submitEvaluation = () => {
                     <span v-if="currentSubsection === 'general'">Cuestionario (GR III)</span>
                     <span v-else-if="currentSubsection === 'conditional'">Cuestionario (GR III)</span>
                     <span v-else-if="currentSubsection === 'traumatic'">Cuestionario (GR III) Acontecimientos Traumáticos</span>
-                    <span v-if="currentSubsection === 'general'"> • Página {{ currentPage }} de {{ totalPages }}</span>
+                    <span v-if="currentSubsection === 'general' && currentBlock"> • Bloque {{ currentBlock.blockNumber }} de {{ currentBlock.totalBlocks }}</span>
                 </span>
                 <span v-else-if="currentSection === 'referencia_i'">
                     Cuestionario (GR I)
@@ -517,7 +474,7 @@ const submitEvaluation = () => {
                         <!-- Preguntas generales -->
                         <div v-if="currentSubsection === 'general'">
                             <GeneralQuestionsSection
-                                :paginated-questions="paginatedQuestions"
+                                :block="currentBlock"
                                 v-model="answers.referencia_iii"
                                 :answer-options="answerOptions.general"
                                 :view-mode="viewMode"
@@ -575,7 +532,7 @@ const submitEvaluation = () => {
                                 @click="() => {
                                     currentSection = 'referencia_v';
                                     currentSubsection = 'general';
-                                    currentPage = 1;
+                                    currentBlockIndex = 0;
                                 }"
                                 class="px-6 py-2 rounded-md bg-slate-100 text-slate-800 font-medium border border-slate-300 hover:bg-slate-200 transition-colors"
                             >
@@ -595,7 +552,7 @@ const submitEvaluation = () => {
                         >
                             {{
                                 currentSection === 'referencia_iii' ?
-                                    (currentSubsection === 'general' && currentPage > 1 ? 'Página anterior' : 'Subsección anterior') :
+                                    (currentSubsection === 'general' && currentBlockIndex > 0 ? 'Bloque anterior' : 'Subsección anterior') :
                                     'Sección anterior'
                             }}
                         </button>
@@ -608,16 +565,16 @@ const submitEvaluation = () => {
                             >
                                 {{
                                     currentSection === 'referencia_iii' ?
-                                        (currentSubsection === 'general' && currentPage < totalPages ? 'Siguiente página' : 'Siguiente subsección') :
+                                        (currentSubsection === 'general' && currentBlockIndex < (quiz?.questions?.general_blocks?.length || 1) - 1 ? 'Siguiente bloque' : 'Siguiente subsección') :
                                         'Siguiente sección'
                                 }}
                             </button>
                         </div>
                     </div>
-                    <!-- Contador de páginas movido aquí -->
-                    <div v-if="currentSection === 'referencia_iii' && currentSubsection === 'general' && totalPages > 1" class="flex justify-center items-center">
+                    <!-- Mostrar progreso de bloques -->
+                    <div v-if="currentSection === 'referencia_iii' && currentSubsection === 'general' && currentBlock" class="flex justify-center items-center">
                         <span class="text-sm text-slate-600">
-                            Página {{ currentPage }} de {{ totalPages }}
+                            Bloque {{ currentBlock.blockNumber }} de {{ currentBlock.totalBlocks }}
                         </span>
                     </div>
                 </div>

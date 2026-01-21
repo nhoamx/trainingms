@@ -68,6 +68,57 @@ return [
         64 => 'He presenciado actos de violencia en mi centro de trabajo',
     ],
 
+    'general_blocks' => [
+        [
+            'instructions' => 'Para responder las preguntas siguientes considere las condiciones ambientales de su centro de trabajo.',
+            'questions' => [1, 2, 3, 4, 5],
+        ],
+        [
+            'instructions' => 'Para responder a las preguntas siguientes piense en la cantidad y ritmo de trabajo que tiene.',
+            'questions' => [6, 7, 8],
+        ],
+        [
+            'instructions' => 'Las preguntas siguientes están relacionadas con el esfuerzo mental que le exige su trabajo.',
+            'questions' => [9, 10, 11, 12],
+        ],
+        [
+            'instructions' => 'Las preguntas siguientes están relacionadas con las actividades que realiza en su trabajo y las responsabilidades que tiene.',
+            'questions' => [13, 14, 15, 16],
+        ],
+        [
+            'instructions' => 'Las preguntas siguientes están relacionadas con su jornada de trabajo.',
+            'questions' => [17, 18, 19, 20, 21, 22],
+        ],
+        [
+            'instructions' => 'Las preguntas siguientes están relacionadas con las decisiones que puede tomar en su trabajo.',
+            'questions' => [23, 24, 25, 26, 27, 28],
+        ],
+        [
+            'instructions' => 'Las preguntas siguientes están relacionadas con cualquier tipo de cambio que ocurra en su trabajo (considere los últimos cambios realizados).',
+            'questions' => [29, 30],
+        ],
+        [
+            'instructions' => 'Las preguntas siguientes están relacionadas con la capacitación e información que se le proporciona sobre su trabajo.',
+            'questions' => [31, 32, 33, 34, 35, 36],
+        ],
+        [
+            'instructions' => 'Las preguntas siguientes están relacionadas con el o los jefes con quien tiene contacto.',
+            'questions' => [37, 38, 39, 40, 41],
+        ],
+        [
+            'instructions' => 'Las preguntas siguientes se refieren a las relaciones con sus compañeros.',
+            'questions' => [42, 43, 44, 45, 46],
+        ],
+        [
+            'instructions' => 'Las preguntas siguientes están relacionadas con la información que recibe sobre su rendimiento en el trabajo, el reconocimiento, el sentido de pertenencia y la estabilidad que le ofrece su trabajo.',
+            'questions' => [47, 48, 49, 50, 51, 52, 53, 54, 55, 56],
+        ],
+        [
+            'instructions' => 'Las preguntas siguientes están relacionadas con actos de violencia laboral (malos tratos, acoso, hostigamiento, acoso psicológico, etc.).',
+            'questions' => [57, 58, 59, 60, 61, 62, 63, 64],
+        ],
+    ],
+
     'conditional_sections' => [
         'customer_service' => [
             'condition' => 'En mi trabajo debo brindar servicio a clientes o usuarios',
