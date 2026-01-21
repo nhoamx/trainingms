@@ -36,6 +36,7 @@
                 <div class="flex gap-2 mb-4">
                     <AudioPlayer
                         :audio-url="getAudioUrl(qIndex)"
+                        @ready="handleAudioReady(qIndex)"
                         @ended="handleAudioEnded(qIndex)"
                         @error="handleAudioError(qIndex)"
                     />
@@ -102,9 +103,9 @@ const primeUnlockState = () => {
     const next = { ...unlocked.value };
     Object.entries(props.conditionalSections).forEach(([key, section]) => {
         Object.keys(section.questions).forEach((qKey) => {
-            const hasAudio = Boolean(getAudioUrl(qKey));
             if (!(qKey in next)) {
-                next[qKey] = !hasAudio;
+                // Por defecto, todas las preguntas están desbloqueadas
+                next[qKey] = true;
             }
         });
     });
@@ -114,6 +115,11 @@ const primeUnlockState = () => {
 watch(() => props.conditionalSections, primeUnlockState, { immediate: true });
 
 const isDisabled = (questionId) => unlocked.value[questionId] === false;
+
+const handleAudioReady = (questionId) => {
+    // Cuando el audio se carga exitosamente, bloqueamos la pregunta
+    unlocked.value = { ...unlocked.value, [questionId]: false };
+};
 
 const handleAudioEnded = (questionId) => {
     unlocked.value = { ...unlocked.value, [questionId]: true };
