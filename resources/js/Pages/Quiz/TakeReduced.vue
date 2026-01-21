@@ -10,6 +10,7 @@ import ViewModeToggle from '@/Components/Quiz/ViewModeToggle.vue';
 import PersonalDataSection from "../../Components/Quiz/PersonalDataSection.vue";
 import LaborDataSection from "../../Components/Quiz/LaborDataSection.vue";
 import CustomFieldsSection from "../../Components/Quiz/CustomFieldsSection.vue";
+import OrganizationInfoSection from '../../Components/Quiz/OrganizationInfoSection.vue';
 import TraumaticEventsSection from "../../Components/Quiz/TraumaticEventsSection.vue";
 import FollowUpQuestionsSection from '@/Components/Quiz/FollowUpQuestionsSection.vue';
 import FinalSection from '@/Components/Quiz/FinalSection.vue';
@@ -25,6 +26,12 @@ const answers = ref({
     acontecimientos_traumaticos: {},
     referencia_i: {},
     custom_fields: {},
+    organization_info: {
+        nombre_comercial: '',
+        division_sucursal: '',
+        estado: '',
+        ciudad: ''
+    },
     referencia_v: {
         sexo: '',
         edad: '',
@@ -62,8 +69,10 @@ const checkTraumaticEvents = () => {
 const isReferenciaVComplete = computed(() => {
     const rv = answers.value.referencia_v;
     const dl = rv.datos_laborales;
+    const org = answers.value.organization_info;
     
-    return rv.sexo && rv.edad && rv.estado_civil && rv.nivel_estudios &&
+    return org.nombre_comercial && org.division_sucursal && org.estado && org.ciudad &&
+           rv.sexo && rv.edad && rv.estado_civil && rv.nivel_estudios &&
            dl.ocupacion_puesto && dl.tipo_puesto && dl.tipo_contratacion &&
            dl.tipo_personal && dl.rotacion_turnos &&
            dl.experiencia.tiempo_puesto_actual && dl.experiencia.tiempo_experiencia_laboral;
@@ -280,6 +289,12 @@ const submitEvaluation = () => {
 
                     <!-- Sección Referencia V -->
                     <div v-if="currentSection === 'referencia_v'" class="space-y-6">
+                        <!-- Información de la Organización -->
+                        <OrganizationInfoSection
+                            v-model="answers.organization_info"
+                            :organization-name="quiz.organization?.name || ''"
+                        />
+
                         <!-- Datos personales -->
                         <PersonalDataSection 
                             v-model="answers.referencia_v" 
@@ -287,11 +302,11 @@ const submitEvaluation = () => {
                         />
 
                         <!-- Campos Personalizados -->
-                        <CustomFieldsSection 
+                        <!-- <CustomFieldsSection 
                             v-if="quiz.custom_fields && quiz.custom_fields.length > 0"
                             :custom-fields="quiz.custom_fields" 
                             v-model="answers.custom_fields"
-                        />
+                        /> -->
 
                         <!-- Datos Laborales -->
                         <LaborDataSection 
