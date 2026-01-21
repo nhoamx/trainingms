@@ -65,18 +65,9 @@ const emit = defineEmits(['update:modelValue']);
 
 const unlocked = ref({});
 
-const primeUnlockState = () => {
-    const next = { ...unlocked.value };
-    props.paginatedQuestions.forEach((question) => {
-        const hasAudio = Boolean(getAudioUrl(question.id));
-        if (!(question.id in next)) {
-            next[question.id] = !hasAudio;
-        }
-    });
-    unlocked.value = next;
+const getAudioUrl = (questionId) => {
+    return props.audioUrls?.[questionId] || null;
 };
-
-watch(() => props.paginatedQuestions, primeUnlockState, { immediate: true });
 
 const isDisabled = (questionId) => {
     return unlocked.value[questionId] === false;
@@ -91,9 +82,18 @@ const handleAudioError = (questionId) => {
     unlocked.value = { ...unlocked.value, [questionId]: true };
 };
 
-const getAudioUrl = (questionId) => {
-    return props.audioUrls?.[questionId] || null;
+const primeUnlockState = () => {
+    const next = { ...unlocked.value };
+    props.paginatedQuestions.forEach((question) => {
+        const hasAudio = Boolean(getAudioUrl(question.id));
+        if (!(question.id in next)) {
+            next[question.id] = !hasAudio;
+        }
+    });
+    unlocked.value = next;
 };
+
+watch(() => props.paginatedQuestions, primeUnlockState, { immediate: true });
 
 const updateAnswer = (questionId, value) => {
     emit('update:modelValue', {

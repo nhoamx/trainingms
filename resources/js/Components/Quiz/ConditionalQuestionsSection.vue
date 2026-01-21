@@ -94,6 +94,10 @@ const emit = defineEmits(['update:modelValue']);
 
 const unlocked = ref({});
 
+const getAudioUrl = (questionId) => {
+    return props.audioUrls?.[questionId] || null;
+};
+
 const primeUnlockState = () => {
     const next = { ...unlocked.value };
     Object.entries(props.conditionalSections).forEach(([key, section]) => {
@@ -117,10 +121,6 @@ const handleAudioEnded = (questionId) => {
 
 const handleAudioError = (questionId) => {
     unlocked.value = { ...unlocked.value, [questionId]: true };
-};
-
-const getAudioUrl = (questionId) => {
-    return props.audioUrls?.[questionId] || null;
 };
 
 // Watch para inicializar preguntas condicionales como null si el filtro es "No"

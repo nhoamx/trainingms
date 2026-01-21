@@ -71,6 +71,10 @@ const emit = defineEmits(['update:modelValue']);
 
 const unlocked = ref({});
 
+const getAudioUrl = (key) => {
+    return props.audioUrls?.[key] || null;
+};
+
 const primeUnlockState = () => {
     const next = { ...unlocked.value };
     Object.entries(props.followUpQuestions).forEach(([category, questions]) => {
@@ -95,10 +99,6 @@ const handleAudioEnded = (key) => {
 
 const handleAudioError = (key) => {
     unlocked.value = { ...unlocked.value, [key]: true };
-};
-
-const getAudioUrl = (key) => {
-    return props.audioUrls?.[key] || null;
 };
 
 const updateAnswer = (key, value) => {

@@ -426,17 +426,16 @@ const submitEvaluation = () => {
             <!-- Barra de progreso -->
             <ProgressBar :progress="progress">
                 <span v-if="currentSection === 'referencia_v'">
-                    Sección 1: Datos Personales
+                    Cuestionario (GR V)
                 </span>
                 <span v-else-if="currentSection === 'referencia_iii'">
-                    Sección 2:
-                    <span v-if="currentSubsection === 'general'">Cuestionario Principal</span>
-                    <span v-else-if="currentSubsection === 'conditional'">Preguntas Condicionales</span>
-                    <span v-else-if="currentSubsection === 'traumatic'">Acontecimientos Traumáticos</span>
+                    <span v-if="currentSubsection === 'general'">Cuestionario (GR III)</span>
+                    <span v-else-if="currentSubsection === 'conditional'">Cuestionario (GR III)</span>
+                    <span v-else-if="currentSubsection === 'traumatic'">Cuestionario (GR III) Acontecimientos Traumáticos</span>
                     <span v-if="currentSubsection === 'general'"> • Página {{ currentPage }} de {{ totalPages }}</span>
                 </span>
                 <span v-else-if="currentSection === 'referencia_i'">
-                    Sección 3: Preguntas Adicionales
+                    Cuestionario (GR I)
                 </span>
                 <span v-else-if="currentSection === 'final'">
                     Finalización: Guardar Respuestas
@@ -450,7 +449,7 @@ const submitEvaluation = () => {
             <div class="bg-white rounded-lg shadow-sm border border-slate-200">
                 <div class="p-4 sm:p-6">
                     <!-- Encabezado con Indicaciones -->
-                    <div class="mb-8">
+                    <div v-if="currentSection === 'referencia_v'" class="mb-8">
                         <div class="bg-gradient-to-r from-slate-50 to-slate-100 border-l-4 border-slate-800 rounded-lg p-4 sm:p-6">
                             <h1 class="text-lg sm:text-xl font-semibold text-slate-900 mb-4">Indicaciones</h1>
                             <ol class="space-y-3 list-decimal list-inside text-sm sm:text-base text-slate-700">
