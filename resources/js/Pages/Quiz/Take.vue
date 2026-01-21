@@ -80,7 +80,7 @@ const isReferenciaVComplete = computed(() => {
     
     return rv.sexo && rv.edad && rv.estado_civil && rv.nivel_estudios &&
            dl.ocupacion_puesto && dl.tipo_puesto && dl.tipo_contratacion &&
-           dl.tipo_personal && dl.tipo_jornada && dl.rotacion_turnos &&
+           dl.tipo_personal && dl.rotacion_turnos &&
            dl.experiencia.tiempo_puesto_actual && dl.experiencia.tiempo_experiencia_laboral;
 });
 

@@ -90,7 +90,7 @@
                     </div>
                 </template>
                 <!-- Campos normales -->
-                <div v-else-if="field !== 'ocupacion_puesto' && field !== 'departamento_seccion_area'" class="space-y-2">
+                <div v-else-if="field !== 'ocupacion_puesto' && field !== 'departamento_seccion_area' && field !== 'tipo_jornada'" class="space-y-2">
                     <label class="block text-sm font-medium text-slate-700">
                         {{ field.replace(/_/g, ' ').charAt(0).toUpperCase() + field.replace(/_/g, ' ').slice(1) }}
                     </label>

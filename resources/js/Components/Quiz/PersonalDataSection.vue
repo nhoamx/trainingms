@@ -26,20 +26,15 @@
             <!-- Edad -->
             <div class="space-y-2">
                 <label class="block text-sm font-medium text-slate-700">Edad</label>
-                <select
+                <input
+                    type="number"
                     :value="modelValue.edad"
                     @change="updateField('edad', $event.target.value)"
-                    class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm"
+                    min="1"
+                    max="120"
+                    placeholder="Ingrese su edad"
+                    class="mt-1 block w-full rounded-md border border-slate-300 shadow-sm focus:border-slate-300 focus:ring focus:ring-slate-200 text-sm px-3 py-2"
                 >
-                    <option value="">Seleccione un rango de edad</option>
-                    <option
-                        v-for="edad in referenceData.edad"
-                        :key="edad"
-                        :value="edad"
-                    >
-                        {{ edad }}
-                    </option>
-                </select>
             </div>
 
             <!-- Estado Civil -->
