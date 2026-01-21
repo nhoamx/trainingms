@@ -77,26 +77,48 @@
         <audio
             ref="audioElement"
             class="hidden"
-            :src="audioUrl"
             @play="handlePlay"
             @pause="handlePause"
             @loadstart="handleLoadStart"
             @canplay="handleCanPlay"
             @error="handleError"
             @ended="handleEnded"
-        ></audio>
+        >
+            <template v-if="audioSources.length > 0">
+                <source
+                    v-for="(source, idx) in audioSources"
+                    :key="idx"
+                    :src="source.src"
+                    :type="source.type"
+                />
+            </template>
+            <template v-else-if="audioUrl">
+                <source :src="audioUrl" />
+            </template>
+        </audio>
     </div>
 </template>
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 
 const emit = defineEmits(['ready', 'ended', 'error', 'started']);
 
 const props = defineProps({
     audioUrl: {
-        type: String,
+        type: [String, Array],
         default: null
     }
+});
+
+// Computed para manejar audioUrl como string o array de objetos {src, type}
+const audioSources = computed(() => {
+    if (!props.audioUrl) return [];
+    
+    if (Array.isArray(props.audioUrl)) {
+        return props.audioUrl;
+    }
+    
+    return [];
 });
 
 const audioElement = ref(null);
@@ -123,7 +145,7 @@ watch(
         isLoading.value = false;
         hasError.value = false;
         isVisible.value = false;
-        if (newUrl) {
+        if (newUrl && (Array.isArray(newUrl) ? newUrl.length > 0 : true)) {
             // Defer visibility until canplay confirms load success
             audioElement.value?.load?.();
         }
@@ -221,7 +243,10 @@ const handleError = () => {
     hasError.value = true;
     isPlaying.value = false;
     isVisible.value = false;
-    console.warn(`Failed to load audio: ${props.audioUrl}`);
+    const urlInfo = Array.isArray(props.audioUrl) 
+        ? `Tried formats: ${props.audioUrl.map(s => s.src).join(', ')}`
+        : props.audioUrl;
+    console.warn(`Failed to load audio: ${urlInfo}`);
     emit('error');
 };
 
