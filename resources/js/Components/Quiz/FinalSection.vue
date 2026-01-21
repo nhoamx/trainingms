@@ -56,32 +56,6 @@ defineEmits(['submit']);
                 </span>
             </button>
             
-            <div class="bg-slate-50 rounded-lg p-6 mb-8">
-                <h3 class="text-lg font-medium text-slate-800 mb-3">
-                    Antes de finalizar, por favor verifica:
-                </h3>
-                <ul class="text-left text-slate-600 space-y-2">
-                    <li class="flex items-start">
-                        <svg class="h-5 w-5 text-emerald-500 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                        </svg>
-                        Que has respondido todas las preguntas requeridas
-                    </li>
-                    <li class="flex items-start">
-                        <svg class="h-5 w-5 text-emerald-500 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                        </svg>
-                        Que tus datos personales y laborales están correctos
-                    </li>
-                    <li class="flex items-start">
-                        <svg class="h-5 w-5 text-emerald-500 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                        </svg>
-                        Que has completado todas las secciones disponibles
-                    </li>
-                </ul>
-            </div>
-            
         </div>
     </div>
 </template>
