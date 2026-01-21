@@ -36,6 +36,14 @@ Route::controller(\App\Http\Controllers\AuthController::class)->group(function (
 
 Route::middleware(['auth'])->group(function () {
 
+    // Audio file management routes (admin only)
+    Route::middleware(['role:admin|super-admin'])->prefix('audio')->name('audio.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AudioFileController::class, 'index'])->name('index');
+        Route::get('/upload', [\App\Http\Controllers\AudioFileController::class, 'create'])->name('upload');
+        Route::post('/', [\App\Http\Controllers\AudioFileController::class, 'store'])->name('store');
+        Route::delete('/{audioFile}', [\App\Http\Controllers\AudioFileController::class, 'destroy'])->name('destroy');
+    });
+
     Route::get('/organization/{id}/report', function ($id) {
         return \Inertia\Inertia::render('Reports/AdminOrganizationReport', [
             'organizationId' => $id,

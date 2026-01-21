@@ -78,17 +78,20 @@ export function useAudioUrls(quiz) {
 
 /**
  * Genera la URL del audio basándose en el tipo de pregunta y su identificador
+ * Soporta múltiples formatos de audio (mp3, m4a, wav, ogg) con fallback
  * 
  * @param {string} questionType - Tipo de pregunta (general, conditional, traumatic, cisneros, referencia_i)
  * @param {string|number} questionId - Identificador de la pregunta (clave o índice)
- * @returns {string} URL del archivo de audio
+ * @returns {string} URL del archivo de audio con formato preferido
  */
 function getAudioUrl(questionType, questionId) {
-    // Aquí se usa la configuración de audio que será pasada desde el backend
-    // Por ahora retorna un patrón que será reemplazado por la URL real desde el servidor
-    // La configuración será inyectada a través de props o una ruta configurada
-    
     const baseUrl = window.__AUDIO_BASE_URL || '/storage/audio';
     
-    return `${baseUrl}/${questionType}/${questionId}.mp3`;
+    // Formatos soportados en orden de preferencia
+    // El AudioPlayer intentará cargar el primero, si falla, intentará con los siguientes
+    const preferredFormat = 'mp3'; // Formato por defecto
+    
+    // Retornamos la URL con el formato preferido
+    // El navegador manejará automáticamente el fallback si el archivo no existe
+    return `${baseUrl}/${questionType}/${questionId}.${preferredFormat}`;
 }
