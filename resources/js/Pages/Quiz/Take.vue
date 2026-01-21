@@ -58,7 +58,7 @@ const answerOptions = {
     general: [
         { label: 'Siempre', value: 'A' },
         { label: 'Casi siempre', value: 'B' },
-        { label: 'Algunas Veces', value: 'C' },
+        { label: 'Algunas veces', value: 'C' },
         { label: 'Casi nunca', value: 'D' },
         { label: 'Nunca', value: 'E' }
     ],
