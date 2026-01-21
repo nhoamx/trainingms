@@ -54,20 +54,26 @@ const estadosOrdenados = computed(() => {
     return Object.keys(estados.value).sort();
 });
 
-// Watch para emitir cambios al padre
-watch(localValue, (newValue) => {
-    emit('update:modelValue', { ...newValue });
-}, { deep: true });
+// Función para actualizar campos individuales sin watchers profundos
+const updateField = (field, value) => {
+    localValue.value[field] = value;
+    emit('update:modelValue', { ...localValue.value });
+};
 
 // Watch para limpiar ciudad cuando cambia el estado
-watch(() => localValue.value.estado, () => {
-    localValue.value.ciudad = '';
+watch(() => localValue.value.estado, (newEstado, oldEstado) => {
+    if (newEstado !== oldEstado && oldEstado !== undefined) {
+        localValue.value.ciudad = '';
+        emit('update:modelValue', { ...localValue.value });
+    }
 });
 
-// Watch para actualizar el valor local cuando cambia desde el padre
+// Watch para actualizar el valor local cuando cambia desde el padre (sin deep watch)
 watch(() => props.modelValue, (newValue) => {
-    localValue.value = { ...newValue };
-}, { deep: true });
+    if (JSON.stringify(newValue) !== JSON.stringify(localValue.value)) {
+        localValue.value = { ...newValue };
+    }
+});
 </script>
 
 <template>
@@ -101,7 +107,8 @@ watch(() => props.modelValue, (newValue) => {
                 </label>
                 <input
                     id="nombre_comercial"
-                    v-model="localValue.nombre_comercial"
+                    :value="localValue.nombre_comercial"
+                    @input="updateField('nombre_comercial', $event.target.value)"
                     type="text"
                     class="w-full px-3 py-2.5 bg-white border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors"
                     placeholder="Ingresa el nombre comercial"
@@ -116,7 +123,8 @@ watch(() => props.modelValue, (newValue) => {
                 </label>
                 <input
                     id="division_sucursal"
-                    v-model="localValue.division_sucursal"
+                    :value="localValue.division_sucursal"
+                    @input="updateField('division_sucursal', $event.target.value)"
                     type="text"
                     class="w-full px-3 py-2.5 bg-white border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors"
                     placeholder="Ingresa la división o sucursal"
@@ -131,7 +139,8 @@ watch(() => props.modelValue, (newValue) => {
                 </label>
                 <select
                     id="estado"
-                    v-model="localValue.estado"
+                    :value="localValue.estado"
+                    @change="updateField('estado', $event.target.value)"
                     class="w-full px-3 py-2.5 bg-white border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors"
                     required
                     :disabled="isLoadingEstados"
@@ -150,7 +159,8 @@ watch(() => props.modelValue, (newValue) => {
                 </label>
                 <select
                     id="ciudad"
-                    v-model="localValue.ciudad"
+                    :value="localValue.ciudad"
+                    @change="updateField('ciudad', $event.target.value)"
                     class="w-full px-3 py-2.5 bg-white border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors"
                     required
                     :disabled="!localValue.estado || ciudadesDisponibles.length === 0"
