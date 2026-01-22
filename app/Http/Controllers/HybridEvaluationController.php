@@ -43,7 +43,7 @@ class HybridEvaluationController extends Controller
         // Get question configurations
         // Note: The component expects the referencia_iii config directly as props.questions
         $referenciaIIIQuestions = config('referencia_iii');
-        $referenciaIQuestions = config('guide_i_questions');
+        $referenciaIQuestions = config('referencia_i');
 
         return Inertia::render('Hibrido/Take', [
             'evaluationId' => $evaluation->id,
