@@ -37,9 +37,9 @@ class UpdateHybridEvaluationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'referencia_iii.json' => 'Las respuestas de Referencia III deben estar en formato JSON válido.',
-            'referencia_i.json' => 'Las respuestas de Referencia I deben estar en formato JSON válido.',
-            'referencia_iii_conditional.json' => 'Las respuestas condicionales deben estar en formato JSON válido.',
+            'referencia_iii.json' => 'Las respuestas de Referencia III deben ser una cadena JSON válida.',
+            'referencia_i.json' => 'Las respuestas de Referencia I deben ser una cadena JSON válida.',
+            'referencia_iii_conditional.json' => 'Las respuestas condicionales deben ser una cadena JSON válida.',
         ];
     }
 
@@ -48,22 +48,22 @@ class UpdateHybridEvaluationRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        // If the data is already an array, convert it to JSON string
-        if ($this->has('referencia_iii') && is_array($this->referencia_iii)) {
+        // Convert to arrays if they're JSON strings (from form data)
+        if ($this->has('referencia_iii') && is_string($this->referencia_iii)) {
             $this->merge([
-                'referencia_iii' => json_encode($this->referencia_iii),
+                'referencia_iii' => json_decode($this->referencia_iii, true),
             ]);
         }
 
-        if ($this->has('referencia_i') && is_array($this->referencia_i)) {
+        if ($this->has('referencia_i') && is_string($this->referencia_i)) {
             $this->merge([
-                'referencia_i' => json_encode($this->referencia_i),
+                'referencia_i' => json_decode($this->referencia_i, true),
             ]);
         }
 
-        if ($this->has('referencia_iii_conditional') && is_array($this->referencia_iii_conditional)) {
+        if ($this->has('referencia_iii_conditional') && is_string($this->referencia_iii_conditional)) {
             $this->merge([
-                'referencia_iii_conditional' => json_encode($this->referencia_iii_conditional),
+                'referencia_iii_conditional' => json_decode($this->referencia_iii_conditional, true),
             ]);
         }
     }

@@ -23,8 +23,6 @@ class ProcessQuizSubmission implements ShouldQueue
 
     public $maxExceptions = 3;
 
-    public $queue = 'quiz_processing'; // Cola específica para procesamiento de evaluaciones
-
     /**
      * Create a new job instance.
      */
@@ -85,7 +83,15 @@ class ProcessQuizSubmission implements ShouldQueue
         $data = $submissionStatus->data_snapshot;
 
         // Process in chunks to handle large datasets
-        $answers = $data['answers'] ?? [];
+        // For normal submissions, answers are nested under 'answers'
+        // For hybrid submissions, they're at the root level as referencia_iii, referencia_i
+        $answers = $data['answers'] ?? [
+            'referencia_iii' => $data['referencia_iii'] ?? null,
+            'referencia_i' => $data['referencia_i'] ?? null,
+            'referencia_v' => $data['referencia_v'] ?? null,
+            'escala_cisneros' => $data['escala_cisneros'] ?? null,
+            'custom_fields' => $data['custom_fields'] ?? null,
+        ];
         $ineImages = $data['ine_images'] ?? [];
 
         DB::transaction(function () use ($submissionStatus, $answers, $ineImages) {
@@ -120,7 +126,7 @@ class ProcessQuizSubmission implements ShouldQueue
         string $folio,
         string $personalId,
         string $organizationId,
-        int $quizId,
+        ?int $quizId,
         array $answers,
         array $ineImages = []
     ): void {
@@ -147,7 +153,7 @@ class ProcessQuizSubmission implements ShouldQueue
         string $folio,
         string $personalId,
         string $organizationId,
-        int $quizId,
+        ?int $quizId,
         array $answers,
         array $ineImages
     ): void {

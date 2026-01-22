@@ -134,7 +134,7 @@ const currentBlock = computed(() => {
             blockNumber: currentBlockIndex.value + 1,
             totalBlocks: props.questions.general_blocks.length,
             questions: block.questions.map(qId => ({
-                id: qId,
+                id: String(qId), // Convert to string to maintain question IDs as keys
                 text: props.questions.general[qId]
             }))
         };
@@ -261,10 +261,10 @@ const videoUrls = useVideoUrls({ questions: props.questions });
 const submitEvaluation = () => {
     isSubmitting.value = true;
     
+    // Enviar todos los datos juntos (como el formulario normal)
     const payload = {
-        referencia_iii: answers.value.referencia_iii,
-        referencia_iii_conditional: answers.value.referencia_iii,
-        referencia_i: answers.value.referencia_i || {}
+        referencia_iii: JSON.stringify(answers.value.referencia_iii),
+        referencia_i: JSON.stringify(answers.value.referencia_i || {})
     };
     
     console.log('Enviando datos híbridos:', payload);
