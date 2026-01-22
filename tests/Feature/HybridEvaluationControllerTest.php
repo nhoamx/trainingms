@@ -33,8 +33,8 @@ class HybridEvaluationControllerTest extends TestCase
             ->has('evaluationId')
             ->has('folio')
             ->has('organizationName')
-            ->has('questions.referencia_iii')
-            ->has('questions.referencia_i')
+            ->has('questions')
+            ->has('referencia_i_questions')
             ->where('evaluationId', $evaluation->id)
             ->where('folio', $evaluation->folio)
             ->where('organizationName', $organization->name)
@@ -143,8 +143,7 @@ class HybridEvaluationControllerTest extends TestCase
             ->where('folio', '010011234')
             ->where('organizationName', 'Test Organization Name')
             ->has('questions')
-            ->has('questions.referencia_iii')
-            ->has('questions.referencia_i')
+            ->has('referencia_i_questions')
         );
     }
 
@@ -186,7 +185,7 @@ class HybridEvaluationControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Hibrido/Take')
-            ->where('questions.referencia_iii', $referenciaIIIConfig)
+            ->where('questions', $referenciaIIIConfig)
         );
     }
 
@@ -204,12 +203,12 @@ class HybridEvaluationControllerTest extends TestCase
 
         $response = $this->get(route('hybrid.show', $evaluation->folio));
 
-        $referenciaIConfig = config('guide_i_questions');
+        $referenciaIConfig = config('referencia_i');
 
         $response->assertStatus(200);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Hibrido/Take')
-            ->where('questions.referencia_i', $referenciaIConfig)
+            ->where('referencia_i_questions', $referenciaIConfig)
         );
     }
 
@@ -239,5 +238,67 @@ class HybridEvaluationControllerTest extends TestCase
             ->where('evaluationId', $evaluation->id)
             ->where('folio', '030300042')
         );
+    }
+
+    public function test_update_accepts_json_string_answers(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $evaluation = PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'source' => 'hybrid',
+            'processing_status' => 'pending',
+            'referencia_iii_answers' => null,
+            'referencia_i_answers' => null,
+        ]);
+
+        $referenciaIIIData = ['1' => 'A', '2' => 'B'];
+        $conditionalData = ['condition_management' => true];
+        $referenciaIData = ['0' => true, '1' => false];
+
+        $response = $this->put(route('hybrid.update', $evaluation->id), [
+            'referencia_iii' => json_encode($referenciaIIIData),
+            'referencia_iii_conditional' => json_encode($conditionalData),
+            'referencia_i' => json_encode($referenciaIData),
+        ]);
+
+        $response->assertRedirect();
+
+        $evaluation->refresh();
+
+        // Las respuestas de referencia_iii y referencia_iii_conditional se combinan
+        $expectedMerged = array_merge($referenciaIIIData, $conditionalData);
+        $this->assertEquals($expectedMerged, $evaluation->referencia_iii_answers);
+        $this->assertEquals($referenciaIData, $evaluation->referencia_i_answers);
+        $this->assertEquals('completed', $evaluation->processing_status);
+    }
+
+    public function test_update_merges_conditional_answers_with_referencia_iii(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $evaluation = PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'source' => 'hybrid',
+            'processing_status' => 'pending',
+            'referencia_iii_answers' => null,
+            'referencia_i_answers' => null,
+        ]);
+
+        $referenciaIIIData = ['1' => 'A', '2' => 'B'];
+        $conditionalData = ['condition_management' => true];
+
+        $response = $this->put(route('hybrid.update', $evaluation->id), [
+            'referencia_iii' => json_encode($referenciaIIIData),
+            'referencia_iii_conditional' => json_encode($conditionalData),
+            'referencia_i' => json_encode([]),
+        ]);
+
+        $response->assertRedirect();
+
+        $evaluation->refresh();
+
+        $expectedMerged = array_merge($referenciaIIIData, $conditionalData);
+        $this->assertEquals($expectedMerged, $evaluation->referencia_iii_answers);
     }
 }

@@ -262,9 +262,9 @@ const submitEvaluation = () => {
     isSubmitting.value = true;
     
     const payload = {
-        referencia_iii: answers.value.referencia_iii,
-        referencia_iii_conditional: answers.value.referencia_iii,
-        referencia_i: answers.value.referencia_i || {}
+        referencia_iii: JSON.stringify(answers.value.referencia_iii),
+        referencia_iii_conditional: JSON.stringify(answers.value.referencia_iii),
+        referencia_i: JSON.stringify(answers.value.referencia_i || {})
     };
     
     console.log('Enviando datos híbridos:', payload);
