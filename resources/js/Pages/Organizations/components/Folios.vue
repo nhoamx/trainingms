@@ -29,6 +29,7 @@
                   <option value="">Selecciona un tipo</option>
                   <option value="presencial">Presencial</option>
                   <option value="en_linea">En línea</option>
+                  <option value="hibrido">Híbrido (OMR + Online)</option>
                 </select>
                 <p v-if="folioBatchForm.errors.type" class="mt-1 text-xs text-red-500">{{ folioBatchForm.errors.type }}</p>
               </div>
@@ -58,8 +59,8 @@
                 <div class="min-w-0 flex-auto">
                   <div class="flex items-center gap-x-3">
                     <h4 class="text-sm font-semibold leading-6 text-gray-900">{{ batch.name }}</h4>
-                    <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset" :class="batch.type === 'presencial' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'">
-                      {{ batch.type === 'presencial' ? 'Presencial' : 'En línea' }}
+                    <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset" :class="batch.type === 'presencial' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : batch.type === 'hibrido' ? 'bg-purple-50 text-purple-700 ring-purple-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'">
+                      {{ batch.type === 'presencial' ? 'Presencial' : batch.type === 'hibrido' ? 'Híbrido' : 'En línea' }}
                     </span>
                     <span class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
                       {{ batch.quantity }} folios
@@ -68,7 +69,7 @@
                   <p class="mt-1 text-xs text-gray-500">{{ batch.description || 'Sin descripción' }}</p>
                 </div>
                 <div class="flex shrink-0 items-center gap-x-2">
-                  <button v-if="batch.type === 'presencial'" @click="generatePdfForBatch(batch)" type="button" class="rounded-full bg-white p-1 text-gray-400 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2" title="Generar PDF con folios">
+                  <button v-if="batch.type === 'presencial' || batch.type === 'hibrido'" @click="generatePdfForBatch(batch)" type="button" class="rounded-full bg-white p-1 text-gray-400 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2" :title="batch.type === 'hibrido' ? 'Generar PDF con código QR (OMR + Híbrido)' : 'Generar PDF con folios'">
                     <DocumentArrowDownIcon class="h-5 w-5" />
                   </button>
                   <button v-if="batch.type === 'en_linea'" @click="showOnlineLink(batch)" type="button" class="rounded-full bg-white p-1 text-gray-400 hover:text-green-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2" title="Ver enlace de evaluación en línea">

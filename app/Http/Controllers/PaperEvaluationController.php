@@ -384,4 +384,62 @@ class PaperEvaluationController extends Controller
     {
         //
     }
+
+    /**
+     * Update hybrid evaluation with online answers (API endpoint)
+     * Used when user completes Referencia III/I via QR code
+     */
+    public function updateHybrid(Request $request, PaperEvaluation $paperEvaluation): JsonResponse
+    {
+        // Validate it's a hybrid evaluation
+        if ($paperEvaluation->source !== 'hybrid') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Esta evaluación no es de tipo híbrida',
+            ], 403);
+        }
+
+        // Validate it's pending (not already completed)
+        if ($paperEvaluation->processing_status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Esta evaluación ya ha sido procesada',
+            ], 409);
+        }
+
+        // Validate and parse data
+        $validated = $request->validate([
+            'referencia_iii' => 'nullable|json',
+            'referencia_iii_conditional' => 'nullable|json',
+            'referencia_i' => 'nullable|json',
+        ]);
+
+        // Decode JSON strings to arrays
+        $referenciaIII = isset($validated['referencia_iii']) ? json_decode($validated['referencia_iii'], true) : null;
+        $referenciaIIIConditional = isset($validated['referencia_iii_conditional']) ? json_decode($validated['referencia_iii_conditional'], true) : null;
+        $referenciaI = isset($validated['referencia_i']) ? json_decode($validated['referencia_i'], true) : null;
+
+        // Update evaluation with online answers
+        $paperEvaluation->update([
+            'referencia_iii_answers' => $referenciaIII,
+            'referencia_iii_conditional' => $referenciaIIIConditional,
+            'referencia_i_answers' => $referenciaI,
+            'processing_status' => 'completed',
+            'processed_at' => now(),
+            'raw_data' => array_merge(
+                $paperEvaluation->raw_data ?? [],
+                [
+                    'online_completed_at' => now()->toIso8601String(),
+                    'submission_ip' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]
+            ),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Evaluación completada exitosamente',
+            'is_complete' => $paperEvaluation->fresh()->isComplete(),
+        ]);
+    }
 }

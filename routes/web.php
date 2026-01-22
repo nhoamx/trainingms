@@ -7,6 +7,7 @@ use App\Http\Controllers\DimensionReportController;
 use App\Http\Controllers\DomainReportController;
 use App\Http\Controllers\EvaluationController;
 use App\Http\Controllers\GlobalResponseController;
+use App\Http\Controllers\HybridEvaluationController;
 use App\Http\Controllers\OMRController;
 use App\Http\Controllers\PeopleListController;
 use App\Http\Controllers\QuizController;
@@ -26,6 +27,10 @@ Route::get('/evaluacion', function () {
         'title' => 'Acceso a Evaluación',
     ]);
 })->name('online-evaluation.access');
+
+// Ruta pública para evaluaciones híbridas
+Route::get('/h/{folio}', [HybridEvaluationController::class, 'show'])->name('hybrid.show');
+Route::put('/hybrid-evaluations/{paperEvaluation}', [\App\Http\Controllers\PaperEvaluationController::class, 'updateHybrid'])->name('hybrid.update');
 
 Route::controller(\App\Http\Controllers\AuthController::class)->group(function () {
     Route::get('/login', 'showLogin')->name('login');

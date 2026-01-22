@@ -6,6 +6,7 @@ use App\Http\Requests\StoreOMRPdfRequest;
 use App\Jobs\GenerateOMRPdfJob;
 use App\Models\FolioBatch;
 use App\Models\Organization;
+use App\Models\PaperEvaluation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Browsershot\Browsershot;
@@ -169,7 +170,15 @@ class OMRController extends Controller
                 $personFolio
             );
 
-            $pageData = array_merge($viewData, ['folio' => $extendedFolio]);
+            // For hybrid batches generating Referencia V, create empty PaperEvaluation records
+            if ($batch->isHibrido() && $guideType === 'referencia-v') {
+                $this->createHybridPaperEvaluation($extendedFolio, $organization->id);
+            }
+
+            $pageData = array_merge($viewData, [
+                'folio' => $extendedFolio,
+                'isHybrid' => $batch->isHibrido() && $guideType === 'referencia-v',
+            ]);
             $htmlContent .= view("omr.{$guideType}", $pageData)->render();
 
             // Add page break except for the last page
@@ -348,6 +357,43 @@ class OMRController extends Controller
             'logo' => $request->input('logo'),
             'positions' => $positions,
             'areas' => $areas,
+        ]);
+    }
+
+    /**
+     * Create empty PaperEvaluation record for hybrid mode
+     * This pre-creates the record with UUID so it exists when user completes online evaluation
+     */
+    private function createHybridPaperEvaluation(string $folio, string $organizationId): void
+    {
+        // Check if record already exists (avoid duplicates on regeneration)
+        if (PaperEvaluation::where('folio', $folio)->exists()) {
+            return;
+        }
+
+        // Parse folio to get components
+        $folioData = PaperEvaluation::parseFolio($folio);
+
+        // Create empty record with pending status
+        PaperEvaluation::create([
+            'folio' => $folio,
+            'evaluation_type_code' => $folioData['evaluation_type_code'],
+            'organization_code' => $folioData['organization_code'],
+            'personal_folio' => $folioData['personal_folio'],
+            'organization_id' => $organizationId,
+            'evaluation_type' => $folioData['evaluation_type'],
+            'source' => 'hybrid',
+            'processing_status' => 'pending',
+            // All data fields are null initially
+            'demographic_data' => null,
+            'referencia_i_answers' => null,
+            'referencia_iii_answers' => null,
+            'referencia_iii_conditional' => null,
+            'citsats_s1' => null,
+            'raw_data' => json_encode([
+                'created_via' => 'pdf_generation',
+                'created_at' => now()->toIso8601String(),
+            ]),
         ]);
     }
 }
