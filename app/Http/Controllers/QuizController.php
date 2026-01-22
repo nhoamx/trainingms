@@ -342,13 +342,14 @@ class QuizController extends Controller
                 'referencia_v' => 'nullable',
                 'escala_cisneros' => 'nullable',
                 'custom_fields' => 'nullable',
+                'organization_info' => 'nullable',
                 'ine_frente' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'ine_reverso' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
 
             // Parse data - handle both JSON strings (production) and arrays (tests)
             $decodedData = [];
-            foreach (['referencia_iii', 'referencia_i', 'referencia_v', 'escala_cisneros', 'custom_fields'] as $key) {
+            foreach (['referencia_iii', 'referencia_i', 'referencia_v', 'escala_cisneros', 'custom_fields', 'organization_info'] as $key) {
                 if (isset($validated[$key]) && ! empty($validated[$key])) {
                     if (is_array($validated[$key])) {
                         // Direct array from tests
@@ -404,10 +405,7 @@ class QuizController extends Controller
             // Determine evaluation type based on quiz type
             $evaluationType = $this->determineEvaluationType($quiz);
 
-            // Parse the folio to get its components
-            $folioData = \App\Models\PaperEvaluation::parseFolio($folio);
-
-            // Store uploaded files if present
+            // Store uploaded files immediately (before job dispatch)
             $filesData = [];
             if (isset($validated['ine_frente'])) {
                 $path = $validated['ine_frente']->store(
@@ -425,31 +423,43 @@ class QuizController extends Controller
                 $filesData['ine_reverso'] = $path;
             }
 
-            // Create PaperEvaluation record
-            $paperEvaluation = \App\Models\PaperEvaluation::create([
+            // Merge file paths into referencia_v data
+            if (! empty($filesData) && isset($validated['referencia_v'])) {
+                $validated['referencia_v'] = array_merge($validated['referencia_v'], $filesData);
+            }
+
+            // Create SubmissionStatus record for async processing
+            $submissionStatus = \App\Models\SubmissionStatus::create([
                 'folio' => $folio,
-                'evaluation_type_code' => $folioData['evaluation_type_code'],
-                'organization_code' => $folioData['organization_code'],
-                'personal_folio' => $folioData['personal_folio'],
+                'personal_id' => $personalFolioCounter,
                 'organization_id' => $quiz->organization_id,
-                'evaluation_type' => $evaluationType,
-                'source' => 'online',
-                'processing_status' => 'completed',
-                'processed_at' => now(),
-                'demographic_data' => $this->extractDemographicData($validated, $filesData),
-                'referencia_i_answers' => $validated['referencia_i'] ?? null,
-                'referencia_iii_answers' => $this->extractReferenciaIIIAnswers($validated),
-                'referencia_iii_conditional' => $this->extractConditionalAnswers($validated),
-                'cisneros_answers' => $validated['escala_cisneros'] ?? null,
-                'raw_data' => [
+                'quiz_id' => $quiz->id,
+                'status' => \App\Models\SubmissionStatus::STATUS_PENDING,
+                'data_snapshot' => [
+                    'evaluation_type' => $evaluationType,
+                    'referencia_iii' => $validated['referencia_iii'] ?? null,
+                    'referencia_i' => $validated['referencia_i'] ?? null,
+                    'referencia_v' => $validated['referencia_v'] ?? null,
+                    'escala_cisneros' => $validated['escala_cisneros'] ?? null,
                     'custom_fields' => $validated['custom_fields'] ?? null,
-                    'quiz_id' => $quiz->id,
+                    'organization_info' => $validated['organization_info'] ?? null,
                     'quiz_name' => $quiz->name,
+                    'quiz_type' => match (true) {
+                        $quiz->is_cisneros => 'cisneros',
+                        $quiz->is_reduced => 'reducido',
+                        default => 'normal',
+                    },
                     'submitted_at' => now()->toIso8601String(),
+                    'submission_ip' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
                 ],
             ]);
 
-            // Return immediate response to user
+            // Dispatch job to process evaluation asynchronously
+            \App\Jobs\ProcessOnlineEvaluation::dispatch($submissionStatus->id)
+                ->onQueue('quiz_processing');
+
+            // Return immediate response to user (gracias page)
             return Inertia::render('Quiz/Completed', [
                 'quiz' => [
                     'id' => $quiz->id,
@@ -462,24 +472,11 @@ class QuizController extends Controller
                     ],
                 ],
                 'folio' => $folio,
-                'personalId' => $folioData['personal_folio'],
-                'message' => 'Examen completado exitosamente',
-                'processing' => false,
-                'evaluationId' => $paperEvaluation->id,
+                'personalId' => $personalFolioCounter,
+                'message' => 'Gracias por completar la evaluación. Sus respuestas han sido enviadas exitosamente.',
             ]);
-        } catch (\Illuminate\Database\QueryException $e) {
-            \Illuminate\Support\Facades\Log::error('Error de base de datos al guardar examen', [
-                'quiz_id' => $quiz->id,
-                'organization_id' => $quiz->organization_id,
-                'error_code' => $e->getCode(),
-                'error_message' => $e->getMessage(),
-                'sql_state' => $e->errorInfo[0] ?? null,
-                'user_ip' => $request->ip(),
-            ]);
-
-            return back()->with('error', 'Error al guardar el examen en la base de datos. Por favor, inténtelo nuevamente.');
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Error general al guardar examen', [
+            \Illuminate\Support\Facades\Log::error('Error al procesar envío de examen', [
                 'quiz_id' => $quiz->id,
                 'organization_id' => $quiz->organization_id,
                 'error_message' => $e->getMessage(),
@@ -489,7 +486,7 @@ class QuizController extends Controller
                 'user_ip' => $request->ip(),
             ]);
 
-            return back()->with('error', 'Error al guardar el examen. Por favor, inténtelo nuevamente.');
+            return back()->with('error', 'Error al procesar el examen. Por favor, inténtelo nuevamente.');
         }
     }
 
