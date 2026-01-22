@@ -261,25 +261,9 @@ const videoUrls = useVideoUrls({ questions: props.questions });
 const submitEvaluation = () => {
     isSubmitting.value = true;
     
-    // Separar respuestas generales de condicionales
-    const allAnswers = answers.value.referencia_iii;
-    const generalAnswers = {};
-    const conditionalAnswers = {};
-    
-    // Iterar sobre todas las respuestas
-    for (const key in allAnswers) {
-        // Preguntas condicionales: condition_* keys y preguntas 65-72
-        if (key.startsWith('condition_') || (parseInt(key) >= 65 && parseInt(key) <= 72)) {
-            conditionalAnswers[key] = allAnswers[key];
-        } else {
-            // Todo lo demás son generales (1-64, 73-78, acontecimientos_traumaticos)
-            generalAnswers[key] = allAnswers[key];
-        }
-    }
-    
+    // Enviar todos los datos juntos (como el formulario normal)
     const payload = {
-        referencia_iii: JSON.stringify(generalAnswers),
-        referencia_iii_conditional: JSON.stringify(conditionalAnswers),
+        referencia_iii: JSON.stringify(answers.value.referencia_iii),
         referencia_i: JSON.stringify(answers.value.referencia_i || {})
     };
     

@@ -34,9 +34,13 @@ class HybridEvaluationController extends Controller
             abort(403, 'Este folio no corresponde a una evaluación híbrida.');
         }
 
-        // Validate it hasn't been completed yet (referencia_iii_answers should be null)
+        // If already completed, show a nice completion page instead of error
         if ($evaluation->referencia_iii_answers !== null) {
-            abort(410, 'Esta evaluación ya ha sido completada.');
+            return Inertia::render('Hibrido/Completed', [
+                'folio' => $evaluation->folio,
+                'organizationName' => $evaluation->organization?->name ?? 'Organización',
+                'completedAt' => $evaluation->processed_at?->format('d/m/Y H:i'),
+            ]);
         }
 
         // Get question configurations

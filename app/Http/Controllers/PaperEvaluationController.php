@@ -7,6 +7,7 @@ use App\Models\PaperEvaluation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class PaperEvaluationController extends Controller
 {
@@ -396,50 +397,67 @@ class PaperEvaluationController extends Controller
             abort(403, 'Esta evaluación no es de tipo híbrida');
         }
 
-        // Validate it's pending (not already completed)
+        // If already processed, show completion page instead of error
         if ($paperEvaluation->processing_status !== 'pending') {
-            abort(409, 'Esta evaluación ya ha sido procesada');
+            return Inertia::render('Hibrido/Completed', [
+                'folio' => $paperEvaluation->folio,
+                'organizationName' => $paperEvaluation->organization?->name ?? 'Organización',
+                'completedAt' => $paperEvaluation->processed_at?->format('d/m/Y H:i'),
+            ]);
         }
 
-        // Validate and parse data
+        // Validate data (same as normal quiz submission)
         $validated = $request->validate([
-            'referencia_iii' => 'nullable|json',
-            'referencia_iii_conditional' => 'nullable|json',
-            'referencia_i' => 'nullable|json',
+            'referencia_iii' => 'nullable',
+            'referencia_i' => 'nullable',
         ]);
 
-        // Decode JSON strings to arrays
-        $referenciaIII = isset($validated['referencia_iii']) ? json_decode($validated['referencia_iii'], true) : [];
-        $referenciaIIIConditional = isset($validated['referencia_iii_conditional']) ? json_decode($validated['referencia_iii_conditional'], true) : [];
-        $referenciaI = isset($validated['referencia_i']) ? json_decode($validated['referencia_i'], true) : null;
-
-        // Merge referencia_iii and referencia_iii_conditional
-        $mergedReferenciaIII = array_merge($referenciaIII, $referenciaIIIConditional);
-
-        // Decode raw_data if it's a string, otherwise use as array
-        $rawData = $paperEvaluation->raw_data;
-        if (is_string($rawData)) {
-            $rawData = json_decode($rawData, true) ?? [];
-        } else {
-            $rawData = $rawData ?? [];
+        // Parse data - handle both JSON strings (production) and arrays (tests)
+        $decodedData = [];
+        foreach (['referencia_iii', 'referencia_i'] as $key) {
+            if (isset($validated[$key]) && ! empty($validated[$key])) {
+                if (is_array($validated[$key])) {
+                    $decodedData[$key] = $validated[$key];
+                } elseif (is_string($validated[$key])) {
+                    $decoded = json_decode($validated[$key], true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $decodedData[$key] = $decoded;
+                    }
+                }
+            }
         }
 
-        // Update evaluation with online answers
+        // Create SubmissionStatus record for async processing using the same Job as normal submissions
+        $submissionStatus = \App\Models\SubmissionStatus::create([
+            'folio' => $paperEvaluation->folio,
+            'personal_id' => $paperEvaluation->personal_folio,
+            'organization_id' => $paperEvaluation->organization_id,
+            'quiz_id' => null, // Hybrid evaluations don't have a quiz_id from normal quiz
+            'status' => \App\Models\SubmissionStatus::STATUS_PENDING,
+            'data_snapshot' => [
+                'evaluation_type' => $paperEvaluation->evaluation_type,
+                'referencia_iii' => $decodedData['referencia_iii'] ?? null,
+                'referencia_i' => $decodedData['referencia_i'] ?? null,
+                // Skip referencia_v since it was already captured from paper form
+                'is_hybrid' => true,
+                'paper_evaluation_id' => $paperEvaluation->id,
+                'submission_ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ],
+        ]);
+
+        // Dispatch the same job used for normal quiz submissions
+        \App\Jobs\ProcessQuizSubmission::dispatch(
+            $submissionStatus->id,
+            false // No image processing needed for hybrid
+        );
+
+        // Mark paper evaluation as completed
         $paperEvaluation->update([
-            'referencia_iii_answers' => $mergedReferenciaIII,
-            'referencia_i_answers' => $referenciaI,
             'processing_status' => 'completed',
             'processed_at' => now(),
-            'raw_data' => array_merge(
-                $rawData,
-                [
-                    'online_completed_at' => now()->toIso8601String(),
-                    'submission_ip' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                ]
-            ),
         ]);
 
-        return redirect()->back()->with('success', 'Evaluación completada exitosamente');
+        return redirect()->back()->with('success', 'Evaluación completada exitosamente. Los datos se están procesando.');
     }
 }
