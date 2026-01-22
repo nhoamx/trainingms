@@ -51,9 +51,9 @@
                             type="radio"
                             :name="`question_${qIndex}`"
                             :value="option.value"
-                            :checked="modelValue[qIndex] === option.value"
+                            :checked="modelValue[String(qIndex)] === option.value"
                             :disabled="isDisabled(qIndex)"
-                            @change="updateAnswer(qIndex, option.value)"
+                            @change="updateAnswer(String(qIndex), option.value)"
                             class="form-radio h-4 w-4 text-slate-800"
                         >
                         <span class="text-sm text-slate-700">{{ option.label }}</span>

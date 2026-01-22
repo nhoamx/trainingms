@@ -176,7 +176,7 @@ const currentBlock = computed(() => {
             blockNumber: currentBlockIndex.value + 1,
             totalBlocks: props.quiz.questions.general_blocks.length,
             questions: block.questions.map(qId => ({
-                id: qId,
+                id: String(qId), // Convert to string to maintain question IDs as keys
                 text: props.quiz.questions.general[qId]
             }))
         };

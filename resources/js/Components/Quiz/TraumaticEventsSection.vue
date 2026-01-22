@@ -26,9 +26,9 @@
                             type="radio"
                             :name="`${namePrefix}_${index}`"
                             :value="option.value"
-                            :checked="modelValue?.[index] === option.value"
+                            :checked="modelValue?.[String(index)] === option.value"
                             :disabled="isDisabled(index)"
-                            @change="updateAnswer(index, option.value)"
+                            @change="updateAnswer(String(index), option.value)"
                             class="form-radio h-4 w-4 text-slate-800"
                         >
                         <span class="text-sm text-slate-700">{{ option.label }}</span>
