@@ -416,6 +416,14 @@ class PaperEvaluationController extends Controller
         // Merge referencia_iii and referencia_iii_conditional
         $mergedReferenciaIII = array_merge($referenciaIII, $referenciaIIIConditional);
 
+        // Decode raw_data if it's a string, otherwise use as array
+        $rawData = $paperEvaluation->raw_data;
+        if (is_string($rawData)) {
+            $rawData = json_decode($rawData, true) ?? [];
+        } else {
+            $rawData = $rawData ?? [];
+        }
+
         // Update evaluation with online answers
         $paperEvaluation->update([
             'referencia_iii_answers' => $mergedReferenciaIII,
@@ -423,7 +431,7 @@ class PaperEvaluationController extends Controller
             'processing_status' => 'completed',
             'processed_at' => now(),
             'raw_data' => array_merge(
-                $paperEvaluation->raw_data ?? [],
+                $rawData,
                 [
                     'online_completed_at' => now()->toIso8601String(),
                     'submission_ip' => $request->ip(),
