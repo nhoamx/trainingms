@@ -234,6 +234,27 @@
         justify-content: center; 
         align-items: center; 
     }
+    
+    /* Hybrid QR Code styles */
+    .hybrid-qr-container {
+        position: absolute;
+        top: 70mm;
+        right: 8mm;
+        width: 25mm;
+        text-align: center;
+    }
+    .hybrid-qr-code {
+        width: 20mm;
+        height: 20mm;
+        margin: 0 auto 2mm;
+        border: 1px solid #000;
+    }
+    .hybrid-qr-text {
+        font-size: 7px;
+        font-weight: bold;
+        line-height: 1.2;
+        color: #000;
+    }
 </style>
 
 <div class="folio-instructions-row">
@@ -270,6 +291,18 @@
             <p style="font-size: 10px;">• Es importante que conteste todas las preguntas.</p>
         </div>
     </div>
+
+    @if(isset($isHybrid) && $isHybrid)
+    <!-- QR Code for Hybrid Evaluation -->
+    <div class="hybrid-qr-container">
+        <div class="hybrid-qr-code">
+            {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(75)->generate(url('/h/' . $folio)) !!}
+        </div>
+        <div class="hybrid-qr-text">
+            Escanea para<br>completar<br>evaluación
+        </div>
+    </div>
+    @endif
 
     <div class="three-column-layout">
         <!-- COLUMNA 1 -->

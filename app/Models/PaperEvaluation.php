@@ -428,4 +428,62 @@ class PaperEvaluation extends Model
     {
         return $evaluationTypeCode.$organizationCode.$personalFolio;
     }
+
+    /**
+     * Check if evaluation is complete (has all required data)
+     * For hybrid evaluations, requires both demographic data and evaluation answers
+     * For paper evaluations, requires demographic data OR evaluation answers
+     * For online evaluations, requires evaluation answers
+     */
+    public function isComplete(): bool
+    {
+        if ($this->source === 'hybrid') {
+            // Hybrid requires demographic data AND at least one evaluation section
+            return ! empty($this->demographic_data) &&
+                   (! empty($this->referencia_iii_answers) || ! empty($this->referencia_i_answers));
+        }
+
+        if ($this->source === 'paper') {
+            // Paper evaluations are complete if they have any data
+            return ! empty($this->demographic_data) ||
+                   ! empty($this->referencia_iii_answers) ||
+                   ! empty($this->referencia_i_answers) ||
+                   ! empty($this->cisneros_answers) ||
+                   ! empty($this->likert_answers);
+        }
+
+        if ($this->source === 'online') {
+            // Online evaluations should have evaluation answers
+            return ! empty($this->referencia_iii_answers) ||
+                   ! empty($this->referencia_i_answers) ||
+                   ! empty($this->cisneros_answers);
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if evaluation is partially complete (hybrid evaluations only)
+     * Returns true if either part is completed but not both
+     */
+    public function isPartiallyComplete(): bool
+    {
+        if ($this->source !== 'hybrid') {
+            return false;
+        }
+
+        $hasDemographic = ! empty($this->demographic_data);
+        $hasEvaluation = ! empty($this->referencia_iii_answers) || ! empty($this->referencia_i_answers);
+
+        // Partially complete if one part exists but not both
+        return $hasDemographic xor $hasEvaluation;
+    }
+
+    /**
+     * Scope to filter hybrid evaluations only
+     */
+    public function scopeHybrid($query)
+    {
+        return $query->where('source', 'hybrid');
+    }
 }

@@ -18,7 +18,7 @@ class FolioBatchController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'quantity' => 'required|integer|min:1',
-            'type' => 'required|in:presencial,en_linea',
+            'type' => 'required|in:presencial,en_linea,hibrido',
         ]);
 
         // Calcular el siguiente número disponible para la organización
