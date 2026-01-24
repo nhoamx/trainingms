@@ -2,7 +2,12 @@
 
 @section('title', 'Guía de Referencia III')
 
-@section('guide-title', 'GUÍA DE REFERENCIA III - CUESTIONARIO PARA IDENTIFICAR LOS FACTORES DE RIESGO PSICOSOCIAL')
+@section('nom-header')
+    <h2>NOM-035-STPS-2018</h2>
+    <p></p>
+@endsection
+
+@section('guide-title', 'GUÍA DE REFERENCIA III - CUESTIONARIO PARA IDENTIFICAR LOS FACTORES DE RIESGO PSICOSOCIAL Y EVALUAR EL ENTORNO ORGANIZACIONAL EN LOS CENTROS DE TRABAJO')
 
 @section('content')
 <style>
@@ -71,7 +76,7 @@
     .right-side-container {
         flex: 2;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         gap: 2mm;
         min-width: 0;
     }
@@ -90,7 +95,7 @@
         display: flex;
         gap: 2mm;
         width: 100%;
-        margin-top: 3mm;
+        margin-top: 1mm;
     }
     .column {
         width: 32%;
@@ -221,10 +226,12 @@
         <div class="right-side-container">
             <div class="instructions">
                 <h3 style="font-weight: bold; font-size: 10px;">INSTRUCCIONES:</h3>
-                <p style="font-size: 10px;">• Las siguientes preguntas están relacionadas con las actividades que realiza en su trabajo y las condiciones en que las hace.</p>
-                <p style="font-size: 10px;">• Marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
+                <p style="font-size: 10px;">• Utilizar pluma negra, punta mediana.</p>
+                <p style="font-size: 10px;">• No doblar la hoja.</p>
+                <p style="font-size: 10px;">• Seleccionar solamente 1 opción en cada pregunta.</p>
+                <p style="font-size: 10px;">• Opciones:</p>
                 <p style="margin-left: 5mm; font-size: 10px;"><strong>Siempre - Casi siempre - Algunas veces - Casi nunca - Nunca</strong></p>
-                <p style="font-size: 10px;">• Es importante que conteste todas las preguntas.</p>
+                <p style="font-size: 10px;">• Importante contestar todas las preguntas.</p>
             </div>
             
             <!-- CITSATS-s1 Section: ocupando solo 1 de las 2 columnas del lado derecho -->
