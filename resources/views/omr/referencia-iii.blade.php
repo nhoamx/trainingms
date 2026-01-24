@@ -232,7 +232,7 @@
                 <p style="font-size: 10px;">• Opciones:</p>
                 <p style="margin-left: 5mm; font-size: 10px;"><strong>Siempre - Casi siempre - Algunas veces - Casi nunca - Nunca</strong></p>
                 <p style="font-size: 10px;">• Importante contestar todas las preguntas.</p>
-                <p style="font-size: 10px;">• Contestar objetivamente con sineridad tu percepción de 2 meces a la fecha, tomado en cuenta el departamenteo y las actividades que realizan.</p>
+                <p style="font-size: 10px;">• Contestar objetivamente con sineridad tu percepción de 2 meses a la fecha, tomado en cuenta el departamenteo y las actividades que realizan.</p>
                 <p style="font-size: 10px;">• Rellenar completamente el circulo.</p>
             </div>
         </div>
