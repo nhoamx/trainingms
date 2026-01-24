@@ -2,7 +2,12 @@
 
 @section('title', 'Guía de Referencia III')
 
-@section('guide-title', 'GUÍA DE REFERENCIA III - CUESTIONARIO PARA IDENTIFICAR LOS FACTORES DE RIESGO PSICOSOCIAL')
+@section('nom-header')
+    <h2>NOM-035-STPS-2018</h2>
+    <p></p>
+@endsection
+
+@section('guide-title', 'GUÍA DE REFERENCIA III - CUESTIONARIO PARA IDENTIFICAR LOS FACTORES DE RIESGO PSICOSOCIAL Y EVALUAR EL ENTORNO ORGANIZACIONAL EN LOS CENTROS DE TRABAJO')
 
 @section('content')
 <style>
@@ -71,7 +76,7 @@
     .right-side-container {
         flex: 2;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         gap: 2mm;
         min-width: 0;
     }
@@ -90,7 +95,7 @@
         display: flex;
         gap: 2mm;
         width: 100%;
-        margin-top: 3mm;
+        margin-top: 1mm;
     }
     .column {
         width: 32%;
@@ -221,30 +226,12 @@
         <div class="right-side-container">
             <div class="instructions">
                 <h3 style="font-weight: bold; font-size: 10px;">INSTRUCCIONES:</h3>
-                <p style="font-size: 10px;">• Las siguientes preguntas están relacionadas con las actividades que realiza en su trabajo y las condiciones en que las hace.</p>
-                <p style="font-size: 10px;">• Marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
+                <p style="font-size: 10px;">• Utilizar pluma negra, punta mediana.</p>
+                <p style="font-size: 10px;">• No doblar la hoja.</p>
+                <p style="font-size: 10px;">• Seleccionar solamente 1 opción en cada pregunta.</p>
+                <p style="font-size: 10px;">• Opciones:</p>
                 <p style="margin-left: 5mm; font-size: 10px;"><strong>Siempre - Casi siempre - Algunas veces - Casi nunca - Nunca</strong></p>
-                <p style="font-size: 10px;">• Es importante que conteste todas las preguntas.</p>
-            </div>
-            
-            <!-- CITSATS-s1 Section: ocupando solo 1 de las 2 columnas del lado derecho -->
-            <div class="citsats-section">
-                <div class="citsats-title">CITSATS-s1</div>
-                @for($i = 1; $i <= 6; $i++)
-                    <div class="citsats-question">
-                        <div class="citsats-number">{{ $i }}</div>
-                        <div class="citsats-options">
-                            <div class="citsats-option">
-                                <span class="citsats-option-label">SÍ</span>
-                                <div class="bubble-tiny"></div>
-                            </div>
-                            <div class="citsats-option">
-                                <span class="citsats-option-label">NO</span>
-                                <div class="bubble-tiny"></div>
-                            </div>
-                        </div>
-                    </div>
-                @endfor
+                <p style="font-size: 10px;">• Importante contestar todas las preguntas.</p>
             </div>
         </div>
     </div>
@@ -270,10 +257,22 @@
         // Ordenar por número
         ksort($allQuestions);
         
-        // Dividir en tres columnas
-        $totalQuestions = count($allQuestions);
-        $questionsPerColumn = ceil($totalQuestions / 3);
-        $columns = array_chunk($allQuestions, $questionsPerColumn, true);
+        // Dividir en tres columnas por rango específico
+        $column1 = [];
+        $column2 = [];
+        $column3 = [];
+        
+        foreach($allQuestions as $number => $questionData) {
+            if($number >= 1 && $number <= 27) {
+                $column1[$number] = $questionData;
+            } elseif($number >= 28 && $number <= 54) {
+                $column2[$number] = $questionData;
+            } else {
+                $column3[$number] = $questionData;
+            }
+        }
+        
+        $columns = [$column1, $column2, $column3];
     @endphp
 
     <div class="three-column-layout">
@@ -327,6 +326,53 @@
                         </div>
                     </div>
                 @endforeach
+                
+                @if($columnIndex == 2)
+                    <!-- CITSATS-s1 Section: 2 columnas dentro de la columna 3 -->
+                    <div style="margin-top: 4mm; padding: 2mm; ">
+                        <div style="font-weight: bold; font-size: 12px; margin-bottom: 2mm; padding-bottom: 1mm;">
+                            TMS - GRI - ATS - S1
+                        </div>
+                        <div style="display: flex; gap: 3mm;">
+                            <!-- Columna 1 -->
+                            <div style="flex: 1;">
+                                @for($i = 1; $i <= 3; $i++)
+                                    <div style="display: flex; align-items: center; gap: 2mm; margin-bottom: 2mm; font-size: 11px;">
+                                        <div style="font-weight: bold; width: 4mm;">{{ $i }}</div>
+                                        <div style="display: flex; gap: 3mm; align-items: center;">
+                                            <div style="display: flex; align-items: center; gap: 1mm;">
+                                                <span style="font-weight: bold;">SÍ</span>
+                                                <div class="bubble-tiny"></div>
+                                            </div>
+                                            <div style="display: flex; align-items: center; gap: 1mm;">
+                                                <span style="font-weight: bold;">NO</span>
+                                                <div class="bubble-tiny"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endfor
+                            </div>
+                            <!-- Columna 2 -->
+                            <div style="flex: 1;">
+                                @for($i = 4; $i <= 6; $i++)
+                                    <div style="display: flex; align-items: center; gap: 2mm; margin-bottom: 2mm; font-size: 11px;">
+                                        <div style="font-weight: bold; width: 4mm;">{{ $i }}</div>
+                                        <div style="display: flex; gap: 3mm; align-items: center;">
+                                            <div style="display: flex; align-items: center; gap: 1mm;">
+                                                <span style="font-weight: bold;">SÍ</span>
+                                                <div class="bubble-tiny"></div>
+                                            </div>
+                                            <div style="display: flex; align-items: center; gap: 1mm;">
+                                                <span style="font-weight: bold;">NO</span>
+                                                <div class="bubble-tiny"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endfor
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
         @endforeach
     </div>
