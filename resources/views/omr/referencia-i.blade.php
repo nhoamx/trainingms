@@ -4,6 +4,11 @@
 
 @section('guide-title', 'GUÍA DE REFERENCIA I - CUESTIONARIO PARA IDENTIFICAR ACONTECIMIENTOS TRAUMÁTICOS SEVEROS')
 
+@section('nom-header')
+    <h2>NOM-035-STPS-2018</h2>
+    <p></p>
+@endsection
+
 @section('content')
 <style>
     .folio-instructions-row { 
@@ -161,12 +166,14 @@
         @endfor
         </div>
         <div class="instructions">
-            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 13px;">INSTRUCCIONES:</h3>
-            <p style="font-size: 12px; margin-bottom: 0.8mm;">• Las siguientes preguntas están relacionadas con las situaciones que ha experimentado durante o con motivo del trabajo en las últimas 4 semanas.</p>
+            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 13px;">INDICACIONES:</h3>
+            <p style="font-size: 12px; margin-bottom: 0.8mm;">• Las siguientes preguntas están relacionadas con las situaciones que ha experimentado durante o con motivo del trabajo en el ultimo mes.</p>
+            <p style="font-size: 12px; margin-bottom: 0.8mm;">• Utiliza pluma negra, punta mediana.</p>
+            <p style="font-size: 12px; margin-bottom: 0.8mm;">• Rellena completamente el círculo.</p>
             <p style="font-size: 12px; margin-bottom: 0.8mm;">• Para responder las preguntas marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
             <p style="margin-left: 3mm; font-size: 12px; margin-bottom: 0.8mm;"><strong>SÍ</strong> = Si experimentó la situación que se pregunta</p>
             <p style="margin-left: 3mm; font-size: 12px; margin-bottom: 0.8mm;"><strong>NO</strong> = Si NO experimentó la situación que se pregunta</p>
-            <p style="font-size: 12px;">• Es importante que conteste todas las preguntas.</p>
+
         </div>
     </div>
 
