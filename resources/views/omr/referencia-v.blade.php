@@ -2,7 +2,13 @@
 
 @section('title', 'Guía de Referencia V')
 
-@section('guide-title', 'GUÍA DE REFERENCIA V - DATOS GENERALES DEL TRABAJADOR Y DEL CENTRO DE TRABAJO')
+@section('guide-title', 'GUÍA DE REFERENCIA V - DATOS DEL TRABAJADOR')
+
+@section('nom-header')
+    <h2>NOM-035-STPS-2018</h2>
+    <p></p>
+@endsection
+
 
 @section('content')
 <style>
@@ -285,10 +291,11 @@
             @endfor
         </div>
         <div class="instructions">
-            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 10px;">INSTRUCCIONES:</h3>
-            <p style="font-size: 10px; margin-bottom: 0.8mm;">• Las siguientes preguntas están relacionadas con sus datos generales, características sociodemográficas y las del centro de trabajo.</p>
-            <p style="font-size: 10px; margin-bottom: 0.8mm;">• Para responder marque completamente con tinta azul o negra el círculo de la opción que corresponda a su situación.</p>
-            <p style="font-size: 10px;">• Es importante que conteste todas las preguntas.</p>
+            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 10px;">INDICACIÓNES:</h3>
+            <p style="font-size: 10px; margin-bottom: 0.8mm;">• Las siguientes preguntas están relacionadas con sus datos generales.</p>
+            <p style="font-size: 10px; margin-bottom: 0.8mm;">• Utilizar pluma negra, punta mediana</p>
+            <p style="font-size: 10px;">• No doblar la hoja.</p>
+            <p style="font-size: 10px;">• Rellenar completamente el círculo.</p>
         </div>
     </div>
 
