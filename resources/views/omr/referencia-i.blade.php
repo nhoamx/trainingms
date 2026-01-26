@@ -135,6 +135,38 @@
 </style>
 
 <div>
+
+    @section('date-row')
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 5mm; width: 100%;">
+            <!-- Izquierda: XYZ -->
+            <div style="flex-shrink: 0; font-weight: bold; font-size: 12px;">
+                TMS-GR1-S1 S2 S3
+            </div>
+            
+            <!-- Centro: Nombre -->
+            <div style="flex: 1; display: flex; align-items: center; gap: 2mm;">
+                <span style="font-weight: bold; font-size: 12px;">NOMBRE:</span>
+                <div style="flex: 1; border-bottom: 2px solid black; height: 6mm;"></div>
+            </div>
+            
+            <!-- Derecha: Fecha -->
+            <div class="date-row" style="flex-shrink: 0;">
+                <div class="date-field">
+                    <span class="date-field-label">DÍA</span>
+                    <div class="date-field-box"></div>
+                </div>
+                <div class="date-field">
+                    <span class="date-field-label">MES</span>
+                    <div class="date-field-box"></div>
+                </div>
+                <div class="date-field">
+                    <span class="date-field-label">AÑO</span>
+                    <div class="date-field-box"></div>
+                </div>
+            </div>
+        </div>
+    @endsection
+
     <div class="folio-instructions-row">
         <div class="folio-section">
         <!-- Header con espacios para escribir los dígitos -->
@@ -169,19 +201,42 @@
             <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 14px;">INDICACIONES:</h3>
             <p style="font-size: 14px; margin-bottom: 0.8mm;">1. Las siguientes preguntas están relacionadas con las situaciones que ha experimentado durante o con motivo del trabajo en el ultimo mes.</p>
             <p style="font-size: 14px; margin-bottom: 0.8mm;">2. Utiliza pluma negra, punta mediana.</p>
-            <p style="font-size: 14px; margin-bottom: 0.8mm;">3. Rellena completamente el círculo.</p>
-            <p style="font-size: 14px; margin-bottom: 0.8mm;">4. Para responder las preguntas marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
+            <p style="font-size: 14px; margin-bottom: 0.8mm;">3. Para responder las preguntas marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
             <p style="margin-left: 3mm; font-size: 14px; margin-bottom: 0.8mm;"><strong>SÍ</strong> = Si experimentó la situación que se pregunta</p>
             <p style="margin-left: 3mm; font-size: 14px; margin-bottom: 0.8mm;"><strong>NO</strong> = Si NO experimentó la situación que se pregunta</p>
         </div>
     </div>
 
     <div class="content-section">
-        <div class="section-title">PREGUNTAS ({{ $totalQuestions }} total)</div>
         
         @foreach($questions as $index => $question)
+            @php
+                $questionNumber = $index + 1;
+            @endphp
+            
+            {{-- Sección II: Preguntas 1 y 2 --}}
+            @if($questionNumber === 1)
+                <div class="section-title" style="margin-top: 3mm; margin-bottom: 2mm; font-size: 11px;">
+                    II. Recuerdos persistentes sobre el acontecimiento (durante el último mes)
+                </div>
+            @endif
+            
+            {{-- Sección III: Preguntas 3 a 9 --}}
+            @if($questionNumber === 3)
+                <div class="section-title" style="margin-top: 3mm; margin-bottom: 2mm; font-size: 11px;">
+                    III. Esfuerzo por evitar circunstancias parecidas o asociadas al acontecimiento (durante el último mes)
+                </div>
+            @endif
+            
+            {{-- Sección IV: Preguntas 10 en adelante --}}
+            @if($questionNumber === 10)
+                <div class="section-title" style="margin-top: 3mm; margin-bottom: 2mm; font-size: 11px;">
+                    IV. Afectaciones (durante el último mes)
+                </div>
+            @endif
+            
             <div class="question-row">
-                <div class="question-number">{{ $index + 1 }}.</div>
+                <div class="question-number">{{ $questionNumber }}.</div>
                 <div class="question-text">
                     {{ $question }}
                 </div>
