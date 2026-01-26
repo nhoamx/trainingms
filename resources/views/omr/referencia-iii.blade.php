@@ -225,15 +225,23 @@
         
         <div class="right-side-container">
             <div class="instructions">
-                <h3 style="font-weight: bold; font-size: 10px;">INSTRUCCIONES:</h3>
-                <p style="font-size: 10px;">• Utilizar pluma negra, punta mediana.</p>
-                <p style="font-size: 10px;">• No doblar la hoja.</p>
-                <p style="font-size: 10px;">• Seleccionar solamente 1 opción en cada pregunta.</p>
-                <p style="font-size: 10px;">• Opciones:</p>
-                <p style="margin-left: 5mm; font-size: 10px;"><strong>Siempre - Casi siempre - Algunas veces - Casi nunca - Nunca</strong></p>
-                <p style="font-size: 10px;">• Importante contestar todas las preguntas.</p>
-                <p style="font-size: 10px;">• Contestar objetivamente con sineridad tu percepción de 2 meses a la fecha, tomado en cuenta el departamenteo y las actividades que realizan.</p>
-                <p style="font-size: 10px;">• Rellenar completamente el circulo.</p>
+                <h3 style="font-weight: bold; font-size: 14px;">INSTRUCCIONES:</h3>
+                <p style="font-size: 14px;">1. Utilizar pluma negra, punta mediana.</p>
+                <p style="font-size: 14px;">2. No doblar la hoja.</p>
+                <p style="font-size: 14px;">3. Seleccionar solamente 1 opción en cada pregunta.</p>
+                <p style="font-size: 14px;">4. Opciones:</p>
+                <p style="margin-left: 5mm; font-size: 14px;">
+                    <strong>
+                        - Siempre <br>
+                        - Casi siempre <br>
+                        - Algunas veces <br>
+                        - Casi nunca <br>
+                        - Nunca
+                    </strong>
+                </p>
+                <p style="font-size: 14px;">5. Importante contestar todas las preguntas.</p>
+                <p style="font-size: 14px;">6. Contestar objetivamente con sineridad tu percepción de 2 meses a la fecha, tomado en cuenta el departamenteo y las actividades que realizan.</p>
+                <p style="font-size: 14px;">7. Rellenar completamente el circulo.</p>
             </div>
         </div>
     </div>
