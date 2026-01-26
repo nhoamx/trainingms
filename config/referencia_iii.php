@@ -72,50 +72,62 @@ return [
         [
             'instructions' => 'Para responder las preguntas siguientes considere las condiciones ambientales de su centro de trabajo.',
             'questions' => [1, 2, 3, 4, 5],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque1.m4a',
         ],
         [
             'instructions' => 'Para responder a las preguntas siguientes piense en la cantidad y ritmo de trabajo que tiene.',
             'questions' => [6, 7, 8],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque2.m4a',
         ],
         [
             'instructions' => 'Las preguntas siguientes están relacionadas con el esfuerzo mental que le exige su trabajo.',
             'questions' => [9, 10, 11, 12],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque3.m4a',
         ],
         [
             'instructions' => 'Las preguntas siguientes están relacionadas con las actividades que realiza en su trabajo y las responsabilidades que tiene.',
             'questions' => [13, 14, 15, 16],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque4.m4a',
         ],
         [
             'instructions' => 'Las preguntas siguientes están relacionadas con su jornada de trabajo.',
             'questions' => [17, 18, 19, 20, 21, 22],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque5.m4a',
         ],
         [
             'instructions' => 'Las preguntas siguientes están relacionadas con las decisiones que puede tomar en su trabajo.',
             'questions' => [23, 24, 25, 26, 27, 28],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque6.m4a',
         ],
         [
             'instructions' => 'Las preguntas siguientes están relacionadas con cualquier tipo de cambio que ocurra en su trabajo (considere los últimos cambios realizados).',
             'questions' => [29, 30],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque7.m4a',
         ],
         [
             'instructions' => 'Las preguntas siguientes están relacionadas con la capacitación e información que se le proporciona sobre su trabajo.',
             'questions' => [31, 32, 33, 34, 35, 36],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque8.m4a',
         ],
         [
             'instructions' => 'Las preguntas siguientes están relacionadas con el o los jefes con quien tiene contacto.',
             'questions' => [37, 38, 39, 40, 41],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque9.m4a',
         ],
         [
             'instructions' => 'Las preguntas siguientes se refieren a las relaciones con sus compañeros.',
             'questions' => [42, 43, 44, 45, 46],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque10.m4a',
         ],
         [
             'instructions' => 'Las preguntas siguientes están relacionadas con la información que recibe sobre su rendimiento en el trabajo, el reconocimiento, el sentido de pertenencia y la estabilidad que le ofrece su trabajo.',
             'questions' => [47, 48, 49, 50, 51, 52, 53, 54, 55, 56],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque11.m4a',
         ],
         [
             'instructions' => 'Las preguntas siguientes están relacionadas con actos de violencia laboral (malos tratos, acoso, hostigamiento, acoso psicológico, etc.).',
             'questions' => [57, 58, 59, 60, 61, 62, 63, 64],
+            'audio_url' => 'https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/Bloque12.m4a',
         ],
     ],
 

@@ -48,7 +48,7 @@ class WarmOrganizationReportCache implements ShouldQueue
     ): void {
         $orgId = $this->organization->id;
 
-        Log::info("Warming report cache for organization {$orgId}");
+        // Log::info("Warming report cache for organization {$orgId}");
 
         // Warm Likert report cache if organization has Likert evaluations
         $hasLikertEvaluations = PaperEvaluation::where('organization_id', $orgId)
@@ -143,10 +143,10 @@ class WarmOrganizationReportCache implements ShouldQueue
             ->map(function ($fields) use ($customFieldLabels) {
                 $fieldKey = $fields->first()->field_key;
                 $dbLabel = $fields->first()->key_label;
-                
+
                 // Use label from config if exists, otherwise use database label
                 $label = $customFieldLabels[$fieldKey] ?? $dbLabel;
-                
+
                 return [
                     'label' => $label,
                     'values' => $fields->pluck('value')->unique()->filter()->values()->all(),
@@ -203,10 +203,10 @@ class WarmOrganizationReportCache implements ShouldQueue
             foreach ($evaluation->customFields as $customField) {
                 $fieldKey = $customField->field_key;
                 $dbLabel = $customField->key_label;
-                
+
                 // Use label from config if exists, otherwise use database label
                 $label = $customFieldLabels[$fieldKey] ?? $dbLabel;
-                
+
                 $evaluationCustomFields[$fieldKey] = [
                     'label' => $label,
                     'value' => $customField->value,

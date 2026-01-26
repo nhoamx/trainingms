@@ -12,6 +12,15 @@
                     <p class="text-base leading-relaxed text-blue-900 font-medium">{{ block.instructions }}</p>
                 </div>
             </div>
+            <!-- Audio del Bloque -->
+            <div v-if="block.audio_url" class="mt-4 pt-4 border-t border-blue-200">
+                <AudioPlayer
+                    :audio-url="block.audio_url"
+                    @ready="handleBlockAudioReady"
+                    @ended="handleBlockAudioEnded"
+                    @error="handleBlockAudioError"
+                />
+            </div>
         </div>
 
         <!-- Preguntas del Bloque -->
@@ -88,13 +97,34 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 
 const unlocked = ref({});
+const blockAudioUnlocked = ref(false);
 
 const getAudioUrl = (questionId) => {
     return props.audioUrls?.[questionId] || null;
 };
 
 const isDisabled = (questionId) => {
+    // Si hay audio de bloque y no se ha desbloqueado, bloquear todas las preguntas
+    if (props.block?.audio_url && !blockAudioUnlocked.value) {
+        return true;
+    }
+    // Si la pregunta individual tiene audio y no se ha desbloqueado
     return unlocked.value[questionId] === false;
+};
+
+const handleBlockAudioReady = () => {
+    // Bloquear todas las preguntas hasta que termine el audio del bloque
+    blockAudioUnlocked.value = false;
+};
+
+const handleBlockAudioEnded = () => {
+    // Desbloquear todas las preguntas cuando termine el audio del bloque
+    blockAudioUnlocked.value = true;
+};
+
+const handleBlockAudioError = () => {
+    // Si falla el audio del bloque, habilitar las respuestas
+    blockAudioUnlocked.value = true;
 };
 
 const handleAudioReady = (questionId) => {
@@ -123,6 +153,13 @@ const primeUnlockState = () => {
         });
     }
     unlocked.value = next;
+    
+    // Si el bloque no tiene audio, desbloquear inmediatamente
+    if (!props.block?.audio_url) {
+        blockAudioUnlocked.value = true;
+    } else {
+        blockAudioUnlocked.value = false;
+    }
 };
 
 watch(() => props.block, primeUnlockState, { immediate: true });

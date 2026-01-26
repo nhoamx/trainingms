@@ -120,9 +120,11 @@ class OrganizationDashboardController extends Controller
 
         $data = $this->organizationDataService->getDashboardData($organization, 'nom035');
 
-        // Calcular estadísticas por dominio y categoría
+        // Calcular estadísticas por dominio, categoría, dimensión y global
         $domainStatistics = $this->domainCalculationService->calculateDomainStatistics($organization);
         $categoryStatistics = $this->domainCalculationService->calculateCategoryStatistics($organization);
+        $dimensionStatistics = $this->domainCalculationService->calculateDimensionStatistics($organization);
+        $globalStatistics = $this->domainCalculationService->calculateGlobalStatistics($organization);
 
         // Obtener datos para análisis con filtros demográficos
         $analysisData = $this->domainCalculationService->getEvaluationsWithDemographicsAndScores($organization);
@@ -156,6 +158,8 @@ class OrganizationDashboardController extends Controller
             'dashboardData' => $data,
             'domainStatistics' => $domainStatistics,
             'categoryStatistics' => $categoryStatistics,
+            'dimensionStatistics' => $dimensionStatistics,
+            'globalStatistics' => $globalStatistics,
             'analysisData' => $analysisData,
             'evaluations' => $evaluations,
             'availableEvaluationTypes' => $availableEvaluationTypes,

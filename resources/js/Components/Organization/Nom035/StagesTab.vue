@@ -120,14 +120,9 @@
 
             <!-- Vista Global -->
             <div v-if="identificarViewMode === 'global'" class="bg-white rounded-lg p-6">
-              <div class="flex items-center justify-center p-8 border-2 border-dashed border-blue-300 rounded-lg">
-                <div class="text-center">
-                  <ChartBarIcon class="w-12 h-12 text-blue-400 mx-auto mb-3" />
-                  <p class="text-blue-700 font-medium">Vista Global</p>
-                  <p class="text-sm text-blue-600 mt-1">Panorama general de todos los riesgos psicosociales</p>
-                  <p class="text-xs text-blue-500 mt-2">En desarrollo</p>
-                </div>
-              </div>
+              <GlobalCharts 
+                :globalStatistics="props.globalStatistics"
+              />
             </div>
 
             <!-- Gráficas de dominios -->
@@ -152,14 +147,12 @@
 
             <!-- Vista Dimensiones -->
             <div v-if="identificarViewMode === 'dimensions'" class="bg-white rounded-lg p-6">
-              <div class="flex items-center justify-center p-8 border-2 border-dashed border-blue-300 rounded-lg">
-                <div class="text-center">
-                  <Cog6ToothIcon class="w-12 h-12 text-blue-400 mx-auto mb-3" />
-                  <p class="text-blue-700 font-medium">Vista por Dimensiones</p>
-                  <p class="text-sm text-blue-600 mt-1">Análisis detallado por dimensión de riesgo</p>
-                  <p class="text-xs text-blue-500 mt-2">En desarrollo</p>
-                </div>
-              </div>
+              <DimensionCharts 
+                :dimensions="props.dimensionStatistics?.dimensions || {}"
+                :total-evaluations="props.dimensionStatistics?.total_evaluations || 0"
+                :colors="props.dimensionStatistics?.colors || {}"
+                :labels="props.dimensionStatistics?.labels || {}"
+              />
             </div>
 
             <!-- Vista Preguntas -->
@@ -625,6 +618,8 @@ import { ref, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import DomainCharts from './Charts/DomainCharts.vue';
 import CategoryCharts from './Charts/CategoryCharts.vue';
+import DimensionCharts from './Charts/DimensionCharts.vue';
+import GlobalCharts from './Charts/GlobalCharts.vue';
 import AnalysisFilters from './Charts/AnalysisFilters.vue';
 import RiskDistributionCards from './Charts/RiskDistributionCards.vue';
 import RiskPieChart from './Charts/RiskPieChart.vue';
@@ -651,6 +646,20 @@ interface DomainStatistics {
 
 interface CategoryStatistics {
   categories: Record<string, unknown>;
+  total_evaluations: number;
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
+interface DimensionStatistics {
+  dimensions: Record<string, unknown>;
+  total_evaluations: number;
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
+interface GlobalStatistics {
+  global: Record<string, unknown>;
   total_evaluations: number;
   colors: Record<string, string>;
   labels: Record<string, string>;
@@ -686,6 +695,8 @@ interface AnalysisData {
 interface Props {
   domainStatistics?: DomainStatistics;
   categoryStatistics?: CategoryStatistics;
+  dimensionStatistics?: DimensionStatistics;
+  globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
   organizationId?: string | number;
 }
@@ -693,6 +704,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   domainStatistics: () => ({ domains: {}, total_evaluations: 0, colors: {}, labels: {} }),
   categoryStatistics: () => ({ categories: {}, total_evaluations: 0, colors: {}, labels: {} }),
+  dimensionStatistics: () => ({ dimensions: {}, total_evaluations: 0, colors: {}, labels: {} }),
+  globalStatistics: () => ({ global: {}, total_evaluations: 0, colors: {}, labels: {} }),
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
   organizationId: () => '',
 });
