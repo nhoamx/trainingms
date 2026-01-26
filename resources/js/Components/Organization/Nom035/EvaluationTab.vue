@@ -674,7 +674,7 @@ const analysisTabs = [
   { key: 'calificacion', label: 'Calificación final' },
   { key: 'categoria', label: 'Categoría' },
   { key: 'dominio', label: 'Dominio' },
-  { key: 'dimension', label: 'Dimensión' },
+  //{ key: 'dimension', label: 'Dimensión' },
 ];
 
 const totalEvaluations = computed(() => props.evaluations?.length || 0);
