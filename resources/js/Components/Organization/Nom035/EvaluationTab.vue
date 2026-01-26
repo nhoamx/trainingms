@@ -392,10 +392,237 @@
         </div>
 
         <!-- Tab: Dimensión -->
-        <!-- <div v-show="activeAnalysisTab === 'dimension'" class="space-y-6">
+        <div v-show="activeAnalysisTab === 'dimension'" class="space-y-6">
           <h4 class="text-lg font-bold text-slate-900 mb-4">Dimensiones – Rangos de calificación</h4>
-
-        </div> -->
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200 border border-slate-200 rounded-lg">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    Dimensión
+                  </th>
+                  <th scope="col" class="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase tracking-wider bg-blue-50">
+                    Nulo o despreciable
+                  </th>
+                  <th scope="col" class="px-4 py-3 text-center text-xs font-semibold text-green-700 uppercase tracking-wider bg-green-50">
+                    Bajo
+                  </th>
+                  <th scope="col" class="px-4 py-3 text-center text-xs font-semibold text-amber-700 uppercase tracking-wider bg-amber-50">
+                    Medio
+                  </th>
+                  <th scope="col" class="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider bg-orange-50">
+                    Alto
+                  </th>
+                  <th scope="col" class="px-4 py-3 text-center text-xs font-semibold text-red-700 uppercase tracking-wider bg-red-50">
+                    Muy Alto
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-slate-200">
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Trabajos peligrosos</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">C<sub>dim</sub> = 1</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">C<sub>dim</sub> = 2</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">C<sub>dim</sub> = 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> = 4</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Condiciones peligrosas e inseguras</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Cargas contradictorias o inconsistentes</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Cargas cuantitativas</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Cargas de alta responsabilidad</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Condiciones deficientes e insalubres</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Escasa o nula retroalimentación del desempeño</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Inestabilidad laboral</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Influencia de las responsabilidades familiares</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Influencia del trabajo fuera del centro laboral</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Insuficiente participación y manejo del cambio</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Jornadas de trabajo extensas</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Limitada o inexistente capacitación</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Limitada o nula posibilidad de desarrollo</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Limitado sentido de pertenencia</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Ritmos de trabajo acelerado</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 3</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">2 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">4 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 6</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Carga mental</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 4</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">3 &lt; C<sub>dim</sub> &lt; 7</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">6 &lt; C<sub>dim</sub> &lt; 10</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 9</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Cargas psicológicas emocionales</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">4 &lt; C<sub>dim</sub> &lt; 9</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">8 &lt; C<sub>dim</sub> &lt; 13</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 12</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Deficiente relación con los colaboradores que supervisa</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">4 &lt; C<sub>dim</sub> &lt; 9</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">8 &lt; C<sub>dim</sub> &lt; 13</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 12</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Escaso o nulo reconocimiento y compensación</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">4 &lt; C<sub>dim</sub> &lt; 9</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">8 &lt; C<sub>dim</sub> &lt; 13</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 12</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Escaza claridad de funciones</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">4 &lt; C<sub>dim</sub> &lt; 9</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">8 &lt; C<sub>dim</sub> &lt; 13</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 12</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Falta de control y autonomía sobre el trabajo</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 5</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">4 &lt; C<sub>dim</sub> &lt; 9</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">8 &lt; C<sub>dim</sub> &lt; 13</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 12</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Características del liderazgo</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 6</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">5 &lt; C<sub>dim</sub> &lt; 11</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">10 &lt; C<sub>dim</sub> &lt; 16</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 15</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Relaciones sociales en el trabajo</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 6</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">5 &lt; C<sub>dim</sub> &lt; 11</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">10 &lt; C<sub>dim</sub> &lt; 16</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 15</td>
+                </tr>
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-900">Violencia laboral</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-blue-50/30">C<sub>dim</sub> = 0</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-green-50/30">0 &lt; C<sub>dim</sub> &lt; 9</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-amber-50/30">8 &lt; C<sub>dim</sub> &lt; 17</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-orange-50/30">16 &lt; C<sub>dim</sub> &lt; 25</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-600 bg-red-50/30">C<sub>dim</sub> &gt; 24</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -447,7 +674,7 @@ const analysisTabs = [
   { key: 'calificacion', label: 'Calificación final' },
   { key: 'categoria', label: 'Categoría' },
   { key: 'dominio', label: 'Dominio' },
-  //{ key: 'dimension', label: 'Dimensión' },
+  { key: 'dimension', label: 'Dimensión' },
 ];
 
 const totalEvaluations = computed(() => props.evaluations?.length || 0);

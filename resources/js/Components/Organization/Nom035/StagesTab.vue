@@ -38,42 +38,94 @@
       <!-- Identificar Tab -->
       <div v-if="activeSubTab === 'identificar'" class="space-y-6">
         <div class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-8 border border-blue-200 hover:shadow-lg transition-shadow">
-          <!-- <div class="flex items-center gap-3 mb-6">
-            <div class="p-2 bg-blue-100 rounded-lg">
-              <MagnifyingGlassIcon class="w-6 h-6 text-blue-600" />
-            </div>
-            <h3 class="text-2xl font-bold text-blue-900">Identificar Riesgos Psicosociales</h3>
-          </div> -->
           
           <!-- Contenido si hay datos -->
           <div v-if="props.domainStatistics && Object.keys(props.domainStatistics.domains || {}).length > 0" class="space-y-6">
-            <!-- Toggle Dominios/Categorías -->
+            <!-- Selector de Vistas -->
             <div class="bg-white rounded-lg p-4 border border-slate-200">
-              <div class="flex items-center gap-4">
-                <span class="text-sm font-medium text-slate-700">Vista:</span>
-                <div class="flex gap-2">
-                  <button
-                    @click="identificarViewMode = 'domains'"
-                    :class="[
-                      'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                      identificarViewMode === 'domains'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    ]"
-                  >
-                    Dominios
-                  </button>
-                  <button
-                    @click="identificarViewMode = 'categories'"
-                    :class="[
-                      'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                      identificarViewMode === 'categories'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    ]"
-                  >
-                    Categorías
-                  </button>
+              <div class="flex flex-col gap-4">
+                <div class="flex items-center gap-4">
+                  <span class="text-sm font-medium text-slate-700">Vista:</span>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      @click="identificarViewMode = 'global'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        identificarViewMode === 'global'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Global
+                    </button>
+                    <button
+                      @click="identificarViewMode = 'domains'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        identificarViewMode === 'domains'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Dominios
+                    </button>
+                    <button
+                      @click="identificarViewMode = 'categories'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        identificarViewMode === 'categories'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Categorías
+                    </button>
+                    <button
+                      @click="identificarViewMode = 'dimensions'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        identificarViewMode === 'dimensions'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Dimensiones
+                    </button>
+                    <button
+                      @click="identificarViewMode = 'questions'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        identificarViewMode === 'questions'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Preguntas
+                    </button>
+                    <button
+                      @click="identificarViewMode = 'blocks'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        identificarViewMode === 'blocks'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Bloques
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vista Global -->
+            <div v-if="identificarViewMode === 'global'" class="bg-white rounded-lg p-6">
+              <div class="flex items-center justify-center p-8 border-2 border-dashed border-blue-300 rounded-lg">
+                <div class="text-center">
+                  <ChartBarIcon class="w-12 h-12 text-blue-400 mx-auto mb-3" />
+                  <p class="text-blue-700 font-medium">Vista Global</p>
+                  <p class="text-sm text-blue-600 mt-1">Panorama general de todos los riesgos psicosociales</p>
+                  <p class="text-xs text-blue-500 mt-2">En desarrollo</p>
                 </div>
               </div>
             </div>
@@ -96,6 +148,42 @@
                 :colors="props.categoryStatistics?.colors || {}"
                 :labels="props.categoryStatistics?.labels || {}"
               />
+            </div>
+
+            <!-- Vista Dimensiones -->
+            <div v-if="identificarViewMode === 'dimensions'" class="bg-white rounded-lg p-6">
+              <div class="flex items-center justify-center p-8 border-2 border-dashed border-blue-300 rounded-lg">
+                <div class="text-center">
+                  <Cog6ToothIcon class="w-12 h-12 text-blue-400 mx-auto mb-3" />
+                  <p class="text-blue-700 font-medium">Vista por Dimensiones</p>
+                  <p class="text-sm text-blue-600 mt-1">Análisis detallado por dimensión de riesgo</p>
+                  <p class="text-xs text-blue-500 mt-2">En desarrollo</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vista Preguntas -->
+            <div v-if="identificarViewMode === 'questions'" class="bg-white rounded-lg p-6">
+              <div class="flex items-center justify-center p-8 border-2 border-dashed border-blue-300 rounded-lg">
+                <div class="text-center">
+                  <ClipboardDocumentListIcon class="w-12 h-12 text-blue-400 mx-auto mb-3" />
+                  <p class="text-blue-700 font-medium">Vista por Preguntas</p>
+                  <p class="text-sm text-blue-600 mt-1">Análisis individual de cada pregunta del cuestionario</p>
+                  <p class="text-xs text-blue-500 mt-2">En desarrollo</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vista Bloques -->
+            <div v-if="identificarViewMode === 'blocks'" class="bg-white rounded-lg p-6">
+              <div class="flex items-center justify-center p-8 border-2 border-dashed border-blue-300 rounded-lg">
+                <div class="text-center">
+                  <DocumentChartBarIcon class="w-12 h-12 text-blue-400 mx-auto mb-3" />
+                  <p class="text-blue-700 font-medium">Vista por Bloques</p>
+                  <p class="text-sm text-blue-600 mt-1">Agrupación de preguntas por bloques temáticos</p>
+                  <p class="text-xs text-blue-500 mt-2">En desarrollo</p>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -612,7 +700,7 @@ const props = withDefaults(defineProps<Props>(), {
 const activeSubTab = ref('identificar');
 
 // Identificar state
-const identificarViewMode = ref<'domains' | 'categories'>('domains');
+const identificarViewMode = ref<'global' | 'domains' | 'categories' | 'dimensions' | 'questions' | 'blocks'>('global');
 
 // Analysis state
 const analysisViewMode = ref<'domains' | 'categories'>('domains');

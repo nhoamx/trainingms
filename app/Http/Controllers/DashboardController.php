@@ -331,7 +331,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Add a boolean flag indicating if the organization has only Likert paper evaluations completed.
+     * Add boolean flags indicating what types of evaluations the organization has.
      */
     protected function addLikertOnlyFlag($organizations)
     {
@@ -341,10 +341,28 @@ class DashboardController extends Controller
             $baseQuery = \App\Models\PaperEvaluation::where('organization_id', $orgId)
                 ->where('processing_status', 'completed');
 
+            // Count different evaluation types
             $likertCount = (clone $baseQuery)->where('evaluation_type', 'likert')->count();
-            $otherCount = (clone $baseQuery)->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])->count();
+            $nom035Count = (clone $baseQuery)->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])->count();
 
-            $org['is_likert_only'] = $likertCount > 0 && $otherCount === 0;
+            // Check for NOM-002 assets
+            $nom002Count = \App\Models\Asset::where('organization_id', $orgId)->count();
+
+            // Check for paper evaluations (non-online)
+            $paperCount = \App\Models\PaperEvaluation::where('organization_id', $orgId)
+                ->where('processing_status', 'completed')
+                ->where('source', '!=', 'online')
+                ->count();
+
+            // Legacy flag
+            $org['is_likert_only'] = $likertCount > 0 && $nom035Count === 0;
+
+            // New flags for badge system
+            $org['has_nom_035'] = $nom035Count > 0;
+            $org['has_clima_laboral'] = $likertCount > 0;
+            $org['has_nom_002'] = $nom002Count > 0;
+            $org['has_paper_evaluations'] = $paperCount > 0;
+            $org['has_online_evaluations'] = ($org['online_evaluations_count'] ?? 0) > 0;
 
             return $org;
         });
