@@ -291,11 +291,11 @@
             @endfor
         </div>
         <div class="instructions">
-            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 10px;">INDICACIÓNES:</h3>
-            <p style="font-size: 10px; margin-bottom: 0.8mm;">• Las siguientes preguntas están relacionadas con sus datos generales.</p>
-            <p style="font-size: 10px; margin-bottom: 0.8mm;">• Utilizar pluma negra, punta mediana</p>
-            <p style="font-size: 10px;">• No doblar la hoja.</p>
-            <p style="font-size: 10px;">• Rellenar completamente el círculo.</p>
+            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 14px;">INDICACIÓNES:</h3>
+            <p style="font-size: 14px; margin-bottom: 0.8mm;">1. Las siguientes preguntas están relacionadas con sus datos generales.</p>
+            <p style="font-size: 14px; margin-bottom: 0.8mm;">2. Utilizar pluma negra, punta mediana</p>
+            <p style="font-size: 14px;">3. No doblar la hoja.</p>
+            <p style="font-size: 14px;">4. Rellenar completamente el círculo.</p>
         </div>
     </div>
 
