@@ -15,7 +15,8 @@
     .folio-instructions-row { 
         display: flex; 
         gap: 4mm; 
-        margin-bottom: 2.5mm; 
+        margin-top: 3mm;
+        margin-bottom: 3mm; 
         align-items: flex-start; 
     }
     .folio-section { 
@@ -263,6 +264,33 @@
     }
 </style>
 
+
+
+@section('date-row')
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 5mm; width: 100%;">
+        <!-- Izquierda: XYZ -->
+        <div style="flex-shrink: 0; font-weight: bold; font-size: 12px;">
+            TMS-GR5-DT
+        </div>
+        
+        <!-- Derecha: Fecha -->
+        <div style="display: flex; gap: 3mm; align-items: center; flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 1mm;">
+                <span style="font-size: 10px; font-weight: bold;">Día:</span>
+                <div style="width: 15mm; border-bottom: 2px solid black; height: 4mm;"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1mm;">
+                <span style="font-size: 10px; font-weight: bold;">Mes:</span>
+                <div style="width: 15mm; border-bottom: 2px solid black; height: 4mm;"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1mm;">
+                <span style="font-size: 10px; font-weight: bold;">Año:</span>
+                <div style="width: 15mm; border-bottom: 2px solid black; height: 4mm;"></div>
+            </div>
+        </div>
+    </div>
+@endsection
+
 <div class="folio-instructions-row">
         <div class="folio-section">
             <!-- Header con espacios para escribir los dígitos -->
@@ -454,7 +482,7 @@
             <!-- Ocupación/Profesión/Puesto -->
             <div class="coding-section" style="margin-top: 3mm;">
                 <div class="coding-title">OCUPACIÓN/PROFESIÓN/PUESTO</div>
-                <div class="coding-subtitle">Marque la letra correspondiente</div>
+                <div class="coding-subtitle">Rellene la letra correspondiente</div>
                 <div class="coding-grid">
                     <div class="coding-header"></div>
                     <div class="coding-header">A</div>
@@ -476,7 +504,7 @@
             <!-- Departamento/Sección/Área -->
             <div class="coding-section" style="margin-top: 2mm;">
                 <div class="coding-title">DEPARTAMENTO/SECCIÓN/ÁREA</div>
-                <div class="coding-subtitle">Marque la letra correspondiente</div>
+                <div class="coding-subtitle">Rellene la letra correspondiente</div>
                 <div class="coding-grid">
                     <div class="coding-header"></div>
                     <div class="coding-header">A</div>

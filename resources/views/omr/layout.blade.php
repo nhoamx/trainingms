@@ -131,7 +131,6 @@
             margin-bottom: 8px;
             border-bottom: 2px solid black;
             padding-bottom: 5px;
-            min-height: 18mm;
             /* ✅ El header está en ZONA SEGURA (inicia a 20mm del borde superior)
                - No interfiere con marcas OMR (5mm)
                - No interfiere con marcador de orientación (5mm + 4mm height)
@@ -189,21 +188,19 @@
 
         .date-field {
             display: flex;
-            flex-direction: column;
             align-items: center;
             gap: 1mm;
         }
 
         .date-field-label {
-            font-size: 9px;
+            font-size: 10px;
             font-weight: bold;
         }
 
-        .date-field-box {
-            width: 12mm;
-            height: 5mm;
-            border: 1.5px solid black;
-            background: white;
+        .date-field-line {
+            width: 15mm;
+            border-bottom: 2px solid black;
+            height: 4mm;
         }
 
         /* Estilos de folio y fecha movidos a plantillas individuales */
@@ -378,16 +375,16 @@
         @section('date-row')
             <div class="date-row">
                 <div class="date-field">
-                    <span class="date-field-label">DÍA</span>
-                    <div class="date-field-box"></div>
+                    <span class="date-field-label">Día:</span>
+                    <div class="date-field-line"></div>
                 </div>
                 <div class="date-field">
-                    <span class="date-field-label">MES</span>
-                    <div class="date-field-box"></div>
+                    <span class="date-field-label">Mes:</span>
+                    <div class="date-field-line"></div>
                 </div>
                 <div class="date-field">
-                    <span class="date-field-label">AÑO</span>
-                    <div class="date-field-box"></div>
+                    <span class="date-field-label">Año:</span>
+                    <div class="date-field-line"></div>
                 </div>
             </div>
         @show

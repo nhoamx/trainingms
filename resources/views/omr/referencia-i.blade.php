@@ -14,6 +14,7 @@
     .folio-instructions-row { 
         display: flex; 
         gap: 4mm; 
+        margin-top: 3mm;
         margin-bottom: 3mm; 
         align-items: flex-start; 
     }
@@ -150,18 +151,18 @@
             </div>
             
             <!-- Derecha: Fecha -->
-            <div class="date-row" style="flex-shrink: 0;">
-                <div class="date-field">
-                    <span class="date-field-label">DÍA</span>
-                    <div class="date-field-box"></div>
+            <div style="display: flex; gap: 3mm; align-items: center; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 1mm;">
+                    <span style="font-size: 10px; font-weight: bold;">Día:</span>
+                    <div style="width: 15mm; border-bottom: 2px solid black; height: 4mm;"></div>
                 </div>
-                <div class="date-field">
-                    <span class="date-field-label">MES</span>
-                    <div class="date-field-box"></div>
+                <div style="display: flex; align-items: center; gap: 1mm;">
+                    <span style="font-size: 10px; font-weight: bold;">Mes:</span>
+                    <div style="width: 15mm; border-bottom: 2px solid black; height: 4mm;"></div>
                 </div>
-                <div class="date-field">
-                    <span class="date-field-label">AÑO</span>
-                    <div class="date-field-box"></div>
+                <div style="display: flex; align-items: center; gap: 1mm;">
+                    <span style="font-size: 10px; font-weight: bold;">Año:</span>
+                    <div style="width: 15mm; border-bottom: 2px solid black; height: 4mm;"></div>
                 </div>
             </div>
         </div>

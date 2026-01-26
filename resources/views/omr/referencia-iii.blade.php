@@ -14,9 +14,9 @@
     .folio-instructions-row { 
         display: flex; 
         gap: 4mm; 
-        margin-bottom: 3mm;
+        margin-top: 3mm;
+        margin-bottom: 1mm;
         padding-bottom: 2mm;
-        border-bottom: 1.5px solid black;
         align-items: flex-start; 
     }
     .folio-section { 
@@ -195,6 +195,31 @@
     }
 </style>
 
+@section('date-row')
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 5mm; width: 100%;">
+            <!-- Izquierda: XYZ -->
+            <div style="flex-shrink: 0; font-weight: bold; font-size: 12px;">
+                TMS-GR3-FRP-EOF
+            </div>
+            
+            <!-- Derecha: Fecha -->
+            <div style="display: flex; gap: 3mm; align-items: center; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 1mm;">
+                    <span style="font-size: 10px; font-weight: bold;">Día:</span>
+                    <div style="width: 15mm; border-bottom: 2px solid black; height: 4mm;"></div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1mm;">
+                    <span style="font-size: 10px; font-weight: bold;">Mes:</span>
+                    <div style="width: 15mm; border-bottom: 2px solid black; height: 4mm;"></div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1mm;">
+                    <span style="font-size: 10px; font-weight: bold;">Año:</span>
+                    <div style="width: 15mm; border-bottom: 2px solid black; height: 4mm;"></div>
+                </div>
+            </div>
+        </div>
+    @endsection
+
 <div class="folio-instructions-row">
         <div class="folio-section">
             <!-- Header con espacios para escribir los dígitos -->
@@ -225,23 +250,23 @@
         
         <div class="right-side-container">
             <div class="instructions">
-                <h3 style="font-weight: bold; font-size: 14px;">INSTRUCCIONES:</h3>
-                <p style="font-size: 14px;">1. Utilizar pluma negra, punta mediana.</p>
-                <p style="font-size: 14px;">2. No doblar la hoja.</p>
-                <p style="font-size: 14px;">3. Seleccionar solamente 1 opción en cada pregunta.</p>
-                <p style="font-size: 14px;">4. Opciones:</p>
-                <p style="margin-left: 5mm; font-size: 14px;">
+                <h3 style="font-weight: bold; font-size: 12px;">INDICACIONES:</h3>
+                <p style="font-size: 12px;">1. Utilizar pluma negra, punta mediana.</p>
+                <p style="font-size: 12px;">2. No doblar la hoja.</p>
+                <p style="font-size: 12px;">3. Seleccionar solamente 1 opción en cada pregunta.</p>
+                <p style="font-size: 12px;">4. Opciones:</p>
+                <p style="margin-left: 5mm; font-size: 12px;">
                     <strong>
-                        - Siempre <br>
-                        - Casi siempre <br>
-                        - Algunas veces <br>
-                        - Casi nunca <br>
-                        - Nunca
+                        A. Siempre <br>
+                        B. Casi siempre <br>
+                        C. Algunas veces <br>
+                        D. Casi nunca <br>
+                        E. Nunca
                     </strong>
                 </p>
-                <p style="font-size: 14px;">5. Importante contestar todas las preguntas.</p>
-                <p style="font-size: 14px;">6. Contestar objetivamente con sineridad tu percepción de 2 meses a la fecha, tomado en cuenta el departamenteo y las actividades que realizan.</p>
-                <p style="font-size: 14px;">7. Rellenar completamente el circulo.</p>
+                <p style="font-size: 12px;">5. Importante contestar todas las preguntas.</p>
+                <p style="font-size: 12px;">6. Contestar objetivamente con sineridad tu percepción de 2 meses a la fecha, tomado en cuenta el departamento y las actividades que realizan.</p>
+                <p style="font-size: 12px;">7. Rellenar completamente el circulo.</p>
             </div>
         </div>
     </div>
@@ -339,7 +364,7 @@
                 
                 @if($columnIndex == 2)
                     <!-- CITSATS-s1 Section: 2 columnas dentro de la columna 3 -->
-                    <div style="margin-top: 4mm; padding: 2mm; ">
+                    <div style="margin-top: 1mm; padding: 2mm; ">
                         <div style="font-weight: bold; font-size: 12px; margin-bottom: 2mm; padding-bottom: 1mm;">
                             TMS - GRI - ATS - S1
                         </div>
@@ -348,7 +373,7 @@
                             <div style="flex: 1;">
                                 @for($i = 1; $i <= 3; $i++)
                                     <div style="display: flex; align-items: center; gap: 2mm; margin-bottom: 2mm; font-size: 11px;">
-                                        <div style="font-weight: bold; width: 4mm;">{{ $i }}</div>
+                                        <div style="font-weight: bold;">{{ $i }}</div>
                                         <div style="display: flex; gap: 3mm; align-items: center;">
                                             <div style="display: flex; align-items: center; gap: 1mm;">
                                                 <span style="font-weight: bold;">SÍ</span>
@@ -366,7 +391,7 @@
                             <div style="flex: 1;">
                                 @for($i = 4; $i <= 6; $i++)
                                     <div style="display: flex; align-items: center; gap: 2mm; margin-bottom: 2mm; font-size: 11px;">
-                                        <div style="font-weight: bold; width: 4mm;">{{ $i }}</div>
+                                        <div style="font-weight: bold;">{{ $i }}</div>
                                         <div style="display: flex; gap: 3mm; align-items: center;">
                                             <div style="display: flex; align-items: center; gap: 1mm;">
                                                 <span style="font-weight: bold;">SÍ</span>
