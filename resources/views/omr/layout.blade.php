@@ -5,6 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title') - NOM-035-STPS-2018</title>
     <style>
+        /* ============================================
+           OMR MARKER SYSTEM - ASYMMETRIC PATTERN
+           Prevents 180° rotation ambiguity
+           
+           ZONAS DE LA HOJA:
+           1. 🟦 Zona de marcas: 0-5mm (solo escáner)
+           2. 🟨 Zona de seguridad: 5-18mm (buffer vacío)
+           3. 🟩 Zona de contenido: 18mm+ (texto/burbujas)
+           ============================================ */
+        
+        :root {
+            /* Marcadores OMR */
+            --marker-offset: 5mm;           /* Distancia desde borde físico */
+            --marker-large: 10mm;
+            --marker-small: 7mm;
+            --orientation-width: 14mm;
+            --orientation-height: 4mm;
+            
+            /* Zonas de seguridad */
+            --safe-zone-margin: 18mm;       /* Inicio de zona segura de contenido */
+            --safe-zone-top: 20mm;          /* Margen superior aumentado (orientación + header) */
+        }
+
         /* Ensure the PDF renderer uses exact Letter size with no outer margins */
         @page {
             size: 215.9mm 279.4mm; /* US Letter */
@@ -29,37 +52,76 @@
             min-height: 279.4mm;  /* US Letter height */
             margin: 0 auto;
             background: white;
-            padding: 8mm 8mm;
+            /* ZONA SEGURA DE CONTENIDO: Comienza a 18-20mm del borde
+               - Marcas OMR: 5mm desde borde
+               - Buffer de seguridad: 5mm adicionales
+               - Contenido seguro: 18-20mm desde borde */
+            padding: var(--safe-zone-top) var(--safe-zone-margin) var(--safe-zone-margin) var(--safe-zone-margin);
             position: relative;
         }
 
-        /* Marcadores de alineación - Optimizados para detección OMR */
-        .alignment-marker {
+        /* ============================================
+           MARCADORES DE ALINEACIÓN - PATRÓN ASIMÉTRICO
+           🟦 ZONA DE MARCAS: Solo para el escáner OCR
+           
+           IMPORTANTE: Las marcas están en zona de escáner (5mm desde borde).
+           El contenido NUNCA debe tocar esta zona.
+           
+           Sistema a prueba de rotación 180°:
+           - TL: 10mm × 10mm (único grande)
+           - TR: 7mm × 7mm (pequeño)
+           - BL: 7mm × 7mm (pequeño)  
+           - BR: AUSENTE (clave del patrón)
+           - Orientación: 14mm × 4mm (rectángulo horizontal)
+           ============================================ */
+        
+        /* Base para todos los marcadores */
+        .omr-marker {
             position: absolute;
-            width: 8mm;
-            height: 8mm;
-            background: black;
+            background: #000;
             border-radius: 0;
+            /* Los marcadores NO se ven afectados por el padding del .page
+               porque usan position: absolute desde el borde del contenedor */
         }
 
+        /* TOP LEFT - Marcador GRANDE (único) */
         .marker-top-left {
-            top: 5mm;
-            left: 5mm;
+            top: var(--marker-offset);
+            left: var(--marker-offset);
+            width: var(--marker-large);
+            height: var(--marker-large);
         }
 
+        /* TOP RIGHT - Marcador pequeño */
         .marker-top-right {
-            top: 5mm;
-            right: 0mm;
+            top: var(--marker-offset);
+            right: var(--marker-offset);
+            width: var(--marker-small);
+            height: var(--marker-small);
         }
 
+        /* BOTTOM LEFT - Marcador pequeño */
         .marker-bottom-left {
-            bottom: 0;;
-            left: 5mm;
+            bottom: var(--marker-offset);
+            left: var(--marker-offset);
+            width: var(--marker-small);
+            height: var(--marker-small);
         }
 
-        .marker-bottom-right {
-            bottom: 0;
-            right: 0mm;
+        /* BOTTOM RIGHT - INTENCIONALMENTE AUSENTE
+           Este marcador NO EXISTE para crear patrón asimétrico.
+           Si detectas algo aquí, la hoja está rotada 180°. */
+
+        /* MARCADOR DE ORIENTACIÓN - Rectángulo horizontal superior
+           Referencia inequívoca: solo existe arriba en orientación correcta */
+        .orientation-marker {
+            position: absolute;
+            top: var(--marker-offset);
+            left: 50%;
+            width: var(--orientation-width);
+            height: var(--orientation-height);
+            background: #000;
+            transform: translateX(-50%);
         }
 
         /* Encabezado */
@@ -70,6 +132,10 @@
             border-bottom: 2px solid black;
             padding-bottom: 5px;
             min-height: 18mm;
+            /* ✅ El header está en ZONA SEGURA (inicia a 20mm del borde superior)
+               - No interfiere con marcas OMR (5mm)
+               - No interfiere con marcador de orientación (5mm + 4mm height)
+               - Buffer de seguridad: ~10mm entre orientación y contenido */
         }
 
         .header .header-logo {
@@ -146,6 +212,10 @@
         .content {
             margin-top: 1mm;
             clear: both;
+            /* ✅ Todo el contenido está en ZONA SEGURA
+               - Preguntas, burbujas, texto: >18mm desde bordes laterales
+               - Headers, títulos: >20mm desde borde superior
+               - Footer, últimas preguntas: >18mm desde borde inferior */
         }
 
         /* Burbujas para respuestas */
@@ -277,11 +347,16 @@
 </head>
 <body>
     <div class="page">
-        <!-- Marcadores de alineación en las 4 esquinas -->
-        <div class="alignment-marker marker-top-left"></div>
-        <div class="alignment-marker marker-top-right"></div>
-        <div class="alignment-marker marker-bottom-left"></div>
-        <div class="alignment-marker marker-bottom-right"></div>
+        <!-- ============================================
+             SISTEMA DE MARCADORES ASIMÉTRICO
+             - 3 marcadores de esquina (TL grande, TR/BL pequeños)
+             - 1 marcador de orientación (rectángulo horizontal)
+             - SIN marcador bottom-right (patrón inequívoco)
+             ============================================ -->
+        <div class="omr-marker marker-top-left"></div>
+        <div class="omr-marker marker-top-right"></div>
+        <div class="omr-marker marker-bottom-left"></div>
+        <div class="orientation-marker"></div>
 
         <!-- Encabezado -->
         <div class="header">
