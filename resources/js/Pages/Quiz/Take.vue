@@ -423,9 +423,6 @@ const submitEvaluation = () => {
                                     <span class="font-medium">Contestarás tres cuestionarios</span> (Guías de referencia)
                                 </li>
                                 <li class="leading-relaxed">
-                                    Contestar <span class="font-medium">objetivamente con sinceridad</span> tu percepción de <span class="font-medium">dos meses a la fecha</span>, tomando en cuenta el departamento y actividades que realizas.
-                                </li>
-                                <li class="leading-relaxed">
                                     En <span class="font-medium">algunas preguntas deberás escuchar el audio</span> antes de contestar.
                                 </li>
                                 <li class="leading-relaxed">
