@@ -213,6 +213,16 @@
         @foreach($questions as $index => $question)
             @php
                 $questionNumber = $index + 1;
+                $displayNumber = $questionNumber;
+                
+                // Resetear numeración al comenzar cada sección
+                if ($questionNumber >= 1 && $questionNumber <= 2) {
+                    $displayNumber = $questionNumber; // Sección II: 1, 2
+                } elseif ($questionNumber >= 3 && $questionNumber <= 9) {
+                    $displayNumber = $questionNumber - 2; // Sección III: 1, 2, 3, 4, 5, 6, 7
+                } else {
+                    $displayNumber = $questionNumber - 9; // Sección IV: 1, 2, 3...
+                }
             @endphp
             
             {{-- Sección II: Preguntas 1 y 2 --}}
@@ -237,7 +247,7 @@
             @endif
             
             <div class="question-row">
-                <div class="question-number">{{ $questionNumber }}.</div>
+                <div class="question-number">{{ $displayNumber }}.</div>
                 <div class="question-text">
                     {{ $question }}
                 </div>
