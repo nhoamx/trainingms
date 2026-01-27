@@ -101,47 +101,6 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
-const unlocked = ref({});
-
-const primeUnlockState = () => {
-    const next = { ...unlocked.value };
-    cisnerosQuestions.forEach((_, idx) => {
-        const key = `cisneros_${idx + 1}`;
-        const hasAudio = Boolean(getAudioUrl(key));
-        if (!(key in next)) {
-            next[key] = !hasAudio;
-        }
-    });
-    unlocked.value = next;
-};
-
-watch(cisnerosQuestions, primeUnlockState, { immediate: true });
-
-const isDisabled = (key) => unlocked.value[key] === false;
-
-const handleAudioEnded = (key) => {
-    unlocked.value = { ...unlocked.value, [key]: true };
-};
-
-const handleAudioError = (key) => {
-    unlocked.value = { ...unlocked.value, [key]: true };
-};
-
-const updateField = (field, value) => {
-    emit('update:modelValue', {
-        ...props.modelValue,
-        [field]: value
-    });
-};
-
-const getAudioUrl = (questionId) => {
-    return props.audioUrls?.[questionId] || null;
-};
-
-const getVideoUrl = (questionId) => {
-    return props.videoUrls?.[questionId] || null;
-};
-
 const cisnerosQuestions = [
     "Mi superior restringe mis posibilidades de comunicarme, hablar o reunirme con él",
     "Me ignoran, me excluyen o me hacen el vacío, fingen no verme o me hacen «invisible»",
@@ -188,4 +147,45 @@ const cisnerosQuestions = [
     "Me lanzan insinuaciones o proposiciones sexuales directas o indirectas",
     "En el transcurso de los últimos 6 meses, ¿ha sido Ud víctima de por lo menos alguna de las anteriores formas de maltrato psicológico de manera continuada (con una frecuencia de más de1 vez por semana)?, (ver lista de preguntas 1 a 43)"
 ];
+
+const getAudioUrl = (questionId) => {
+    return props.audioUrls?.[questionId] || null;
+};
+
+const getVideoUrl = (questionId) => {
+    return props.videoUrls?.[questionId] || null;
+};
+
+const unlocked = ref({});
+
+const primeUnlockState = () => {
+    const next = { ...unlocked.value };
+    cisnerosQuestions.forEach((_, idx) => {
+        const key = `cisneros_${idx + 1}`;
+        const hasAudio = Boolean(getAudioUrl(key));
+        if (!(key in next)) {
+            next[key] = !hasAudio;
+        }
+    });
+    unlocked.value = next;
+};
+
+watch(cisnerosQuestions, primeUnlockState, { immediate: true });
+
+const isDisabled = (key) => unlocked.value[key] === false;
+
+const handleAudioEnded = (key) => {
+    unlocked.value = { ...unlocked.value, [key]: true };
+};
+
+const handleAudioError = (key) => {
+    unlocked.value = { ...unlocked.value, [key]: true };
+};
+
+const updateField = (field, value) => {
+    emit('update:modelValue', {
+        ...props.modelValue,
+        [field]: value
+    });
+};
 </script>
