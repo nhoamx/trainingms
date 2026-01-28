@@ -57,7 +57,8 @@ const filteredUsers = computed(() => {
 
 const handleDisableUser = (user) => {
     if (confirm(`¿Estás seguro de que deseas ${user.is_disabled ? 'activar' : 'desactivar'} a ${user.name}?`)) {
-        router.post(route('users.disable', user.id), {}, {
+        const routeName = user.is_disabled ? 'users.enable' : 'users.disable'
+        router.post(route(routeName, user.id), {}, {
             preserveScroll: true,
         })
     }

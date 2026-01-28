@@ -34,6 +34,17 @@ class AuthController extends Controller
         }
 
         if (Auth::attempt($request->only('email', 'password'))) {
+            // Verificar si el usuario está desactivado
+            if (Auth::user()->is_disabled) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()->route('login')->withErrors([
+                    'email' => 'Tu cuenta ha sido desactivada. Contacta al administrador.',
+                ]);
+            }
+
             $request->session()->regenerate();
 
             // Si hay un redirect especificado, redirigir ahí

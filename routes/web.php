@@ -454,6 +454,9 @@ Route::middleware(['auth'])->group(function () {
         // Deshabilitar usuario
         Route::post('/usuarios/{user}/disable', [UserController::class, 'disable'])->name('users.disable');
 
+        // Habilitar usuario
+        Route::post('/usuarios/{user}/enable', [UserController::class, 'enable'])->name('users.enable');
+
         // Eliminar usuario
         Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 

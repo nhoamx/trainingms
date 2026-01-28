@@ -163,7 +163,22 @@ class UserController extends Controller
     {
         $user->update(['is_disabled' => true]);
 
+        // Invalidar todas las sesiones del usuario
+        \DB::table('sessions')
+            ->where('user_id', $user->id)
+            ->delete();
+
         return back()->with('success', 'Usuario deshabilitado exitosamente.');
+    }
+
+    /**
+     * Habilitar un usuario.
+     */
+    public function enable(User $user)
+    {
+        $user->update(['is_disabled' => false]);
+
+        return back()->with('success', 'Usuario activado exitosamente.');
     }
 
     /**
