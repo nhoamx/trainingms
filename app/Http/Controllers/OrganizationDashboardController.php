@@ -126,6 +126,17 @@ class OrganizationDashboardController extends Controller
         $dimensionStatistics = $this->domainCalculationService->calculateDimensionStatistics($organization);
         $globalStatistics = $this->domainCalculationService->calculateGlobalStatistics($organization);
 
+        // DEBUG: Log dimension statistics
+        \Log::info('DimensionStatistics Data:', [
+            'has_dimensions' => isset($dimensionStatistics['dimensions']),
+            'dimensions_count' => isset($dimensionStatistics['dimensions']) ? count($dimensionStatistics['dimensions']) : 0,
+            'dimension_names' => isset($dimensionStatistics['dimensions']) ? array_keys($dimensionStatistics['dimensions']) : [],
+            'total_evaluations' => $dimensionStatistics['total_evaluations'] ?? 0,
+            'has_colors' => isset($dimensionStatistics['colors']),
+            'has_labels' => isset($dimensionStatistics['labels']),
+            'full_data' => $dimensionStatistics,
+        ]);
+
         // Obtener datos para análisis con filtros demográficos
         $analysisData = $this->domainCalculationService->getEvaluationsWithDemographicsAndScores($organization);
 

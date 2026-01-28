@@ -771,7 +771,7 @@ class Nom035DomainCalculationService
 
         // Process all regular questions (1-68)
         foreach ($answers as $questionNumber => $answer) {
-            if ($answer === null) {
+            if ($answer === null || is_array($answer)) {
                 continue;
             }
 
@@ -792,7 +792,7 @@ class Nom035DomainCalculationService
         // Process management questions (69-72) if person is a manager
         if ($isManager && ! empty($managementQuestions)) {
             foreach ($managementQuestions as $questionNumber => $answer) {
-                if ($answer === null) {
+                if ($answer === null || is_array($answer)) {
                     continue;
                 }
 

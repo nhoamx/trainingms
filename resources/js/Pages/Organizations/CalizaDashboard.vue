@@ -82,6 +82,8 @@
               <StagesTab 
                 :domain-statistics="props.domainStatistics" 
                 :category-statistics="props.categoryStatistics"
+                :dimension-statistics="props.dimensionStatistics"
+                :global-statistics="props.globalStatistics"
                 :analysis-data="props.analysisData"
                 :organization-id="props.dashboardData.organization.id"
               />
@@ -199,6 +201,20 @@ interface CategoryStatistics {
   labels: Record<string, string>;
 }
 
+interface DimensionStatistics {
+  dimensions: Record<string, unknown>;
+  total_evaluations: number;
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
+interface GlobalStatistics {
+  global: Record<string, unknown>;
+  total_evaluations: number;
+  colors: Record<string, string>;
+  labels: Record<string, string>;
+}
+
 interface AnalysisData {
   evaluations: Array<{
     id: string;
@@ -244,6 +260,8 @@ interface Props {
   dashboardData: DashboardData;
   domainStatistics?: DomainStatistics;
   categoryStatistics?: CategoryStatistics;
+  dimensionStatistics?: DimensionStatistics;
+  globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
   evaluations?: Evaluation[];
   availableEvaluationTypes?: EvaluationType[];
@@ -252,6 +270,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   domainStatistics: () => ({ domains: {}, total_evaluations: 0, colors: {}, labels: {} }),
   categoryStatistics: () => ({ categories: {}, total_evaluations: 0, colors: {}, labels: {} }),
+  dimensionStatistics: () => ({ dimensions: {}, total_evaluations: 0, colors: {}, labels: {} }),
+  globalStatistics: () => ({ global: {}, total_evaluations: 0, colors: {}, labels: {} }),
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
   evaluations: () => [],
   availableEvaluationTypes: () => [],
