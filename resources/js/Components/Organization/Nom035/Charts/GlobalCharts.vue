@@ -172,8 +172,8 @@ const createRiskDistributionChart = (): void => {
   // Filtrar solo niveles con datos
   const levelsWithData = levelsOrder.filter(level => (distribution[level] || 0) > 0);
   const data = levelsWithData.map(level => distribution[level] || 0);
-  const backgroundColors = levelsWithData.map(level => colors.value[level]);
-  const levelLabels = levelsWithData.map(level => labels.value[level]);
+  const backgroundColors = levelsWithData.map(level => colors[level]);
+  const levelLabels = levelsWithData.map(level => labels[level]);
 
   const maxValue = Math.max(...data, 0);
   const stepSize = getConsistentStepSize(maxValue);

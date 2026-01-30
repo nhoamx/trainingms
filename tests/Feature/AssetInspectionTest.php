@@ -6,12 +6,12 @@ use App\Models\Asset;
 use App\Models\AssetInspection;
 use App\Models\Organization;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class AssetInspectionTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     public function test_can_view_asset_inspection_page(): void
     {
