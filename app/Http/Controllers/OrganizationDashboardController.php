@@ -221,6 +221,8 @@ class OrganizationDashboardController extends Controller
 
                 return [
                     'id' => $evaluation->id,
+                    'folio' => $evaluation->folio,
+                    'personal_folio' => $evaluation->personal_folio,
                     'demographicData' => $evaluation->demographicData ? [
                         'gender' => $evaluation->demographicData->gender,
                         'contract_type' => $evaluation->demographicData->contract_type,

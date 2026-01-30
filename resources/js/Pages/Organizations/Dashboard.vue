@@ -63,18 +63,11 @@
             </div>
 
             <!-- Resultados -->
-            <div v-show="activeTab === 'results'" class="text-center py-16">
-              <div class="text-6xl mb-4">📈</div>
-              <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Work Climate Report') }}</p>
-              <p class="text-gray-600 mb-6">{{ t('View the detailed analysis of the evaluation results') }}</p>
-              <a
-                :href="`/organization/${dashboardData.organization.id}/likert/report`"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                {{ t('View Report') }} →
-              </a>
+            <div v-show="activeTab === 'results'" class="animate-fade-in">
+              <ClimaLaboralResultsTab
+                :evaluations="evaluations"
+                :organization-id="dashboardData.organization.id"
+              />
             </div>
 
             <!-- Análisis -->
@@ -375,6 +368,7 @@ import EvidencesDataTab from '@/Components/Organization/EvidencesDataTab.vue';
 import FodaDataTab from '@/Components/Organization/FodaDataTab.vue';
 import RecommendationsP3Tab from '@/Components/Organization/RecommendationsP3Tab.vue';
 import ReportTab from '@/Components/Organization/ReportTab.vue';
+import ClimaLaboralResultsTab from '@/Components/Organization/ClimaLaboralResultsTab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
 import { useTranslations } from '@/composables/useTranslations';
 
