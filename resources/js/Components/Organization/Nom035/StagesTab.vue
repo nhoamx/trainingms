@@ -164,15 +164,11 @@
             </div>
 
             <!-- Vista Bloques -->
-            <div v-if="identificarViewMode === 'blocks'" class="bg-white rounded-lg p-6">
-              <div class="flex items-center justify-center p-8 border-2 border-dashed border-blue-300 rounded-lg">
-                <div class="text-center">
-                  <DocumentChartBarIcon class="w-12 h-12 text-blue-400 mx-auto mb-3" />
-                  <p class="text-blue-700 font-medium">Vista por Bloques</p>
-                  <p class="text-sm text-blue-600 mt-1">Agrupación de preguntas por bloques temáticos</p>
-                  <p class="text-xs text-blue-500 mt-2">En desarrollo</p>
-                </div>
-              </div>
+            <div v-if="identificarViewMode === 'blocks'">
+              <BlocksCharts
+                :blocks-data="props.blockStatistics?.blocks || {}"
+                :total-evaluations="props.blockStatistics?.total_evaluations || 0"
+              />
             </div>
           </div>
           
@@ -616,6 +612,7 @@ import DomainCharts from './Charts/DomainCharts.vue';
 import CategoryCharts from './Charts/CategoryCharts.vue';
 import DimensionCharts from './Charts/DimensionCharts.vue';
 import QuestionsCharts from './Charts/QuestionsCharts.vue';
+import BlocksCharts from './Charts/BlocksCharts.vue';
 import GlobalCharts from './Charts/GlobalCharts.vue';
 import AnalysisFilters from './Charts/AnalysisFilters.vue';
 import RiskDistributionCards from './Charts/RiskDistributionCards.vue';
@@ -660,6 +657,11 @@ interface QuestionStatistics {
   total_evaluations: number;
 }
 
+interface BlockStatistics {
+  blocks: Record<string, unknown>;
+  total_evaluations: number;
+}
+
 interface GlobalStatistics {
   global: Record<string, unknown>;
   total_evaluations: number;
@@ -699,6 +701,7 @@ interface Props {
   categoryStatistics?: CategoryStatistics;
   dimensionStatistics?: DimensionStatistics;
   questionStatistics?: QuestionStatistics;
+  blockStatistics?: BlockStatistics;
   globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
   organizationId?: string | number;

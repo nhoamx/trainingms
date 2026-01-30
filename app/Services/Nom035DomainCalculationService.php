@@ -957,4 +957,130 @@ class Nom035DomainCalculationService
 
         return $totalScore;
     }
+
+    /**
+     * Calculate statistics for each question block from referencia_iii config
+     */
+    public function calculateBlockStatistics(Organization $organization): array
+    {
+        $evaluations = PaperEvaluation::where('organization_id', $organization->id)
+            ->whereNotNull('referencia_iii_answers')
+            ->get();
+
+        if ($evaluations->isEmpty()) {
+            return $this->getEmptyBlockStatistics();
+        }
+
+        $blocks = config('referencia_iii.general_blocks', []);
+        $responseLabels = [
+            'A' => 'siempre',
+            'B' => 'casi_siempre',
+            'C' => 'algunas_veces',
+            'D' => 'casi_nunca',
+            'E' => 'nunca',
+        ];
+
+        $blockStats = [];
+
+        foreach ($blocks as $blockIndex => $blockData) {
+            $blockNumber = $blockIndex + 1;
+            $questions = $blockData['questions'] ?? [];
+
+            // Initialize block statistics
+            $blockStats[$blockNumber] = [
+                'block_number' => $blockNumber,
+                'instructions' => $blockData['instructions'] ?? '',
+                'question_count' => count($questions),
+                'questions' => $questions,
+                'responses' => [
+                    'siempre' => 0,
+                    'casi_siempre' => 0,
+                    'algunas_veces' => 0,
+                    'casi_nunca' => 0,
+                    'nunca' => 0,
+                ],
+                'total_responses' => 0,
+                'average_score' => 0,
+                'negative_percentage' => 0,
+                'criticality' => 'low',
+            ];
+
+            $totalScore = 0;
+            $totalResponses = 0;
+
+            // Process each evaluation
+            foreach ($evaluations as $evaluation) {
+                $answers = $evaluation->referencia_iii_answers ?? [];
+
+                // Process each question in the block
+                foreach ($questions as $questionNumber) {
+                    if (isset($answers[$questionNumber])) {
+                        $answer = $answers[$questionNumber];
+
+                        // Skip if answer is not a letter (array values)
+                        if (is_array($answer)) {
+                            continue;
+                        }
+
+                        // Map letter to label
+                        $label = $responseLabels[$answer] ?? null;
+                        if ($label) {
+                            $blockStats[$blockNumber]['responses'][$label]++;
+                            $totalResponses++;
+
+                            // Calculate score (assuming standard scoring)
+                            $answerValues = config('answer_values');
+                            $group = in_array($questionNumber, $answerValues['group1']['questions'])
+                                ? 'group1'
+                                : 'group2';
+                            $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
+                        }
+                    }
+                }
+            }
+
+            // Calculate averages and percentages
+            if ($totalResponses > 0) {
+                $blockStats[$blockNumber]['total_responses'] = $totalResponses;
+                $blockStats[$blockNumber]['average_score'] = round($totalScore / $totalResponses, 2);
+
+                $negativeCount = $blockStats[$blockNumber]['responses']['casi_nunca']
+                    + $blockStats[$blockNumber]['responses']['nunca'];
+                $blockStats[$blockNumber]['negative_percentage'] = round(
+                    ($negativeCount / $totalResponses) * 100,
+                    1
+                );
+
+                // Assign criticality level based on negative percentage
+                $negativePercentage = $blockStats[$blockNumber]['negative_percentage'];
+                if ($negativePercentage >= 50) {
+                    $blockStats[$blockNumber]['criticality'] = 'critical';
+                } elseif ($negativePercentage >= 30) {
+                    $blockStats[$blockNumber]['criticality'] = 'high';
+                } elseif ($negativePercentage >= 15) {
+                    $blockStats[$blockNumber]['criticality'] = 'medium';
+                } else {
+                    $blockStats[$blockNumber]['criticality'] = 'low';
+                }
+            }
+        }
+
+        ksort($blockStats);
+
+        return [
+            'blocks' => empty($blockStats) ? new \stdClass : (object) $blockStats,
+            'total_evaluations' => $evaluations->count(),
+        ];
+    }
+
+    /**
+     * Return empty structure for block statistics when there are no evaluations
+     */
+    private function getEmptyBlockStatistics(): array
+    {
+        return [
+            'blocks' => new \stdClass,
+            'total_evaluations' => 0,
+        ];
+    }
 }
