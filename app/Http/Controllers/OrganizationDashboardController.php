@@ -120,10 +120,11 @@ class OrganizationDashboardController extends Controller
 
         $data = $this->organizationDataService->getDashboardData($organization, 'nom035');
 
-        // Calcular estadísticas por dominio, categoría, dimensión y global
+        // Calcular estadísticas por dominio, categoría, dimensión, pregunta y global
         $domainStatistics = $this->domainCalculationService->calculateDomainStatistics($organization);
         $categoryStatistics = $this->domainCalculationService->calculateCategoryStatistics($organization);
         $dimensionStatistics = $this->domainCalculationService->calculateDimensionStatistics($organization);
+        $questionStatistics = $this->domainCalculationService->calculateQuestionStatistics($organization);
         $globalStatistics = $this->domainCalculationService->calculateGlobalStatistics($organization);
 
         // DEBUG: Log dimension statistics
@@ -170,6 +171,7 @@ class OrganizationDashboardController extends Controller
             'domainStatistics' => $domainStatistics,
             'categoryStatistics' => $categoryStatistics,
             'dimensionStatistics' => $dimensionStatistics,
+            'questionStatistics' => $questionStatistics,
             'globalStatistics' => $globalStatistics,
             'analysisData' => $analysisData,
             'evaluations' => $evaluations,

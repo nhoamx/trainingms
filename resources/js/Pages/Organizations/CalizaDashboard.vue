@@ -83,6 +83,7 @@
                 :domain-statistics="props.domainStatistics" 
                 :category-statistics="props.categoryStatistics"
                 :dimension-statistics="props.dimensionStatistics"
+                :question-statistics="props.questionStatistics"
                 :global-statistics="props.globalStatistics"
                 :analysis-data="props.analysisData"
                 :organization-id="props.dashboardData.organization.id"
@@ -261,6 +262,7 @@ interface Props {
   domainStatistics?: DomainStatistics;
   categoryStatistics?: CategoryStatistics;
   dimensionStatistics?: DimensionStatistics;
+  questionStatistics?: { questions: Record<string, unknown>; total_evaluations: number };
   globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
   evaluations?: Evaluation[];

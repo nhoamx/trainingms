@@ -157,14 +157,10 @@
 
             <!-- Vista Preguntas -->
             <div v-if="identificarViewMode === 'questions'" class="bg-white rounded-lg p-6">
-              <div class="flex items-center justify-center p-8 border-2 border-dashed border-blue-300 rounded-lg">
-                <div class="text-center">
-                  <ClipboardDocumentListIcon class="w-12 h-12 text-blue-400 mx-auto mb-3" />
-                  <p class="text-blue-700 font-medium">Vista por Preguntas</p>
-                  <p class="text-sm text-blue-600 mt-1">Análisis individual de cada pregunta del cuestionario</p>
-                  <p class="text-xs text-blue-500 mt-2">En desarrollo</p>
-                </div>
-              </div>
+              <QuestionsCharts 
+                :questions-data="props.questionStatistics?.questions || {}"
+                :total-evaluations="props.questionStatistics?.total_evaluations || 0"
+              />
             </div>
 
             <!-- Vista Bloques -->
@@ -619,6 +615,7 @@ import { Link } from '@inertiajs/vue3';
 import DomainCharts from './Charts/DomainCharts.vue';
 import CategoryCharts from './Charts/CategoryCharts.vue';
 import DimensionCharts from './Charts/DimensionCharts.vue';
+import QuestionsCharts from './Charts/QuestionsCharts.vue';
 import GlobalCharts from './Charts/GlobalCharts.vue';
 import AnalysisFilters from './Charts/AnalysisFilters.vue';
 import RiskDistributionCards from './Charts/RiskDistributionCards.vue';
@@ -656,6 +653,11 @@ interface DimensionStatistics {
   total_evaluations: number;
   colors: Record<string, string>;
   labels: Record<string, string>;
+}
+
+interface QuestionStatistics {
+  questions: Record<string, unknown>;
+  total_evaluations: number;
 }
 
 interface GlobalStatistics {
@@ -696,6 +698,7 @@ interface Props {
   domainStatistics?: DomainStatistics;
   categoryStatistics?: CategoryStatistics;
   dimensionStatistics?: DimensionStatistics;
+  questionStatistics?: QuestionStatistics;
   globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
   organizationId?: string | number;

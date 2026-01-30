@@ -595,12 +595,12 @@ class Nom035DomainCalculationService
                 foreach ($domains as $domainName => $dimensions) {
                     $categoryDimensions = array_merge($categoryDimensions, $dimensions);
                 }
-                
+
                 $score = $this->calculateCategoryScore(
                     $evaluation->referencia_iii_answers,
                     $categoryDimensions
                 );
-                
+
                 // Get first domain name to determine risk level thresholds (categories use same scale as first domain)
                 $firstDomainName = array_key_first($domains);
                 $riskLevel = $this->getRiskLevel($score, $firstDomainName, $riskLevels);
@@ -745,6 +745,156 @@ class Nom035DomainCalculationService
             'total_evaluations' => 0,
             'colors' => $riskLevels['colors'],
             'labels' => $riskLevels['labels'],
+        ];
+    }
+
+    /**
+     * Calcular estadísticas por pregunta individual NOM-035 para una organización
+     */
+    public function calculateQuestionStatistics(Organization $organization): array
+    {
+        $evaluations = PaperEvaluation::where('organization_id', $organization->id)
+            ->whereNotNull('referencia_iii_answers')
+            ->get();
+
+        if ($evaluations->isEmpty()) {
+            return $this->getEmptyQuestionStatistics();
+        }
+
+        $questionsConfig = config('referencia_iii.general');
+        $domainConfig = config('question_dimensions');
+        $answerValues = config('answer_values');
+
+        // Mapeo de letras a etiquetas de respuesta
+        $responseLabels = [
+            'A' => 'siempre',
+            'B' => 'casi_siempre',
+            'C' => 'algunas_veces',
+            'D' => 'casi_nunca',
+            'E' => 'nunca',
+        ];
+
+        // Preparar estructura para estadísticas por pregunta
+        $questionStats = [];
+        foreach ($questionsConfig as $questionNumber => $questionText) {
+            $questionStats[$questionNumber] = [
+                'number' => $questionNumber,
+                'text' => $questionText,
+                'responses' => [
+                    'siempre' => 0,
+                    'casi_siempre' => 0,
+                    'algunas_veces' => 0,
+                    'casi_nunca' => 0,
+                    'nunca' => 0,
+                ],
+                'scores' => [],
+                'dimension' => '',
+                'domain' => '',
+                'category' => '',
+            ];
+        }
+
+        // Mapear preguntas a su dimensión/dominio/categoría
+        foreach ($domainConfig as $categoryName => $domains) {
+            foreach ($domains as $domainName => $dimensions) {
+                foreach ($dimensions as $dimensionName => $questions) {
+                    foreach ($questions as $questionNumber) {
+                        if (isset($questionStats[$questionNumber])) {
+                            $questionStats[$questionNumber]['dimension'] = $dimensionName;
+                            $questionStats[$questionNumber]['domain'] = $domainName;
+                            $questionStats[$questionNumber]['category'] = $categoryName;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Procesar respuestas de cada evaluación
+        foreach ($evaluations as $evaluation) {
+            $answers = $evaluation->referencia_iii_answers ?? [];
+
+            foreach ($answers as $questionNumber => $answer) {
+                // Skip arrays (conditional answers container)
+                if (is_array($answer)) {
+                    continue;
+                }
+
+                if (isset($questionStats[$questionNumber]) && $answer !== null && isset($responseLabels[$answer])) {
+                    // Contar respuestas usando el mapeo de letras
+                    $responseLabel = $responseLabels[$answer];
+                    $questionStats[$questionNumber]['responses'][$responseLabel]++;
+
+                    // Guardar puntaje para esta pregunta
+                    $questionKey = str_pad($questionNumber, 2, '0', STR_PAD_LEFT);
+                    $group = in_array($questionKey, $answerValues['group1']['questions'])
+                        ? 'group1'
+                        : 'group2';
+
+                    $score = $answerValues[$group]['values'][$answer] ?? 0;
+                    $questionStats[$questionNumber]['scores'][] = $score;
+                }
+            }
+        }
+
+        // Calcular promedios y criticidad
+        $result = [];
+        foreach ($questionStats as $questionNumber => $stats) {
+            if (count($stats['scores']) === 0) {
+                continue; // Skip questions with no responses
+            }
+
+            $averageScore = array_sum($stats['scores']) / count($stats['scores']);
+            $maxScore = 4; // Maximum score per question
+
+            // Determinar criticidad basado en respuestas negativas
+            $negativeResponses = ($stats['responses']['casi_nunca'] + $stats['responses']['nunca']);
+            $totalResponses = array_sum($stats['responses']);
+            $negativePercentage = $totalResponses > 0 ? ($negativeResponses / $totalResponses) * 100 : 0;
+
+            // Clasificar criticidad
+            $criticality = 'low';
+            if ($negativePercentage >= 50) {
+                $criticality = 'critical';
+            } elseif ($negativePercentage >= 30) {
+                $criticality = 'high';
+            } elseif ($negativePercentage >= 15) {
+                $criticality = 'medium';
+            }
+
+            $result[$questionNumber] = [
+                'number' => $questionNumber,
+                'text' => $stats['text'],
+                'category' => $stats['category'],
+                'domain' => $stats['domain'],
+                'dimension' => $stats['dimension'],
+                'responses' => $stats['responses'],
+                'averageScore' => round($averageScore, 2),
+                'maxScore' => $maxScore,
+                'percentage' => round(($averageScore / $maxScore) * 100, 2),
+                'criticality' => $criticality,
+                'totalResponses' => $totalResponses,
+            ];
+        }
+
+        // Sort by question number
+        ksort($result);
+
+        // Force object serialization by using stdClass for numeric keys
+        // This prevents JSON from converting to array when keys are numeric
+        return [
+            'questions' => empty($result) ? new \stdClass : (object) $result,
+            'total_evaluations' => $evaluations->count(),
+        ];
+    }
+
+    /**
+     * Retornar estructura vacía para preguntas cuando no hay evaluaciones
+     */
+    private function getEmptyQuestionStatistics(): array
+    {
+        return [
+            'questions' => [],
+            'total_evaluations' => 0,
         ];
     }
 
