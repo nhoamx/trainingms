@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ClimaLaboralCompactExport;
 use App\Exports\EvaluationCommentsTemplateExport;
 use App\Exports\EvaluationTemplateExport;
 use App\Exports\GapFoliosExport;
@@ -424,6 +425,45 @@ class ResultsController extends Controller
 
         return \Maatwebsite\Excel\Facades\Excel::download(
             new \App\Exports\LikertClimaLevelExport($filteredData, $customFieldHeaders),
+            $filename
+        );
+    }
+
+    /**
+     * Export all Clima Laboral evaluations in a single compact sheet
+     */
+    public function exportClimaLaboralCompact(Organization $organization, Request $request)
+    {
+        $this->authorize('view-organization-results', $organization);
+
+        // Get cached report data
+        $reportData = $this->cacheService->rememberLikertReport($organization->id, function () use ($organization) {
+            return $this->computeLikertReportData($organization);
+        });
+
+        $evaluations = $reportData['evaluations'] ?? [];
+
+        if (empty($evaluations)) {
+            return response()->json(['error' => 'No se encontraron evaluaciones de clima laboral'], 404);
+        }
+
+        // Map evaluations to compact format
+        $exportData = [];
+        foreach ($evaluations as $evaluation) {
+            $exportData[] = [
+                $evaluation['personal_folio'] ?? $evaluation['folio'] ?? '',
+                $evaluation['scores']['total_score'] ?? '',
+                $evaluation['scores']['interpretation'] ?? 'Sin clasificar',
+                $evaluation['demographics']['tipo_contrato'] ?? '',
+                $evaluation['demographics']['area'] ?? '',
+                $evaluation['demographics']['puesto'] ?? '',
+            ];
+        }
+
+        $filename = 'clima_laboral_'.str_replace(' ', '_', $organization->name).'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(
+            new ClimaLaboralCompactExport($exportData),
             $filename
         );
     }

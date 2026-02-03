@@ -2,13 +2,31 @@
   <div class="space-y-6">
     <!-- Encabezado -->
     <div class="border-b border-slate-200 pb-6">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="p-2 bg-blue-100 rounded-lg">
-          <ChartBarIcon class="w-6 h-6 text-blue-600" />
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-blue-100 rounded-lg">
+            <ChartBarIcon class="w-6 h-6 text-blue-600" />
+          </div>
+          <div>
+            <h2 class="text-3xl font-bold text-slate-900">{{ t('Work Climate Results') }}</h2>
+            <p class="text-slate-600 mt-2">{{ t('Analysis by satisfaction level') }}</p>
+          </div>
         </div>
-        <h2 class="text-3xl font-bold text-slate-900">{{ t('Work Climate Results') }}</h2>
+        <button
+          @click="exportToExcel"
+          :disabled="isExporting || evaluations.length === 0"
+          class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <svg v-if="!isExporting" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <svg v-else class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>{{ isExporting ? t('Exporting...') : t('Export to Excel') }}</span>
+        </button>
       </div>
-      <p class="text-slate-600 mt-2 ml-11">{{ t('Analysis by satisfaction level') }}</p>
     </div>
 
     <!-- Selector de Vistas -->
@@ -227,6 +245,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { router } from '@inertiajs/vue3';
 import { ChartBarIcon } from '@heroicons/vue/24/outline';
 import { useTranslations } from '@/composables/useTranslations';
 import EvaluationsTable from './ClimaLaboral/EvaluationsTable.vue';
@@ -269,6 +288,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const activeSatisfactionLevel = ref<string>('global');
+const isExporting = ref<boolean>(false);
 
 const satisfactionLevels: SatisfactionLevel[] = [
   { 
@@ -335,6 +355,29 @@ const getDistributionByLevel = (interpretationKey: string, type: 'area' | 'posit
   return Object.entries(distribution)
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
+};
+
+// Export to Excel
+const exportToExcel = () => {
+  if (isExporting.value || !props.organizationId) return;
+  
+  isExporting.value = true;
+  
+  router.post(
+    (window as any).route('organization.clima-laboral.export-compact', props.organizationId),
+    {},
+    {
+      preserveState: true,
+      preserveScroll: true,
+      onFinish: () => {
+        isExporting.value = false;
+      },
+      onError: (errors) => {
+        console.error('Export error:', errors);
+        isExporting.value = false;
+      },
+    }
+  );
 };
 </script>
     
