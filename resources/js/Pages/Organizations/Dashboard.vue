@@ -68,6 +68,18 @@
                 :evaluations="evaluations"
                 :organization-id="dashboardData.organization.id"
               />
+
+              <div class="text-6xl mb-4">📈</div>
+              <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Work Climate Report') }}</p>
+              <p class="text-gray-600 mb-6">{{ t('View the detailed analysis of the evaluation results') }}</p>
+              <a
+                :href="`/organization/${dashboardData.organization.id}/likert/report`"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {{ t('View Report') }} →
+              </a>
             </div>
 
             <!-- Análisis -->
