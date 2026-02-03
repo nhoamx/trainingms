@@ -271,8 +271,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Export Clima Laboral compact (all evaluations in single sheet)
     Route::post('/organizacion/{organization}/clima-laboral/export-compact', [ResultsController::class, 'exportClimaLaboralCompact'])
-        ->name('organization.clima-laboral.export-compact')
-        ->middleware('can:view-organization-results,organization');
+        ->name('organization.clima-laboral.export-compact');
 
     // Multi-sheet climate export routes (admin only)
     Route::get('/organizacion/{organization}/clima/export-options', [ResultsController::class, 'getClimaExportOptions'])

@@ -245,7 +245,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { router } from '@inertiajs/vue3';
+import axios from 'axios';
 import { ChartBarIcon } from '@heroicons/vue/24/outline';
 import { useTranslations } from '@/composables/useTranslations';
 import EvaluationsTable from './ClimaLaboral/EvaluationsTable.vue';
@@ -358,26 +358,44 @@ const getDistributionByLevel = (interpretationKey: string, type: 'area' | 'posit
 };
 
 // Export to Excel
-const exportToExcel = () => {
+const exportToExcel = async () => {
   if (isExporting.value || !props.organizationId) return;
   
   isExporting.value = true;
   
-  router.post(
-    (window as any).route('organization.clima-laboral.export-compact', props.organizationId),
-    {},
-    {
-      preserveState: true,
-      preserveScroll: true,
-      onFinish: () => {
-        isExporting.value = false;
-      },
-      onError: (errors) => {
-        console.error('Export error:', errors);
-        isExporting.value = false;
-      },
+  try {
+    const response = await axios.post(
+      (window as any).route('organization.clima-laboral.export-compact', props.organizationId),
+      {},
+      { responseType: 'blob' }
+    );
+
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Get filename from Content-Disposition header or use default
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = `clima_laboral_${new Date().toISOString().split('T')[0]}.xlsx`;
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '');
+      }
     }
-  );
+    
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Export error:', error);
+    alert('Error al descargar el archivo. Intente nuevamente.');
+  } finally {
+    isExporting.value = false;
+  }
 };
 </script>
     
