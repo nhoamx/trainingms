@@ -6,7 +6,6 @@ const props = defineProps({
         type: Object,
         default: () => ({
             nombre_comercial: '',
-            division_sucursal: '',
             estado: '',
             ciudad: ''
         })
@@ -21,7 +20,6 @@ const emit = defineEmits(['update:modelValue']);
 
 const localValue = ref({
     nombre_comercial: props.modelValue.nombre_comercial || '',
-    division_sucursal: props.modelValue.division_sucursal || '',
     estado: props.modelValue.estado || '',
     ciudad: props.modelValue.ciudad || ''
 });
@@ -103,7 +101,7 @@ watch(() => props.modelValue, (newValue) => {
             <!-- Nombre Comercial -->
             <div>
                 <label for="nombre_comercial" class="block text-sm font-medium text-blue-900 mb-1.5">
-                    Nombre Comercial <span class="text-red-600">*</span>
+                    Plaza <span class="text-red-600">*</span>
                 </label>
                 <input
                     id="nombre_comercial"
@@ -111,23 +109,7 @@ watch(() => props.modelValue, (newValue) => {
                     @input="updateField('nombre_comercial', $event.target.value)"
                     type="text"
                     class="w-full px-3 py-2.5 bg-white border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors"
-                    placeholder="Ingresa el nombre comercial"
-                    required
-                />
-            </div>
-
-            <!-- División / Sucursal -->
-            <div>
-                <label for="division_sucursal" class="block text-sm font-medium text-blue-900 mb-1.5">
-                    División / Sucursal <span class="text-red-600">*</span>
-                </label>
-                <input
-                    id="division_sucursal"
-                    :value="localValue.division_sucursal"
-                    @input="updateField('division_sucursal', $event.target.value)"
-                    type="text"
-                    class="w-full px-3 py-2.5 bg-white border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors"
-                    placeholder="Ingresa la división o sucursal"
+                    placeholder="Ingresa la plaza"
                     required
                 />
             </div>
