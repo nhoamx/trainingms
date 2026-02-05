@@ -1,6 +1,6 @@
 <script setup>
 import Dashboard from "../../Layouts/Dashboard.vue";
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import Modal from '@/Components/Modal.vue';
 import CustomFieldsManager from '@/Components/Quiz/CustomFieldsManager.vue';
@@ -14,6 +14,7 @@ const showCreateForm = ref(false);
 const form = useForm({
     name: '',
     organization_id: '',
+    work_center_id: '',
     expires_at: '',
     quiz_type: 'normal', // valores: normal, reducido, cisneros
     custom_fields: []
@@ -21,8 +22,20 @@ const form = useForm({
 
 const props = defineProps({
     quizzes: Array,
-    organizations: Array
+    organizations: Array,
+    workCenters: Array
 });
+
+// Filtrar work centers según la organización seleccionada
+const filteredWorkCenters = computed(() => {
+    if (!form.organization_id) return [];
+    return props.workCenters.filter(wc => wc.organization_id === form.organization_id);
+});
+
+// Reset work center cuando cambia la organización
+const onOrganizationChange = () => {
+    form.work_center_id = '';
+};
 
 const formatDate = (date) => {
     return new Date(date).toLocaleString();
@@ -102,9 +115,10 @@ const toggleCreateForm = () => {
                                 >
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Organización</label>
+                                <label class="block text-sm font-medium text-gray-700">Organización *</label>
                                 <select
                                     v-model="form.organization_id"
+                                    @change="onOrganizationChange"
                                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     required
                                 >
@@ -113,6 +127,23 @@ const toggleCreateForm = () => {
                                         {{ org.name }}
                                     </option>
                                 </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Centro de Trabajo *</label>
+                                <select
+                                    v-model="form.work_center_id"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    :disabled="!form.organization_id || filteredWorkCenters.length === 0"
+                                    required
+                                >
+                                    <option value="">Selecciona un centro de trabajo</option>
+                                    <option v-for="wc in filteredWorkCenters" :key="wc.id" :value="wc.id">
+                                        {{ wc.full_name }}
+                                    </option>
+                                </select>
+                                <p v-if="form.organization_id && filteredWorkCenters.length === 0" class="mt-1 text-xs text-amber-600">
+                                    ⚠️ Esta organización no tiene centros de trabajo. <a :href="route('organizations.edit', form.organization_id)" class="underline">Crear uno</a>
+                                </p>
                             </div>
                         </div>
 

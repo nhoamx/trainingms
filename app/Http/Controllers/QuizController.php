@@ -80,7 +80,7 @@ class QuizController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'organization_id' => 'required|exists:organizations,id',
-                'work_center_id' => 'nullable|exists:work_centers,id',
+                'work_center_id' => 'required|exists:work_centers,id',
                 'expires_at' => 'required|date|after:now',
                 'quiz_type' => 'required|in:normal,reducido,cisneros',
                 'custom_fields' => 'sometimes|array',
@@ -94,7 +94,7 @@ class QuizController extends Controller
             $quiz = Quiz::create([
                 'name' => $validated['name'],
                 'organization_id' => $validated['organization_id'],
-                'work_center_id' => $validated['work_center_id'] ?? null,
+                'work_center_id' => $validated['work_center_id'],
                 'temp_url' => Str::random(32),
                 'expires_at' => $validated['expires_at'],
                 'is_active' => true,
