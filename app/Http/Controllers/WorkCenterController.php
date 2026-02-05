@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\WorkCenterType;
+use App\Exports\WorkCentersExport;
+use App\Imports\WorkCentersImport;
 use App\Models\Organization;
 use App\Models\WorkCenter;
 use Illuminate\Http\RedirectResponse;
@@ -10,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
 
 class WorkCenterController extends Controller
 {
@@ -173,5 +176,63 @@ class WorkCenterController extends Controller
                 'title' => 'Centro eliminado',
                 'message' => "Centro '{$workCenter->name}' eliminado exitosamente.",
             ]);
+    }
+
+    /**
+     * Descargar plantilla Excel con los centros de trabajo actuales
+     */
+    public function downloadTemplate(Organization $organization)
+    {
+        $filename = 'centros_trabajo_'.$organization->folio_organization.'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(new WorkCentersExport($organization), $filename);
+    }
+
+    /**
+     * Importar centros de trabajo desde archivo Excel
+     */
+    public function import(Request $request, Organization $organization)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:10240', // Max 10MB
+        ]);
+
+        try {
+            $import = new WorkCentersImport($organization);
+
+            Excel::import($import, $request->file('file'));
+
+            $summary = $import->getSummary();
+
+            $message = sprintf(
+                'Importación completada: %d creados, %d actualizados, %d omitidos.',
+                $summary['created'],
+                $summary['updated'],
+                $summary['skipped']
+            );
+
+            if (! empty($summary['errors'])) {
+                $message .= ' Errores: '.implode(', ', array_slice($summary['errors'], 0, 3));
+                if (count($summary['errors']) > 3) {
+                    $message .= '...';
+                }
+            }
+
+            return back()->with([
+                'flash' => [
+                    'type' => empty($summary['errors']) ? 'success' : 'warning',
+                    'title' => 'Importación de Centros de Trabajo',
+                    'message' => $message,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return back()->with([
+                'flash' => [
+                    'type' => 'error',
+                    'title' => 'Error en la importación',
+                    'message' => 'No se pudo procesar el archivo: '.$e->getMessage(),
+                ],
+            ]);
+        }
     }
 }

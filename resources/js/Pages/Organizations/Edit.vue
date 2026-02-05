@@ -7,15 +7,20 @@ import Dashboard from '../../Layouts/Dashboard.vue'
 import Alert from '../../Components/Alert.vue'
 import FormInput from "../../Components/FormInput.vue"
 import Folios from './components/Folios.vue'
+import WorkCentersSection from './components/WorkCentersSection.vue'
 import ImportDataModal from '../../Components/ImportDataModal.vue'
 import ClimaExporter from '../../Components/ClimaExporter.vue'
 import { defineProps, computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 
-// Recibimos la organización desde el backend
-const { organization } = defineProps({
+// Recibimos la organización y work center types desde el backend
+const { organization, workCenterTypes } = defineProps({
     organization: {
         type: Object,
+        required: true,
+    },
+    workCenterTypes: {
+        type: Array,
         required: true,
     },
 });
@@ -446,6 +451,13 @@ const handlePolicyApprovedUpload = (event) => {
                         :class="activeTab === 'areas' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700'"
                     >
                         Departamentos
+                    </button>
+                    <button
+                        @click="changeTab('work-centers')"
+                        class="px-3 py-2 text-sm font-medium rounded-md transition-colors"
+                        :class="activeTab === 'work-centers' ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:text-gray-700'"
+                    >
+                        Centros de Trabajo
                     </button>
                     <button
                         @click="changeTab('folios')"
@@ -897,6 +909,10 @@ const handlePolicyApprovedUpload = (event) => {
                 </div>
             </div>
 
+            <!-- Pestaña de Centros de Trabajo -->
+            <div v-else-if="activeTab === 'work-centers'" class="space-y-6">
+                <WorkCentersSection :organization="organization" :work-center-types="workCenterTypes" />
+            </div>
 
             <div v-else-if="activeTab === 'folios'" class="space-y-6">
                 <Folios :organization="organization" />

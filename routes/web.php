@@ -406,6 +406,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{workCenter}/edit', [\App\Http\Controllers\WorkCenterController::class, 'edit'])->name('edit');
             Route::put('/{workCenter}', [\App\Http\Controllers\WorkCenterController::class, 'update'])->name('update');
             Route::delete('/{workCenter}', [\App\Http\Controllers\WorkCenterController::class, 'destroy'])->name('destroy');
+            Route::get('/template', [\App\Http\Controllers\WorkCenterController::class, 'downloadTemplate'])->name('template');
+            Route::post('/import', [\App\Http\Controllers\WorkCenterController::class, 'import'])->name('import');
         });
 
         // Rutas para puestos de ocupación

@@ -48,10 +48,13 @@ class OrganizationController extends Controller
 
     public function edit(Organization $organization)
     {
-        // Cargar relaciones de puestos y departamentos
+        // Cargar relaciones de puestos, departamentos, work centers
         $organization->load([
             'occupationPositions',
             'departmentAreas',
+            'workCenters' => function ($query) {
+                $query->orderBy('is_primary', 'desc')->orderBy('code');
+            },
             'addresses' => function ($query) {
                 $query->orderBy('is_primary', 'desc')->orderBy('type');
             },
@@ -67,6 +70,13 @@ class OrganizationController extends Controller
         return Inertia::render('Organizations/Edit', [
             'title' => 'Editar organización',
             'organization' => $organization,
+            'workCenterTypes' => array_map(
+                fn ($type) => [
+                    'value' => $type->value,
+                    'label' => $type->label(),
+                ],
+                \App\Enums\WorkCenterType::cases()
+            ),
         ]);
     }
 
