@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Organization extends Model
 {
@@ -13,6 +14,7 @@ class Organization extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'logo',
         'folio_organization',
         'razon_social',
@@ -63,6 +65,36 @@ class Organization extends Model
             'comite_hombres' => 'integer',
             'comite_mujeres' => 'integer',
         ];
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($organization) {
+            if (empty($organization->slug)) {
+                $organization->slug = static::generateUniqueSlug($organization->name);
+            }
+        });
+    }
+
+    /**
+     * Generate a unique slug for the organization
+     */
+    private static function generateUniqueSlug(string $name, ?string $id = null): string
+    {
+        $baseSlug = Str::slug($name);
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (static::where('slug', $slug)->when($id, function ($query) use ($id) {
+            return $query->where('id', '!=', $id);
+        })->exists()) {
+            $slug = $baseSlug.'-'.$counter;
+            $counter++;
+        }
+
+        return $slug;
     }
 
     public function users()
@@ -123,6 +155,16 @@ class Organization extends Model
     public function primaryAddress()
     {
         return $this->hasOne(OrganizationAddress::class)->where('is_primary', true);
+    }
+
+    public function workCenters()
+    {
+        return $this->hasMany(WorkCenter::class);
+    }
+
+    public function primaryWorkCenter()
+    {
+        return $this->hasOne(WorkCenter::class)->where('is_primary', true);
     }
 
     public function hasInstrument(string $instrumentName): bool

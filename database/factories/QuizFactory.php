@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Organization;
 use App\Models\Quiz;
+use App\Models\WorkCenter;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -13,6 +14,11 @@ class QuizFactory extends Factory
 
     public function definition()
     {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
         return [
             'name' => $this->faker->sentence(3),
             'temp_url' => Str::random(32),
@@ -20,7 +26,8 @@ class QuizFactory extends Factory
             'is_active' => true,
             'is_reduced' => false,
             'is_cisneros' => false,
-            'organization_id' => Organization::factory(),
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
             'created_at' => now(),
             'updated_at' => now(),
         ];

@@ -19,7 +19,8 @@ const currentSection = ref('referencia_v');
 const showFollowUpQuestions = ref(false);
 
 const props = defineProps({
-    quiz: Object
+    quiz: Object,
+    workCenterName: String
 });
 
 const answers = ref({
@@ -293,6 +294,7 @@ const submitEvaluation = () => {
                         <OrganizationInfoSection
                             v-model="answers.organization_info"
                             :organization-name="quiz.organization?.name || ''"
+                            :work-center-name="workCenterName"
                         />
 
                         <!-- Datos personales -->

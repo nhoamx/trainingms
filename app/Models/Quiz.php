@@ -12,9 +12,11 @@ class Quiz extends Model
     protected $fillable = [
         'name',
         'temp_url',
+        'unique_identifier',
         'expires_at',
         'is_active',
         'organization_id',
+        'work_center_id',
         'is_reduced',
         'is_cisneros',
     ];
@@ -25,6 +27,32 @@ class Quiz extends Model
         'is_reduced' => 'boolean',
         'is_cisneros' => 'boolean',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($quiz) {
+            if (empty($quiz->unique_identifier)) {
+                $quiz->unique_identifier = static::generateUniqueIdentifier();
+            }
+        });
+    }
+
+    /**
+     * Generate a unique identifier for the quiz
+     */
+    private static function generateUniqueIdentifier(): string
+    {
+        $identifier = substr(md5(uniqid(mt_rand(), true)), 0, 8);
+
+        // Ensure uniqueness
+        while (static::where('unique_identifier', $identifier)->exists()) {
+            $identifier = substr(md5(uniqid(mt_rand(), true)), 0, 8);
+        }
+
+        return $identifier;
+    }
 
     public function scopeActive($query)
     {
@@ -61,6 +89,14 @@ class Quiz extends Model
     public function organization()
     {
         return $this->belongsTo(\App\Models\Organization::class);
+    }
+
+    /**
+     * Relación con el centro de trabajo
+     */
+    public function workCenter()
+    {
+        return $this->belongsTo(\App\Models\WorkCenter::class);
     }
 
     /**
