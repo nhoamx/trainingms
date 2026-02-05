@@ -34,6 +34,8 @@ class QuizControllerTest extends TestCase
 
     public function test_submit_creates_submission_status_record(): void
     {
+        Queue::fake(); // Prevent job from executing synchronously
+
         $submissionData = [
             'referencia_v' => [
                 'sexo' => 'Masculino',

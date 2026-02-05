@@ -125,6 +125,16 @@ class Organization extends Model
         return $this->hasOne(OrganizationAddress::class)->where('is_primary', true);
     }
 
+    public function workCenters()
+    {
+        return $this->hasMany(WorkCenter::class);
+    }
+
+    public function primaryWorkCenter()
+    {
+        return $this->hasOne(WorkCenter::class)->where('is_primary', true);
+    }
+
     public function hasInstrument(string $instrumentName): bool
     {
         return $this->instruments()->where('name', $instrumentName)->exists();

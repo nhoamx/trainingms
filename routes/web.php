@@ -398,6 +398,16 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/batch-inspections', [\App\Http\Controllers\AssetController::class, 'batchCreateInspections'])->name('batch-inspections');
         });
 
+        // Rutas para centros de trabajo (Work Centers)
+        Route::prefix('/organizaciones/{organization}/centros')->name('organizations.work-centers.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\WorkCenterController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\WorkCenterController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\WorkCenterController::class, 'store'])->name('store');
+            Route::get('/{workCenter}/edit', [\App\Http\Controllers\WorkCenterController::class, 'edit'])->name('edit');
+            Route::put('/{workCenter}', [\App\Http\Controllers\WorkCenterController::class, 'update'])->name('update');
+            Route::delete('/{workCenter}', [\App\Http\Controllers\WorkCenterController::class, 'destroy'])->name('destroy');
+        });
+
         // Rutas para puestos de ocupación
         Route::post('/occupation-positions', [\App\Http\Controllers\OccupationPositionController::class, 'store'])
             ->name('occupation-positions.store');

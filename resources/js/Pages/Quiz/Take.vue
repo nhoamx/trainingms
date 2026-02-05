@@ -24,7 +24,8 @@ const currentBlockIndex = ref(0);
 const currentSubsection = ref('general'); // 'general', 'conditional', 'traumatic'
 
 const props = defineProps({
-    quiz: Object
+    quiz: Object,
+    workCenterName: String
 });
 
 const answers = ref({
@@ -458,6 +459,7 @@ const submitEvaluation = () => {
                         <OrganizationInfoSection
                             v-model="answers.organization_info"
                             :organization-name="quiz.organization?.name || ''"
+                            :work-center-name="workCenterName"
                         />
 
                         <!-- Datos personales -->

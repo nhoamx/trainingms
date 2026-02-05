@@ -15,6 +15,7 @@ class Quiz extends Model
         'expires_at',
         'is_active',
         'organization_id',
+        'work_center_id',
         'is_reduced',
         'is_cisneros',
     ];
@@ -61,6 +62,14 @@ class Quiz extends Model
     public function organization()
     {
         return $this->belongsTo(\App\Models\Organization::class);
+    }
+
+    /**
+     * Relación con el centro de trabajo
+     */
+    public function workCenter()
+    {
+        return $this->belongsTo(\App\Models\WorkCenter::class);
     }
 
     /**

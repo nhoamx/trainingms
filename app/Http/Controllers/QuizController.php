@@ -39,9 +39,25 @@ class QuizController extends Controller
         // Obtener organizaciones para el formulario de creación
         $organizations = \App\Models\Organization::select('id', 'name')->orderBy('name')->get();
 
+        // Obtener work centers para todos los centros de trabajo
+        $workCenters = \App\Models\WorkCenter::with('organization:id,name')
+            ->select('id', 'organization_id', 'code', 'name', 'is_primary')
+            ->orderBy('organization_id')
+            ->orderByDesc('is_primary')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($wc) => [
+                'id' => $wc->id,
+                'organization_id' => $wc->organization_id,
+                'name' => $wc->name,
+                'full_name' => $wc->full_name,
+                'is_primary' => $wc->is_primary,
+            ]);
+
         return Inertia::render('Quiz/Index', [
             'quizzes' => $quizzes,
             'organizations' => $organizations,
+            'workCenters' => $workCenters,
         ]);
     }
 
@@ -51,6 +67,7 @@ class QuizController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'organization_id' => 'required|exists:organizations,id',
+                'work_center_id' => 'nullable|exists:work_centers,id',
                 'expires_at' => 'required|date|after:now',
                 'quiz_type' => 'required|in:normal,reducido,cisneros',
                 'custom_fields' => 'sometimes|array',
@@ -64,6 +81,7 @@ class QuizController extends Controller
             $quiz = Quiz::create([
                 'name' => $validated['name'],
                 'organization_id' => $validated['organization_id'],
+                'work_center_id' => $validated['work_center_id'] ?? null,
                 'temp_url' => Str::random(32),
                 'expires_at' => $validated['expires_at'],
                 'is_active' => true,
@@ -220,7 +238,7 @@ class QuizController extends Controller
     public function showTemp($tempUrl)
     {
         try {
-            $quiz = Quiz::with(['organization.occupationPositions', 'organization.departmentAreas', 'customFields'])
+            $quiz = Quiz::with(['organization.occupationPositions', 'organization.departmentAreas', 'customFields', 'workCenter'])
                 ->where('temp_url', $tempUrl)
                 ->where('is_active', true)
                 ->where('expires_at', '>', now())
@@ -283,6 +301,7 @@ class QuizController extends Controller
                         ];
                     })->toArray(),
                 ],
+                'workCenterName' => $quiz->workCenter?->name,
             ]);
         } elseif ($quiz->is_reduced) {
             // Quiz reducido - solo acontecimientos traumáticos
@@ -304,6 +323,7 @@ class QuizController extends Controller
                         ];
                     })->toArray(),
                 ],
+                'workCenterName' => $quiz->workCenter?->name,
             ]);
         } else {
             // Quiz completo - layout original
@@ -328,6 +348,7 @@ class QuizController extends Controller
                         ];
                     })->toArray(),
                 ],
+                'workCenterName' => $quiz->workCenter?->name,
             ]);
         }
     }

@@ -20,6 +20,7 @@ class PaperEvaluation extends Model
         'organization_code',
         'personal_folio',
         'organization_id',
+        'work_center_id',
         'evaluation_type',
         'source',
         'processing_status',
@@ -59,6 +60,14 @@ class PaperEvaluation extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Get the work center that owns the evaluation
+     */
+    public function workCenter(): BelongsTo
+    {
+        return $this->belongsTo(WorkCenter::class);
     }
 
     /**
