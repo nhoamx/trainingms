@@ -13,10 +13,22 @@ const props = defineProps({
     organizationName: {
         type: String,
         default: ''
+    },
+    workCenterName: {
+        type: String,
+        default: ''
     }
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+// Computed property para combinar organización y centro de trabajo
+const fullOrganizationDisplay = computed(() => {
+    if (props.workCenterName) {
+        return `${props.organizationName} - ${props.workCenterName}`;
+    }
+    return props.organizationName;
+});
 
 const localValue = ref({
     nombre_comercial: props.modelValue.nombre_comercial || '',
@@ -86,7 +98,7 @@ watch(() => props.modelValue, (newValue) => {
                 <div>
                     <h2 class="text-base sm:text-lg font-bold text-blue-900">Datos de la Organización</h2>
                     <p class="text-xs sm:text-sm text-blue-700">
-                        Empresa: <span class="font-semibold">{{ organizationName }}</span>
+                        <span class="font-semibold">{{ fullOrganizationDisplay }}</span>
                     </p>
                 </div>
             </div>

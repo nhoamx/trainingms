@@ -34,6 +34,8 @@ class QuizControllerTest extends TestCase
 
     public function test_submit_creates_submission_status_record(): void
     {
+        Queue::fake(); // Prevent job from executing synchronously
+
         $submissionData = [
             'referencia_v' => [
                 'sexo' => 'Masculino',
@@ -332,5 +334,51 @@ class QuizControllerTest extends TestCase
         $this->assertArrayHasKey('quiz_type', $submissionStatus->data_snapshot);
         $this->assertEquals('cisneros', $submissionStatus->data_snapshot['quiz_type']);
         $this->assertArrayHasKey('escala_cisneros', $submissionStatus->data_snapshot);
+    }
+
+    public function test_friendly_url_displays_quiz_correctly(): void
+    {
+        $workCenter = \App\Models\WorkCenter::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $friendlyQuiz = Quiz::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $workCenter->id,
+            'is_active' => true,
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        $response = $this->get(route('quiz.friendly', [
+            $this->organization->slug,
+            $workCenter->slug,
+            $friendlyQuiz->unique_identifier,
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Quiz/Take')
+            ->has('quiz')
+            ->has('quiz.organization')
+            ->has('quiz.questions')
+        );
+    }
+
+    public function test_friendly_url_returns_404_for_invalid_slug(): void
+    {
+        $response = $this->get(route('quiz.friendly', [
+            'invalid-org-slug',
+            'invalid-wc-slug',
+            'invalid-id',
+        ]));
+
+        $response->assertStatus(404);
+    }
+
+    public function test_old_temp_url_still_works_for_backward_compatibility(): void
+    {
+        $response = $this->get(route('quiz.temp', $this->quiz->temp_url));
+
+        $response->assertStatus(200);
     }
 }

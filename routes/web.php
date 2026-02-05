@@ -398,6 +398,18 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/batch-inspections', [\App\Http\Controllers\AssetController::class, 'batchCreateInspections'])->name('batch-inspections');
         });
 
+        // Rutas para centros de trabajo (Work Centers)
+        Route::prefix('/organizaciones/{organization}/centros')->name('organizations.work-centers.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\WorkCenterController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\WorkCenterController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\WorkCenterController::class, 'store'])->name('store');
+            Route::get('/{workCenter}/edit', [\App\Http\Controllers\WorkCenterController::class, 'edit'])->name('edit');
+            Route::put('/{workCenter}', [\App\Http\Controllers\WorkCenterController::class, 'update'])->name('update');
+            Route::delete('/{workCenter}', [\App\Http\Controllers\WorkCenterController::class, 'destroy'])->name('destroy');
+            Route::get('/template', [\App\Http\Controllers\WorkCenterController::class, 'downloadTemplate'])->name('template');
+            Route::post('/import', [\App\Http\Controllers\WorkCenterController::class, 'import'])->name('import');
+        });
+
         // Rutas para puestos de ocupación
         Route::post('/occupation-positions', [\App\Http\Controllers\OccupationPositionController::class, 'store'])
             ->name('occupation-positions.store');
@@ -488,6 +500,11 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // Rutas públicas para acceder al examen temporal (fuera del middleware auth)
+// URL amigable con organización y centro de trabajo
+Route::get('/evaluacion/{organizationSlug}/{workCenterSlug}/{identifier}', [QuizController::class, 'showBySlug'])
+    ->name('quiz.friendly');
+
+// URL antigua con hash (mantenida para compatibilidad con QR codes existentes)
 Route::get('/q/{tempUrl}', [QuizController::class, 'showTemp'])->name('quiz.temp');
 Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])
     ->name('quiz.submit');

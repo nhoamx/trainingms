@@ -14,18 +14,31 @@ class QuizController extends Controller
     public function index()
     {
         $quizzes = Quiz::query()
-            ->with(['organization', 'customFields'])
+            ->with(['organization', 'workCenter', 'customFields'])
             ->withCount('evaluations')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($quiz) {
-                $url = route('quiz.temp', $quiz->temp_url);
+                // Generar URL amigable si tiene work center asignado
+                if ($quiz->work_center_id && $quiz->workCenter && $quiz->organization && $quiz->unique_identifier) {
+                    $url = route('quiz.friendly', [
+                        $quiz->organization->slug,
+                        $quiz->workCenter->slug,
+                        $quiz->unique_identifier,
+                    ]);
+                } else {
+                    // Fallback a URL antigua
+                    $url = route('quiz.temp', $quiz->temp_url);
+                }
 
                 return [
                     'id' => $quiz->id,
                     'name' => $quiz->name,
                     'organization' => $quiz->organization,
+                    'work_center' => $quiz->workCenter,
                     'temp_url' => $url,
+                    'friendly_url' => $quiz->work_center_id && $quiz->workCenter && $quiz->organization ?
+                        "evaluacion/{$quiz->organization->slug}/{$quiz->workCenter->slug}/{$quiz->unique_identifier}" : null,
                     'qr_code' => 'data:image/svg+xml;base64,'.base64_encode(QrCode::format('svg')->size(500)->generate($url)),
                     'expires_at' => $quiz->expires_at->format('Y-m-d H:i'),
                     'is_active' => $quiz->is_active && ! $quiz->isExpired(),
@@ -39,9 +52,25 @@ class QuizController extends Controller
         // Obtener organizaciones para el formulario de creación
         $organizations = \App\Models\Organization::select('id', 'name')->orderBy('name')->get();
 
+        // Obtener work centers para todos los centros de trabajo
+        $workCenters = \App\Models\WorkCenter::with('organization:id,name')
+            ->select('id', 'organization_id', 'code', 'name', 'is_primary')
+            ->orderBy('organization_id')
+            ->orderByDesc('is_primary')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($wc) => [
+                'id' => $wc->id,
+                'organization_id' => $wc->organization_id,
+                'name' => $wc->name,
+                'full_name' => $wc->full_name,
+                'is_primary' => $wc->is_primary,
+            ]);
+
         return Inertia::render('Quiz/Index', [
             'quizzes' => $quizzes,
             'organizations' => $organizations,
+            'workCenters' => $workCenters,
         ]);
     }
 
@@ -51,6 +80,7 @@ class QuizController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'organization_id' => 'required|exists:organizations,id',
+                'work_center_id' => 'required|exists:work_centers,id',
                 'expires_at' => 'required|date|after:now',
                 'quiz_type' => 'required|in:normal,reducido,cisneros',
                 'custom_fields' => 'sometimes|array',
@@ -64,6 +94,7 @@ class QuizController extends Controller
             $quiz = Quiz::create([
                 'name' => $validated['name'],
                 'organization_id' => $validated['organization_id'],
+                'work_center_id' => $validated['work_center_id'],
                 'temp_url' => Str::random(32),
                 'expires_at' => $validated['expires_at'],
                 'is_active' => true,
@@ -220,7 +251,7 @@ class QuizController extends Controller
     public function showTemp($tempUrl)
     {
         try {
-            $quiz = Quiz::with(['organization.occupationPositions', 'organization.departmentAreas', 'customFields'])
+            $quiz = Quiz::with(['organization.occupationPositions', 'organization.departmentAreas', 'customFields', 'workCenter'])
                 ->where('temp_url', $tempUrl)
                 ->where('is_active', true)
                 ->where('expires_at', '>', now())
@@ -283,6 +314,7 @@ class QuizController extends Controller
                         ];
                     })->toArray(),
                 ],
+                'workCenterName' => $quiz->workCenter?->name,
             ]);
         } elseif ($quiz->is_reduced) {
             // Quiz reducido - solo acontecimientos traumáticos
@@ -304,6 +336,7 @@ class QuizController extends Controller
                         ];
                     })->toArray(),
                 ],
+                'workCenterName' => $quiz->workCenter?->name,
             ]);
         } else {
             // Quiz completo - layout original
@@ -328,7 +361,138 @@ class QuizController extends Controller
                         ];
                     })->toArray(),
                 ],
+                'workCenterName' => $quiz->workCenter?->name,
             ]);
+        }
+    }
+
+    /**
+     * Show quiz using friendly URL (organization slug + work center slug + quiz identifier)
+     */
+    public function showBySlug(string $organizationSlug, string $workCenterSlug, string $identifier)
+    {
+        try {
+            // Find organization by slug
+            $organization = \App\Models\Organization::where('slug', $organizationSlug)->firstOrFail();
+
+            // Find work center by slug within the organization
+            $workCenter = \App\Models\WorkCenter::where('organization_id', $organization->id)
+                ->where('slug', $workCenterSlug)
+                ->firstOrFail();
+
+            // Find active quiz for this work center with the unique identifier
+            $quiz = Quiz::with(['organization.occupationPositions', 'organization.departmentAreas', 'customFields', 'workCenter'])
+                ->where('organization_id', $organization->id)
+                ->where('work_center_id', $workCenter->id)
+                ->where('unique_identifier', $identifier)
+                ->where('is_active', true)
+                ->where('expires_at', '>', now())
+                ->firstOrFail();
+
+            // Preparar datos de la organización (mismo código que showTemp)
+            $organizationData = [
+                'id' => $quiz->organization->id,
+                'name' => $quiz->organization->name,
+                'occupation_positions' => $quiz->organization->occupationPositions->pluck('name', 'id')->toArray(),
+                'department_areas' => $quiz->organization->departmentAreas->pluck('name', 'id')->toArray(),
+                'custom_fields' => $quiz->customFields->map(function ($field) {
+                    return [
+                        'id' => $field->id,
+                        'name' => $field->name,
+                        'type' => $field->type,
+                    ];
+                })->toArray(),
+            ];
+
+            // Decidir qué vista usar basado en el tipo de quiz
+            if ($quiz->is_cisneros) {
+                return Inertia::render('Quiz/TakeCisneros', [
+                    'quiz' => [
+                        'id' => $quiz->id,
+                        'name' => $quiz->name,
+                        'organization' => $organizationData,
+                        'questions' => [
+                            'acontecimientos_traumaticos' => config('referencia_iii_reduced.acontecimientos_traumaticos'),
+                        ],
+                        'reference_i' => config('referencia_i'),
+                        'reference_v' => config('referencia_v'),
+                        'custom_fields' => $quiz->customFields->map(function ($field) {
+                            return [
+                                'id' => $field->id,
+                                'name' => $field->name,
+                                'type' => $field->type,
+                            ];
+                        })->toArray(),
+                    ],
+                    'workCenterName' => $quiz->workCenter?->name,
+                ]);
+            } elseif ($quiz->is_reduced) {
+                return Inertia::render('Quiz/TakeReduced', [
+                    'quiz' => [
+                        'id' => $quiz->id,
+                        'name' => $quiz->name,
+                        'organization' => $organizationData,
+                        'questions' => [
+                            'acontecimientos_traumaticos' => config('referencia_iii_reduced.acontecimientos_traumaticos'),
+                        ],
+                        'reference_i' => config('referencia_i'),
+                        'reference_v' => config('referencia_v'),
+                        'custom_fields' => $quiz->customFields->map(function ($field) {
+                            return [
+                                'id' => $field->id,
+                                'name' => $field->name,
+                                'type' => $field->type,
+                            ];
+                        })->toArray(),
+                    ],
+                    'workCenterName' => $quiz->workCenter?->name,
+                ]);
+            } else {
+                return Inertia::render('Quiz/Take', [
+                    'quiz' => [
+                        'id' => $quiz->id,
+                        'name' => $quiz->name,
+                        'organization' => $organizationData,
+                        'questions' => [
+                            'general' => config('referencia_iii.general'),
+                            'general_blocks' => config('referencia_iii.general_blocks'),
+                            'conditional_sections' => config('referencia_iii.conditional_sections'),
+                            'acontecimientos_traumaticos' => config('referencia_iii.acontecimientos_traumaticos'),
+                        ],
+                        'reference_i' => config('referencia_i'),
+                        'reference_v' => config('referencia_v'),
+                        'custom_fields' => $quiz->customFields->map(function ($field) {
+                            return [
+                                'id' => $field->id,
+                                'name' => $field->name,
+                                'type' => $field->type,
+                            ];
+                        })->toArray(),
+                    ],
+                    'workCenterName' => $quiz->workCenter?->name,
+                ]);
+            }
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Illuminate\Support\Facades\Log::warning('Quiz no encontrado con URL amigable', [
+                'organization_slug' => $organizationSlug,
+                'work_center_slug' => $workCenterSlug,
+                'identifier' => $identifier,
+                'user_ip' => request()->ip(),
+            ]);
+
+            abort(404, 'El examen no está disponible o ha expirado.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al cargar quiz con URL amigable', [
+                'organization_slug' => $organizationSlug,
+                'work_center_slug' => $workCenterSlug,
+                'identifier' => $identifier,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'user_ip' => request()->ip(),
+            ]);
+
+            abort(500, 'Error al cargar el examen. Por favor, inténtelo nuevamente.');
         }
     }
 

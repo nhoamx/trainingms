@@ -1,6 +1,6 @@
 <script setup>
 import Dashboard from "../../Layouts/Dashboard.vue";
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import Modal from '@/Components/Modal.vue';
 import CustomFieldsManager from '@/Components/Quiz/CustomFieldsManager.vue';
@@ -14,6 +14,7 @@ const showCreateForm = ref(false);
 const form = useForm({
     name: '',
     organization_id: '',
+    work_center_id: '',
     expires_at: '',
     quiz_type: 'normal', // valores: normal, reducido, cisneros
     custom_fields: []
@@ -21,8 +22,20 @@ const form = useForm({
 
 const props = defineProps({
     quizzes: Array,
-    organizations: Array
+    organizations: Array,
+    workCenters: Array
 });
+
+// Filtrar work centers según la organización seleccionada
+const filteredWorkCenters = computed(() => {
+    if (!form.organization_id) return [];
+    return props.workCenters.filter(wc => wc.organization_id === form.organization_id);
+});
+
+// Reset work center cuando cambia la organización
+const onOrganizationChange = () => {
+    form.work_center_id = '';
+};
 
 const formatDate = (date) => {
     return new Date(date).toLocaleString();
@@ -102,9 +115,10 @@ const toggleCreateForm = () => {
                                 >
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Organización</label>
+                                <label class="block text-sm font-medium text-gray-700">Organización *</label>
                                 <select
                                     v-model="form.organization_id"
+                                    @change="onOrganizationChange"
                                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     required
                                 >
@@ -113,6 +127,23 @@ const toggleCreateForm = () => {
                                         {{ org.name }}
                                     </option>
                                 </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Centro de Trabajo *</label>
+                                <select
+                                    v-model="form.work_center_id"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    :disabled="!form.organization_id || filteredWorkCenters.length === 0"
+                                    required
+                                >
+                                    <option value="">Selecciona un centro de trabajo</option>
+                                    <option v-for="wc in filteredWorkCenters" :key="wc.id" :value="wc.id">
+                                        {{ wc.full_name }}
+                                    </option>
+                                </select>
+                                <p v-if="form.organization_id && filteredWorkCenters.length === 0" class="mt-1 text-xs text-amber-600">
+                                    ⚠️ Esta organización no tiene centros de trabajo. <a :href="route('organizations.edit', form.organization_id)" class="underline">Crear uno</a>
+                                </p>
                             </div>
                         </div>
 
@@ -240,8 +271,13 @@ const toggleCreateForm = () => {
                                         </div>
                                     </td>                                    <!-- Organización -->
                                     <td class="px-4 py-4">
-                                        <div class="text-sm text-gray-900 truncate">
-                                            {{ quiz.organization?.name || 'N/A' }}
+                                        <div class="space-y-1">
+                                            <div class="text-sm font-medium text-gray-900 truncate">
+                                                {{ quiz.organization?.name || 'N/A' }}
+                                            </div>
+                                            <div v-if="quiz.work_center" class="text-xs text-gray-500 truncate">
+                                                {{ quiz.work_center.name }}
+                                            </div>
                                         </div>
                                     </td>
                                     
@@ -249,19 +285,25 @@ const toggleCreateForm = () => {
                                     <td class="px-4 py-4">
                                         <div class="flex items-center space-x-3">
                                             <!-- URL -->
-                                            <div class="flex items-center space-x-2 flex-1 min-w-0">
-                                                <span class="text-xs text-gray-600 truncate max-w-32" :title="quiz.temp_url">
-                                                    {{ quiz.temp_url.replace('http://', '').replace('https://', '') }}
-                                                </span>
-                                                <button 
-                                                    @click="copyToClipboard(quiz.temp_url)"
-                                                    class="text-blue-600 hover:text-blue-800 flex-shrink-0"
-                                                    title="Copiar URL"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                    </svg>
-                                                </button>
+                                            <div class="flex flex-col space-y-1 flex-1 min-w-0">
+                                                <!-- URL amigable o hash -->
+                                                <div class="flex items-center space-x-2">
+                                                    <span v-if="quiz.friendly_url" class="text-xs font-mono text-blue-600 truncate max-w-48" :title="quiz.temp_url">
+                                                        /{{ quiz.friendly_url }}
+                                                    </span>
+                                                    <span v-else class="text-xs text-gray-500 truncate max-w-32" :title="quiz.temp_url">
+                                                        {{ quiz.temp_url.replace('http://', '').replace('https://', '').split('/').pop() }}
+                                                    </span>
+                                                    <button 
+                                                        @click="copyToClipboard(quiz.temp_url)"
+                                                        class="text-blue-600 hover:text-blue-800 flex-shrink-0"
+                                                        title="Copiar URL completa"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                             
                                             <!-- QR Code -->
