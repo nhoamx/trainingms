@@ -5,11 +5,12 @@ namespace App\Enums;
 enum WorkCenterType: string
 {
     case Headquarters = 'headquarters';
-    case Plant = 'plant';
-    case Branch = 'branch';
-    case Warehouse = 'warehouse';
-    case Office = 'office';
-    case Other = 'other';
+    case Plant = 'planta';
+    case Branch = 'sucursal';
+    case Warehouse = 'almacen';
+    case Office = 'oficina';
+    case Other = 'otro';
+    case Square = 'plaza';
 
     /**
      * Get human-readable label for the type
@@ -17,12 +18,12 @@ enum WorkCenterType: string
     public function label(): string
     {
         return match ($this) {
-            self::Headquarters => 'Headquarters',
-            self::Plant => 'Plant',
-            self::Branch => 'Branch',
-            self::Warehouse => 'Warehouse',
-            self::Office => 'Office',
-            self::Other => 'Other',
+            self::Headquarters => 'Matriz',
+            self::Plant => 'Planta',
+            self::Branch => 'Sucursal',
+            self::Warehouse => 'Almacén',
+            self::Office => 'Oficina',
+            self::Other => 'Otro',
         };
     }
 
