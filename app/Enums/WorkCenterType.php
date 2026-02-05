@@ -18,11 +18,12 @@ enum WorkCenterType: string
     public function label(): string
     {
         return match ($this) {
-            self::Headquarters => 'Matriz',
+            self::Headquarters => 'Headquarters',
             self::Plant => 'Planta',
             self::Branch => 'Sucursal',
             self::Warehouse => 'Almacén',
             self::Office => 'Oficina',
+            self::Square => 'Plaza',
             self::Other => 'Otro',
         };
     }
