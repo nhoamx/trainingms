@@ -500,6 +500,11 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // Rutas públicas para acceder al examen temporal (fuera del middleware auth)
+// URL amigable con organización y centro de trabajo
+Route::get('/evaluacion/{organizationSlug}/{workCenterSlug}/{identifier}', [QuizController::class, 'showBySlug'])
+    ->name('quiz.friendly');
+
+// URL antigua con hash (mantenida para compatibilidad con QR codes existentes)
 Route::get('/q/{tempUrl}', [QuizController::class, 'showTemp'])->name('quiz.temp');
 Route::post('/quiz/{quiz}/submit', [QuizController::class, 'submit'])
     ->name('quiz.submit');

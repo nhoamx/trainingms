@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class WorkCenter extends Model
 {
@@ -18,6 +19,7 @@ class WorkCenter extends Model
         'organization_id',
         'code',
         'name',
+        'slug',
         'type',
         'is_primary',
         'legal_name',
@@ -38,6 +40,41 @@ class WorkCenter extends Model
             'type' => WorkCenterType::class,
             'is_primary' => 'boolean',
         ];
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($workCenter) {
+            if (empty($workCenter->slug)) {
+                $workCenter->slug = static::generateUniqueSlug(
+                    $workCenter->name,
+                    $workCenter->organization_id
+                );
+            }
+        });
+    }
+
+    /**
+     * Generate a unique slug for the work center within its organization
+     */
+    private static function generateUniqueSlug(string $name, string $organizationId, ?string $id = null): string
+    {
+        $baseSlug = Str::slug($name);
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (static::where('organization_id', $organizationId)
+            ->where('slug', $slug)
+            ->when($id, function ($query) use ($id) {
+                return $query->where('id', '!=', $id);
+            })->exists()) {
+            $slug = $baseSlug.'-'.$counter;
+            $counter++;
+        }
+
+        return $slug;
     }
 
     /**
