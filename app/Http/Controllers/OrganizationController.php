@@ -6,13 +6,17 @@ use App\Http\Requests\StoreOrganizationRequest;
 use App\Http\Requests\UpdateOrganizationRequest;
 use App\Models\Organization;
 use App\Services\OrganizationAddressService;
+use App\Services\OrganizationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 
 class OrganizationController extends Controller
 {
+    public function __construct(
+        protected OrganizationService $organizationService
+    ) {}
+
     public function index()
     {
         $organizations = Organization::all();
@@ -33,29 +37,13 @@ class OrganizationController extends Controller
     public function store(StoreOrganizationRequest $request)
     {
         $data = $request->validated();
-
-        // Generar folio si no se proporcionó
-        if (empty($data['folio_organization'])) {
-            $data['folio_organization'] = rand(100, 999);
-        }
-
-        // Manejar logo aparte del fill
         $logoFile = $data['logo'] ?? null;
-        unset($data['logo']);
 
-        $organization = new Organization;
-        $organization->fill($data);
+        // Create organization with primary work center automatically
+        $organization = $this->organizationService->createWithWorkCenter($data, $logoFile);
 
-        if ($logoFile) {
-            $logoPath = $logoFile->store('organizations', 'public');
-            $organization->logo = $logoPath;
-        }
-
-        $organization->save();
-
-        // Redirigimos a organizations.index y enviamos un mensaje flash de sesión
         return redirect()->route('organizations.index')
-            ->with('success', 'Organización creada exitosamente.');
+            ->with('success', 'Organización y centro de trabajo primario creados exitosamente.');
     }
 
     public function edit(Organization $organization)
@@ -85,29 +73,17 @@ class OrganizationController extends Controller
     public function update(UpdateOrganizationRequest $request, Organization $organization)
     {
         $data = $request->validated();
-
         $logoFile = $data['logo'] ?? null;
-        unset($data['logo']);
 
-        $organization->fill($data);
-
-        if ($logoFile) {
-            if ($organization->logo && Storage::disk('public')->exists($organization->logo)) {
-                Storage::disk('public')->delete($organization->logo);
-            }
-            $logoPath = $logoFile->store('organizations', 'public');
-            $organization->logo = $logoPath;
-        }
-
-        $organization->save();
+        // Update organization and sync primary work center data
+        $organization = $this->organizationService->updateWithWorkCenter($organization, $data, $logoFile);
 
         return redirect()->route('organizations.edit', $organization)
             ->with('flash', [
                 'type' => 'success',
                 'title' => 'Organización actualizada exitosamente.',
-                'message' => 'Los datos de la organización han sido actualizados correctamente.',
+                'message' => 'Los datos de la organización y su centro de trabajo primario han sido actualizados.',
             ]);
-
     }
 
     public function destroy(Organization $organization)
