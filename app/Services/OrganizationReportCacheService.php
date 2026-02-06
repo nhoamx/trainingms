@@ -64,6 +64,54 @@ class OrganizationReportCacheService
     }
 
     /**
+     * Get the cache key for NOM-035 domain statistics
+     */
+    public function getNom035DomainsCacheKey(int|string $organizationId): string
+    {
+        return self::PREFIX."_nom035_domains_{$organizationId}";
+    }
+
+    /**
+     * Get the cache key for NOM-035 category statistics
+     */
+    public function getNom035CategoriesCacheKey(int|string $organizationId): string
+    {
+        return self::PREFIX."_nom035_categories_{$organizationId}";
+    }
+
+    /**
+     * Get the cache key for NOM-035 dimension statistics
+     */
+    public function getNom035DimensionsCacheKey(int|string $organizationId): string
+    {
+        return self::PREFIX."_nom035_dimensions_{$organizationId}";
+    }
+
+    /**
+     * Get the cache key for NOM-035 question statistics
+     */
+    public function getNom035QuestionsCacheKey(int|string $organizationId): string
+    {
+        return self::PREFIX."_nom035_questions_{$organizationId}";
+    }
+
+    /**
+     * Get the cache key for NOM-035 block statistics
+     */
+    public function getNom035BlocksCacheKey(int|string $organizationId): string
+    {
+        return self::PREFIX."_nom035_blocks_{$organizationId}";
+    }
+
+    /**
+     * Get the cache key for NOM-035 global statistics
+     */
+    public function getNom035GlobalCacheKey(int|string $organizationId): string
+    {
+        return self::PREFIX."_nom035_global_{$organizationId}";
+    }
+
+    /**
      * Get the cache key for tracking warming job dispatches (debouncing)
      */
     private function getWarmingLockCacheKey(int|string $organizationId): string
@@ -91,6 +139,14 @@ class OrganizationReportCacheService
         Cache::forget($this->getLikertReportCacheKey($organizationId));
         Cache::forget($this->getListResultsCacheKey($organizationId));
         Cache::forget($this->getMissingFoliosCacheKey($organizationId));
+
+        // Invalidate NOM-035 caches
+        Cache::forget($this->getNom035DomainsCacheKey($organizationId));
+        Cache::forget($this->getNom035CategoriesCacheKey($organizationId));
+        Cache::forget($this->getNom035DimensionsCacheKey($organizationId));
+        Cache::forget($this->getNom035QuestionsCacheKey($organizationId));
+        Cache::forget($this->getNom035BlocksCacheKey($organizationId));
+        Cache::forget($this->getNom035GlobalCacheKey($organizationId));
 
         // Skip warming if not requested
         if (! $warmCache) {

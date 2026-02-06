@@ -200,7 +200,8 @@ class CacheWarmingOptimizationTest extends TestCase
         $job->handle(
             app(OrganizationReportCacheService::class),
             app(LikertScoreService::class),
-            app(PaperEvaluationScoreService::class)
+            app(PaperEvaluationScoreService::class),
+            app(\App\Services\Nom035DomainCalculationService::class)
         );
 
         // Cache should now be populated
@@ -265,7 +266,7 @@ class CacheWarmingOptimizationTest extends TestCase
      */
     public function test_production_scenario_5000_evaluations_bulk_import(): void
     {
-        #$this->markTestSkipped('This test takes ~2-3 minutes to run. Enable manually when needed.');
+        // $this->markTestSkipped('This test takes ~2-3 minutes to run. Enable manually when needed.');
 
         $organization = Organization::factory()->create(['name' => 'Test Org - 5K Import']);
 
@@ -296,9 +297,9 @@ class CacheWarmingOptimizationTest extends TestCase
         $withoutBatchTime = microtime(true) - $startTime;
         $withoutBatchJobs = Queue::pushed(WarmOrganizationReportCache::class)->count();
 
-        echo "   ✅ Created 50 evaluations in " . round($withoutBatchTime, 2) . "s\n";
+        echo '   ✅ Created 50 evaluations in '.round($withoutBatchTime, 2)."s\n";
         echo "   ⚠️  Warming jobs dispatched: {$withoutBatchJobs}\n";
-        echo "   💡 Extrapolated to 5K: ~" . ($withoutBatchJobs * 100) . " warming jobs would be created!\n\n";
+        echo '   💡 Extrapolated to 5K: ~'.($withoutBatchJobs * 100)." warming jobs would be created!\n\n";
 
         // Reset for next scenario
         Queue::fake();
@@ -334,7 +335,7 @@ class CacheWarmingOptimizationTest extends TestCase
         $withBatchTime = microtime(true) - $startTime;
         $afterBatchJobs = Queue::pushed(WarmOrganizationReportCache::class)->count();
 
-        echo "   ✅ Created 50 evaluations in " . round($withBatchTime, 2) . "s\n";
+        echo '   ✅ Created 50 evaluations in '.round($withBatchTime, 2)."s\n";
         echo "   ⚡ Warming jobs during batch: {$duringBatchJobs} (ZERO expected)\n";
         echo "   ✅ Warming jobs after batch: {$afterBatchJobs}\n\n";
 
@@ -346,8 +347,8 @@ class CacheWarmingOptimizationTest extends TestCase
         echo "📈 RESULTS:\n";
         echo "   Without optimization: {$withoutBatchJobs} warming jobs\n";
         echo "   With optimization: {$duringBatchJobs} warming jobs during import\n";
-        echo "   Improvement: " . round($improvement, 1) . "%\n";
-        echo "   Time difference: " . round($withoutBatchTime - $withBatchTime, 2) . "s faster\n\n";
+        echo '   Improvement: '.round($improvement, 1)."%\n";
+        echo '   Time difference: '.round($withoutBatchTime - $withBatchTime, 2)."s faster\n\n";
 
         echo "🎯 PRODUCTION EXTRAPOLATION (5,000 evaluations):\n";
         echo "   Old behavior: ~{$withoutBatchJobs}00 warming jobs → 3-5 minutes wait\n";

@@ -6,7 +6,9 @@ use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Services\LikertScoreService;
 use App\Services\OrganizationDataService;
+use App\Services\OrganizationReportCacheService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,7 +22,8 @@ class OrganizationDashboardController extends Controller
     public function __construct(
         protected OrganizationDataService $organizationDataService,
         protected LikertScoreService $likertScoreService,
-        protected \App\Services\Nom035DomainCalculationService $domainCalculationService
+        protected \App\Services\Nom035DomainCalculationService $domainCalculationService,
+        protected OrganizationReportCacheService $cacheService
     ) {}
 
     /**
@@ -121,12 +124,36 @@ class OrganizationDashboardController extends Controller
         $data = $this->organizationDataService->getDashboardData($organization, 'nom035');
 
         // Calcular estadísticas por dominio, categoría, dimensión, pregunta, bloque y global
-        $domainStatistics = $this->domainCalculationService->calculateDomainStatistics($organization);
-        $categoryStatistics = $this->domainCalculationService->calculateCategoryStatistics($organization);
-        $dimensionStatistics = $this->domainCalculationService->calculateDimensionStatistics($organization);
-        $questionStatistics = $this->domainCalculationService->calculateQuestionStatistics($organization);
-        $blockStatistics = $this->domainCalculationService->calculateBlockStatistics($organization);
-        $globalStatistics = $this->domainCalculationService->calculateGlobalStatistics($organization);
+        // Usando caché para mejorar performance
+        $domainStatistics = Cache::rememberForever(
+            $this->cacheService->getNom035DomainsCacheKey($organization->id),
+            fn () => $this->domainCalculationService->calculateDomainStatistics($organization)
+        );
+
+        $categoryStatistics = Cache::rememberForever(
+            $this->cacheService->getNom035CategoriesCacheKey($organization->id),
+            fn () => $this->domainCalculationService->calculateCategoryStatistics($organization)
+        );
+
+        $dimensionStatistics = Cache::rememberForever(
+            $this->cacheService->getNom035DimensionsCacheKey($organization->id),
+            fn () => $this->domainCalculationService->calculateDimensionStatistics($organization)
+        );
+
+        $questionStatistics = Cache::rememberForever(
+            $this->cacheService->getNom035QuestionsCacheKey($organization->id),
+            fn () => $this->domainCalculationService->calculateQuestionStatistics($organization)
+        );
+
+        $blockStatistics = Cache::rememberForever(
+            $this->cacheService->getNom035BlocksCacheKey($organization->id),
+            fn () => $this->domainCalculationService->calculateBlockStatistics($organization)
+        );
+
+        $globalStatistics = Cache::rememberForever(
+            $this->cacheService->getNom035GlobalCacheKey($organization->id),
+            fn () => $this->domainCalculationService->calculateGlobalStatistics($organization)
+        );
 
         // DEBUG: Log dimension statistics
         \Log::info('DimensionStatistics Data:', [

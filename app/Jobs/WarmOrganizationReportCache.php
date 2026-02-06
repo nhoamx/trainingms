@@ -44,7 +44,8 @@ class WarmOrganizationReportCache implements ShouldQueue
     public function handle(
         OrganizationReportCacheService $cacheService,
         LikertScoreService $likertScoreService,
-        PaperEvaluationScoreService $scoreService
+        PaperEvaluationScoreService $scoreService,
+        \App\Services\Nom035DomainCalculationService $domainCalculationService
     ): void {
         $orgId = $this->organization->id;
 
@@ -62,6 +63,16 @@ class WarmOrganizationReportCache implements ShouldQueue
 
         // Warm list results cache
         $this->warmListResultsCache($cacheService, $scoreService, $likertScoreService);
+
+        // Warm NOM-035 statistics cache if organization has NOM-035 evaluations
+        $hasNom035Evaluations = PaperEvaluation::where('organization_id', $orgId)
+            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])
+            ->where('processing_status', 'completed')
+            ->exists();
+
+        if ($hasNom035Evaluations) {
+            $this->warmNom035StatisticsCache($cacheService, $domainCalculationService);
+        }
 
         Log::info("Cache warming completed for organization {$orgId}");
     }
@@ -93,6 +104,55 @@ class WarmOrganizationReportCache implements ShouldQueue
         $cacheService->rememberMissingFolios($this->organization->id, function () {
             return $this->computeMissingFoliosData();
         });
+    }
+
+    /**
+     * Warm the NOM-035 statistics cache
+     *
+     * Pre-computes all NOM-035 statistics (domains, categories, dimensions, questions, blocks, global)
+     * to ensure instant dashboard loading for users
+     */
+    private function warmNom035StatisticsCache(
+        OrganizationReportCacheService $cacheService,
+        \App\Services\Nom035DomainCalculationService $domainCalculationService
+    ): void {
+        $orgId = $this->organization->id;
+
+        // Warm domain statistics
+        \Illuminate\Support\Facades\Cache::rememberForever(
+            $cacheService->getNom035DomainsCacheKey($orgId),
+            fn () => $domainCalculationService->calculateDomainStatistics($this->organization)
+        );
+
+        // Warm category statistics
+        \Illuminate\Support\Facades\Cache::rememberForever(
+            $cacheService->getNom035CategoriesCacheKey($orgId),
+            fn () => $domainCalculationService->calculateCategoryStatistics($this->organization)
+        );
+
+        // Warm dimension statistics
+        \Illuminate\Support\Facades\Cache::rememberForever(
+            $cacheService->getNom035DimensionsCacheKey($orgId),
+            fn () => $domainCalculationService->calculateDimensionStatistics($this->organization)
+        );
+
+        // Warm question statistics
+        \Illuminate\Support\Facades\Cache::rememberForever(
+            $cacheService->getNom035QuestionsCacheKey($orgId),
+            fn () => $domainCalculationService->calculateQuestionStatistics($this->organization)
+        );
+
+        // Warm block statistics
+        \Illuminate\Support\Facades\Cache::rememberForever(
+            $cacheService->getNom035BlocksCacheKey($orgId),
+            fn () => $domainCalculationService->calculateBlockStatistics($this->organization)
+        );
+
+        // Warm global statistics
+        \Illuminate\Support\Facades\Cache::rememberForever(
+            $cacheService->getNom035GlobalCacheKey($orgId),
+            fn () => $domainCalculationService->calculateGlobalStatistics($this->organization)
+        );
     }
 
     /**
