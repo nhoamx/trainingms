@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
@@ -75,38 +76,60 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'role' => 'required|exists:roles,id',
+            'organization' => 'nullable|exists:organizations,id',
+            'work_centers' => 'nullable|array',
+            'work_centers.*' => 'exists:work_centers,id',
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
 
-        // Create the temporary password
-        $password = substr(md5(microtime()), 0, 8);
+        DB::beginTransaction();
+        try {
+            // Create the temporary password
+            $password = substr(md5(microtime()), 0, 8);
 
-        // Crear usuario
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'temporal_password' => $password,
-            'password' => Hash::make($password), // Ahora usamos la misma contraseña temporal
-        ]);
+            // Crear usuario
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'temporal_password' => $password,
+                'password' => Hash::make($password),
+                'organization_id' => $request->organization,
+            ]);
 
-        // Asignar rol
-        $user->assignRole($request->role);
+            // Asignar rol
+            $user->assignRole($request->role);
 
-        if ($request->organization) {
-            $user->organization()->associate($request->organization);
-            $user->save();
+            // Asignar centros de trabajo (solo si es work_center_user)
+            $role = Role::find($request->role);
+            if ($role->name === 'work_center_user' && $request->work_centers) {
+                $user->workCenters()->sync($request->work_centers);
+            }
+
+            DB::commit();
+
+            return redirect()->route('users.index')
+                ->with('success', 'Usuario creado exitosamente.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->withErrors(['error' => 'Error al crear usuario: '.$e->getMessage()]);
         }
-
-        return redirect()->route('users.index')->with('success', 'Usuario creado exitosamente.');
     }
 
     public function edit(User $user)
     {
         return Inertia::render('Users/Edit', [
-            'user' => $user->load(['roles', 'organization']),
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->roles->first()?->id,
+                'organization' => $user->organization_id,
+                'work_centers' => $user->workCenters->pluck('id')->toArray(),
+            ],
             'roles' => Role::all()->map(fn ($role) => [
                 'value' => $role->id,
                 'label' => $role->name,
@@ -128,32 +151,50 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email',
             'role' => 'required|exists:roles,id',
+            'organization' => 'nullable|exists:organizations,id',
+            'work_centers' => 'nullable|array',
+            'work_centers.*' => 'exists:work_centers,id',
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
 
-        $user->name = $request->name;
-        $user->email = $request->email;
+        DB::beginTransaction();
+        try {
+            $user->name = $request->name;
+            $user->email = $request->email;
+            $user->organization_id = $request->organization;
 
-        // Actualizar rol
-        $user->syncRoles([$request->role]);
+            // Actualizar rol
+            $user->syncRoles([$request->role]);
 
-        if ($request->organization) {
-            $user->organization()->dissociate();
-            $user->organization()->associate($request->organization);
+            // Actualizar centros de trabajo (solo si es work_center_user)
+            $role = Role::find($request->role);
+            if ($role->name === 'work_center_user') {
+                $user->workCenters()->sync($request->work_centers ?? []);
+            } else {
+                // Si cambió de rol y ya no es work_center_user, limpiar centros
+                $user->workCenters()->detach();
+            }
+
+            if ($request->reset_password) {
+                $password = substr(md5(microtime()), 0, 8);
+                $user->temporal_password = $password;
+                $user->password = Hash::make($password);
+            }
+
+            $user->save();
+
+            DB::commit();
+
+            return redirect()->route('users.index')
+                ->with('success', 'Usuario actualizado exitosamente.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->withErrors(['error' => 'Error al actualizar usuario: '.$e->getMessage()]);
         }
-
-        if ($request->reset_password) {
-            $password = substr(md5(microtime()), 0, 8);
-            $user->temporary_password = $password;
-            $user->password = Hash::make($password);
-        }
-
-        $user->save();
-
-        return redirect()->route('users.index')->with('success', 'Usuario actualizado exitosamente.');
     }
 
     /**

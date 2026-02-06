@@ -31,7 +31,7 @@ class WorkCenter extends Model
         'municipality',
         'state',
         'phone',
-        'email',
+        'emails',
     ];
 
     protected function casts(): array
@@ -39,6 +39,7 @@ class WorkCenter extends Model
         return [
             'type' => WorkCenterType::class,
             'is_primary' => 'boolean',
+            'emails' => 'array',
         ];
     }
 

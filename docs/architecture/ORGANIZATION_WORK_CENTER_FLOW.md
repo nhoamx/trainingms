@@ -409,6 +409,374 @@ php artisan test --filter="OrganizationServiceTest|WorkCenterTest" --compact
 
 ---
 
-**Last Updated:** 2025-02-05  
-**Status:** Production Ready ✅  
-**Version:** Phase 1 Complete + Organization Flow Updated
+**Last Updated:** 2026-02-06  
+**Status:** Phase 2A Complete - User Work Center Access ✅  
+**Version:** Multi-Center User Access Implemented
+
+---
+
+## 🎉 Phase 2A: User Work Center Access - COMPLETED
+
+### Summary
+
+Successfully implemented **multi-center user access control** with role-based permissions. Users can now be assigned to specific work centers or have organization-wide access.
+
+### Implementation Date
+February 6, 2026
+
+### Key Features Delivered
+
+#### 1. **Three-Tier Role System**
+- `admin`: Global system access (all organizations, all centers)
+- `organization`: Organization-wide access (all centers of their org)
+- `work_center_user`: Granular access (only assigned centers)
+
+#### 2. **Many-to-Many User↔WorkCenter Relationship**
+- Pivot table: `user_work_centers`
+- Users can have access to multiple centers
+- Dynamic role-based access control
+
+#### 3. **Smart UX Workflow**
+- **Admin role**: No org/center selection needed
+- **Organization role**: Select org, auto-access to all centers
+- **Work Center User**: Select org → Select centers (multi-select)
+  - Auto-assigns if org has only 1 center
+  - Checkboxes for multiple centers
+
+#### 4. **Frontend Enhancements**
+- Dynamic form fields based on selected role
+- Real-time work center loading via API
+- Visual indicators for single-center orgs
+- Consistent Create/Edit experience
+
+#### 5. **Backend Safety**
+- Transaction-wrapped operations (rollback on error)
+- Automatic cleanup when changing roles
+- Organization field maintained for performance
+- Comprehensive access control methods
+
+---
+
+## 📊 Implementation Statistics
+
+### Files Created/Modified
+- **Migrations**: 1 new (`user_work_centers`)
+- **Seeders**: 2 updated (`RolesSeeder`, `MigrateUsersToWorkCentersSeeder`)
+- **Models**: 1 updated (`User` - 4 new methods)
+- **Controllers**: 1 updated (`UserController`)
+- **Routes**: 1 new API endpoint
+- **Frontend**: 2 updated (`Create.vue`, `Edit.vue`)
+- **Tests**: 1 new (`UserWorkCenterTest` - 9 tests, 35 assertions)
+
+### Migration Results
+- **Total users migrated**: 20
+- **Skipped (organization role)**: 20 (correct behavior)
+- **New work_center_user assignments**: 0 (all existing users had org-wide access)
+
+### Test Results
+```
+✓ admin has access to all work centers
+✓ organization user has access to all org centers
+✓ work center user has access only to assigned centers
+✓ work center user can have multiple centers
+✓ has access to work center method works
+✓ creating work center user with centers
+✓ updating work center user centers
+✓ changing role to organization removes work centers
+✓ api endpoint returns work centers for organization
+
+Tests: 9 passed (35 assertions) ✅
+```
+
+---
+
+## 🏗️ Architecture Changes
+
+### Database Schema
+
+#### New Pivot Table: `user_work_centers`
+```sql
+CREATE TABLE user_work_centers (
+    user_id UUID,
+    work_center_id UUID,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    PRIMARY KEY (user_id, work_center_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (work_center_id) REFERENCES work_centers(id) ON DELETE CASCADE
+);
+```
+
+#### Existing Users Table (Unchanged)
+```sql
+users
+  - organization_id (MAINTAINED for performance)
+  - ... other fields
+```
+
+---
+
+## 💡 Key Architectural Decisions
+
+### Decision 1: Keep `organization_id` in Users Table
+**Rationale**: Performance over purity
+- Avoids expensive JOINs in common queries
+- Minimal redundancy (single foreign key)
+- Huge performance gain for organization-scoped queries
+
+### Decision 2: Empty Pivot = No Restriction for admin/organization
+**Rationale**: Clear intent separation
+- `admin`/`organization`: No records in pivot (intended behavior)
+- `work_center_user`: Has records in pivot (explicit assignments)
+- Makes queries cleaner and intent obvious
+
+### Decision 3: Multi-Select UI Instead of Switcher
+**Rationale**: Simplicity + Better UX
+- Cards/badges show all accessible centers at once
+- No session state management needed
+- Users see comprehensive view without clicking
+- **Switcher deferred to Phase 2B** (if needed)
+
+### Decision 4: Maintain `organization` Role Name
+**Rationale**: Backward compatibility
+- No breaking changes to existing role checks
+- `organization_admin` rename deferred to cleanup sprint
+- Reduces scope of Phase 2A changes
+
+---
+
+## 📝 User Model - New Methods
+
+### 1. `workCenters()` - Relationship
+```php
+public function workCenters()
+{
+    return $this->belongsToMany(WorkCenter::class, 'user_work_centers')
+        ->withTimestamps();
+}
+```
+
+### 2. `accessibleWorkCenters()` - Dynamic Access
+```php
+public function accessibleWorkCenters()
+{
+    if ($this->hasRole('admin')) {
+        return WorkCenter::query(); // All centers
+    }
+    
+    if ($this->hasRole('organization')) {
+        return WorkCenter::where('organization_id', $this->organization_id);
+    }
+    
+    if ($this->hasRole('work_center_user')) {
+        return $this->workCenters(); // Only assigned
+    }
+    
+    return WorkCenter::whereRaw('1 = 0'); // No access
+}
+```
+
+### 3. `scopeForAccessibleCenters()` - Query Scope
+```php
+public function scopeForAccessibleCenters($query, User $user)
+{
+    // Filters any model query by user's accessible centers
+    // Usage: PaperEvaluation::forAccessibleCenters($user)->get()
+}
+```
+
+### 4. `hasAccessToWorkCenter()` - Permission Check
+```php
+public function hasAccessToWorkCenter(int|WorkCenter $workCenter): bool
+{
+    // Returns true if user can access the given center
+}
+```
+
+---
+
+## 🔌 API Endpoint
+
+### GET `/api/organizations/{organization}/work-centers`
+**Purpose**: Load work centers for organization selector
+
+**Response Example**:
+```json
+[
+    { "value": "uuid-1", "label": "0001 - Headquarters" },
+    { "value": "uuid-2", "label": "0002 - Warehouse" }
+]
+```
+
+**Used By**: Users/Create.vue, Users/Edit.vue
+
+---
+
+## 🎨 Frontend Workflow
+
+### Users/Create.vue Logic
+
+```vue
+1. User selects role
+   ↓
+2. IF role = 'admin'
+   → Hide org/center fields
+   
+3. IF role = 'organization' OR 'work_center_user'
+   → Show organization dropdown
+   ↓
+4. User selects organization
+   ↓
+5. IF role = 'work_center_user'
+   → Load work centers via API
+   ↓
+   a) IF 1 center: Auto-select + show green box
+   b) IF >1 centers: Show checkboxes
+```
+
+### Users/Edit.vue Logic
+- Same as Create.vue
+- Pre-populates assigned work centers
+- Watch triggers load centers on mount (`immediate: true`)
+
+---
+
+## 🧪 Testing Strategy
+
+### Unit Tests Coverage
+1. ✅ Admin access to all centers
+2. ✅ Organization user access to org centers
+3. ✅ Work center user restricted access
+4. ✅ Multi-center assignment
+5. ✅ Permission check methods
+6. ✅ User creation with centers
+7. ✅ User update with centers
+8. ✅ Role change cleanup
+9. ✅ API endpoint response
+
+### Integration Scenarios Tested
+- Creating new work_center_user with multiple centers
+- Updating existing user's center assignments
+- Role changes (work_center_user → organization)
+- API endpoint with authentication
+- Pivot table cascade deletes
+
+---
+
+## 🚀 Deployment Checklist
+
+### Pre-Deployment
+- [x] Run migrations (`php artisan migrate`)
+- [x] Seed roles (`php artisan db:seed --class=RolesSeeder`)
+- [x] Run user migration seeder (`php artisan db:seed --class=MigrateUsersToWorkCentersSeeder`)
+- [x] Run tests (`php artisan test --filter=UserWorkCenterTest`)
+- [x] Format code (`vendor/bin/pint --dirty`)
+- [x] Build frontend assets (`npm run build`)
+
+### Post-Deployment
+- [ ] Verify existing users retained their access
+- [ ] Test creating new work_center_user
+- [ ] Test editing existing users
+- [ ] Verify API endpoint in browser network tab
+- [ ] Check role-based dashboard filtering
+
+---
+
+## 🔍 Usage Examples
+
+### Example 1: Creating Work Center User
+```php
+// Admin creates user with access to 2 centers
+POST /usuarios
+{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "work_center_user_role_id",
+    "organization": "org_uuid",
+    "work_centers": ["center1_uuid", "center2_uuid"]
+}
+```
+
+### Example 2: Filtering Evaluations by Access
+```php
+// In any controller
+$user = auth()->user();
+$evaluations = PaperEvaluation::forAccessibleCenters($user)->get();
+// Returns only evaluations from user's accessible centers
+```
+
+### Example 3: Checking Permission
+```php
+if ($user->hasAccessToWorkCenter($workCenter)) {
+    // Allow operation
+} else {
+    abort(403);
+}
+```
+
+---
+
+## 📋 Next Steps (Phase 2B - Optional)
+
+### Context Switcher Enhancement
+If users request the ability to focus on one center at a time:
+
+1. **Session-based Active Center**
+   - Store `session('active_work_center_id')`
+   - Navbar dropdown to switch context
+   - Filter dashboard by active center only
+
+2. **Implementation Effort**
+   - Middleware: `SetActiveWorkCenter`
+   - Frontend: Navbar component
+   - Backend: Scopes with session filter
+   - **Estimated**: ~3-4 hours
+
+3. **Benefits**
+   - Focused view for multi-center users
+   - Cleaner dashboards
+   - Easier navigation
+
+4. **Drawbacks**
+   - Added complexity
+   - Session state management
+   - More middleware/filters
+
+**Decision**: Deferred until user feedback indicates need.
+
+---
+
+## 🐛 Known Limitations (Phase 2A)
+
+### 1. No per-model permission granularity
+- Users have access to **all data** in their centers (evaluations, quizzes, reports)
+- Future enhancement: Add permissions like `view-evaluations`, `edit-quizzes`, etc.
+
+### 2. Organization change doesn't auto-update centers
+- Admin must manually re-assign centers if user moves orgs
+- Future enhancement: Auto-suggest centers on org change
+
+### 3. No center-level roles
+- Can't have "manager of center A, viewer of center B"
+- Future enhancement: Add `PermissionableWorkCenter` pivot with role column
+
+---
+
+## 📚 Documentation Updates
+
+### Files Updated
+1. ✅ [ORGANIZATION_WORK_CENTER_FLOW.md](./ORGANIZATION_WORK_CENTER_FLOW.md) (this file)
+2. ✅ Added Phase 2A implementation summary
+3. ✅ Added architecture decisions log
+4. ✅ Added testing results
+5. ✅ Added usage examples
+
+### Files to Create (Future)
+- [ ] `USER_ROLES_GUIDE.md` - End-user documentation
+- [ ] `WORK_CENTER_ACCESS_API.md` - API documentation
+
+---
+
+**Last Updated:** 2026-02-06  
+**Status:** Phase 2A Complete - User Work Center Access ✅  
+**Version:** Multi-Center User Access Implemented

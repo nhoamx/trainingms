@@ -235,4 +235,32 @@ class WorkCenterController extends Controller
             ]);
         }
     }
+
+    /**
+     * Display work centers assigned to the authenticated user
+     */
+    public function myWorkCenters(): Response
+    {
+        $user = auth()->user();
+
+        $workCenters = $user->workCenters()
+            ->with('organization:id,name')
+            ->select('work_centers.*')
+            ->get()
+            ->map(function ($workCenter) {
+                return [
+                    'id' => $workCenter->id,
+                    'code' => $workCenter->code,
+                    'name' => $workCenter->name,
+                    'work_center_type' => $workCenter->work_center_type,
+                    'is_primary' => $workCenter->is_primary,
+                    'organization_id' => $workCenter->organization_id,
+                    'organization_name' => $workCenter->organization->name ?? 'N/A',
+                ];
+            });
+
+        return Inertia::render('WorkCenters/MyWorkCenters', [
+            'workCenters' => $workCenters,
+        ]);
+    }
 }

@@ -2,7 +2,7 @@
 
 import Dashboard from "../../Layouts/Dashboard.vue";
 import { useForm } from '@inertiajs/vue3'
-import {reactive, ref, defineProps} from "vue";
+import {reactive, ref, defineProps, computed, watch} from "vue";
 import FormInput from "../../Components/FormInput.vue";
 import FormSelect from "../../Components/FormSelect.vue";
 
@@ -21,15 +21,69 @@ const form = useForm({
     email: null,
     role: null,
     organization: null,
+    work_centers: [],
 })
 
 const clientErrors = ref({})
+const workCenters = ref([])
+const loadingCenters = ref(false)
 
 // Objeto reactivo para validaciones de cliente (además de las de backend que Inertia maneja)
 const errors = reactive({
     name: '',
     email: '',
     role: '',
+})
+
+// Computed: Obtener el rol seleccionado
+const selectedRole = computed(() => {
+    return roles.find(r => r.value === form.role)
+})
+
+// Computed: ¿El rol requiere seleccionar organización?
+const roleRequiresOrganization = computed(() => {
+    if (!selectedRole.value) return false
+    return ['organization', 'work_center_user'].includes(selectedRole.value.label)
+})
+
+// Computed: ¿El rol requiere seleccionar work centers?
+const roleRequiresWorkCenters = computed(() => {
+    return selectedRole.value?.label === 'work_center_user'
+})
+
+// Watch: Cargar work centers cuando cambia la organización
+watch(() => form.organization, async (newOrgId) => {
+    if (!newOrgId || !roleRequiresWorkCenters.value) {
+        workCenters.value = []
+        form.work_centers = []
+        return
+    }
+
+    loadingCenters.value = true
+    try {
+        const response = await fetch(`/api/organizations/${newOrgId}/work-centers`)
+        workCenters.value = await response.json()
+
+        // Si solo hay 1 centro, auto-seleccionar
+        if (workCenters.value.length === 1) {
+            form.work_centers = [workCenters.value[0].value]
+        }
+    } catch (error) {
+        console.error('Error cargando centros:', error)
+    } finally {
+        loadingCenters.value = false
+    }
+})
+
+// Watch: Limpiar centros si cambia de rol
+watch(() => form.role, () => {
+    if (!roleRequiresWorkCenters.value) {
+        form.work_centers = []
+    }
+    // Limpiar organización si es admin
+    if (selectedRole.value?.label === 'admin') {
+        form.organization = null
+    }
 })
 
 
@@ -110,16 +164,58 @@ const submit = () => {
                                     :error="clientErrors.role || form.errors.role"
                                 />
                             </div>
-                            <div class="sm:col-span-4">
+
+                            <!-- Organización (solo si no es admin) -->
+                            <div v-if="roleRequiresOrganization" class="sm:col-span-4">
                                 <FormSelect
-                                    label="Organicación (opcional)"
+                                    label="Organización"
                                     id="organization"
                                     name="organization"
                                     v-model="form.organization"
                                     :options="organizations"
-                                    error=""
+                                    :error="form.errors.organization"
                                 />
                             </div>
+
+                            <!-- Work Centers (solo para work_center_user) -->
+                            <div v-if="roleRequiresWorkCenters && form.organization" class="sm:col-span-4">
+                                <label class="block text-sm font-medium leading-6 text-gray-900 mb-2">
+                                    Centros de Trabajo Asignados
+                                </label>
+
+                                <div v-if="loadingCenters" class="text-sm text-gray-500">
+                                    Cargando centros...
+                                </div>
+
+                                <div v-else-if="workCenters.length === 0" class="text-sm text-gray-500">
+                                    Esta organización no tiene centros de trabajo.
+                                </div>
+
+                                <div v-else-if="workCenters.length === 1" class="text-sm text-gray-600 bg-green-50 p-3 rounded">
+                                    ✓ Auto-asignado: {{ workCenters[0].label }}
+                                </div>
+
+                                <!-- Multi-select si hay múltiples centros -->
+                                <div v-else class="space-y-2 border border-gray-300 rounded-md p-4">
+                                    <div v-for="center in workCenters" :key="center.value" class="flex items-center">
+                                        <input
+                                            :id="`center-${center.value}`"
+                                            v-model="form.work_centers"
+                                            type="checkbox"
+                                            :value="center.value"
+                                            class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                                        />
+                                        <label :for="`center-${center.value}`" class="ml-2 text-sm text-gray-700">
+                                            {{ center.label }}
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Selecciona los centros a los que este usuario tendrá acceso
+                                </p>
+                            </div>
+
                             <div class="sm:col-span-4">
                                 <label :for="id" class="block text-sm font-medium leading-6 text-gray-900">
                                     Contrasñea
