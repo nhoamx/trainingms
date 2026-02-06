@@ -40,8 +40,7 @@ return [
             'a0315c7c-d7a2-4969-b51e-d126fa6da1af', // CORPORACION INDUSTRIAL DE CALIZA
             'a0317959-15f7-4d4a-a2d3-82aaae4c032a', // SEVEN
             'a0d2175b-4c4e-4e6b-bc5d-6faef772b10d', // Empresa DEMO
-            'a0e21613-3fe3-4ede-9bfa-f6ecc1badfa8', // Más Bodega
-            'a1032859-d40a-4071-b8fd-dd72b35b8e3e', // MAS BODEGA Y LOGISTICA S.A. DE C.V.
+            'a104b279-75d4-4e4e-8a4a-e57b0dd97ce9', // Más Bodega
         ],
     ],
 
