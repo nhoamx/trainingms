@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RoleType;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
@@ -50,10 +51,15 @@ class UserController extends Controller
      */
     public function create()
     {
-        $roles = Role::all()->map(fn ($role) => [
-            'value' => $role->id,
-            'label' => $role->name,
-        ]);
+        $roles = Role::all()->map(function ($role) {
+            $roleType = RoleType::tryFromValue($role->name);
+
+            return [
+                'value' => $role->id,
+                'name' => $role->name, // Nombre técnico para lógica
+                'label' => $roleType?->label() ?? $role->name, // Label amigable para UI
+            ];
+        });
 
         $organizations = Organization::all()->map(fn ($organization) => [
             'value' => $organization->id,
@@ -130,10 +136,15 @@ class UserController extends Controller
                 'organization' => $user->organization_id,
                 'work_centers' => $user->workCenters->pluck('id')->toArray(),
             ],
-            'roles' => Role::all()->map(fn ($role) => [
-                'value' => $role->id,
-                'label' => $role->name,
-            ]),
+            'roles' => Role::all()->map(function ($role) {
+                $roleType = RoleType::tryFromValue($role->name);
+
+                return [
+                    'value' => $role->id,
+                    'name' => $role->name, // Nombre técnico para lógica
+                    'label' => $roleType?->label() ?? $role->name, // Label amigable para UI
+                ];
+            }),
             'organizations' => Organization::all()->map(fn ($organization) => [
                 'value' => $organization->id,
                 'label' => $organization->name,

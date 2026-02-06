@@ -19,6 +19,7 @@ const userRole = (role) => {
         'super-admin': { label: 'Super Admin', color: 'purple' },
         'admin': { label: 'Administrador', color: 'blue' },
         'organization': { label: 'Organización', color: 'green' },
+        'work_center_user': { label: 'Usuario de Centro de Trabajo', color: 'gray' },
     }
     return roleMap[role] || { label: 'Invitado', color: 'gray' }
 }

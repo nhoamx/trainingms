@@ -43,12 +43,12 @@ const selectedRole = computed(() => {
 // Computed: ¿El rol requiere seleccionar organización?
 const roleRequiresOrganization = computed(() => {
     if (!selectedRole.value) return false
-    return ['organization', 'work_center_user'].includes(selectedRole.value.label)
+    return ['organization', 'work_center_user'].includes(selectedRole.value.name)
 })
 
 // Computed: ¿El rol requiere seleccionar work centers?
 const roleRequiresWorkCenters = computed(() => {
-    return selectedRole.value?.label === 'work_center_user'
+    return selectedRole.value?.name === 'work_center_user'
 })
 
 // Watch: Cargar work centers cuando cambia la organización
@@ -80,8 +80,8 @@ watch(() => form.role, () => {
     if (!roleRequiresWorkCenters.value) {
         form.work_centers = []
     }
-    // Limpiar organización si es admin
-    if (selectedRole.value?.label === 'admin') {
+    // Limpiar organización si es admin o super-admin
+    if (selectedRole.value?.name === 'admin' || selectedRole.value?.name === 'super-admin') {
         form.organization = null
     }
 })
