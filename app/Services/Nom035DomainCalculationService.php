@@ -497,22 +497,25 @@ class Nom035DomainCalculationService
         $riskLevels = config('nom035_risk_levels');
 
         $domains = [];
-        foreach (array_keys($domainConfig) as $domainName) {
-            $domains[$domainName] = [
-                'average_score' => 0,
-                'max_score' => $riskLevels['domains'][$domainName]['max_score'],
-                'percentage' => 0,
-                'risk_level' => 'nulo',
-                'risk_level_label' => $riskLevels['labels']['nulo'],
-                'distribution' => [
-                    'nulo' => 0,
-                    'bajo' => 0,
-                    'medio' => 0,
-                    'alto' => 0,
-                    'muy_alto' => 0,
-                ],
-                'total_evaluations' => 0,
-            ];
+        // Iterar correctamente sobre categorías -> dominios (no solo categorías)
+        foreach ($domainConfig as $categoryName => $domainsInCategory) {
+            foreach ($domainsInCategory as $domainName => $dimensions) {
+                $domains[$domainName] = [
+                    'average_score' => 0,
+                    'max_score' => $riskLevels['domains'][$domainName]['max_score'] ?? 0,
+                    'percentage' => 0,
+                    'risk_level' => 'nulo',
+                    'risk_level_label' => $riskLevels['labels']['nulo'],
+                    'distribution' => [
+                        'nulo' => 0,
+                        'bajo' => 0,
+                        'medio' => 0,
+                        'alto' => 0,
+                        'muy_alto' => 0,
+                    ],
+                    'total_evaluations' => 0,
+                ];
+            }
         }
 
         return [
@@ -649,11 +652,18 @@ class Nom035DomainCalculationService
         $riskLevels = config('nom035_risk_levels');
 
         $categories = [];
+        // Nota: Las variables tienen nombres confusos heredados, pero mantienen compatibilidad
+        // $domainName = realmente es una CATEGORÍA en la estructura question_dimensions
+        // $categoriesInDomain = realmente son los DOMINIOS
+        // $categoryName = realmente es un DOMINIO
         foreach ($domainConfig as $domainName => $categoriesInDomain) {
             foreach (array_keys($categoriesInDomain) as $categoryName) {
+                // Calcular max_score correctamente sumando todas las preguntas de las dimensiones
+                $maxScore = $this->calculateCategoryMaxScore($categoryName, $domainConfig);
+
                 $categories[$categoryName] = [
                     'average_score' => 0,
-                    'max_score' => $riskLevels['domains'][$domainName]['max_score'],
+                    'max_score' => $maxScore,
                     'percentage' => 0,
                     'risk_level' => 'nulo',
                     'risk_level_label' => $riskLevels['labels']['nulo'],
