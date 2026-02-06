@@ -6,6 +6,7 @@ use App\Events\BulkImportProgress;
 use App\Imports\EvaluationBulkUpdateImport;
 use App\Models\BulkImportJob;
 use App\Services\OrganizationReportCacheService;
+use App\Support\BatchModeContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -26,9 +27,9 @@ class ProcessBulkEvaluationImport implements ShouldQueue
     /**
      * Create a new job instance.
      *
-     * Important: This job must invalidate organization report caches after importing evaluations.
-     * Since Excel::import() performs bulk updates that bypass Eloquent Observers, we manually
-     * invalidate the caches to ensure next page loads show fresh data (not stale cached results).
+     * Important: This job uses BatchModeContext to prevent thousands of warming jobs.
+     * During import, observers fire for every row but skip cache warming.
+     * After import completes, we dispatch ONE warming job for the organization.
      */
     public function __construct(
         public BulkImportJob $bulkImportJob,
@@ -40,6 +41,8 @@ class ProcessBulkEvaluationImport implements ShouldQueue
      */
     public function handle(): void
     {
+        $organizationId = $this->bulkImportJob->organization_id;
+
         try {
             $this->bulkImportJob->update([
                 'status' => 'processing',
@@ -48,16 +51,19 @@ class ProcessBulkEvaluationImport implements ShouldQueue
 
             Log::info('Starting bulk import job', [
                 'bulk_import_job_id' => $this->bulkImportJob->id,
-                'organization_id' => $this->bulkImportJob->organization_id,
+                'organization_id' => $organizationId,
                 'file_path' => $this->bulkImportJob->file_path,
             ]);
 
             // Broadcast initial progress
             $this->broadcastProgress();
 
+            // Enable batch mode to prevent observer storm
+            BatchModeContext::enableForOrganization($organizationId);
+
             // Create import with progress callback
             $import = new EvaluationBulkUpdateImport(
-                $this->bulkImportJob->organization_id,
+                $organizationId,
                 $this->bulkImportJob->source,
                 function ($processedRows, $totalRows, $updatedCount, $skippedCount) {
                     $this->updateProgress($processedRows, $totalRows, $updatedCount, $skippedCount);
@@ -67,8 +73,11 @@ class ProcessBulkEvaluationImport implements ShouldQueue
             // Get file path from storage
             $filePath = Storage::disk('local')->path($this->bulkImportJob->file_path);
 
-            // Run import
+            // Run import (observers will fire but skip warming)
             Excel::import($import, $filePath);
+
+            // Disable batch mode
+            BatchModeContext::disableForOrganization($organizationId);
 
             // Update final stats
             $this->bulkImportJob->update([
@@ -86,8 +95,9 @@ class ProcessBulkEvaluationImport implements ShouldQueue
                 'errors_count' => count($import->getErrors()),
             ]);
 
-            // Invalidate organization caches so next page load shows fresh data
-            $this->cacheService->forgetOrganizationCaches($this->bulkImportJob->organization_id);
+            // Invalidate caches and dispatch ONE warming job for the organization
+            Log::info("Dispatching single cache warming job for org {$organizationId} after bulk import");
+            $this->cacheService->forgetOrganizationCaches($organizationId, warmCache: true);
 
             // Broadcast final progress
             $this->broadcastProgress();
@@ -96,6 +106,9 @@ class ProcessBulkEvaluationImport implements ShouldQueue
             Storage::disk('local')->delete($this->bulkImportJob->file_path);
 
         } catch (\Throwable $e) {
+            // Make sure to disable batch mode on failure
+            BatchModeContext::disableForOrganization($organizationId);
+
             Log::error('Bulk import job failed', [
                 'bulk_import_job_id' => $this->bulkImportJob->id,
                 'error' => $e->getMessage(),

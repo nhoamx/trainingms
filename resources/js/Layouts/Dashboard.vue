@@ -1,211 +1,102 @@
 <template>
-    <div class="min-h-full">
-        <Disclosure as="nav" class="bg-gray-800" v-slot="{ open }">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div class="flex h-16 items-center justify-between">
-                    <div class="flex items-center">
-                        <div class="shrink-0">
-                            <span class="text-white text-2xl font-bold">T & MS</span>
-                        </div>
-                        <div class="hidden md:block">
-                            <div class="ml-10 flex items-baseline space-x-4">
-                                <!-- Iteramos sobre cada elemento de la navegación -->
-                                <template v-for="item in navigation" :key="item.name">
-                                    <!-- Si el item tiene subitems, mostramos el dropdown -->
-                                    <template v-if="item.items">
-                                        <Menu as="div" class="relative inline-block text-left">
-                                            <div>
-                                                <MenuButton
-                                                    class="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white focus:outline-none"
-                                                >
-                                                    {{ item.name }}
-                                                    <!-- Icono para indicar que tiene submenú (opcional) -->
-                                                    <svg
-                                                        class="ml-2 h-5 w-5"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        viewBox="0 0 20 20"
-                                                        fill="currentColor"
-                                                        aria-hidden="true"
-                                                    >
-                                                        <path
-                                                            fill-rule="evenodd"
-                                                            d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-                                                            clip-rule="evenodd"
-                                                        />
-                                                    </svg>
-                                                </MenuButton>
-                                            </div>
-                                            <transition
-                                                enter-active-class="transition ease-out duration-100"
-                                                enter-from-class="transform opacity-0 scale-95"
-                                                enter-to-class="transform opacity-100 scale-100"
-                                                leave-active-class="transition ease-in duration-75"
-                                                leave-from-class="transform opacity-100 scale-100"
-                                                leave-to-class="transform opacity-0 scale-95"
-                                            >
-                                                <MenuItems
-                                                    class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-none"
-                                                >
-                                                    <!-- Iteramos sobre los subitems -->
-                                                    <MenuItem v-for="subItem in item.items" :key="subItem.name" v-slot="{ active }">
-                                                        <Link
-                                                            :href="subItem.href"
-                                                            :class="[active ? 'bg-gray-100' : '', 'block px-4 py-2 text-sm text-gray-700']"
-                                                        >
-                                                            {{ subItem.name }}
-                                                        </Link>
-                                                    </MenuItem>
-                                                </MenuItems>
-                                            </transition>
-                                        </Menu>
-                                    </template>
+    <div class="min-h-screen bg-gray-50">
+        <!-- Sidebar Component -->
+        <Sidebar 
+            ref="sidebarRef"
+            :navigation="navigation"
+            :user-navigation="userNavigation"
+            :user="user"
+            :csrf-token="csrfToken"
+            @toggle-sidebar="handleSidebarToggle"
+        />
 
-                                    <!-- Si el item no tiene subitems, se renderiza como un enlace normal -->
-                                    <template v-else>
-                                        <Link
-                                            :href="item.href"
-                                            :class="[item.current ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white', 'rounded-md px-3 py-2 text-sm font-medium']"
-                                            :aria-current="item.current ? 'page' : undefined"
-                                        >
-                                            {{ item.name }}
-                                        </Link>
-                                    </template>
-                                </template>
-                            </div>
+        <!-- Main content area -->
+        <div 
+            :class="[
+                'transition-all duration-300 ease-in-out',
+                sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+            ]"
+        >
+            <!-- Top bar (mobile menu + page title) -->
+            <header class="sticky top-0 z-30 bg-white border-b border-gray-200">
+                <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+                    <!-- Mobile menu button -->
+                    <button
+                        @click="toggleMobileMenu"
+                        class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+                        aria-label="Abrir menú"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
 
-                        </div>
+                    <!-- Page title -->
+                    <div class="flex-1">
+                        <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl">{{ title }}</h1>
                     </div>
-                    <div class="hidden md:block">
-                        <div class="ml-4 flex items-center md:ml-6">
-                            <!-- <button type="button" class="relative rounded-full bg-gray-800 p-1 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
-                                <span class="absolute -inset-1.5" />
-                                <span class="sr-only">View notifications</span>
-                                <BellIcon class="size-6" aria-hidden="true" />
-                            </button> -->
 
-                            <!-- Profile dropdown -->
-                            <Menu as="div" class="relative ml-3">
-                                <div>
-                                    <MenuButton class="relative flex max-w-xs items-center rounded-full bg-gray-800 text-sm focus:outline-none">
-                                        <span class="absolute -inset-1.5" />
-                                        <span class="sr-only">Open user menu</span>
-                                        <div class="text-base/5 text-gray-400 hover:text-white">{{ user.name }}</div>
-                                    </MenuButton>
-                                </div>
-                                <transition enter-active-class="transition ease-out duration-100" enter-from-class="transform opacity-0 scale-95" enter-to-class="transform opacity-100 scale-100" leave-active-class="transition ease-in duration-75" leave-from-class="transform opacity-100 scale-100" leave-to-class="transform opacity-0 scale-95">
-                                    <MenuItems class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-none">
-                                        <MenuItem v-for="item in userNavigation" :key="item.name" v-slot="{ active }">
-                                            <template v-if="item.method">
-                                                <form :action="item.href" method="post">
-                                                    <input type="hidden" name="_token" :value="csrfToken">
-                                                    <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-gray-700">{{ item.name }}</button>
-                                                </form>
-                                            </template>
-                                            <template v-else>
-                                                <a :href="item.href" :class="[active ? 'bg-gray-100 outline-none' : '', 'block px-4 py-2 text-sm text-gray-700']">{{ item.name }}</a>
-                                            </template>
-                                        </MenuItem>
-                                    </MenuItems>
-                                </transition>
-                            </Menu>
-                        </div>
-                    </div>
-                    <div class="-mr-2 flex md:hidden">
-                        <!-- Mobile menu button -->
-                        <DisclosureButton class="relative inline-flex items-center justify-center rounded-md bg-gray-800 p-2 text-gray-400 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
-                            <span class="absolute -inset-0.5" />
-                            <span class="sr-only">Open main menu</span>
-                            <Bars3Icon v-if="!open" class="block size-6" aria-hidden="true" />
-                            <XMarkIcon v-else class="block size-6" aria-hidden="true" />
-                        </DisclosureButton>
+                    <!-- Action button (if provided) -->
+                    <div v-if="action" class="ml-4">
+                        <Link 
+                            :href="action.route" 
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            {{ action.title }}
+                        </Link>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <DisclosurePanel class="md:hidden">
-                <div class="space-y-1 px-2 pb-3 pt-2 sm:px-3">
-                    <DisclosureButton v-for="item in navigation" :key="item.name" as="a" :href="item.href" :class="[item.current ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white', 'block rounded-md px-3 py-2 text-base font-medium']" :aria-current="item.current ? 'page' : undefined">{{ item.name }}</DisclosureButton>
+            <!-- Main content -->
+            <main class="p-4 sm:p-6 lg:p-8">
+                <div class="mx-auto max-w-7xl">
+                    <slot />
                 </div>
-                <div class="border-t border-gray-700 pb-3 pt-4">
-                    <div class="flex items-center px-5">
-                        <div class="shrink-0">
-                            <img class="size-10 rounded-full" :src="user.imageUrl" alt="" />
-                        </div>
-                        <div class="ml-3">
-                            <div class="text-base/5 font-medium text-white">{{ user.name }}</div>
-                            <div class="text-sm font-medium text-gray-400">{{ user.email }}</div>
-                        </div>
-                        <!-- <button type="button" class="relative ml-auto shrink-0 rounded-full bg-gray-800 p-1 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
-                            <span class="absolute -inset-1.5" />
-                            <span class="sr-only">View notifications</span>
-                            <BellIcon class="size-6" aria-hidden="true" />
-                        </button> -->
-                    </div>
-                    <div class="mt-3 space-y-1 px-2">
-                        <template v-for="item in userNavigation" :key="item.name">
-                            <form v-if="item.method" :action="item.href" method="post">
-                                <input type="hidden" name="_token" :value="csrfToken">
-                                <button type="submit" class="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-400 hover:bg-gray-700 hover:text-white">
-                                    {{ item.name }}
-                                </button>
-                            </form>
-                            <DisclosureButton v-else as="a" :href="item.href" class="block rounded-md px-3 py-2 text-base font-medium text-gray-400 hover:bg-gray-700 hover:text-white">
-                                {{ item.name }}
-                            </DisclosureButton>
-                        </template>
-                    </div>
-                </div>
-            </DisclosurePanel>
-        </Disclosure>
-
-        <header class="bg-white shadow">
-            <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <div class="md:flex md:items-center md:justify-between">
-                    <div class="min-w-0 flex-1">
-                        <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">{{ title }}</h2>
-                    </div>
-                    <div class="mt-4 flex md:ml-4 md:mt-0" v-if="action">
-                        <Link :href="action.route" class="ml-3 inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-                            {{ action.title }}</Link>
-                    </div>
-                </div>
-
-            </div>
-        </header>
-        <main>
-        <!-- Persistent notification stack - survives page navigation -->
-            <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <slot />
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
-
 </template>
 
 <script setup>
-import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
-import { Bars3Icon } from '@heroicons/vue/24/outline'
-import {computed} from 'vue'
-import { usePage } from '@inertiajs/vue3'
+import { ref, computed } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import Sidebar from '../Components/Sidebar.vue';
 
-const page = usePage()
-
-const user = computed(() => page.props.auth.user)
-console.log(user.value)
-
+const page = usePage();
+const user = computed(() => page.props.auth.user);
 const title = computed(() => page.props.title || 'Dashboard');
 const action = computed(() => page.props.action || null);
-
 const csrfToken = computed(() => page.props.csrf_token);
+
+const sidebarRef = ref(null);
+const sidebarCollapsed = ref(false);
+
+const handleSidebarToggle = (collapsed) => {
+  sidebarCollapsed.value = collapsed;
+};
+
+const toggleMobileMenu = () => {
+  if (sidebarRef.value) {
+    sidebarRef.value.mobileMenuOpen = !sidebarRef.value.mobileMenuOpen;
+  }
+};
 
 const navigation = computed(() => {
     // Check if user has work_center_user role
     const isWorkCenterUser = user.value.roles?.some(role => role.name === 'work_center_user');
     
     if (isWorkCenterUser) {
-        // Work center users only see Dashboard (redirects to their work centers)
         return [
-            { name: 'Dashboard', href: route('my-work-centers'), current: route().current('my-work-centers') },
+            { 
+                name: 'Dashboard', 
+                href: route('my-work-centers'), 
+                current: route().current('my-work-centers'),
+                icon: 'home'
+            },
         ];
     }
 
@@ -213,48 +104,81 @@ const navigation = computed(() => {
     const isOrganizationUser = user.value.roles?.some(role => role.name === 'organization');
 
     if (isOrganizationUser) {
-        // For organization users, get their organization ID
         const orgId = user.value.organization_id;
-        console.log('Organization User - orgId:', orgId, 'Type:', typeof orgId);
         
         const navItems = [
-            { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
+            { 
+                name: 'Dashboard', 
+                href: route('dashboard'), 
+                current: route().current('dashboard'),
+                icon: 'home'
+            },
         ];
         
-        // Only add company data link if organization ID exists
         if (orgId) {
-            console.log('Adding company data link with orgId:', orgId);
             navItems.push({ 
                 name: 'Datos de la empresa', 
                 href: route('company-data.edit', orgId), 
-                current: route().current('company-data.*') 
+                current: route().current('company-data.*'),
+                icon: 'building'
             });
-        } else {
-            console.log('No orgId found, skipping company data link');
         }
         
-        console.log('Final navItems:', navItems);
         return navItems;
     }
 
-    // Admin/super-admin users see full menu
+    // Admin/super-admin users see full menu with icons
     return [
-        { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
-        { name: 'Cargar Evaluación', href: route('evaluations.load'), current: route().current('evaluations.load') },
-        { name: 'Organizaciones', href: '#', current: route().current('organizations.*'), items: [
-            { name: 'Listado', href: route('organizations.index'), current: route().current('organizations.index') },
-            { name: 'Crear', href: route('organizations.create'), current: route().current('organizations.create') },
-        ] },
-        { name: 'Gestión de Audio', href: '#', current: route().current('audio.*'), items: [
-            { name: 'Subir Archivos', href: route('audio.upload'), current: route().current('audio.upload') },
-            { name: 'Ver Biblioteca', href: route('audio.index'), current: route().current('audio.index') },
-        ] },
-        { name: 'Programar examen', href: route('quiz.index'), current: route().current('quiz.*') },
-        { name: 'Usuarios', href: route('users.index'), current: route().current('users.index') },
+        { 
+            name: 'Dashboard', 
+            href: route('dashboard'), 
+            current: route().current('dashboard'),
+            icon: 'home'
+        },
+        { 
+            name: 'Organizaciones', 
+            href: route('organizations.index'), 
+            current: route().current('organizations.*'),
+            icon: 'building',
+            items: [
+                { name: 'Listado', href: route('organizations.index'), current: route().current('organizations.index') },
+                { name: 'Crear', href: route('organizations.create'), current: route().current('organizations.create') },
+            ] 
+        },
+        { 
+            name: 'Evaluaciones', 
+            href: route('evaluations.load'), 
+            current: route().current('evaluations.*'),
+            icon: 'document'
+        },
+        { 
+            name: 'Gestión de Audio', 
+            href: route('audio.index'), 
+            current: route().current('audio.*'),
+            icon: 'microphone',
+            items: [
+                { name: 'Biblioteca', href: route('audio.index'), current: route().current('audio.index') },
+                { name: 'Subir Archivos', href: route('audio.upload'), current: route().current('audio.upload') },
+            ]
+        },
+        { 
+            name: 'Exámenes', 
+            href: route('quiz.index'), 
+            current: route().current('quiz.*'),
+            icon: 'calendar'
+        },
+        { 
+            name: 'Usuarios', 
+            href: route('users.index'), 
+            current: route().current('users.index'),
+            icon: 'users'
+        },
     ];
 });
+
 const userNavigation = [
     { name: 'Mi Perfil', href: route('profile') },
     { name: 'Cerrar sesión', href: route('logout'), method: 'post' },
-]
+];
 </script>
+

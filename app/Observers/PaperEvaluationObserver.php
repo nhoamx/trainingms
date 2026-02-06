@@ -4,12 +4,19 @@ namespace App\Observers;
 
 use App\Models\PaperEvaluation;
 use App\Services\OrganizationReportCacheService;
+use App\Support\BatchModeContext;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Observer for PaperEvaluation model to handle cache invalidation.
  *
  * Clears organization report caches when evaluations are created, updated,
  * deleted, or restored to ensure reports always reflect current data.
+ *
+ * Batch Mode Support:
+ * During bulk imports, observers fire for every row. To prevent thousands
+ * of warming jobs, we detect batch mode and skip warming. The import job
+ * dispatches ONE warming job at the end.
  */
 class PaperEvaluationObserver
 {
@@ -22,7 +29,7 @@ class PaperEvaluationObserver
      */
     public function created(PaperEvaluation $paperEvaluation): void
     {
-        $this->invalidateCache($paperEvaluation);
+        $this->invalidateCache($paperEvaluation, 'created');
     }
 
     /**
@@ -30,7 +37,7 @@ class PaperEvaluationObserver
      */
     public function updated(PaperEvaluation $paperEvaluation): void
     {
-        $this->invalidateCache($paperEvaluation);
+        $this->invalidateCache($paperEvaluation, 'updated');
     }
 
     /**
@@ -38,7 +45,7 @@ class PaperEvaluationObserver
      */
     public function deleted(PaperEvaluation $paperEvaluation): void
     {
-        $this->invalidateCache($paperEvaluation);
+        $this->invalidateCache($paperEvaluation, 'deleted');
     }
 
     /**
@@ -46,7 +53,7 @@ class PaperEvaluationObserver
      */
     public function restored(PaperEvaluation $paperEvaluation): void
     {
-        $this->invalidateCache($paperEvaluation);
+        $this->invalidateCache($paperEvaluation, 'restored');
     }
 
     /**
@@ -54,16 +61,30 @@ class PaperEvaluationObserver
      */
     public function forceDeleted(PaperEvaluation $paperEvaluation): void
     {
-        $this->invalidateCache($paperEvaluation);
+        $this->invalidateCache($paperEvaluation, 'forceDeleted');
     }
 
     /**
      * Invalidate cache for the organization
+     *
+     * Smart warming: Skips warming in batch mode to prevent job storms
      */
-    private function invalidateCache(PaperEvaluation $paperEvaluation): void
+    private function invalidateCache(PaperEvaluation $paperEvaluation, string $event): void
     {
         if ($paperEvaluation->organization_id) {
-            $this->cacheService->forgetOrganizationCaches($paperEvaluation->organization_id);
+            $orgId = $paperEvaluation->organization_id;
+            $isBatchMode = BatchModeContext::isEnabledForOrganization($orgId);
+
+            // Always invalidate cache immediately (data must be fresh)
+            // But skip warming if in batch mode (import job will warm at end)
+            $this->cacheService->forgetOrganizationCaches(
+                $orgId,
+                warmCache: ! $isBatchMode
+            );
+
+            if ($isBatchMode) {
+                Log::debug("PaperEvaluation {$event}: Skipped warming for org {$orgId} (batch mode)");
+            }
         }
     }
 }
