@@ -11,14 +11,18 @@ class RolesSeeder extends Seeder
      */
     public function run(): void
     {
-        // Crear dos roles, Admin y Company
+        // Crear roles del sistema
         $roles = [
-            ['name' => 'admin'],
-            ['name' => 'organization'],
+            ['name' => 'admin', 'guard_name' => 'web'],
+            ['name' => 'organization', 'guard_name' => 'web'],
+            ['name' => 'work_center_user', 'guard_name' => 'web'],
         ];
 
         foreach ($roles as $role) {
-            \App\Models\Role::firstOrCreate($role);
+            \App\Models\Role::firstOrCreate(
+                ['name' => $role['name']],
+                $role
+            );
         }
     }
 }

@@ -14,6 +14,7 @@ use App\Http\Controllers\QuizController;
 use App\Http\Controllers\ResultsController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\UserDashboardAccess;
+use App\Models\Organization;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +41,11 @@ Route::controller(\App\Http\Controllers\AuthController::class)->group(function (
 });
 
 Route::middleware(['auth'])->group(function () {
+
+    // Work Center User - My Work Centers (for users with work_center_user role)
+    Route::get('/mis-centros', [\App\Http\Controllers\WorkCenterController::class, 'myWorkCenters'])
+        ->middleware('role:work_center_user')
+        ->name('my-work-centers');
 
     // Audio file management routes (admin only)
     Route::middleware(['role:admin|super-admin'])->prefix('audio')->name('audio.')->group(function () {
@@ -475,6 +481,18 @@ Route::middleware(['auth'])->group(function () {
 
         // Eliminar usuario
         Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        // API: Obtener work centers de una organización
+        Route::get('/api/organizations/{organization}/work-centers', function (Organization $organization) {
+            return $organization->workCenters()
+                ->select('id', 'name', 'code', 'type')
+                ->orderBy('code')
+                ->get()
+                ->map(fn ($center) => [
+                    'value' => $center->id,
+                    'label' => "{$center->code} - {$center->name}",
+                ]);
+        });
 
         Route::get('/api/notifications', function (Request $request) {
             // Supongamos que el estado se guarda en cache o en un modelo.

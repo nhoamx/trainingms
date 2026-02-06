@@ -184,10 +184,9 @@
 
 <script setup>
 import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
-import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/vue/24/outline'
-import {computed, onMounted} from 'vue'
+import { Bars3Icon } from '@heroicons/vue/24/outline'
+import {computed} from 'vue'
 import { usePage } from '@inertiajs/vue3'
-import NotificationStack from "../Components/NotificationStack.vue";
 
 const page = usePage()
 
@@ -200,6 +199,16 @@ const action = computed(() => page.props.action || null);
 const csrfToken = computed(() => page.props.csrf_token);
 
 const navigation = computed(() => {
+    // Check if user has work_center_user role
+    const isWorkCenterUser = user.value.roles?.some(role => role.name === 'work_center_user');
+    
+    if (isWorkCenterUser) {
+        // Work center users only see Dashboard (redirects to their work centers)
+        return [
+            { name: 'Dashboard', href: route('my-work-centers'), current: route().current('my-work-centers') },
+        ];
+    }
+
     // Check if user has organization role
     const isOrganizationUser = user.value.roles?.some(role => role.name === 'organization');
 
@@ -228,6 +237,7 @@ const navigation = computed(() => {
         return navItems;
     }
 
+    // Admin/super-admin users see full menu
     return [
         { name: 'Dashboard', href: route('dashboard'), current: route().current('dashboard') },
         { name: 'Cargar Evaluación', href: route('evaluations.load'), current: route().current('evaluations.load') },

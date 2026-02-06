@@ -23,6 +23,56 @@ class WorkCentersImport implements ToCollection, WithHeadingRow, WithValidation
     public function __construct(protected Organization $organization) {}
 
     /**
+     * Normalizar un valor que puede venir como número o string desde Excel
+     */
+    private function normalizeToString($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return (string) $value;
+        }
+
+        if (is_string($value)) {
+            return trim($value);
+        }
+
+        return (string) $value;
+    }
+
+    /**
+     * Parsear múltiples emails que pueden venir separados por comas, espacios o saltos de línea
+     * Retorna un array de emails válidos o null si no hay emails
+     */
+    private function parseEmails(?string $emailString): ?array
+    {
+        if (empty($emailString)) {
+            return null;
+        }
+
+        // Normalizar: reemplazar saltos de línea y múltiples espacios por un espacio
+        $normalized = preg_replace('/[\r\n\t]+/', ' ', $emailString);
+        $normalized = preg_replace('/\s+/', ' ', $normalized);
+
+        // Separar por comas o espacios
+        $emails = preg_split('/[,\s]+/', $normalized, -1, PREG_SPLIT_NO_EMPTY);
+
+        // Filtrar y validar emails
+        $validEmails = [];
+        foreach ($emails as $email) {
+            $email = trim($email);
+            // Validación básica de email
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $validEmails[] = $email;
+            }
+        }
+
+        return count($validEmails) > 0 ? $validEmails : null;
+    }
+
+    /**
      * Procesar las filas del archivo Excel
      */
     public function collection(Collection $rows)
@@ -36,9 +86,17 @@ class WorkCentersImport implements ToCollection, WithHeadingRow, WithValidation
                     return is_string($value) ? trim($value) : $value;
                 });
 
-                $code = $row['codigo'] ?? null;
+                // Obtener y normalizar campos
+                $code = $this->normalizeToString($row['codigo'] ?? null);
                 $name = $row['nombre'] ?? null;
                 $type = $row['tipo'] ?? null;
+                $rfc = $this->normalizeToString($row['rfc'] ?? null);
+                $registroPatronal = $this->normalizeToString($row['registro_patronal'] ?? null);
+                $codigoPostal = $this->normalizeToString($row['codigo_postal'] ?? null);
+                $telefono = $this->normalizeToString($row['telefono'] ?? null);
+
+                // Parsear emails (puede venir separado por comas, espacios, saltos de línea)
+                $emails = $this->parseEmails($row['email'] ?? $row['emails'] ?? null);
 
                 // Validar que tengamos los campos requeridos
                 if (empty($name)) {
@@ -56,7 +114,7 @@ class WorkCentersImport implements ToCollection, WithHeadingRow, WithValidation
                 }
 
                 // Validar que el tipo sea válido
-                $validTypes = ['matriz', 'planta', 'sucursal', 'almacen', 'oficina', 'otro'];
+                $validTypes = ['matriz', 'planta', 'sucursal', 'almacen', 'oficina', 'otro', 'plaza'];
                 $typeNormalized = strtolower($type);
 
                 if (! in_array($typeNormalized, $validTypes)) {
@@ -74,15 +132,16 @@ class WorkCentersImport implements ToCollection, WithHeadingRow, WithValidation
                     'almacen' => WorkCenterType::Warehouse,
                     'oficina' => WorkCenterType::Office,
                     'otro' => WorkCenterType::Other,
+                    'plaza' => WorkCenterType::Square,
                 };
 
-                // Si el código está vacío, generar uno automáticamente
-                if (empty($code)) {
+                // Si el código está vacío o es null, generar uno automáticamente
+                if ($code === null || $code === '') {
                     $maxCode = $this->organization->workCenters()->max('code');
                     $nextNumber = $maxCode ? intval($maxCode) + 1 : 2; // Empezar desde 0002 (el primario es 0001)
-                    $code = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+                    $code = str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
                 } else {
-                    // Asegurarse de que el código tenga 4 dígitos
+                    // Normalizar: asegurarse de que el código tenga 4 dígitos con ceros a la izquierda
                     $code = str_pad($code, 4, '0', STR_PAD_LEFT);
                 }
 
@@ -105,15 +164,15 @@ class WorkCentersImport implements ToCollection, WithHeadingRow, WithValidation
                         'name' => $name,
                         'type' => $typeEnum,
                         'legal_name' => $row['razon_social'] ?? $existingCenter->legal_name,
-                        'tax_id' => $row['rfc'] ?? $existingCenter->tax_id,
-                        'employer_registration' => $row['registro_patronal'] ?? $existingCenter->employer_registration,
+                        'tax_id' => $rfc ?? $existingCenter->tax_id,
+                        'employer_registration' => $registroPatronal ?? $existingCenter->employer_registration,
                         'street_address' => $row['calle_numero'] ?? $existingCenter->street_address,
                         'neighborhood' => $row['colonia'] ?? $existingCenter->neighborhood,
-                        'postal_code' => $row['codigo_postal'] ?? $existingCenter->postal_code,
+                        'postal_code' => $codigoPostal ?? $existingCenter->postal_code,
                         'municipality' => $row['municipio'] ?? $existingCenter->municipality,
                         'state' => $row['estado'] ?? $existingCenter->state,
-                        'phone' => $row['telefono'] ?? $existingCenter->phone,
-                        'email' => $row['email'] ?? $existingCenter->email,
+                        'phone' => $telefono ?? $existingCenter->phone,
+                        'emails' => $emails ?? $existingCenter->emails,
                         'notes' => $row['notas'] ?? $existingCenter->notes,
                     ]);
 
@@ -142,15 +201,15 @@ class WorkCentersImport implements ToCollection, WithHeadingRow, WithValidation
                     'type' => $typeEnum,
                     'is_primary' => false,
                     'legal_name' => $row['razon_social'] ?? null,
-                    'tax_id' => $row['rfc'] ?? null,
-                    'employer_registration' => $row['registro_patronal'] ?? null,
+                    'tax_id' => $rfc,
+                    'employer_registration' => $registroPatronal,
                     'street_address' => $row['calle_numero'] ?? null,
                     'neighborhood' => $row['colonia'] ?? null,
-                    'postal_code' => $row['codigo_postal'] ?? null,
+                    'postal_code' => $codigoPostal,
                     'municipality' => $row['municipio'] ?? null,
                     'state' => $row['estado'] ?? null,
-                    'phone' => $row['telefono'] ?? null,
-                    'email' => $row['email'] ?? null,
+                    'phone' => $telefono,
+                    'emails' => $emails,
                     'notes' => $row['notas'] ?? null,
                 ]);
 
@@ -170,17 +229,20 @@ class WorkCentersImport implements ToCollection, WithHeadingRow, WithValidation
         return [
             'nombre' => 'required|string|max:255',
             'tipo' => 'required|string',
-            'codigo' => 'nullable|string|max:4',
+            // Aceptar string o numeric porque Excel puede enviar números
+            'codigo' => 'nullable',
             'razon_social' => 'nullable|string|max:255',
-            'rfc' => 'nullable|string|max:13',
-            'registro_patronal' => 'nullable|string|max:20',
+            'rfc' => 'nullable',
+            'registro_patronal' => 'nullable',
             'calle_numero' => 'nullable|string|max:255',
             'colonia' => 'nullable|string|max:100',
-            'codigo_postal' => 'nullable|string|max:10',
+            'codigo_postal' => 'nullable',
             'municipio' => 'nullable|string|max:100',
             'estado' => 'nullable|string|max:100',
-            'telefono' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
+            'telefono' => 'nullable',
+            // Aceptar email o emails (validación manual en parseEmails)
+            'email' => 'nullable',
+            'emails' => 'nullable',
             'notas' => 'nullable|string',
         ];
     }
@@ -196,7 +258,6 @@ class WorkCentersImport implements ToCollection, WithHeadingRow, WithValidation
             'nombre.max' => 'El nombre no puede exceder 255 caracteres',
             'tipo.required' => 'El tipo de centro de trabajo es requerido',
             'tipo.string' => 'El tipo debe ser texto',
-            'email.email' => 'El email debe tener un formato válido',
             'rfc.max' => 'El RFC no puede exceder 13 caracteres',
         ];
     }
