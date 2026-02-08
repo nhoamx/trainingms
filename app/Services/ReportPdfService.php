@@ -776,8 +776,8 @@ class ReportPdfService
         // Use cached data from OrganizationReportCacheService (same cache as web report)
         // This significantly improves Word report generation performance
         $organization = Organization::find($organizationId);
-        
-        if (!$organization) {
+
+        if (! $organization) {
             return $this->getEmptyLikertReportData();
         }
 
@@ -976,7 +976,7 @@ class ReportPdfService
     private function getEmptyLikertReportData(): array
     {
         $config = config('likert-value');
-        
+
         return [
             'evaluations' => [],
             'demographics' => [

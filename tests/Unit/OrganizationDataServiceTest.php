@@ -182,7 +182,7 @@ class OrganizationDataServiceTest extends TestCase
     {
         // Create organization with assets
         $organization = Organization::factory()->create();
-        
+
         Asset::factory()->create([
             'organization_id' => $organization->id,
             'asset_category' => 'extintor',

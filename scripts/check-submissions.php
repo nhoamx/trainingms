@@ -56,7 +56,7 @@ if ($failed > 0) {
 
     foreach ($lastFailed as $sub) {
         echo "  • Folio {$sub->folio} - ID {$sub->id}\n";
-        echo "    Error: ".substr($sub->error_message, 0, 100)."...\n";
+        echo '    Error: '.substr($sub->error_message, 0, 100)."...\n";
     }
 }
 

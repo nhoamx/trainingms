@@ -36,14 +36,30 @@ class OrganizationController extends Controller
 
     public function store(StoreOrganizationRequest $request)
     {
-        $data = $request->validated();
-        $logoFile = $data['logo'] ?? null;
+        $orgData = $request->validated();
+        $logoFile = $request->hasFile('logo') ? $request->file('logo') : null;
 
-        // Create organization with primary work center automatically
-        $organization = $this->organizationService->createWithWorkCenter($data, $logoFile);
+        // Extract work center data from wizard (Paso 2) with wc_ prefix
+        $workCenterData = $request->only([
+            'wc_name', 'wc_type', 'wc_legal_name', 'wc_tax_id', 'wc_employer_registration',
+            'wc_street_address', 'wc_neighborhood', 'wc_postal_code', 'wc_municipality', 'wc_state',
+        ]);
 
-        return redirect()->route('organizations.index')
-            ->with('success', 'Organización y centro de trabajo primario creados exitosamente.');
+        // Remove wc_ prefix from keys
+        $workCenterData = collect($workCenterData)
+            ->mapWithKeys(fn ($value, $key) => [str_replace('wc_', '', $key) => $value])
+            ->filter(fn ($value) => $value !== null)
+            ->toArray();
+
+        // Create organization with work center from wizard
+        $organization = $this->organizationService->createWithWorkCenter($orgData, $workCenterData, $logoFile);
+
+        return redirect()->route('organizations.edit', $organization)
+            ->with('flash', [
+                'type' => 'success',
+                'title' => 'Organización creada exitosamente',
+                'message' => "Se creó el corporativo '{$organization->name}' y su centro principal.",
+            ]);
     }
 
     public function edit(Organization $organization)
@@ -85,14 +101,14 @@ class OrganizationController extends Controller
         $data = $request->validated();
         $logoFile = $data['logo'] ?? null;
 
-        // Update organization and sync primary work center data
-        $organization = $this->organizationService->updateWithWorkCenter($organization, $data, $logoFile);
+        // Update only organization corporate data
+        $organization = $this->organizationService->updateOrganization($organization, $data, $logoFile);
 
         return redirect()->route('organizations.edit', $organization)
             ->with('flash', [
                 'type' => 'success',
                 'title' => 'Organización actualizada exitosamente.',
-                'message' => 'Los datos de la organización y su centro de trabajo primario han sido actualizados.',
+                'message' => 'Los datos corporativos de la organización han sido actualizados.',
             ]);
     }
 

@@ -6,29 +6,28 @@ use App\Enums\WorkCenterType;
 use App\Models\Organization;
 use App\Models\WorkCenter;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class OrganizationService
 {
     /**
      * Create organization with primary work center
      *
-     * @param  array  $data  Organization data from form
-     * @param  mixed  $logoFile  Uploaded logo file (nullable)
+     * @param  array  $orgData  Organization data
+     * @param  array  $workCenterData  Work center data
+     * @param  mixed  $logoFile  Logo file
      */
-    public function createWithWorkCenter(array $data, $logoFile = null): Organization
+    public function createWithWorkCenter(array $orgData, array $workCenterData, $logoFile = null): Organization
     {
-        return DB::transaction(function () use ($data, $logoFile) {
-            // Generate folio if not provided
-            if (empty($data['folio_organization'])) {
-                $data['folio_organization'] = rand(100, 999);
+        return DB::transaction(function () use ($orgData, $workCenterData, $logoFile) {
+            // Generar folio automáticamente basado en timestamp + random
+            if (empty($orgData['folio_organization'])) {
+                $orgData['folio_organization'] = $this->generateFolio();
             }
 
-            // Handle logo separately
-            unset($data['logo']);
-
-            // Create organization
+            // Crear organización (solo datos corporativos)
             $organization = new Organization;
-            $organization->fill($data);
+            $organization->fill($orgData);
 
             if ($logoFile) {
                 $logoPath = $logoFile->store('organizations', 'public');
@@ -37,30 +36,74 @@ class OrganizationService
 
             $organization->save();
 
-            // Create primary work center automatically
-            $this->createPrimaryWorkCenter($organization);
+            // Crear centro de trabajo primario con los datos del wizard
+            $this->createWorkCenter($organization, $workCenterData, true);
 
             return $organization->fresh(['workCenters']);
         });
     }
 
     /**
-     * Update organization and sync primary work center data
-     *
-     * @param  array  $data  Updated organization data from form
-     * @param  mixed  $logoFile  Uploaded logo file (nullable)
+     * Generate unique folio for organization
      */
-    public function updateWithWorkCenter(Organization $organization, array $data, $logoFile = null): Organization
+    protected function generateFolio(): int
+    {
+        // Timestamp + random para máxima unicidad
+        return (int) (now()->timestamp.rand(10, 99));
+    }
+
+    /**
+     * Create work center for organization
+     *
+     * @param  bool  $isPrimary  Is this the primary center?
+     */
+    public function createWorkCenter(Organization $organization, array $data, bool $isPrimary = false): WorkCenter
+    {
+        // Generar código de centro si no existe
+        if (empty($data['code'])) {
+            $data['code'] = $this->generateWorkCenterCode($organization);
+        }
+
+        // Asegurar que el tipo sea headquarters si es primario
+        if ($isPrimary) {
+            $data['type'] = $data['type'] ?? WorkCenterType::Headquarters->value;
+            $data['is_primary'] = true;
+        }
+
+        $data['organization_id'] = $organization->id;
+
+        return WorkCenter::create($data);
+    }
+
+    /**
+     * Generate unique code for work center within organization
+     */
+    protected function generateWorkCenterCode(Organization $organization): string
+    {
+        $lastCenter = $organization->workCenters()
+            ->orderBy('code', 'desc')
+            ->first();
+
+        if (! $lastCenter) {
+            return '0001';
+        }
+
+        $lastCode = (int) $lastCenter->code;
+
+        return str_pad($lastCode + 1, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Update organization (only corporate data)
+     */
+    public function updateOrganization(Organization $organization, array $data, $logoFile = null): Organization
     {
         return DB::transaction(function () use ($organization, $data, $logoFile) {
-            // Handle logo separately
-            unset($data['logo']);
-
             $organization->fill($data);
 
             if ($logoFile) {
-                if ($organization->logo && \Storage::disk('public')->exists($organization->logo)) {
-                    \Storage::disk('public')->delete($organization->logo);
+                if ($organization->logo && Storage::disk('public')->exists($organization->logo)) {
+                    Storage::disk('public')->delete($organization->logo);
                 }
                 $logoPath = $logoFile->store('organizations', 'public');
                 $organization->logo = $logoPath;
@@ -68,73 +111,18 @@ class OrganizationService
 
             $organization->save();
 
-            // Sync primary work center data with organization
-            $this->syncPrimaryWorkCenterData($organization);
-
-            return $organization->fresh(['workCenters']);
+            return $organization->fresh();
         });
     }
 
     /**
-     * Create primary work center for organization
+     * Update work center
      */
-    protected function createPrimaryWorkCenter(Organization $organization): WorkCenter
+    public function updateWorkCenter(WorkCenter $workCenter, array $data): WorkCenter
     {
-        return WorkCenter::create([
-            'organization_id' => $organization->id,
-            'code' => '0001',
-            'name' => $organization->name,
-            'type' => WorkCenterType::Headquarters->value,
-            'is_primary' => true,
-            // Copy fiscal data
-            'legal_name' => $organization->razon_social,
-            'tax_id' => $organization->rfc,
-            'employer_registration' => $organization->registro_patronal,
-            // Copy address
-            'street_address' => $organization->calle_numero,
-            'neighborhood' => $organization->colonia,
-            'postal_code' => $organization->codigo_postal,
-            'municipality' => $organization->municipio,
-            'state' => $organization->estado,
-            // Copy contact
-            'phone' => $organization->contacto_movil,
-            'email' => $organization->contacto_email,
-        ]);
-    }
+        $workCenter->fill($data);
+        $workCenter->save();
 
-    /**
-     * Sync primary work center data with organization data
-     * Updates fiscal, address, and contact information
-     */
-    protected function syncPrimaryWorkCenterData(Organization $organization): void
-    {
-        $primaryCenter = $organization->workCenters()
-            ->where('is_primary', true)
-            ->first();
-
-        // If no primary work center exists, create it
-        if (! $primaryCenter) {
-            $this->createPrimaryWorkCenter($organization);
-
-            return;
-        }
-
-        // Update primary work center with organization data
-        $primaryCenter->update([
-            'name' => $organization->name,
-            // Fiscal data
-            'legal_name' => $organization->razon_social,
-            'tax_id' => $organization->rfc,
-            'employer_registration' => $organization->registro_patronal,
-            // Address
-            'street_address' => $organization->calle_numero,
-            'neighborhood' => $organization->colonia,
-            'postal_code' => $organization->codigo_postal,
-            'municipality' => $organization->municipio,
-            'state' => $organization->estado,
-            // Contact
-            'phone' => $organization->contacto_movil,
-            'email' => $organization->contacto_email,
-        ]);
+        return $workCenter->fresh();
     }
 }
