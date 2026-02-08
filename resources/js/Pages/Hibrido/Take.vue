@@ -24,7 +24,11 @@ const props = defineProps({
     folio: String,
     organizationName: String,
     questions: Object,
-    referencia_i_questions: Object
+    referencia_i_questions: Object,
+    disableAudioValidation: {
+        type: Boolean,
+        default: false
+    }
 });
 
 const answers = ref({
@@ -375,6 +379,7 @@ const submitEvaluation = () => {
                                 :view-mode="viewMode"
                                 :audio-urls="audioUrls"
                                 :video-urls="videoUrls"
+                                :disable-audio-validation="disableAudioValidation"
                             />
                         </div>
 
@@ -387,6 +392,7 @@ const submitEvaluation = () => {
                                 :general-options="answerOptions.general"
                                 :audio-urls="audioUrls"
                                 :video-urls="videoUrls"
+                                :disable-audio-validation="disableAudioValidation"
                             />
                         </div>
 
@@ -400,6 +406,7 @@ const submitEvaluation = () => {
                                 name-prefix="trauma"
                                 :audio-urls="audioUrls"
                                 :video-urls="videoUrls"
+                                :disable-audio-validation="disableAudioValidation"
                             />
                         </div>
                     </div>
@@ -412,6 +419,7 @@ const submitEvaluation = () => {
                             :answer-options="answerOptions.yesNo"
                             :audio-urls="audioUrls"
                             :video-urls="videoUrls"
+                            :disable-audio-validation="disableAudioValidation"
                         />
                     </div>
 

@@ -88,6 +88,10 @@ const props = defineProps({
     audioUrls: {
         type: Object,
         default: () => ({})
+    },
+    disableAudioValidation: {
+        type: Boolean,
+        default: false
     }
 });
 

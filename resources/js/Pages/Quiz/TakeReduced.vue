@@ -29,7 +29,6 @@ const answers = ref({
     custom_fields: {},
     organization_info: {
         nombre_comercial: '',
-        division_sucursal: '',
         estado: '',
         ciudad: ''
     },
@@ -72,7 +71,7 @@ const isReferenciaVComplete = computed(() => {
     const dl = rv.datos_laborales;
     const org = answers.value.organization_info;
     
-    return org.nombre_comercial && org.division_sucursal && org.estado && org.ciudad &&
+    return org.nombre_comercial && org.estado && org.ciudad &&
            rv.sexo && rv.edad && rv.estado_civil && rv.nivel_estudios &&
            dl.ocupacion_puesto && dl.tipo_puesto && dl.tipo_contratacion &&
            dl.tipo_personal && dl.rotacion_turnos &&
@@ -212,9 +211,9 @@ const submitEvaluation = () => {
     // Agregar el resto de datos de referencia_v
     formData.append('referencia_v', JSON.stringify(referenciaVData));
     
-    // Agregar campos personalizados
-    formData.append('custom_fields', JSON.stringify(answers.value.custom_fields || {}));
-    
+        // Agregar información de organización ingresada por el usuario
+        formData.append('organization_info', JSON.stringify(answers.value.organization_info));
+
     console.log('Enviando datos con FormData');
     
     router.post(route('quiz.submit', props.quiz.id), formData, {
