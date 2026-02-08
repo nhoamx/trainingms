@@ -32,6 +32,27 @@ class WorkCenter extends Model
         'state',
         'phone',
         'emails',
+        // Contact information
+        'contact_name',
+        'contact_position',
+        'contact_email',
+        'contact_phone',
+        'responsible_name',
+        'responsible_position',
+        'responsible_email',
+        'responsible_phone',
+        // NOM-035 Census
+        'total_workers',
+        'total_men',
+        'total_women',
+        'sample_applied',
+        'sample_men',
+        'sample_women',
+        'committee_members',
+        'committee_men',
+        'committee_women',
+        'application_date',
+        'sample_justification',
     ];
 
     protected function casts(): array
@@ -40,6 +61,17 @@ class WorkCenter extends Model
             'type' => WorkCenterType::class,
             'is_primary' => 'boolean',
             'emails' => 'array',
+            'application_date' => 'date',
+            // Integer casts
+            'total_workers' => 'integer',
+            'total_men' => 'integer',
+            'total_women' => 'integer',
+            'sample_applied' => 'integer',
+            'sample_men' => 'integer',
+            'sample_women' => 'integer',
+            'committee_members' => 'integer',
+            'committee_men' => 'integer',
+            'committee_women' => 'integer',
         ];
     }
 

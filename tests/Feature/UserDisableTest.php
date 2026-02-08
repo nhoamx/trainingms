@@ -92,4 +92,3 @@ class UserDisableTest extends TestCase
         $this->assertFalse($user->is_disabled);
     }
 }
-
