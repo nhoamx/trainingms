@@ -392,6 +392,7 @@ const submitEvaluation = () => {
                                 :general-options="answerOptions.general"
                                 :audio-urls="audioUrls"
                                 :video-urls="videoUrls"
+                                :disable-audio-validation="disableAudioValidation"
                             />
                         </div>
 
@@ -405,6 +406,7 @@ const submitEvaluation = () => {
                                 name-prefix="trauma"
                                 :audio-urls="audioUrls"
                                 :video-urls="videoUrls"
+                                :disable-audio-validation="disableAudioValidation"
                             />
                         </div>
                     </div>
@@ -417,6 +419,7 @@ const submitEvaluation = () => {
                             :answer-options="answerOptions.yesNo"
                             :audio-urls="audioUrls"
                             :video-urls="videoUrls"
+                            :disable-audio-validation="disableAudioValidation"
                         />
                     </div>
 

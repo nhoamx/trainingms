@@ -65,6 +65,10 @@ const props = defineProps({
     audioUrls: {
         type: Object,
         default: () => ({})
+    },
+    disableAudioValidation: {
+        type: Boolean,
+        default: false
     }
 });
 
@@ -95,6 +99,10 @@ watch(() => props.followUpQuestions, primeUnlockState, { immediate: true });
 const isDisabled = (key) => unlocked.value[key] === false;
 
 const handleAudioReady = (key) => {
+    // Si la validación de audio está deshabilitada, no bloqueamos
+    if (props.disableAudioValidation) {
+        return;
+    }
     // Cuando el audio se carga exitosamente, bloqueamos la pregunta
     unlocked.value = { ...unlocked.value, [key]: false };
 };
