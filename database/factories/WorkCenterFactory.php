@@ -23,16 +23,16 @@ class WorkCenterFactory extends Factory
             'name' => fake()->randomElement(['Plant', 'Branch', 'Warehouse', 'Office']).' '.fake()->city(),
             'type' => fake()->randomElement(WorkCenterType::cases())->value,
             'is_primary' => false,
-            'legal_name' => fake()->optional()->company(),
-            'tax_id' => fake()->optional()->regexify('[A-Z]{3}[0-9]{6}[A-Z0-9]{3}'),
-            'employer_registration' => fake()->optional()->numerify('######-###'),
+            'legal_name' => fake()->company().' S.A. de C.V.',
+            'tax_id' => fake()->regexify('[A-Z]{3}[0-9]{6}[A-Z0-9]{3}'),
+            'employer_registration' => fake()->optional()->numerify('A##########'),
             'street_address' => fake()->streetAddress(),
             'neighborhood' => fake()->citySuffix(),
             'postal_code' => fake()->postcode(),
             'municipality' => fake()->city(),
             'state' => fake()->state(),
             'phone' => fake()->optional()->phoneNumber(),
-            'email' => fake()->optional()->companyEmail(),
+            'contact_email' => fake()->optional()->companyEmail(),
         ];
     }
 

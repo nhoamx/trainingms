@@ -329,10 +329,10 @@ class GenerateWordReport implements ShouldQueue
         if (! empty($sectionsData)) {
             $firstSection = $sectionsData[0];
             $imageSuffix = $firstSection['imageSuffix'];
-            
+
             // Calculate demographic distributions
             $demographicDistributions = $reportPdfService->calculateDemographicDistributions($likertData);
-            
+
             // Gender distribution
             if (! empty($demographicDistributions['gender'])) {
                 $chartDefinitions[] = [
@@ -342,7 +342,7 @@ class GenerateWordReport implements ShouldQueue
                     'title' => 'Distribución por Género',
                 ];
             }
-            
+
             // Contract type distribution
             if (! empty($demographicDistributions['contract'])) {
                 $chartDefinitions[] = [
@@ -352,7 +352,7 @@ class GenerateWordReport implements ShouldQueue
                     'title' => 'Distribución por Tipo de Contrato',
                 ];
             }
-            
+
             // Position distribution (horizontal bar - many categories)
             if (! empty($demographicDistributions['position'])) {
                 $chartDefinitions[] = [
@@ -362,7 +362,7 @@ class GenerateWordReport implements ShouldQueue
                     'title' => 'Distribución por Puesto',
                 ];
             }
-            
+
             // Shift distribution
             if (! empty($demographicDistributions['shift'])) {
                 $chartDefinitions[] = [
@@ -933,13 +933,13 @@ class GenerateWordReport implements ShouldQueue
         foreach ($niveles as $dimensionName => $dimConfig) {
             $safeDimName = preg_replace('/[^a-zA-Z0-9]/', '_', $dimensionName);
             $factorChartPath = $tempDir.'/factor_'.$safeDimName.'_'.$imageSuffix.'.png';
-            
+
             if (isset($chartPaths[$factorChartPath]) && file_exists($factorChartPath)) {
                 // Add page break every 2 charts (after the first 2)
                 if ($factorCount > 0 && $factorCount % 2 === 0) {
                     $section->addPageBreak();
                 }
-                
+
                 $section->addText(
                     $dimensionName,
                     ['bold' => true, 'size' => 11, 'color' => '1e40af']

@@ -961,8 +961,6 @@ class ReportService
             ->filter();
 
         if ($guideIIIPersonalIds->isEmpty()) {
-            Log::warning('No personal_ids found with Guide III evaluations. Demographic report will be empty.');
-
             return [];
         }
 
