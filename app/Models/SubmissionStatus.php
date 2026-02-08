@@ -11,6 +11,7 @@ class SubmissionStatus extends Model
         'folio',
         'personal_id',
         'organization_id',
+        'work_center_id',
         'quiz_id',
         'status',
         'data_snapshot',
@@ -51,6 +52,14 @@ class SubmissionStatus extends Model
     public function quiz(): BelongsTo
     {
         return $this->belongsTo(Quiz::class);
+    }
+
+    /**
+     * Get the work center that owns the submission.
+     */
+    public function workCenter(): BelongsTo
+    {
+        return $this->belongsTo(WorkCenter::class);
     }
 
     /**

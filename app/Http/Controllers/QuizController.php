@@ -597,6 +597,7 @@ class QuizController extends Controller
                 'folio' => $folio,
                 'personal_id' => $personalFolioCounter,
                 'organization_id' => $quiz->organization_id,
+                'work_center_id' => $quiz->work_center_id,
                 'quiz_id' => $quiz->id,
                 'status' => \App\Models\SubmissionStatus::STATUS_PENDING,
                 'data_snapshot' => [
