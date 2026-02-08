@@ -54,6 +54,7 @@ class HybridEvaluationController extends Controller
             'organizationName' => $evaluation->organization?->name ?? 'Organización',
             'questions' => $referenciaIIIQuestions,
             'referencia_i_questions' => $referenciaIQuestions,
+            'disableAudioValidation' => config('app.env') !== 'production',
         ]);
     }
 }
