@@ -30,8 +30,7 @@ class ProcessQuizSubmission implements ShouldQueue
         public int $submissionStatusId,
         public bool $processImages = true
     ) {
-        // Asignar a la cola específica de procesamiento de evaluaciones
-        $this->onQueue('quiz_processing');
+        // Uses default queue - ensures it's processed by standard queue:work command
     }
 
     /**

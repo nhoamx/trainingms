@@ -32,7 +32,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
     public function __construct(
         public int $submissionStatusId
     ) {
-        $this->onQueue('quiz_processing');
+        // Uses default queue - ensures it's processed by standard queue:work command
     }
 
     /**
@@ -157,28 +157,30 @@ class ProcessOnlineEvaluation implements ShouldQueue
             $demographicData['organization_info'] = $dataSnapshot['organization_info'];
         }
 
-        // Create PaperEvaluation
-        $paperEvaluation = PaperEvaluation::create([
-            'folio' => $submissionStatus->folio,
-            'evaluation_type_code' => $folioComponents['evaluation_type_code'],
-            'organization_code' => $folioComponents['organization_code'],
-            'personal_folio' => $folioComponents['personal_folio'],
-            'organization_id' => $submissionStatus->organization_id,
-            'work_center_id' => $submissionStatus->work_center_id,
-            'evaluation_type' => $folioComponents['evaluation_type'],
-            'source' => 'online',
-            'processing_status' => 'completed',
-            'processed_at' => now(),
-            'demographic_data' => $demographicData,
-            'referencia_i_answers' => $referenciaIAnswers,
-            'referencia_iii_answers' => $referenciaIIIAnswers,
-            'referencia_iii_conditional' => $referenciaIIIConditional,
-            'citsats_s1' => $citsatsS1,
-            'cisneros_answers' => $cisnerosAnswers,
-            'raw_data' => $rawData,
-        ]);
+        // Create or update PaperEvaluation (prevents duplicates on concurrent submissions)
+        $paperEvaluation = PaperEvaluation::updateOrCreate(
+            ['folio' => $submissionStatus->folio],
+            [
+                'evaluation_type_code' => $folioComponents['evaluation_type_code'],
+                'organization_code' => $folioComponents['organization_code'],
+                'personal_folio' => $folioComponents['personal_folio'],
+                'organization_id' => $submissionStatus->organization_id,
+                'work_center_id' => $submissionStatus->work_center_id,
+                'evaluation_type' => $folioComponents['evaluation_type'],
+                'source' => 'online',
+                'processing_status' => 'completed',
+                'processed_at' => now(),
+                'demographic_data' => $demographicData,
+                'referencia_i_answers' => $referenciaIAnswers,
+                'referencia_iii_answers' => $referenciaIIIAnswers,
+                'referencia_iii_conditional' => $referenciaIIIConditional,
+                'citsats_s1' => $citsatsS1,
+                'cisneros_answers' => $cisnerosAnswers,
+                'raw_data' => $rawData,
+            ]
+        );
 
-        Log::info('PaperEvaluation created from online submission', [
+        Log::info('PaperEvaluation created/updated from online submission', [
             'paper_evaluation_id' => $paperEvaluation->id,
             'folio' => $paperEvaluation->folio,
             'evaluation_type' => $paperEvaluation->evaluation_type,
