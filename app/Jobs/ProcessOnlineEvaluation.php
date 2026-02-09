@@ -149,6 +149,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
         $referenciaIIIAnswers = $this->extractReferenciaIII($dataSnapshot);
         $referenciaIIIConditional = $this->extractConditionals($dataSnapshot);
         $cisnerosAnswers = $this->extractCisneros($dataSnapshot);
+        $citsatsS1 = $this->extractCitsatsS1($dataSnapshot);
 
         // Fusionar organization_info con demographic_data (referencia_v)
         $demographicData = $dataSnapshot['referencia_v'] ?? [];
@@ -172,6 +173,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
             'referencia_i_answers' => $referenciaIAnswers,
             'referencia_iii_answers' => $referenciaIIIAnswers,
             'referencia_iii_conditional' => $referenciaIIIConditional,
+            'citsats_s1' => $citsatsS1,
             'cisneros_answers' => $cisnerosAnswers,
             'raw_data' => $rawData,
         ]);
@@ -291,6 +293,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
     /**
      * Extract Referencia I answers (Guide I - PTSD)
+     * Now expects direct indices 1-13
      */
     protected function extractReferenciaI(array $dataSnapshot): ?array
     {
@@ -300,12 +303,20 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
         $referenciaI = $dataSnapshot['referencia_i'];
 
-        // Return the acontecimientos_traumaticos section
-        return $referenciaI['acontecimientos_traumaticos'] ?? null;
+        // Filter only numeric keys (1-13)
+        $answers = [];
+        for ($i = 1; $i <= 13; $i++) {
+            if (isset($referenciaI[$i])) {
+                $answers[$i] = $referenciaI[$i];
+            }
+        }
+
+        return ! empty($answers) ? $answers : null;
     }
 
     /**
      * Extract Referencia III answers (Workplace factors)
+     * Now expects direct indices 1-64
      */
     protected function extractReferenciaIII(array $dataSnapshot): ?array
     {
@@ -315,18 +326,20 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
         $referenciaIII = $dataSnapshot['referencia_iii'];
 
-        // Extract general questions
+        // Extract general questions (1-64)
         $generalAnswers = [];
-
-        if (isset($referenciaIII['general']) && is_array($referenciaIII['general'])) {
-            $generalAnswers = $referenciaIII['general'];
+        for ($i = 1; $i <= 64; $i++) {
+            if (isset($referenciaIII[$i])) {
+                $generalAnswers[$i] = $referenciaIII[$i];
+            }
         }
 
-        return $generalAnswers;
+        return ! empty($generalAnswers) ? $generalAnswers : null;
     }
 
     /**
      * Extract conditional questions from Referencia III
+     * Now expects customer_service and management with condition + indices
      */
     protected function extractConditionals(array $dataSnapshot): ?array
     {
@@ -337,20 +350,38 @@ class ProcessOnlineEvaluation implements ShouldQueue
         $referenciaIII = $dataSnapshot['referencia_iii'];
         $conditionals = [];
 
-        // Extract customer service conditional
-        if (isset($referenciaIII['atencion_clientes'])) {
+        // Extract customer service conditional (65-68)
+        if (isset($referenciaIII['customer_service'])) {
+            $customerService = $referenciaIII['customer_service'];
             $conditionals['customer_service'] = [
-                'condition' => $referenciaIII['atencion_clientes']['condition'] ?? null,
-                'questions' => $referenciaIII['atencion_clientes']['questions'] ?? null,
+                'condition' => $customerService['condition'] ?? null,
             ];
+
+            // Add questions 65-68 if condition is true
+            if (($customerService['condition'] ?? false) === true) {
+                for ($i = 65; $i <= 68; $i++) {
+                    if (isset($customerService[$i])) {
+                        $conditionals['customer_service'][$i] = $customerService[$i];
+                    }
+                }
+            }
         }
 
-        // Extract management conditional
-        if (isset($referenciaIII['supervision'])) {
+        // Extract management conditional (69-72)
+        if (isset($referenciaIII['management'])) {
+            $management = $referenciaIII['management'];
             $conditionals['management'] = [
-                'condition' => $referenciaIII['supervision']['condition'] ?? null,
-                'questions' => $referenciaIII['supervision']['questions'] ?? null,
+                'condition' => $management['condition'] ?? null,
             ];
+
+            // Add questions 69-72 if condition is true
+            if (($management['condition'] ?? false) === true) {
+                for ($i = 69; $i <= 72; $i++) {
+                    if (isset($management[$i])) {
+                        $conditionals['management'][$i] = $management[$i];
+                    }
+                }
+            }
         }
 
         return ! empty($conditionals) ? $conditionals : null;
@@ -366,6 +397,29 @@ class ProcessOnlineEvaluation implements ShouldQueue
         }
 
         return $dataSnapshot['escala_cisneros'];
+    }
+
+    /**
+     * Extract CITSATS S1 (Acontecimientos Traumáticos) from Referencia III
+     * Now expects ats_s1 with indices 1-6
+     */
+    protected function extractCitsatsS1(array $dataSnapshot): ?array
+    {
+        if (! isset($dataSnapshot['referencia_iii']['ats_s1']) || empty($dataSnapshot['referencia_iii']['ats_s1'])) {
+            return null;
+        }
+
+        $atsS1 = $dataSnapshot['referencia_iii']['ats_s1'];
+
+        // Filter only numeric keys (1-6)
+        $answers = [];
+        for ($i = 1; $i <= 6; $i++) {
+            if (isset($atsS1[$i])) {
+                $answers[$i] = $atsS1[$i];
+            }
+        }
+
+        return ! empty($answers) ? $answers : null;
     }
 
     /**

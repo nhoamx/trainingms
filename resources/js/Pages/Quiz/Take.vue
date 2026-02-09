@@ -291,6 +291,62 @@ const isLastSection = computed(() => {
     return currentSection.value === 'final';
 });
 
+const transformToStandardizedStructure = () => {
+    const refIII = answers.value.referencia_iii || {};
+    const refI = answers.value.referencia_i || {};
+    
+    // Extraer preguntas generales (1-64)
+    const generalQuestions = {};
+    for (let i = 1; i <= 64; i++) {
+        if (refIII[i] !== undefined) {
+            generalQuestions[i] = refIII[i];
+        }
+    }
+    
+    // Extraer sección customer_service (65-68)
+    const customerService = {
+        condition: refIII.condition_atencion_clientes !== undefined ? refIII.condition_atencion_clientes : null
+    };
+    if (customerService.condition === true) {
+        for (let i = 65; i <= 68; i++) {
+            if (refIII[i] !== undefined) {
+                customerService[i] = refIII[i];
+            }
+        }
+    }
+    
+    // Extraer sección management (69-72)
+    const management = {
+        condition: refIII.condition_supervision !== undefined ? refIII.condition_supervision : null
+    };
+    if (management.condition === true) {
+        for (let i = 69; i <= 72; i++) {
+            if (refIII[i] !== undefined) {
+                management[i] = refIII[i];
+            }
+        }
+    }
+    
+    // Extraer acontecimientos traumáticos (ats_s1) - ya vienen como 1-6
+    const atsS1 = refIII.acontecimientos_traumaticos || {};
+    
+    // Construir referencia_iii estandarizada
+    const referenciaIII = {
+        ...generalQuestions,
+        customer_service: customerService,
+        management: management,
+        ats_s1: atsS1
+    };
+    
+    // Referencia I ya viene con índices 1-13
+    const referenciaI = { ...refI };
+    
+    return {
+        referencia_iii: referenciaIII,
+        referencia_i: referenciaI
+    };
+};
+
 // Actualizar el progreso para incluir subsecciones
 const progress = computed(() => {
     // Calcular el progreso basado en secciones y subsecciones en el nuevo orden
@@ -347,12 +403,15 @@ const handleSubsectionChange = (subsection) => {
 const submitEvaluation = () => {
     isSubmitting.value = true;
     
+    // Transformar datos a estructura estandarizada
+    const standardizedData = transformToStandardizedStructure();
+    
     // Crear FormData para manejar archivos
     const formData = new FormData();
     
     // Agregar datos de respuestas como JSON
-    formData.append('referencia_iii', JSON.stringify(answers.value.referencia_iii));
-    formData.append('referencia_i', JSON.stringify(answers.value.referencia_i || {}));
+    formData.append('referencia_iii', JSON.stringify(standardizedData.referencia_iii));
+    formData.append('referencia_i', JSON.stringify(standardizedData.referencia_i));
     
     // Separar archivos de imágenes de los demás datos de referencia_v
     const referenciaVData = { ...answers.value.referencia_v };

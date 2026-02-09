@@ -12,13 +12,13 @@
                     :key="index"
                     class="bg-white p-4 rounded-lg border border-slate-100"
                 >
-                    <p class="text-slate-900 mb-4">{{ question }}</p>
+                    <p class="text-slate-900 mb-4">{{ getQuestionIndex(category, index) }}. {{ question }}</p>
                     <div class="flex gap-2 mb-4">
                         <AudioPlayer
-                            :audio-url="getAudioUrl(`${category}_${index}`)"
-                            @ready="handleAudioReady(`${category}_${index}`)"
-                            @ended="handleAudioEnded(`${category}_${index}`)"
-                            @error="handleAudioError(`${category}_${index}`)"
+                            :audio-url="getAudioUrl(getQuestionIndex(category, index))"
+                            @ready="handleAudioReady(getQuestionIndex(category, index))"
+                            @ended="handleAudioEnded(getQuestionIndex(category, index))"
+                            @error="handleAudioError(getQuestionIndex(category, index))"
                         />
                     </div>
                     <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
@@ -29,11 +29,11 @@
                         >
                             <input
                                 type="radio"
-                                :name="`trauma_follow_${category}_${index}`"
+                                :name="`trauma_follow_${getQuestionIndex(category, index)}`"
                                 :value="option.value"
-                                :checked="modelValue[`${category}_${index}`] === option.value"
-                                :disabled="isDisabled(`${category}_${index}`)"
-                                @change="updateAnswer(`${category}_${index}`, option.value)"
+                                :checked="modelValue[getQuestionIndex(category, index)] === option.value"
+                                :disabled="isDisabled(getQuestionIndex(category, index))"
+                                @change="updateAnswer(getQuestionIndex(category, index), option.value)"
                                 class="form-radio h-4 w-4 text-slate-800"
                             >
                             <span class="text-sm text-slate-700">{{ option.label }}</span>
@@ -75,50 +75,73 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 
 const unlocked = ref({});
+const questionIndexMap = ref({});
 
-const getAudioUrl = (key) => {
-    return props.audioUrls?.[key] || null;
+const getAudioUrl = (index) => {
+    return props.audioUrls?.[index] || null;
+};
+
+// Build mapping of category_localIndex to globalIndex
+const buildQuestionIndexMap = () => {
+    const map = {};
+    let globalIndex = 1;
+    Object.entries(props.followUpQuestions).forEach(([category, questions]) => {
+        questions.forEach((_, localIndex) => {
+            map[`${category}_${localIndex}`] = globalIndex;
+            globalIndex++;
+        });
+    });
+    questionIndexMap.value = map;
+};
+
+// Helper function to get question index
+const getQuestionIndex = (category, localIndex) => {
+    return questionIndexMap.value[`${category}_${localIndex}`] || null;
 };
 
 const primeUnlockState = () => {
     const next = { ...unlocked.value };
+    let globalIndex = 1;
     Object.entries(props.followUpQuestions).forEach(([category, questions]) => {
-        questions.forEach((_, index) => {
-            const key = `${category}_${index}`;
-            if (!(key in next)) {
+        questions.forEach(() => {
+            if (!(globalIndex in next)) {
                 // Por defecto, todas las preguntas están desbloqueadas
-                next[key] = true;
+                next[globalIndex] = true;
             }
+            globalIndex++;
         });
     });
     unlocked.value = next;
 };
 
-watch(() => props.followUpQuestions, primeUnlockState, { immediate: true });
+watch(() => props.followUpQuestions, () => {
+    buildQuestionIndexMap();
+    primeUnlockState();
+}, { immediate: true });
 
-const isDisabled = (key) => unlocked.value[key] === false;
+const isDisabled = (index) => unlocked.value[index] === false;
 
-const handleAudioReady = (key) => {
+const handleAudioReady = (index) => {
     // Si la validación de audio está deshabilitada, no bloqueamos
     if (props.disableAudioValidation) {
         return;
     }
     // Cuando el audio se carga exitosamente, bloqueamos la pregunta
-    unlocked.value = { ...unlocked.value, [key]: false };
+    unlocked.value = { ...unlocked.value, [index]: false };
 };
 
-const handleAudioEnded = (key) => {
-    unlocked.value = { ...unlocked.value, [key]: true };
+const handleAudioEnded = (index) => {
+    unlocked.value = { ...unlocked.value, [index]: true };
 };
 
-const handleAudioError = (key) => {
-    unlocked.value = { ...unlocked.value, [key]: true };
+const handleAudioError = (index) => {
+    unlocked.value = { ...unlocked.value, [index]: true };
 };
 
-const updateAnswer = (key, value) => {
+const updateAnswer = (index, value) => {
     emit('update:modelValue', {
         ...props.modelValue,
-        [key]: value
+        [index]: value
     });
 };
 </script>
