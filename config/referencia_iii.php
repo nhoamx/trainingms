@@ -214,16 +214,16 @@ return [
         ],
     ],
 
-    // Respuestas Si/No
+    // Respuestas Si/No (índices 1-6 en frontend)
     'acontecimientos_traumaticos' => [
         'title' => '¿Ha presenciado o sufrido alguna vez, durante o con motivo del trabajo un acontecimiento como los siguientes:',
         'questions' => [
-            73 => 'Accidente que tenga como consecuencia la muerte, la pérdida de un miembro o una lesión grave',
-            74 => 'Asaltos',
-            75 => 'Actos violentos que derivaron en lesiones graves',
-            76 => 'Secuestro',
-            77 => 'Amenazas',
-            78 => 'Cualquier otro que ponga en riesgo su vida o salud, y/o la de otras personas',
+            'Accidente que tenga como consecuencia la muerte, la pérdida de un miembro o una lesión grave',
+            'Asaltos',
+            'Actos violentos que derivaron en lesiones graves',
+            'Secuestro',
+            'Amenazas',
+            'Cualquier otro que ponga en riesgo su vida o salud, y/o la de otras personas',
         ],
     ],
 ];

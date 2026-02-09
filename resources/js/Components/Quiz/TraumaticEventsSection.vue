@@ -7,13 +7,13 @@
                 :key="index"
                 class="bg-white p-4 rounded-lg border border-slate-100"
             >
-                <p class="text-slate-900 mb-4">{{ index }}. {{ question }}</p>
+                <p class="text-slate-900 mb-4">{{ index + 1 }}. {{ question }}</p>
                 <div class="flex gap-2 mb-4">
                     <AudioPlayer
-                        :audio-url="getAudioUrl(index)"
-                        @ready="handleAudioReady(index)"
-                        @ended="handleAudioEnded(index)"
-                        @error="handleAudioError(index)"
+                        :audio-url="getAudioUrl(index + 1)"
+                        @ready="handleAudioReady(index + 1)"
+                        @ended="handleAudioEnded(index + 1)"
+                        @error="handleAudioError(index + 1)"
                     />
                 </div>
                 <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
@@ -24,11 +24,11 @@
                     >
                         <input
                             type="radio"
-                            :name="`${namePrefix}_${index}`"
+                            :name="`${namePrefix}_${index + 1}`"
                             :value="option.value"
-                            :checked="modelValue?.[String(index)] === option.value"
-                            :disabled="isDisabled(index)"
-                            @change="updateAnswer(String(index), option.value)"
+                            :checked="modelValue?.[String(index + 1)] === option.value"
+                            :disabled="isDisabled(index + 1)"
+                            @change="updateAnswer(String(index + 1), option.value)"
                             class="form-radio h-4 w-4 text-slate-800"
                         >
                         <span class="text-sm text-slate-700">{{ option.label }}</span>
@@ -68,6 +68,10 @@ const props = defineProps({
         type: Object,
         default: () => ({})
     },
+    disableAudioValidation: {
+        type: Boolean,
+        default: false
+    }
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -77,7 +81,7 @@ const unlocked = ref({});
 const primeUnlockState = () => {
     const next = { ...unlocked.value };
     const questionKeys = Array.isArray(props.questions)
-        ? props.questions.map((_, idx) => idx)
+        ? props.questions.map((_, idx) => idx + 1) // 1-based indexing
         : Object.keys(props.questions);
     questionKeys.forEach((index) => {
         if (!(index in next)) {
@@ -100,6 +104,10 @@ const getAudioUrl = (index) => {
 const isDisabled = (index) => unlocked.value[index] === false;
 
 const handleAudioReady = (index) => {
+    // Si la validación de audio está deshabilitada, no bloqueamos
+    if (props.disableAudioValidation) {
+        return;
+    }
     // Cuando el audio se carga exitosamente, bloqueamos la pregunta
     unlocked.value = { ...unlocked.value, [index]: false };
 };
@@ -118,12 +126,12 @@ onMounted(() => {
     
     const newValue = { ...props.modelValue };
     const questionKeys = Array.isArray(props.questions) 
-        ? props.questions.map((_, idx) => idx)
+        ? props.questions.map((_, idx) => idx + 1) // 1-based indexing
         : Object.keys(props.questions);
     
     questionKeys.forEach(index => {
-        if (!(index in newValue)) {
-            newValue[index] = null;
+        if (!(String(index) in newValue)) {
+            newValue[String(index)] = null;
         }
     });
     emit('update:modelValue', newValue);

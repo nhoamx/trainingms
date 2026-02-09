@@ -25,7 +25,11 @@ const currentSubsection = ref('general'); // 'general', 'conditional', 'traumati
 
 const props = defineProps({
     quiz: Object,
-    workCenterName: String
+    workCenterName: String,
+    disableAudioValidation: {
+        type: Boolean,
+        default: false
+    }
 });
 
 const answers = ref({
@@ -33,7 +37,6 @@ const answers = ref({
     referencia_i: {},
     organization_info: {
         nombre_comercial: '',
-        division_sucursal: '',
         estado: '',
         ciudad: ''
     },
@@ -86,7 +89,7 @@ const isReferenciaVComplete = computed(() => {
     const dl = rv.datos_laborales;
     const org = answers.value.organization_info;
     
-    return org.nombre_comercial && org.division_sucursal && org.estado && org.ciudad &&
+    return org.nombre_comercial && org.estado && org.ciudad &&
            rv.sexo && rv.edad && rv.estado_civil && rv.nivel_estudios &&
            dl.ocupacion_puesto && dl.tipo_puesto && dl.tipo_contratacion &&
            dl.tipo_personal && dl.rotacion_turnos &&
@@ -133,7 +136,13 @@ const isAcontecimientosComplete = computed(() => {
     
     if (!Array.isArray(traumaticQuestions) || traumaticQuestions.length === 0) return true;
     
-    return traumaticQuestions.every((_, idx) => traumaticAnswers[idx] !== undefined);
+    // Verificar que todas las preguntas (1-6) tengan respuesta
+    for (let i = 1; i <= traumaticQuestions.length; i++) {
+        if (traumaticAnswers[i] === undefined) {
+            return false;
+        }
+    }
+    return true;
 });
 
 const isReferenciaIComplete = computed(() => {
@@ -288,6 +297,48 @@ const isLastSection = computed(() => {
     return currentSection.value === 'final';
 });
 
+const transformToStandardizedStructure = () => {
+    const refIII = answers.value.referencia_iii || {};
+    const refI = answers.value.referencia_i || {};
+    
+    // Extraer preguntas generales (1-64)
+    const generalQuestions = {};
+    for (let i = 1; i <= 64; i++) {
+        if (refIII[i] !== undefined) {
+            generalQuestions[i] = refIII[i];
+        }
+    }
+    
+    // Construir referencia_iii estandarizada
+    const referenciaIII = {
+        ...generalQuestions
+    };
+    
+    // Extraer sección customer_service (65-68) - SOLO si existe
+    if (refIII.customer_service !== undefined) {
+        referenciaIII.customer_service = refIII.customer_service;
+    }
+    
+    // Extraer sección management (69-72) - SOLO si existe
+    if (refIII.management !== undefined) {
+        referenciaIII.management = refIII.management;
+    }
+    
+    // Extraer acontecimientos traumáticos (ats_s1) - índices 1-6
+    const atsS1 = refIII.acontecimientos_traumaticos || {};
+    if (Object.keys(atsS1).length > 0) {
+        referenciaIII.ats_s1 = atsS1;
+    }
+    
+    // Referencia I ya viene con índices 1-13
+    const referenciaI = { ...refI };
+    
+    return {
+        referencia_iii: referenciaIII,
+        referencia_i: referenciaI
+    };
+};
+
 // Actualizar el progreso para incluir subsecciones
 const progress = computed(() => {
     // Calcular el progreso basado en secciones y subsecciones en el nuevo orden
@@ -344,12 +395,15 @@ const handleSubsectionChange = (subsection) => {
 const submitEvaluation = () => {
     isSubmitting.value = true;
     
+    // Transformar datos a estructura estandarizada
+    const standardizedData = transformToStandardizedStructure();
+    
     // Crear FormData para manejar archivos
     const formData = new FormData();
     
     // Agregar datos de respuestas como JSON
-    formData.append('referencia_iii', JSON.stringify(answers.value.referencia_iii));
-    formData.append('referencia_i', JSON.stringify(answers.value.referencia_i || {}));
+    formData.append('referencia_iii', JSON.stringify(standardizedData.referencia_iii));
+    formData.append('referencia_i', JSON.stringify(standardizedData.referencia_i));
     
     // Separar archivos de imágenes de los demás datos de referencia_v
     const referenciaVData = { ...answers.value.referencia_v };
@@ -367,6 +421,9 @@ const submitEvaluation = () => {
     
     // Agregar el resto de datos de referencia_v
     formData.append('referencia_v', JSON.stringify(referenciaVData));
+    
+    // Agregar información de organización ingresada por el usuario
+    formData.append('organization_info', JSON.stringify(answers.value.organization_info));
     
     // Agregar campos personalizados
     formData.append('custom_fields', JSON.stringify(answers.value.custom_fields || {}));
@@ -494,6 +551,7 @@ const submitEvaluation = () => {
                                 :view-mode="viewMode"
                                 :audio-urls="audioUrls"
                                 :video-urls="videoUrls"
+                                :disable-audio-validation="disableAudioValidation"
                             />
                         </div>
 
@@ -506,6 +564,7 @@ const submitEvaluation = () => {
                                 :general-options="answerOptions.general"
                                 :audio-urls="audioUrls"
                                 :video-urls="videoUrls"
+                                :disable-audio-validation="disableAudioValidation"
                             />
                         </div>
 
@@ -519,6 +578,7 @@ const submitEvaluation = () => {
                                 name-prefix="trauma"
                                 :audio-urls="audioUrls"
                                 :video-urls="videoUrls"
+                                :disable-audio-validation="disableAudioValidation"
                             />
                         </div>
                     </div>
@@ -531,6 +591,7 @@ const submitEvaluation = () => {
                             :answer-options="answerOptions.yesNo"
                             :audio-urls="audioUrls"
                             :video-urls="videoUrls"
+                            :disable-audio-validation="disableAudioValidation"
                         />
                     </div>
 

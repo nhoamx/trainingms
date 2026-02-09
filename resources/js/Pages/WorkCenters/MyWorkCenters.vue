@@ -61,6 +61,51 @@
                                     Centro Principal
                                 </span>
                             </div>
+
+                            <!-- Evaluations Count -->
+                            <div class="mt-3 text-sm text-gray-500">
+                                <span class="font-medium">{{ workCenter.paper_evaluations_count }}</span> 
+                                {{ workCenter.paper_evaluations_count === 1 ? 'evaluación' : 'evaluaciones' }}
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="mt-4 flex flex-col space-y-2">
+                                <!-- Ver Evaluaciones -->
+                                <a
+                                    :href="workCenter.has_evaluations ? '#' : '#'"
+                                    :class="[
+                                        'inline-flex items-center justify-center px-4 py-2 border rounded-md text-sm font-medium transition-colors duration-200',
+                                        workCenter.has_evaluations
+                                            ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 cursor-pointer'
+                                            : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                                    ]"
+                                    :disabled="!workCenter.has_evaluations"
+                                    @click.prevent="workCenter.has_evaluations && handleViewEvaluations(workCenter)"
+                                >
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                                    </svg>
+                                    Ver Evaluaciones
+                                </a>
+
+                                <!-- Ver Reporte -->
+                                <a
+                                    :href="workCenter.has_evaluations ? '#' : '#'"
+                                    :class="[
+                                        'inline-flex items-center justify-center px-4 py-2 border rounded-md text-sm font-medium transition-colors duration-200',
+                                        workCenter.has_evaluations
+                                            ? 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100 cursor-pointer'
+                                            : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                                    ]"
+                                    :disabled="!workCenter.has_evaluations"
+                                    @click.prevent="workCenter.has_evaluations && handleViewReport(workCenter)"
+                                >
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    Ver Reporte
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -116,5 +161,15 @@ const getTypeColor = (type) => {
         'otro': 'bg-gray-100 text-gray-800',
     };
     return colors[type] || 'bg-gray-100 text-gray-800';
+};
+
+const handleViewEvaluations = (workCenter) => {
+    // TODO: Implementar navegación a vista de evaluaciones
+    console.log('Ver evaluaciones del centro:', workCenter.name);
+};
+
+const handleViewReport = (workCenter) => {
+    // TODO: Implementar navegación a vista de reportes
+    console.log('Ver reporte del centro:', workCenter.name);
 };
 </script>

@@ -245,7 +245,7 @@ class WorkCenterController extends Controller
 
         $workCenters = $user->workCenters()
             ->with('organization:id,name')
-            ->select('work_centers.*')
+            ->withCount('paperEvaluations')
             ->get()
             ->map(function ($workCenter) {
                 return [
@@ -256,6 +256,8 @@ class WorkCenterController extends Controller
                     'is_primary' => $workCenter->is_primary,
                     'organization_id' => $workCenter->organization_id,
                     'organization_name' => $workCenter->organization->name ?? 'N/A',
+                    'paper_evaluations_count' => $workCenter->paper_evaluations_count,
+                    'has_evaluations' => $workCenter->paper_evaluations_count > 0,
                 ];
             });
 

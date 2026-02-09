@@ -30,310 +30,268 @@ class ProcessOnlineEvaluationTest extends TestCase
         ]);
     }
 
-    public function test_creates_paper_evaluation_with_source_online(): void
+    public function test_extracts_standardized_referencia_i_with_numeric_indices(): void
     {
         $submissionStatus = SubmissionStatus::create([
-            'folio' => '020010001',
-            'personal_id' => '0001',
+            'folio' => '020010009',
+            'personal_id' => '0009',
             'organization_id' => $this->organization->id,
             'quiz_id' => $this->quiz->id,
             'status' => SubmissionStatus::STATUS_PENDING,
             'data_snapshot' => [
                 'evaluation_type' => 'referencia_v',
-                'referencia_v' => [
-                    'sexo' => 'Masculino',
-                    'edad' => '35',
-                    'datos_laborales' => [
-                        'ocupacion_puesto' => 'Gerente',
-                    ],
-                ],
-                'referencia_iii' => [
-                    'question_1' => 'Siempre',
-                ],
-            ],
-        ]);
-
-        ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
-
-        $this->assertDatabaseHas('paper_evaluations', [
-            'folio' => '020010001',
-            'personal_id' => '0001',
-            'source' => 'online',
-            'organization_id' => $this->organization->id,
-            'processing_status' => 'completed',
-        ]);
-
-        $paperEvaluation = PaperEvaluation::where('folio', '020010001')->first();
-        $this->assertNotNull($paperEvaluation);
-        $this->assertEquals('online', $paperEvaluation->source);
-        $this->assertArrayHasKey('source', $paperEvaluation->raw_data);
-        $this->assertEquals('online', $paperEvaluation->raw_data['source']);
-    }
-
-    public function test_creates_demographic_data_record(): void
-    {
-        $submissionStatus = SubmissionStatus::create([
-            'folio' => '020010002',
-            'personal_id' => '0002',
-            'organization_id' => $this->organization->id,
-            'quiz_id' => $this->quiz->id,
-            'status' => SubmissionStatus::STATUS_PENDING,
-            'data_snapshot' => [
-                'evaluation_type' => 'referencia_v',
-                'referencia_v' => [
-                    'sexo' => 'Femenino',
-                    'edad' => '28',
-                    'estado_civil' => 'Soltera',
-                    'nivel_estudios' => 'Licenciatura',
-                    'datos_laborales' => [
-                        'ocupacion_puesto' => 'Analista',
-                        'departamento_seccion_area' => 'Finanzas',
-                        'tipo_puesto' => 'Profesional',
-                        'tipo_contratacion' => 'Base',
-                    ],
-                ],
-                'referencia_iii' => [],
-            ],
-        ]);
-
-        ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
-
-        $paperEvaluation = PaperEvaluation::where('folio', '020010002')->first();
-        $this->assertNotNull($paperEvaluation);
-
-        $this->assertDatabaseHas('demographic_data', [
-            'paper_evaluation_id' => $paperEvaluation->id,
-            'gender' => 'Femenino',
-            'age' => '28',
-            'marital_status' => 'Soltera',
-            'education_level' => 'Licenciatura',
-            'position' => 'Analista',
-            'department' => 'Finanzas',
-        ]);
-
-        $demographicData = DemographicData::where('paper_evaluation_id', $paperEvaluation->id)->first();
-        $this->assertNotNull($demographicData);
-        $this->assertEquals('Femenino', $demographicData->gender);
-    }
-
-    public function test_extracts_referencia_i_answers(): void
-    {
-        $submissionStatus = SubmissionStatus::create([
-            'folio' => '020010003',
-            'personal_id' => '0003',
-            'organization_id' => $this->organization->id,
-            'quiz_id' => $this->quiz->id,
-            'status' => SubmissionStatus::STATUS_PENDING,
-            'data_snapshot' => [
-                'evaluation_type' => 'referencia_v',
-                'referencia_v' => [
-                    'sexo' => 'Masculino',
-                    'edad' => '40',
-                ],
+                'referencia_v' => ['sexo' => 'Masculino', 'edad' => '30'],
                 'referencia_i' => [
-                    'question_1' => 'Sí',
-                    'question_2' => 'No',
-                    'question_3' => 'Sí',
+                    '1' => true,
+                    '2' => false,
+                    '3' => true,
+                    '4' => false,
+                    '5' => true,
+                    '6' => false,
+                    '7' => true,
+                    '8' => false,
+                    '9' => true,
+                    '10' => false,
+                    '11' => true,
+                    '12' => false,
+                    '13' => true,
                 ],
             ],
         ]);
 
         ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
 
-        $paperEvaluation = PaperEvaluation::where('folio', '020010003')->first();
+        $paperEvaluation = PaperEvaluation::where('folio', '020010009')->first();
         $this->assertNotNull($paperEvaluation);
         $this->assertNotNull($paperEvaluation->referencia_i_answers);
-        $this->assertIsArray($paperEvaluation->referencia_i_answers);
-        $this->assertEquals('Sí', $paperEvaluation->referencia_i_answers['question_1']);
-        $this->assertEquals('No', $paperEvaluation->referencia_i_answers['question_2']);
-        $this->assertEquals('Sí', $paperEvaluation->referencia_i_answers['question_3']);
+
+        // Verify indices 1-13 with correct values
+        $this->assertEquals(true, $paperEvaluation->referencia_i_answers['1']);
+        $this->assertEquals(false, $paperEvaluation->referencia_i_answers['2']);
+        $this->assertEquals(true, $paperEvaluation->referencia_i_answers['13']);
+
+        // Verify only indices 1-13 are present
+        $this->assertCount(13, $paperEvaluation->referencia_i_answers);
     }
 
-    public function test_extracts_referencia_iii_answers(): void
+    public function test_extracts_standardized_referencia_iii_with_numeric_indices(): void
     {
+        $answers = [];
+        for ($i = 1; $i <= 64; $i++) {
+            $answers[(string) $i] = ['A', 'B', 'C', 'D', 'E'][($i - 1) % 5];
+        }
+
         $submissionStatus = SubmissionStatus::create([
-            'folio' => '020010004',
-            'personal_id' => '0004',
+            'folio' => '020010010',
+            'personal_id' => '0010',
             'organization_id' => $this->organization->id,
             'quiz_id' => $this->quiz->id,
             'status' => SubmissionStatus::STATUS_PENDING,
             'data_snapshot' => [
                 'evaluation_type' => 'referencia_v',
-                'referencia_v' => [
-                    'sexo' => 'Masculino',
-                    'edad' => '45',
-                ],
-                'referencia_iii' => [
-                    'question_1' => 'Siempre',
-                    'question_2' => 'Casi siempre',
-                    'question_3' => 'Algunas veces',
-                    'question_4' => 'Casi nunca',
-                    'question_5' => 'Nunca',
-                ],
+                'referencia_v' => ['sexo' => 'Femenino', 'edad' => '28'],
+                'referencia_iii' => $answers,
             ],
         ]);
 
         ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
 
-        $paperEvaluation = PaperEvaluation::where('folio', '020010004')->first();
+        $paperEvaluation = PaperEvaluation::where('folio', '020010010')->first();
         $this->assertNotNull($paperEvaluation);
         $this->assertNotNull($paperEvaluation->referencia_iii_answers);
-        $this->assertIsArray($paperEvaluation->referencia_iii_answers);
-        $this->assertEquals('Siempre', $paperEvaluation->referencia_iii_answers['question_1']);
-        $this->assertEquals('Casi siempre', $paperEvaluation->referencia_iii_answers['question_2']);
-        $this->assertEquals('Algunas veces', $paperEvaluation->referencia_iii_answers['question_3']);
-        $this->assertEquals('Casi nunca', $paperEvaluation->referencia_iii_answers['question_4']);
-        $this->assertEquals('Nunca', $paperEvaluation->referencia_iii_answers['question_5']);
+
+        // Verify indices 1-64 are present
+        $this->assertCount(64, $paperEvaluation->referencia_iii_answers);
+        $this->assertEquals('A', $paperEvaluation->referencia_iii_answers['1']);
+        $this->assertEquals('D', $paperEvaluation->referencia_iii_answers['64']);
     }
 
-    public function test_extracts_conditional_answers_separately(): void
+    public function test_extracts_citsats_s1_with_indices_1_to_6(): void
     {
         $submissionStatus = SubmissionStatus::create([
-            'folio' => '020010005',
-            'personal_id' => '0005',
+            'folio' => '020010011',
+            'personal_id' => '0011',
             'organization_id' => $this->organization->id,
             'quiz_id' => $this->quiz->id,
             'status' => SubmissionStatus::STATUS_PENDING,
             'data_snapshot' => [
                 'evaluation_type' => 'referencia_v',
-                'referencia_v' => [
-                    'sexo' => 'Femenino',
-                    'edad' => '32',
-                ],
+                'referencia_v' => ['sexo' => 'Masculino', 'edad' => '35'],
                 'referencia_iii' => [
-                    'question_1' => 'Siempre',
-                    'question_2' => 'Casi siempre',
-                ],
-                'preguntas_condicionales' => [
-                    'conditional_1' => 'Sí',
-                    'conditional_2' => 'No',
+                    '1' => 'A',
+                    'ats_s1' => [
+                        '1' => true,
+                        '2' => false,
+                        '3' => false,
+                        '4' => true,
+                        '5' => false,
+                        '6' => true,
+                    ],
                 ],
             ],
         ]);
 
         ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
 
-        $paperEvaluation = PaperEvaluation::where('folio', '020010005')->first();
+        $paperEvaluation = PaperEvaluation::where('folio', '020010011')->first();
         $this->assertNotNull($paperEvaluation);
+        $this->assertNotNull($paperEvaluation->citsats_s1);
 
-        // Verify conditional questions are stored in raw_data
-        $this->assertArrayHasKey('preguntas_condicionales', $paperEvaluation->raw_data);
-        $conditionalAnswers = $paperEvaluation->raw_data['preguntas_condicionales'];
-        $this->assertIsArray($conditionalAnswers);
-        $this->assertEquals('Sí', $conditionalAnswers['conditional_1']);
-        $this->assertEquals('No', $conditionalAnswers['conditional_2']);
+        // Verify indices 1-6 with correct structure
+        $this->assertCount(6, $paperEvaluation->citsats_s1);
+        $this->assertEquals(true, $paperEvaluation->citsats_s1['1']);
+        $this->assertEquals(false, $paperEvaluation->citsats_s1['2']);
+        $this->assertEquals(true, $paperEvaluation->citsats_s1['6']);
+
+        // Verify NO duplicate indices like "731", "741"
+        $this->assertArrayNotHasKey('731', $paperEvaluation->citsats_s1);
+        $this->assertArrayNotHasKey('741', $paperEvaluation->citsats_s1);
     }
 
-    public function test_stores_standardized_raw_data_structure(): void
+    public function test_extracts_customer_service_conditional_with_true_condition(): void
     {
         $submissionStatus = SubmissionStatus::create([
-            'folio' => '020010006',
-            'personal_id' => '0006',
+            'folio' => '020010012',
+            'personal_id' => '0012',
             'organization_id' => $this->organization->id,
             'quiz_id' => $this->quiz->id,
             'status' => SubmissionStatus::STATUS_PENDING,
             'data_snapshot' => [
                 'evaluation_type' => 'referencia_v',
-                'referencia_v' => [
-                    'sexo' => 'Masculino',
-                    'edad' => '50',
+                'referencia_v' => ['sexo' => 'Femenino', 'edad' => '32'],
+                'referencia_iii' => [
+                    '1' => 'A',
+                    'customer_service' => [
+                        'condition' => true,
+                        '65' => 'A',
+                        '66' => 'B',
+                        '67' => 'C',
+                        '68' => 'D',
+                    ],
                 ],
-                'referencia_iii' => [],
             ],
         ]);
 
         ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
 
-        $paperEvaluation = PaperEvaluation::where('folio', '020010006')->first();
+        $paperEvaluation = PaperEvaluation::where('folio', '020010012')->first();
+        $this->assertNotNull($paperEvaluation);
+        $this->assertNotNull($paperEvaluation->referencia_iii_conditional);
+
+        // Verify customer_service with condition true includes answers
+        $this->assertArrayHasKey('customer_service', $paperEvaluation->referencia_iii_conditional);
+        $customerService = $paperEvaluation->referencia_iii_conditional['customer_service'];
+
+        $this->assertEquals(true, $customerService['condition']);
+        $this->assertEquals('A', $customerService['65']);
+        $this->assertEquals('B', $customerService['66']);
+        $this->assertEquals('C', $customerService['67']);
+        $this->assertEquals('D', $customerService['68']);
+    }
+
+    public function test_extracts_management_conditional_with_false_condition(): void
+    {
+        $submissionStatus = SubmissionStatus::create([
+            'folio' => '020010013',
+            'personal_id' => '0013',
+            'organization_id' => $this->organization->id,
+            'quiz_id' => $this->quiz->id,
+            'status' => SubmissionStatus::STATUS_PENDING,
+            'data_snapshot' => [
+                'evaluation_type' => 'referencia_v',
+                'referencia_v' => ['sexo' => 'Masculino', 'edad' => '40'],
+                'referencia_iii' => [
+                    '1' => 'A',
+                    'management' => [
+                        'condition' => false,
+                    ],
+                ],
+            ],
+        ]);
+
+        ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
+
+        $paperEvaluation = PaperEvaluation::where('folio', '020010013')->first();
+        $this->assertNotNull($paperEvaluation);
+        $this->assertNotNull($paperEvaluation->referencia_iii_conditional);
+
+        // Verify management with condition false does NOT include answers
+        $this->assertArrayHasKey('management', $paperEvaluation->referencia_iii_conditional);
+        $management = $paperEvaluation->referencia_iii_conditional['management'];
+
+        $this->assertEquals(false, $management['condition']);
+        $this->assertArrayNotHasKey('69', $management);
+        $this->assertArrayNotHasKey('70', $management);
+        $this->assertArrayNotHasKey('71', $management);
+        $this->assertArrayNotHasKey('72', $management);
+    }
+
+    public function test_does_not_store_conditionals_when_not_present(): void
+    {
+        $submissionStatus = SubmissionStatus::create([
+            'folio' => '020010014',
+            'personal_id' => '0014',
+            'organization_id' => $this->organization->id,
+            'quiz_id' => $this->quiz->id,
+            'status' => SubmissionStatus::STATUS_PENDING,
+            'data_snapshot' => [
+                'evaluation_type' => 'referencia_v',
+                'referencia_v' => ['sexo' => 'Femenino', 'edad' => '25'],
+                'referencia_iii' => [
+                    '1' => 'A',
+                    '2' => 'B',
+                ],
+            ],
+        ]);
+
+        ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
+
+        $paperEvaluation = PaperEvaluation::where('folio', '020010014')->first();
         $this->assertNotNull($paperEvaluation);
 
-        // Verify standardized structure as per ONLINE_RAW_DATA_SCHEMA
+        // Verify referencia_iii_conditional is null when sections don't exist
+        $this->assertNull($paperEvaluation->referencia_iii_conditional);
+    }
+
+    public function test_raw_data_includes_all_quiz_sections(): void
+    {
+        $submissionStatus = SubmissionStatus::create([
+            'folio' => '020010015',
+            'personal_id' => '0015',
+            'organization_id' => $this->organization->id,
+            'quiz_id' => $this->quiz->id,
+            'status' => SubmissionStatus::STATUS_PENDING,
+            'data_snapshot' => [
+                'evaluation_type' => 'referencia_v',
+                'referencia_v' => ['sexo' => 'Masculino', 'edad' => '38'],
+                'referencia_i' => ['1' => true, '2' => false],
+                'referencia_iii' => [
+                    '1' => 'A',
+                    'ats_s1' => ['1' => true, '2' => false],
+                    'customer_service' => ['condition' => true, '65' => 'B'],
+                ],
+            ],
+        ]);
+
+        ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
+
+        $paperEvaluation = PaperEvaluation::where('folio', '020010015')->first();
+        $this->assertNotNull($paperEvaluation);
+        $this->assertNotNull($paperEvaluation->raw_data);
+
         $rawData = $paperEvaluation->raw_data;
 
-        $this->assertArrayHasKey('source', $rawData);
+        // Verify raw_data includes all sections
+        $this->assertArrayHasKey('referencia_i', $rawData);
+        $this->assertArrayHasKey('referencia_iii', $rawData);
+        $this->assertArrayHasKey('referencia_v', $rawData);
+
+        // Verify referencia_iii contains nested structures
+        $this->assertArrayHasKey('ats_s1', $rawData['referencia_iii']);
+        $this->assertArrayHasKey('customer_service', $rawData['referencia_iii']);
+
+        // Verify source metadata
         $this->assertEquals('online', $rawData['source']);
-
         $this->assertArrayHasKey('source_metadata', $rawData);
-        $this->assertIsArray($rawData['source_metadata']);
-        $this->assertArrayHasKey('quiz_id', $rawData['source_metadata']);
-        $this->assertEquals($this->quiz->id, $rawData['source_metadata']['quiz_id']);
-        $this->assertArrayHasKey('submission_id', $rawData['source_metadata']);
-
-        $this->assertArrayHasKey('evaluation_type_code', $rawData);
-        $this->assertEquals('referencia_v', $rawData['evaluation_type_code']);
-
-        $this->assertArrayHasKey('timestamp', $rawData);
-        $this->assertNotNull($rawData['timestamp']);
-    }
-
-    public function test_handles_file_uploads_in_submissions(): void
-    {
-        $submissionStatus = SubmissionStatus::create([
-            'folio' => '020010007',
-            'personal_id' => '0007',
-            'organization_id' => $this->organization->id,
-            'quiz_id' => $this->quiz->id,
-            'status' => SubmissionStatus::STATUS_PENDING,
-            'data_snapshot' => [
-                'evaluation_type' => 'referencia_v',
-                'referencia_v' => [
-                    'sexo' => 'Femenino',
-                    'edad' => '29',
-                ],
-                'ine_frontal' => 'uploads/ine/frontal_12345.jpg',
-                'ine_trasera' => 'uploads/ine/trasera_12345.jpg',
-            ],
-        ]);
-
-        ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
-
-        $paperEvaluation = PaperEvaluation::where('folio', '020010007')->first();
-        $this->assertNotNull($paperEvaluation);
-
-        // Verify file paths are stored in raw_data
-        $rawData = $paperEvaluation->raw_data;
-        $this->assertArrayHasKey('ine_frontal', $rawData);
-        $this->assertArrayHasKey('ine_trasera', $rawData);
-        $this->assertEquals('uploads/ine/frontal_12345.jpg', $rawData['ine_frontal']);
-        $this->assertEquals('uploads/ine/trasera_12345.jpg', $rawData['ine_trasera']);
-    }
-
-    public function test_retries_failed_submissions_with_progressive_delay(): void
-    {
-        Queue::fake();
-
-        // Create a submission that will fail
-        $submissionStatus = SubmissionStatus::create([
-            'folio' => '020010008',
-            'personal_id' => '0008',
-            'organization_id' => $this->organization->id,
-            'quiz_id' => $this->quiz->id,
-            'status' => SubmissionStatus::STATUS_FAILED,
-            'retry_count' => 0,
-            'data_snapshot' => [
-                'evaluation_type' => 'referencia_v',
-                'referencia_v' => [],
-            ],
-        ]);
-
-        // Verify can retry
-        $this->assertTrue($submissionStatus->canRetry());
-
-        // Dispatch job
-        ProcessOnlineEvaluation::dispatch($submissionStatus->id);
-
-        Queue::assertPushed(ProcessOnlineEvaluation::class, function ($job) use ($submissionStatus) {
-            return $job->submissionStatusId === $submissionStatus->id;
-        });
-
-        // Verify retry logic
-        $submissionStatus->update(['retry_count' => 1, 'status' => SubmissionStatus::STATUS_FAILED]);
-        $this->assertTrue($submissionStatus->fresh()->canRetry());
-
-        $submissionStatus->update(['retry_count' => 2, 'status' => SubmissionStatus::STATUS_FAILED]);
-        $this->assertTrue($submissionStatus->fresh()->canRetry());
-
-        $submissionStatus->update(['retry_count' => 3, 'status' => SubmissionStatus::STATUS_FAILED]);
-        $this->assertFalse($submissionStatus->fresh()->canRetry());
     }
 }

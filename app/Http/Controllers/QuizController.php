@@ -315,6 +315,7 @@ class QuizController extends Controller
                     })->toArray(),
                 ],
                 'workCenterName' => $quiz->workCenter?->name,
+                'disableAudioValidation' => config('app.env') !== 'production',
             ]);
         } elseif ($quiz->is_reduced) {
             // Quiz reducido - solo acontecimientos traumáticos
@@ -337,6 +338,7 @@ class QuizController extends Controller
                     })->toArray(),
                 ],
                 'workCenterName' => $quiz->workCenter?->name,
+                'disableAudioValidation' => config('app.env') !== 'production',
             ]);
         } else {
             // Quiz completo - layout original
@@ -362,6 +364,7 @@ class QuizController extends Controller
                     })->toArray(),
                 ],
                 'workCenterName' => $quiz->workCenter?->name,
+                'disableAudioValidation' => config('app.env') !== 'production',
             ]);
         }
     }
@@ -425,6 +428,7 @@ class QuizController extends Controller
                         })->toArray(),
                     ],
                     'workCenterName' => $quiz->workCenter?->name,
+                    'disableAudioValidation' => config('app.env') !== 'production',
                 ]);
             } elseif ($quiz->is_reduced) {
                 return Inertia::render('Quiz/TakeReduced', [
@@ -446,6 +450,7 @@ class QuizController extends Controller
                         })->toArray(),
                     ],
                     'workCenterName' => $quiz->workCenter?->name,
+                    'disableAudioValidation' => config('app.env') !== 'production',
                 ]);
             } else {
                 return Inertia::render('Quiz/Take', [
@@ -470,6 +475,7 @@ class QuizController extends Controller
                         })->toArray(),
                     ],
                     'workCenterName' => $quiz->workCenter?->name,
+                    'disableAudioValidation' => config('app.env') !== 'production',
                 ]);
             }
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -597,6 +603,7 @@ class QuizController extends Controller
                 'folio' => $folio,
                 'personal_id' => $personalFolioCounter,
                 'organization_id' => $quiz->organization_id,
+                'work_center_id' => $quiz->work_center_id,
                 'quiz_id' => $quiz->id,
                 'status' => \App\Models\SubmissionStatus::STATUS_PENDING,
                 'data_snapshot' => [

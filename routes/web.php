@@ -47,6 +47,16 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('role:work_center_user')
         ->name('my-work-centers');
 
+    // Notification routes
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index'])->name('index');
+        Route::get('/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('unread-count');
+        Route::post('/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-as-read');
+        Route::post('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('mark-all-as-read');
+        Route::delete('/{id}', [\App\Http\Controllers\NotificationController::class, 'destroy'])->name('destroy');
+        Route::delete('/', [\App\Http\Controllers\NotificationController::class, 'destroyAll'])->name('destroy-all');
+    });
+
     // Audio file management routes (admin only)
     Route::middleware(['role:admin|super-admin'])->prefix('audio')->name('audio.')->group(function () {
         Route::get('/', [\App\Http\Controllers\AudioFileController::class, 'index'])->name('index');

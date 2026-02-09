@@ -4,6 +4,8 @@ namespace App\Jobs;
 
 use App\Models\PaperEvaluation;
 use App\Models\SubmissionStatus;
+use App\Models\User;
+use App\Notifications\EvaluationCompletedNotification;
 use App\Services\DemographicDataService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,6 +14,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 
 class ProcessOnlineEvaluation implements ShouldQueue
 {
@@ -29,7 +32,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
     public function __construct(
         public int $submissionStatusId
     ) {
-        $this->onQueue('quiz_processing');
+        // Uses default queue - ensures it's processed by standard queue:work command
     }
 
     /**
@@ -77,6 +80,9 @@ class ProcessOnlineEvaluation implements ShouldQueue
                 'folio' => $submissionStatus->folio,
                 'paper_evaluation_id' => $paperEvaluation->id,
             ]);
+
+            // 6. Send notification to organization users
+            $this->sendCompletionNotification($submissionStatus, $paperEvaluation);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -143,27 +149,38 @@ class ProcessOnlineEvaluation implements ShouldQueue
         $referenciaIIIAnswers = $this->extractReferenciaIII($dataSnapshot);
         $referenciaIIIConditional = $this->extractConditionals($dataSnapshot);
         $cisnerosAnswers = $this->extractCisneros($dataSnapshot);
+        $citsatsS1 = $this->extractCitsatsS1($dataSnapshot);
 
-        // Create PaperEvaluation
-        $paperEvaluation = PaperEvaluation::create([
-            'folio' => $submissionStatus->folio,
-            'evaluation_type_code' => $folioComponents['evaluation_type_code'],
-            'organization_code' => $folioComponents['organization_code'],
-            'personal_folio' => $folioComponents['personal_folio'],
-            'organization_id' => $submissionStatus->organization_id,
-            'evaluation_type' => $folioComponents['evaluation_type'],
-            'source' => 'online',
-            'processing_status' => 'completed',
-            'processed_at' => now(),
-            'demographic_data' => $dataSnapshot['referencia_v'] ?? null,
-            'referencia_i_answers' => $referenciaIAnswers,
-            'referencia_iii_answers' => $referenciaIIIAnswers,
-            'referencia_iii_conditional' => $referenciaIIIConditional,
-            'cisneros_answers' => $cisnerosAnswers,
-            'raw_data' => $rawData,
-        ]);
+        // Fusionar organization_info con demographic_data (referencia_v)
+        $demographicData = $dataSnapshot['referencia_v'] ?? [];
+        if (isset($dataSnapshot['organization_info'])) {
+            $demographicData['organization_info'] = $dataSnapshot['organization_info'];
+        }
 
-        Log::info('PaperEvaluation created from online submission', [
+        // Create or update PaperEvaluation (prevents duplicates on concurrent submissions)
+        $paperEvaluation = PaperEvaluation::updateOrCreate(
+            ['folio' => $submissionStatus->folio],
+            [
+                'evaluation_type_code' => $folioComponents['evaluation_type_code'],
+                'organization_code' => $folioComponents['organization_code'],
+                'personal_folio' => $folioComponents['personal_folio'],
+                'organization_id' => $submissionStatus->organization_id,
+                'work_center_id' => $submissionStatus->work_center_id,
+                'evaluation_type' => $folioComponents['evaluation_type'],
+                'source' => 'online',
+                'processing_status' => 'completed',
+                'processed_at' => now(),
+                'demographic_data' => $demographicData,
+                'referencia_i_answers' => $referenciaIAnswers,
+                'referencia_iii_answers' => $referenciaIIIAnswers,
+                'referencia_iii_conditional' => $referenciaIIIConditional,
+                'citsats_s1' => $citsatsS1,
+                'cisneros_answers' => $cisnerosAnswers,
+                'raw_data' => $rawData,
+            ]
+        );
+
+        Log::info('PaperEvaluation created/updated from online submission', [
             'paper_evaluation_id' => $paperEvaluation->id,
             'folio' => $paperEvaluation->folio,
             'evaluation_type' => $paperEvaluation->evaluation_type,
@@ -214,6 +231,10 @@ class ProcessOnlineEvaluation implements ShouldQueue
         $quiz = $submissionStatus->quiz;
         $organization = $submissionStatus->organization;
 
+        // Usar datos de organization_info del usuario si están disponibles,
+        // sino usar los datos del modelo Organization como fallback
+        $userOrgInfo = $dataSnapshot['organization_info'] ?? [];
+
         $rawData = [
             'source' => 'online',
             'source_metadata' => [
@@ -224,15 +245,32 @@ class ProcessOnlineEvaluation implements ShouldQueue
                 'submission_ip' => $dataSnapshot['submission_ip'] ?? null,
                 'user_agent' => $dataSnapshot['user_agent'] ?? null,
                 'organization_info' => [
-                    'nombre_comercial' => $organization?->nombre_comercial,
-                    'division_sucursal' => $organization?->division_sucursal,
-                    'estado' => $organization?->estado,
-                    'ciudad' => $organization?->ciudad,
+                    'nombre_comercial' => $userOrgInfo['nombre_comercial'] ?? $organization?->nombre_comercial,
+                    'division_sucursal' => $userOrgInfo['division_sucursal'] ?? $organization?->division_sucursal,
+                    'estado' => $userOrgInfo['estado'] ?? $organization?->estado,
+                    'ciudad' => $userOrgInfo['ciudad'] ?? $organization?->ciudad,
                 ],
             ],
             'custom_fields' => $dataSnapshot['custom_fields'] ?? [],
             'file_uploads' => $this->extractFileUploads($dataSnapshot),
         ];
+
+        // Include quiz responses sections
+        if (isset($dataSnapshot['referencia_i'])) {
+            $rawData['referencia_i'] = $dataSnapshot['referencia_i'];
+        }
+
+        if (isset($dataSnapshot['referencia_iii'])) {
+            $rawData['referencia_iii'] = $dataSnapshot['referencia_iii'];
+        }
+
+        if (isset($dataSnapshot['escala_cisneros'])) {
+            $rawData['escala_cisneros'] = $dataSnapshot['escala_cisneros'];
+        }
+
+        if (isset($dataSnapshot['referencia_v'])) {
+            $rawData['referencia_v'] = $dataSnapshot['referencia_v'];
+        }
 
         return $rawData;
     }
@@ -274,6 +312,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
     /**
      * Extract Referencia I answers (Guide I - PTSD)
+     * Now expects direct indices 1-13
      */
     protected function extractReferenciaI(array $dataSnapshot): ?array
     {
@@ -283,12 +322,20 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
         $referenciaI = $dataSnapshot['referencia_i'];
 
-        // Return the acontecimientos_traumaticos section
-        return $referenciaI['acontecimientos_traumaticos'] ?? null;
+        // Filter only numeric keys (1-13)
+        $answers = [];
+        for ($i = 1; $i <= 13; $i++) {
+            if (isset($referenciaI[$i])) {
+                $answers[$i] = $referenciaI[$i];
+            }
+        }
+
+        return ! empty($answers) ? $answers : null;
     }
 
     /**
      * Extract Referencia III answers (Workplace factors)
+     * Now expects direct indices 1-64
      */
     protected function extractReferenciaIII(array $dataSnapshot): ?array
     {
@@ -298,18 +345,20 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
         $referenciaIII = $dataSnapshot['referencia_iii'];
 
-        // Extract general questions
+        // Extract general questions (1-64)
         $generalAnswers = [];
-
-        if (isset($referenciaIII['general']) && is_array($referenciaIII['general'])) {
-            $generalAnswers = $referenciaIII['general'];
+        for ($i = 1; $i <= 64; $i++) {
+            if (isset($referenciaIII[$i])) {
+                $generalAnswers[$i] = $referenciaIII[$i];
+            }
         }
 
-        return $generalAnswers;
+        return ! empty($generalAnswers) ? $generalAnswers : null;
     }
 
     /**
      * Extract conditional questions from Referencia III
+     * Now expects customer_service and management with condition + indices
      */
     protected function extractConditionals(array $dataSnapshot): ?array
     {
@@ -320,20 +369,38 @@ class ProcessOnlineEvaluation implements ShouldQueue
         $referenciaIII = $dataSnapshot['referencia_iii'];
         $conditionals = [];
 
-        // Extract customer service conditional
-        if (isset($referenciaIII['atencion_clientes'])) {
+        // Extract customer service conditional (65-68) - ONLY if exists
+        if (isset($referenciaIII['customer_service']) && isset($referenciaIII['customer_service']['condition'])) {
+            $customerService = $referenciaIII['customer_service'];
             $conditionals['customer_service'] = [
-                'condition' => $referenciaIII['atencion_clientes']['condition'] ?? null,
-                'questions' => $referenciaIII['atencion_clientes']['questions'] ?? null,
+                'condition' => $customerService['condition'],
             ];
+
+            // Add questions 65-68 if condition is true
+            if ($customerService['condition'] === true) {
+                for ($i = 65; $i <= 68; $i++) {
+                    if (isset($customerService[$i])) {
+                        $conditionals['customer_service'][$i] = $customerService[$i];
+                    }
+                }
+            }
         }
 
-        // Extract management conditional
-        if (isset($referenciaIII['supervision'])) {
+        // Extract management conditional (69-72) - ONLY if exists
+        if (isset($referenciaIII['management']) && isset($referenciaIII['management']['condition'])) {
+            $management = $referenciaIII['management'];
             $conditionals['management'] = [
-                'condition' => $referenciaIII['supervision']['condition'] ?? null,
-                'questions' => $referenciaIII['supervision']['questions'] ?? null,
+                'condition' => $management['condition'],
             ];
+
+            // Add questions 69-72 if condition is true
+            if ($management['condition'] === true) {
+                for ($i = 69; $i <= 72; $i++) {
+                    if (isset($management[$i])) {
+                        $conditionals['management'][$i] = $management[$i];
+                    }
+                }
+            }
         }
 
         return ! empty($conditionals) ? $conditionals : null;
@@ -349,6 +416,30 @@ class ProcessOnlineEvaluation implements ShouldQueue
         }
 
         return $dataSnapshot['escala_cisneros'];
+    }
+
+    /**
+     * Extract CITSATS S1 (Acontecimientos Traumáticos) from Referencia III
+     * Now expects ats_s1 with indices 1-6
+     */
+    protected function extractCitsatsS1(array $dataSnapshot): ?array
+    {
+        if (! isset($dataSnapshot['referencia_iii']['ats_s1']) || empty($dataSnapshot['referencia_iii']['ats_s1'])) {
+            return null;
+        }
+
+        $atsS1 = $dataSnapshot['referencia_iii']['ats_s1'];
+
+        // Filter only string keys "1"-"6"
+        $answers = [];
+        for ($i = 1; $i <= 6; $i++) {
+            $key = (string) $i;
+            if (isset($atsS1[$key])) {
+                $answers[$key] = $atsS1[$key];
+            }
+        }
+
+        return ! empty($answers) ? $answers : null;
     }
 
     /**
@@ -372,6 +463,68 @@ class ProcessOnlineEvaluation implements ShouldQueue
             ]);
 
             throw $e;
+        }
+    }
+
+    /**
+     * Send completion notification to organization users
+     */
+    protected function sendCompletionNotification(
+        SubmissionStatus $submissionStatus,
+        PaperEvaluation $paperEvaluation
+    ): void {
+        try {
+            // Get users who should receive notifications
+            // 1. If work_center_id exists, notify work center users and system admins
+            // 2. Otherwise, notify organization users
+            $users = collect();
+
+            if ($submissionStatus->work_center_id) {
+                // Get work center users and system admins (admin/super-admin)
+                $users = User::where(function ($query) use ($submissionStatus) {
+                    $query->whereHas('workCenters', function ($q) use ($submissionStatus) {
+                        $q->where('work_centers.id', $submissionStatus->work_center_id);
+                    })
+                        ->orWhereHas('roles', function ($r) {
+                            $r->whereIn('name', ['admin', 'super-admin']);
+                        });
+                })->get();
+            } elseif ($submissionStatus->organization_id) {
+                // Get organization users
+                $users = User::where('organization_id', $submissionStatus->organization_id)
+                    ->get();
+            }
+
+            if ($users->isEmpty()) {
+                Log::info('No users to notify for evaluation completion', [
+                    'submission_id' => $submissionStatus->id,
+                ]);
+
+                return;
+            }
+
+            // Send notification
+            Notification::send($users, new EvaluationCompletedNotification(
+                folio: $submissionStatus->folio,
+                personalId: $submissionStatus->personal_id,
+                organizationId: $submissionStatus->organization_id,
+                workCenterId: $submissionStatus->work_center_id,
+                organizationName: $submissionStatus->organization?->name,
+                workCenterName: $submissionStatus->workCenter?->name
+            ));
+
+            Log::info('Completion notification sent', [
+                'submission_id' => $submissionStatus->id,
+                'folio' => $submissionStatus->folio,
+                'users_notified' => $users->count(),
+            ]);
+
+        } catch (\Exception $e) {
+            // Don't fail the job if notification fails
+            Log::error('Error sending completion notification', [
+                'submission_id' => $submissionStatus->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

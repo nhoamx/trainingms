@@ -432,6 +432,7 @@ class PaperEvaluationController extends Controller
             'folio' => $paperEvaluation->folio,
             'personal_id' => $paperEvaluation->personal_folio,
             'organization_id' => $paperEvaluation->organization_id,
+            'work_center_id' => $paperEvaluation->work_center_id,
             'quiz_id' => null, // Hybrid evaluations don't have a quiz_id from normal quiz
             'status' => \App\Models\SubmissionStatus::STATUS_PENDING,
             'data_snapshot' => [

@@ -36,6 +36,13 @@
 
                     <!-- Sección Referencia V -->
                     <div v-if="currentSection === 'referencia_v'" class="space-y-6">
+                        <!-- Información de la Organización -->
+                        <OrganizationInfoSection
+                            v-model="answers.organization_info"
+                            :organization-name="quiz.organization?.name || ''"
+                            :work-center-name="workCenterName"
+                        />
+
                         <!-- Datos personales -->
                         <PersonalDataSection v-model="answers.referencia_v" :reference-data="quiz.reference_v" />
 
@@ -113,6 +120,7 @@ import ViewModeToggle from '@/Components/Quiz/ViewModeToggle.vue';
 import PersonalDataSection from '@/Components/Quiz/PersonalDataSection.vue';
 import LaborDataSection from '@/Components/Quiz/LaborDataSection.vue';
 import CustomFieldsSection from '@/Components/Quiz/CustomFieldsSection.vue';
+import OrganizationInfoSection from '@/Components/Quiz/OrganizationInfoSection.vue';
 import EscalaCisneros from '@/Components/Quiz/EscalaCisneros.vue';
 import TraumaticEventsSection from '@/Components/Quiz/TraumaticEventsSection.vue';
 import FollowUpQuestionsSection from '@/Components/Quiz/FollowUpQuestionsSection.vue';
@@ -122,7 +130,8 @@ const currentSection = ref('referencia_v');
 const showFollowUpQuestions = ref(false);
 
 const props = defineProps({
-    quiz: Object
+    quiz: Object,
+    workCenterName: String
 });
 
 const answers = ref({
@@ -130,6 +139,11 @@ const answers = ref({
     acontecimientos_traumaticos: {},
     referencia_i: {},
     custom_fields: {},
+    organization_info: {
+        nombre_comercial: '',
+        estado: '',
+        ciudad: ''
+    },
     referencia_v: {
         sexo: '',
         edad: '',
@@ -268,8 +282,8 @@ const submitEvaluation = () => {
     // Agregar el resto de datos de referencia_v
     formData.append('referencia_v', JSON.stringify(referenciaVData));
 
-    // Agregar campos personalizados
-    formData.append('custom_fields', JSON.stringify(answers.value.custom_fields || {}));
+        // Agregar información de organización ingresada por el usuario
+        formData.append('organization_info', JSON.stringify(answers.value.organization_info));
 
     console.log('Enviando datos con FormData');
 

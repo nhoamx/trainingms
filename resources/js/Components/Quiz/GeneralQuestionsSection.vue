@@ -92,6 +92,10 @@ const props = defineProps({
         type: Object,
         default: () => ({})
     },
+    disableAudioValidation: {
+        type: Boolean,
+        default: false
+    },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -104,6 +108,11 @@ const getAudioUrl = (questionId) => {
 };
 
 const isDisabled = (questionId) => {
+    // Si está deshabilitada la validación de audio (modo testing), nunca bloquear
+    if (props.disableAudioValidation) {
+        return false;
+    }
+    
     // Si hay audio de bloque y no se ha desbloqueado, bloquear todas las preguntas
     if (props.block?.audio_url && !blockAudioUnlocked.value) {
         return true;
