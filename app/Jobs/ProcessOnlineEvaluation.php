@@ -253,6 +253,23 @@ class ProcessOnlineEvaluation implements ShouldQueue
             'file_uploads' => $this->extractFileUploads($dataSnapshot),
         ];
 
+        // Include quiz responses sections
+        if (isset($dataSnapshot['referencia_i'])) {
+            $rawData['referencia_i'] = $dataSnapshot['referencia_i'];
+        }
+
+        if (isset($dataSnapshot['referencia_iii'])) {
+            $rawData['referencia_iii'] = $dataSnapshot['referencia_iii'];
+        }
+
+        if (isset($dataSnapshot['escala_cisneros'])) {
+            $rawData['escala_cisneros'] = $dataSnapshot['escala_cisneros'];
+        }
+
+        if (isset($dataSnapshot['referencia_v'])) {
+            $rawData['referencia_v'] = $dataSnapshot['referencia_v'];
+        }
+
         return $rawData;
     }
 
@@ -350,15 +367,15 @@ class ProcessOnlineEvaluation implements ShouldQueue
         $referenciaIII = $dataSnapshot['referencia_iii'];
         $conditionals = [];
 
-        // Extract customer service conditional (65-68)
-        if (isset($referenciaIII['customer_service'])) {
+        // Extract customer service conditional (65-68) - ONLY if exists
+        if (isset($referenciaIII['customer_service']) && isset($referenciaIII['customer_service']['condition'])) {
             $customerService = $referenciaIII['customer_service'];
             $conditionals['customer_service'] = [
-                'condition' => $customerService['condition'] ?? null,
+                'condition' => $customerService['condition'],
             ];
 
             // Add questions 65-68 if condition is true
-            if (($customerService['condition'] ?? false) === true) {
+            if ($customerService['condition'] === true) {
                 for ($i = 65; $i <= 68; $i++) {
                     if (isset($customerService[$i])) {
                         $conditionals['customer_service'][$i] = $customerService[$i];
@@ -367,15 +384,15 @@ class ProcessOnlineEvaluation implements ShouldQueue
             }
         }
 
-        // Extract management conditional (69-72)
-        if (isset($referenciaIII['management'])) {
+        // Extract management conditional (69-72) - ONLY if exists
+        if (isset($referenciaIII['management']) && isset($referenciaIII['management']['condition'])) {
             $management = $referenciaIII['management'];
             $conditionals['management'] = [
-                'condition' => $management['condition'] ?? null,
+                'condition' => $management['condition'],
             ];
 
             // Add questions 69-72 if condition is true
-            if (($management['condition'] ?? false) === true) {
+            if ($management['condition'] === true) {
                 for ($i = 69; $i <= 72; $i++) {
                     if (isset($management[$i])) {
                         $conditionals['management'][$i] = $management[$i];
@@ -411,11 +428,12 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
         $atsS1 = $dataSnapshot['referencia_iii']['ats_s1'];
 
-        // Filter only numeric keys (1-6)
+        // Filter only string keys "1"-"6"
         $answers = [];
         for ($i = 1; $i <= 6; $i++) {
-            if (isset($atsS1[$i])) {
-                $answers[$i] = $atsS1[$i];
+            $key = (string) $i;
+            if (isset($atsS1[$key])) {
+                $answers[$key] = $atsS1[$key];
             }
         }
 

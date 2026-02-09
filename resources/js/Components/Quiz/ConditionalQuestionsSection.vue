@@ -151,10 +151,23 @@ Object.entries(props.conditionalSections).forEach(([key, section]) => {
 });
 
 const updateCondition = (key, value) => {
-    emit('update:modelValue', {
+    const newValue = {
         ...props.modelValue,
         [key]: value
-    });
+    };
+    
+    // Si se cambia a false, limpiar las preguntas asociadas
+    if (value === false) {
+        const sectionKey = key.replace('condition_', '');
+        const section = props.conditionalSections[sectionKey];
+        if (section && section.questions) {
+            Object.keys(section.questions).forEach(qKey => {
+                delete newValue[qKey];
+            });
+        }
+    }
+    
+    emit('update:modelValue', newValue);
 };
 
 const updateAnswer = (questionId, value) => {

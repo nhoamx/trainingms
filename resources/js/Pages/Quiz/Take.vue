@@ -136,7 +136,13 @@ const isAcontecimientosComplete = computed(() => {
     
     if (!Array.isArray(traumaticQuestions) || traumaticQuestions.length === 0) return true;
     
-    return traumaticQuestions.every((_, idx) => traumaticAnswers[idx] !== undefined);
+    // Verificar que todas las preguntas (1-6) tengan respuesta
+    for (let i = 1; i <= traumaticQuestions.length; i++) {
+        if (traumaticAnswers[i] === undefined) {
+            return false;
+        }
+    }
+    return true;
 });
 
 const isReferenciaIComplete = computed(() => {
@@ -303,40 +309,26 @@ const transformToStandardizedStructure = () => {
         }
     }
     
-    // Extraer sección customer_service (65-68)
-    const customerService = {
-        condition: refIII.condition_atencion_clientes !== undefined ? refIII.condition_atencion_clientes : null
-    };
-    if (customerService.condition === true) {
-        for (let i = 65; i <= 68; i++) {
-            if (refIII[i] !== undefined) {
-                customerService[i] = refIII[i];
-            }
-        }
-    }
-    
-    // Extraer sección management (69-72)
-    const management = {
-        condition: refIII.condition_supervision !== undefined ? refIII.condition_supervision : null
-    };
-    if (management.condition === true) {
-        for (let i = 69; i <= 72; i++) {
-            if (refIII[i] !== undefined) {
-                management[i] = refIII[i];
-            }
-        }
-    }
-    
-    // Extraer acontecimientos traumáticos (ats_s1) - ya vienen como 1-6
-    const atsS1 = refIII.acontecimientos_traumaticos || {};
-    
     // Construir referencia_iii estandarizada
     const referenciaIII = {
-        ...generalQuestions,
-        customer_service: customerService,
-        management: management,
-        ats_s1: atsS1
+        ...generalQuestions
     };
+    
+    // Extraer sección customer_service (65-68) - SOLO si existe
+    if (refIII.customer_service !== undefined) {
+        referenciaIII.customer_service = refIII.customer_service;
+    }
+    
+    // Extraer sección management (69-72) - SOLO si existe
+    if (refIII.management !== undefined) {
+        referenciaIII.management = refIII.management;
+    }
+    
+    // Extraer acontecimientos traumáticos (ats_s1) - índices 1-6
+    const atsS1 = refIII.acontecimientos_traumaticos || {};
+    if (Object.keys(atsS1).length > 0) {
+        referenciaIII.ats_s1 = atsS1;
+    }
     
     // Referencia I ya viene con índices 1-13
     const referenciaI = { ...refI };
