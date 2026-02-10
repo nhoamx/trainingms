@@ -45,11 +45,19 @@ class OrganizationService
 
     /**
      * Generate unique folio for organization
+     * Returns a 2-digit sequential folio (01-99)
      */
-    protected function generateFolio(): int
+    protected function generateFolio(): string
     {
-        // Timestamp + random para máxima unicidad
-        return (int) (now()->timestamp.rand(10, 99));
+        // Obtener el último folio en el rango 01-99
+        $lastFolio = Organization::whereBetween('folio_organization', [1, 99])
+            ->max('folio_organization');
+
+        // Si no hay folios previos, comenzar desde 1
+        $nextFolio = $lastFolio ? (int) $lastFolio + 1 : 1;
+
+        // Retornar con padding de 2 dígitos
+        return str_pad($nextFolio, 2, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -85,12 +93,12 @@ class OrganizationService
             ->first();
 
         if (! $lastCenter) {
-            return '0001';
+            return '01';
         }
 
         $lastCode = (int) $lastCenter->code;
 
-        return str_pad($lastCode + 1, 4, '0', STR_PAD_LEFT);
+        return str_pad($lastCode + 1, 2, '0', STR_PAD_LEFT);
     }
 
     /**
