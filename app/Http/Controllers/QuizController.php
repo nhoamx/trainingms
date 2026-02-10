@@ -627,8 +627,7 @@ class QuizController extends Controller
             ]);
 
             // Dispatch job to process evaluation asynchronously
-            \App\Jobs\ProcessOnlineEvaluation::dispatch($submissionStatus->id)
-                ->onQueue('quiz_processing');
+            \App\Jobs\ProcessOnlineEvaluation::dispatch($submissionStatus->id);
 
             // Return immediate response to user (gracias page)
             return Inertia::render('Quiz/Completed', [
@@ -1150,12 +1149,12 @@ class QuizController extends Controller
                 ->first();
 
             if (! $lastEvaluation) {
-                return '0001';
+                return '00001';
             }
 
             $nextNumber = intval($lastEvaluation->personal_folio) + 1;
 
-            return str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            return str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error al generar personal folio', [
                 'organization_id' => $organizationId,
@@ -1168,7 +1167,8 @@ class QuizController extends Controller
 
     /**
      * Generate a complete folio for PaperEvaluation
-     * Format: 2 digits (evaluation_type_code) + 3 digits (organization_code) + 4 digits (personal_folio)
+     * Format: 2 digits (evaluation_type_code) + 2 digits (organization_code) + 2 digits (work_center_code) + 5 digits (personal_folio)
+     * Total: 11 digits [TT][OO][CC][PPPPP]
      */
     private function generatePaperEvaluationFolio(Quiz $quiz, string $personalFolio): string
     {
@@ -1179,26 +1179,51 @@ class QuizController extends Controller
             default => '03',             // Full evaluation (Referencia V)
         };
 
-        // Get organization code (using folio_organization or generating from ID)
+        // Get organization code (2 digits)
         $organizationCode = $this->getOrganizationCode($quiz->organization);
 
-        return $evaluationTypeCode.$organizationCode.$personalFolio;
+        // Get work center code (2 digits)
+        $workCenterCode = $this->getWorkCenterCode($quiz);
+
+        return $evaluationTypeCode.$organizationCode.$workCenterCode.$personalFolio;
     }
 
     /**
      * Get organization code from organization model
+     * Returns 2-digit organization code
      */
     private function getOrganizationCode($organization): string
     {
-        if ($organization->folio_organization) {
-            // Use existing code, ensure it's 3 digits
-            return str_pad(substr($organization->folio_organization, 0, 3), 3, '0', STR_PAD_LEFT);
+        // Convert to string and take last 2 digits, then pad if needed
+        $folioStr = (string) $organization->folio_organization;
+        $last2Digits = substr($folioStr, -2);
+
+        return str_pad($last2Digits, 2, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Get work center code from quiz
+     * Returns 2-digit work center code
+     */
+    private function getWorkCenterCode(Quiz $quiz): string
+    {
+        // If quiz has no work center assigned, use default '01'
+        if (! $quiz->work_center_id) {
+            return '01';
         }
 
-        // Generate from ID as fallback
-        $orgId = is_numeric($organization->id) ? $organization->id : crc32($organization->id);
+        // Load work center if not already loaded
+        $workCenter = $quiz->workCenter ?? \App\Models\WorkCenter::find($quiz->work_center_id);
 
-        return str_pad(substr((string) $orgId, -3), 3, '0', STR_PAD_LEFT);
+        if (! $workCenter || ! $workCenter->code) {
+            return '01';
+        }
+
+        // Convert to string and take last 2 digits, then pad if needed
+        $codeStr = (string) $workCenter->code;
+        $last2Digits = substr($codeStr, -2);
+
+        return str_pad($last2Digits, 2, '0', STR_PAD_LEFT);
     }
 
     /**

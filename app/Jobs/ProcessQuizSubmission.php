@@ -114,7 +114,7 @@ class ProcessQuizSubmission implements ShouldQueue
                 $submissionStatus->folio,
                 $submissionStatus->personal_id,
                 $ineImages
-            )->onQueue('images');
+            );
         }
     }
 

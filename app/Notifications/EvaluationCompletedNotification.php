@@ -22,9 +22,7 @@ class EvaluationCompletedNotification extends Notification implements ShouldBroa
         public ?string $workCenterId = null,
         public ?string $organizationName = null,
         public ?string $workCenterName = null
-    ) {
-        $this->onQueue('notifications');
-    }
+    ) {}
 
     /**
      * Get the notification's delivery channels.

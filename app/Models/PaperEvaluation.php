@@ -143,24 +143,57 @@ class PaperEvaluation extends Model
 
     /**
      * Parse folio into its components
+     *
+     * Supports two formats:
+     * - New 11-digit format: [TT][OO][CC][PPPPP]
+     *   - TT = Evaluation type (2 digits): 02, 03, 04
+     *   - OO = Organization (2 digits): 01-99
+     *   - CC = Work center (2 digits): 01-99
+     *   - PPPPP = Personal (5 digits): 00001-99999
+     *
+     * - Legacy 9-digit format: [TT][OOO][PPPP]
+     *   - TT = Evaluation type (2 digits): 02, 03, 04
+     *   - OOO = Organization (3 digits): 001-999
+     *   - PPPP = Personal (4 digits): 0001-9999
+     *
+     * @return array{folio: string, evaluation_type_code: string, organization_code: string, work_center_code: string|null, personal_folio: string, evaluation_type: string}
      */
     public static function parseFolio(string $folio): array
     {
-        if (strlen($folio) !== 9) {
-            throw new \InvalidArgumentException("Folio must be exactly 9 characters: {$folio}");
+        $folioLength = strlen($folio);
+
+        if ($folioLength === 11) {
+            // New format: [TT][OO][CC][PPPPP]
+            $evaluationTypeCode = substr($folio, 0, 2);
+            $organizationCode = substr($folio, 2, 2);
+            $workCenterCode = substr($folio, 4, 2);
+            $personalFolio = substr($folio, 6, 5);
+
+            return [
+                'folio' => $folio,
+                'evaluation_type_code' => $evaluationTypeCode,
+                'organization_code' => $organizationCode,
+                'work_center_code' => $workCenterCode,
+                'personal_folio' => $personalFolio,
+                'evaluation_type' => self::getEvaluationTypeFromCode($evaluationTypeCode),
+            ];
+        } elseif ($folioLength === 9) {
+            // Legacy format: [TT][OOO][PPPP]
+            $evaluationTypeCode = substr($folio, 0, 2);
+            $organizationCode = substr($folio, 2, 3);
+            $personalFolio = substr($folio, 5, 4);
+
+            return [
+                'folio' => $folio,
+                'evaluation_type_code' => $evaluationTypeCode,
+                'organization_code' => $organizationCode,
+                'work_center_code' => null,
+                'personal_folio' => $personalFolio,
+                'evaluation_type' => self::getEvaluationTypeFromCode($evaluationTypeCode),
+            ];
         }
 
-        $evaluationTypeCode = substr($folio, 0, 2);
-        $organizationCode = substr($folio, 2, 3);
-        $personalFolio = substr($folio, 5, 4);
-
-        return [
-            'folio' => $folio,
-            'evaluation_type_code' => $evaluationTypeCode,
-            'organization_code' => $organizationCode,
-            'personal_folio' => $personalFolio,
-            'evaluation_type' => self::getEvaluationTypeFromCode($evaluationTypeCode),
-        ];
+        throw new \InvalidArgumentException("Folio must be either 9 (legacy) or 11 (new) characters: {$folio}");
     }
 
     /**
