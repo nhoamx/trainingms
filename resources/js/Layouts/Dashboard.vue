@@ -65,13 +65,14 @@
             </main>
         </div>
     </div>
-import NotificationCenter from '../Components/NotificationCenter.vue';
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import Sidebar from '../Components/Sidebar.vue';
+import NotificationCenter from '../Components/NotificationCenter.vue';
+
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);

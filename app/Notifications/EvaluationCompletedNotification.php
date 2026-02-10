@@ -82,7 +82,7 @@ class EvaluationCompletedNotification extends Notification implements ShouldBroa
     {
         $parts = [];
 
-        $parts[] = "Se ha completado la evaluación con folio {$this->folio}";
+        $parts[] = "Se ha completado una evaluación";
 
         if ($this->workCenterName) {
             $parts[] = "en {$this->workCenterName}";

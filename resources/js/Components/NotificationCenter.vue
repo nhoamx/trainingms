@@ -3,7 +3,7 @@
         <!-- Notification Button -->
         <button
             type="button"
-            @click="togglePanel"
+            @click.stop="togglePanel"
             class="relative p-2 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg transition-colors"
             aria-label="Ver notificaciones"
             :aria-expanded="isOpen"
