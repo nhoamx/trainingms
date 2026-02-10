@@ -78,7 +78,7 @@ const unlocked = ref({});
 const questionIndexMap = ref({});
 
 const getAudioUrl = (index) => {
-    return props.audioUrls?.[index] || null;
+    return props.audioUrls?.referencia_i?.[index] || null;
 };
 
 // Build mapping of category_localIndex to globalIndex

@@ -248,4 +248,74 @@ class OrganizationReportCacheService
             $callback
         );
     }
+
+    // ──────────────────────────────────────────────────────────────
+    // Work Center Cache Keys
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Cache key prefix for work center reports
+     */
+    private const WC_PREFIX = 'wc_report';
+
+    /**
+     * Get the cache key for WorkCenter NOM-035 domain statistics
+     */
+    public function getWcNom035DomainsCacheKey(int|string $workCenterId): string
+    {
+        return self::WC_PREFIX."_nom035_domains_{$workCenterId}";
+    }
+
+    /**
+     * Get the cache key for WorkCenter NOM-035 category statistics
+     */
+    public function getWcNom035CategoriesCacheKey(int|string $workCenterId): string
+    {
+        return self::WC_PREFIX."_nom035_categories_{$workCenterId}";
+    }
+
+    /**
+     * Get the cache key for WorkCenter NOM-035 dimension statistics
+     */
+    public function getWcNom035DimensionsCacheKey(int|string $workCenterId): string
+    {
+        return self::WC_PREFIX."_nom035_dimensions_{$workCenterId}";
+    }
+
+    /**
+     * Get the cache key for WorkCenter NOM-035 question statistics
+     */
+    public function getWcNom035QuestionsCacheKey(int|string $workCenterId): string
+    {
+        return self::WC_PREFIX."_nom035_questions_{$workCenterId}";
+    }
+
+    /**
+     * Get the cache key for WorkCenter NOM-035 block statistics
+     */
+    public function getWcNom035BlocksCacheKey(int|string $workCenterId): string
+    {
+        return self::WC_PREFIX."_nom035_blocks_{$workCenterId}";
+    }
+
+    /**
+     * Get the cache key for WorkCenter NOM-035 global statistics
+     */
+    public function getWcNom035GlobalCacheKey(int|string $workCenterId): string
+    {
+        return self::WC_PREFIX."_nom035_global_{$workCenterId}";
+    }
+
+    /**
+     * Forget all cached report data for a work center
+     */
+    public function forgetWorkCenterCaches(int|string $workCenterId): void
+    {
+        Cache::forget($this->getWcNom035DomainsCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035CategoriesCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035DimensionsCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035QuestionsCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035BlocksCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035GlobalCacheKey($workCenterId));
+    }
 }

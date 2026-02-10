@@ -1,0 +1,237 @@
+<?php
+
+namespace App\Http\Controllers\WorkCenter;
+
+use App\Http\Controllers\Controller;
+use App\Models\PaperEvaluation;
+use App\Models\WorkCenter;
+use App\Services\OrganizationReportCacheService;
+use App\Services\WorkCenter\WorkCenterNom035CalculationService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Cache;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class WorkCenterNom035DashboardController extends Controller
+{
+    use AuthorizesRequests;
+
+    public function __construct(
+        protected WorkCenterNom035CalculationService $calculationService,
+        protected OrganizationReportCacheService $cacheService
+    ) {}
+
+    /**
+     * Muestra el dashboard NOM-035 para un centro de trabajo
+     */
+    public function show(WorkCenter $workCenter): Response
+    {
+        $this->authorize('viewWorkCenterDashboard', $workCenter);
+
+        $workCenter->load('organization');
+
+        $dashboardData = $this->buildDashboardData($workCenter);
+
+        $domainStatistics = Cache::rememberForever(
+            $this->cacheService->getWcNom035DomainsCacheKey($workCenter->id),
+            fn () => $this->calculationService->calculateDomainStatistics($workCenter)
+        );
+
+        $categoryStatistics = Cache::rememberForever(
+            $this->cacheService->getWcNom035CategoriesCacheKey($workCenter->id),
+            fn () => $this->calculationService->calculateCategoryStatistics($workCenter)
+        );
+
+        $dimensionStatistics = Cache::rememberForever(
+            $this->cacheService->getWcNom035DimensionsCacheKey($workCenter->id),
+            fn () => $this->calculationService->calculateDimensionStatistics($workCenter)
+        );
+
+        $questionStatistics = Cache::rememberForever(
+            $this->cacheService->getWcNom035QuestionsCacheKey($workCenter->id),
+            fn () => $this->calculationService->calculateQuestionStatistics($workCenter)
+        );
+
+        $blockStatistics = Cache::rememberForever(
+            $this->cacheService->getWcNom035BlocksCacheKey($workCenter->id),
+            fn () => $this->calculationService->calculateBlockStatistics($workCenter)
+        );
+
+        $globalStatistics = Cache::rememberForever(
+            $this->cacheService->getWcNom035GlobalCacheKey($workCenter->id),
+            fn () => $this->calculationService->calculateGlobalStatistics($workCenter)
+        );
+
+        $analysisData = $this->calculationService->getEvaluationsWithDemographicsAndScores($workCenter);
+
+        $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
+            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])
+            ->where('processing_status', 'completed')
+            ->with(['demographicData', 'comments'])
+            ->get()
+            ->map(function ($evaluation) {
+                return [
+                    'id' => $evaluation->id,
+                    'evaluation_type' => $evaluation->evaluation_type,
+                    'personal_folio' => $evaluation->personal_folio,
+                    'demographicData' => $evaluation->demographicData ? [
+                        'gender' => $evaluation->demographicData->gender,
+                        'contract_type' => $evaluation->demographicData->contract_type,
+                        'position' => $evaluation->demographicData->position,
+                        'department' => $evaluation->demographicData->department,
+                        'work_schedule' => $evaluation->demographicData->work_schedule,
+                    ] : null,
+                ];
+            });
+
+        $availableEvaluationTypes = $this->getAvailableEvaluationTypes($workCenter);
+
+        return Inertia::render('WorkCenters/Nom035Dashboard', [
+            'title' => 'NOM-035-STPS-2018 - '.$workCenter->name,
+            'dashboardData' => $dashboardData,
+            'domainStatistics' => $domainStatistics,
+            'categoryStatistics' => $categoryStatistics,
+            'dimensionStatistics' => $dimensionStatistics,
+            'questionStatistics' => $questionStatistics,
+            'blockStatistics' => $blockStatistics,
+            'globalStatistics' => $globalStatistics,
+            'analysisData' => $analysisData,
+            'evaluations' => $evaluations,
+            'availableEvaluationTypes' => $availableEvaluationTypes,
+        ]);
+    }
+
+    /**
+     * Construye los datos del dashboard a partir del WorkCenter
+     */
+    private function buildDashboardData(WorkCenter $workCenter): array
+    {
+        $organization = $workCenter->organization;
+
+        return [
+            'organization' => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+                'logo' => $organization->logo ? asset('storage/'.$organization->logo) : null,
+            ],
+            'work_center' => [
+                'id' => $workCenter->id,
+                'name' => $workCenter->name,
+                'code' => $workCenter->code,
+            ],
+            'company_data' => [
+                'general' => [
+                    'name' => $workCenter->name,
+                    'razon_social' => $workCenter->legal_name,
+                    'rfc' => $workCenter->tax_id,
+                    'registro_patronal' => $workCenter->employer_registration,
+                    'actividad_principal' => $organization->actividad_principal,
+                    'folio_organization' => $organization->folio_organization,
+                ],
+                'address' => [
+                    'calle_numero' => $workCenter->street_address,
+                    'colonia' => $workCenter->neighborhood,
+                    'codigo_postal' => $workCenter->postal_code,
+                    'municipio' => $workCenter->municipality,
+                    'estado' => $workCenter->state,
+                ],
+                'contact' => [
+                    'nombre' => $workCenter->contact_name,
+                    'puesto' => $workCenter->contact_position,
+                    'email' => $workCenter->contact_email,
+                    'movil' => $workCenter->contact_phone,
+                ],
+                'responsible' => [
+                    'nombre' => $workCenter->responsible_name,
+                    'puesto' => $workCenter->responsible_position,
+                    'email' => $workCenter->responsible_email,
+                    'movil' => $workCenter->responsible_phone,
+                ],
+                'workforce' => [
+                    'total_trabajadores' => $workCenter->total_workers,
+                    'total_hombres' => $workCenter->total_men,
+                    'total_mujeres' => $workCenter->total_women,
+                ],
+                'sample' => [
+                    'muestra_aplicada' => $workCenter->sample_applied,
+                    'muestra_hombres' => $workCenter->sample_men,
+                    'muestra_mujeres' => $workCenter->sample_women,
+                    'justificacion_muestra' => $workCenter->sample_justification,
+                ],
+                'evaluation_date' => $workCenter->application_date,
+                'committee' => [
+                    'comite_integrantes' => $workCenter->committee_members,
+                    'comite_hombres' => $workCenter->committee_men,
+                    'comite_mujeres' => $workCenter->committee_women,
+                ],
+            ],
+            'demographic_summary' => [],
+            'demographic_details' => [
+                'genders' => [],
+                'contract_types' => [],
+                'positions' => [],
+                'areas' => [],
+                'shifts' => [],
+                'total_evaluations' => 0,
+            ],
+        ];
+    }
+
+    /**
+     * Get available evaluation types for a work center based on actual data
+     *
+     * @return array<int, array{key: string, label: string, description: string, badge: string, color: string, icon: string}>
+     */
+    private function getAvailableEvaluationTypes(WorkCenter $workCenter): array
+    {
+        $evaluationTypes = PaperEvaluation::where('work_center_id', $workCenter->id)
+            ->where('processing_status', 'completed')
+            ->distinct()
+            ->pluck('evaluation_type')
+            ->toArray();
+
+        $typeConfigurations = [
+            'referencia_i' => [
+                'key' => 'referencia_i',
+                'label' => 'Referencia I (ATS)',
+                'description' => 'Identificación de trabajadores con ATS (Acontecimiento Traumáticos Severos)',
+                'badge' => 'Evaluación ATS',
+                'color' => 'red',
+                'icon' => 'DocumentTextIcon',
+            ],
+            'referencia_iii' => [
+                'key' => 'referencia_iii',
+                'label' => 'Referencia III',
+                'description' => 'Identificación de factores de riesgo psicosocial en el trabajo',
+                'badge' => 'Factores de Riesgo',
+                'color' => 'amber',
+                'icon' => 'AdjustmentsHorizontalIcon',
+            ],
+            'referencia_v' => [
+                'key' => 'referencia_v',
+                'label' => 'Referencia V',
+                'description' => 'Datos demográficos y características del entorno de trabajo',
+                'badge' => 'Datos Demográficos',
+                'color' => 'green',
+                'icon' => 'UserGroupIcon',
+            ],
+            'cisneros' => [
+                'key' => 'cisneros',
+                'label' => 'Escala Cisneros',
+                'description' => 'Evaluación de violencia laboral, acoso y mobbing',
+                'badge' => 'Violencia Laboral',
+                'color' => 'orange',
+                'icon' => 'ShieldCheckIcon',
+            ],
+        ];
+
+        $availableTypes = [];
+        foreach ($evaluationTypes as $type) {
+            if (isset($typeConfigurations[$type])) {
+                $availableTypes[] = $typeConfigurations[$type];
+            }
+        }
+
+        return $availableTypes;
+    }
+}
