@@ -27,23 +27,6 @@
                             <span class="text-sm text-gray-900">{{ quiz.organization?.name || 'N/A' }}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-sm font-medium text-gray-500">Tipo de evaluación:</span>
-                            <span class="text-sm text-gray-900">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                      :class="getQuizTypeClass()">
-                                    {{ getQuizTypeLabel() }}
-                                </span>
-                            </span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-sm font-medium text-gray-500">Folio asignado:</span>
-                            <span class="text-sm font-mono text-gray-900 bg-gray-200 px-2 py-1 rounded">{{ folio }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-sm font-medium text-gray-500">ID Personal:</span>
-                            <span class="text-sm font-mono text-gray-900 bg-gray-200 px-2 py-1 rounded">{{ personalId }}</span>
-                        </div>
-                        <div class="flex justify-between">
                             <span class="text-sm font-medium text-gray-500">Fecha y hora:</span>
                             <span class="text-sm text-gray-900">{{ formatDate(new Date()) }}</span>
                         </div>
@@ -59,8 +42,6 @@
                             <div class="mt-2 text-sm text-blue-700">
                                 <ul class="list-disc list-inside space-y-1">
                                     <li>Su evaluación ha sido guardada correctamente en el sistema</li>
-                                    <li>Los resultados serán procesados por el equipo correspondiente</li>
-                                    <li>Conserve su folio <strong>{{ folio }}</strong> para futuras referencias</li>
                                     <li>No es necesario realizar ninguna acción adicional</li>
                                 </ul>
                             </div>
