@@ -26,6 +26,7 @@ const props = defineProps({
 const answers = ref({
     acontecimientos_traumaticos: {},
     referencia_i: {},
+    evaluee_name: '',
     custom_fields: {},
     organization_info: {
         nombre_comercial: '',
@@ -95,7 +96,11 @@ const isReferenciaIComplete = computed(() => {
     
     if (!Array.isArray(followUpQuestions) || followUpQuestions.length === 0) return true;
     
-    return followUpQuestions.every((_, idx) => referenciaIAnswers[idx] !== undefined);
+    // Validar que todas las preguntas estén respondidas Y que se haya ingresado el nombre
+    const allQuestionsAnswered = followUpQuestions.every((_, idx) => referenciaIAnswers[idx] !== undefined);
+    const hasName = answers.value.evaluee_name && answers.value.evaluee_name.trim().length > 0;
+    
+    return allQuestionsAnswered && hasName;
 });
 
 const canAdvanceFromCurrentSection = computed(() => {
@@ -211,8 +216,13 @@ const submitEvaluation = () => {
     // Agregar el resto de datos de referencia_v
     formData.append('referencia_v', JSON.stringify(referenciaVData));
     
-        // Agregar información de organización ingresada por el usuario
-        formData.append('organization_info', JSON.stringify(answers.value.organization_info));
+    // Agregar información de organización ingresada por el usuario
+    formData.append('organization_info', JSON.stringify(answers.value.organization_info));
+    
+    // Agregar nombre del evaluado
+    if (answers.value.evaluee_name) {
+        formData.append('evaluee_name', answers.value.evaluee_name);
+    }
 
     console.log('Enviando datos con FormData');
     
@@ -332,6 +342,7 @@ const submitEvaluation = () => {
                         <FollowUpQuestionsSection
                             :follow-up-questions="quiz.reference_i"
                             v-model="answers.referencia_i"
+                            v-model:evaluee-name="answers.evaluee_name"
                             :answer-options="answerOptions.yesNo"
                             :audio-urls="audioUrls"
                             :video-urls="videoUrls"

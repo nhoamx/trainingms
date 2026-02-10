@@ -171,6 +171,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
                 'source' => 'online',
                 'processing_status' => 'completed',
                 'processed_at' => now(),
+                'evaluee_name' => $dataSnapshot['evaluee_name'] ?? null,
                 'demographic_data' => $demographicData,
                 'referencia_i_answers' => $referenciaIAnswers,
                 'referencia_iii_answers' => $referenciaIIIAnswers,

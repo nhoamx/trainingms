@@ -513,6 +513,7 @@ class QuizController extends Controller
                 'escala_cisneros' => 'nullable',
                 'custom_fields' => 'nullable',
                 'organization_info' => 'nullable',
+                'evaluee_name' => 'nullable|string|max:255',
                 'ine_frente' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'ine_reverso' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
@@ -614,6 +615,7 @@ class QuizController extends Controller
                     'escala_cisneros' => $validated['escala_cisneros'] ?? null,
                     'custom_fields' => $validated['custom_fields'] ?? null,
                     'organization_info' => $validated['organization_info'] ?? null,
+                    'evaluee_name' => $validated['evaluee_name'] ?? null,
                     'quiz_name' => $quiz->name,
                     'quiz_type' => match (true) {
                         $quiz->is_cisneros => 'cisneros',
