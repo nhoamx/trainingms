@@ -104,7 +104,7 @@ const unlocked = ref({});
 const blockAudioUnlocked = ref(false);
 
 const getAudioUrl = (questionId) => {
-    return props.audioUrls?.[questionId] || null;
+    return props.audioUrls?.general?.[questionId] || null;
 };
 
 const isDisabled = (questionId) => {

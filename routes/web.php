@@ -90,6 +90,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/organizacion/{organization}/dashboard/nom-002', [\App\Http\Controllers\OrganizationDashboardController::class, 'showNom002Dashboard'])
         ->name('organization.dashboard.nom-002');
 
+    // Work Center dashboard routes
+    Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035', [\App\Http\Controllers\WorkCenter\WorkCenterNom035DashboardController::class, 'show'])
+        ->name('work-centers.dashboard.nom-035');
+
     // Online results routes
     Route::get('/organization/{id}/online-results', [App\Http\Controllers\OnlineResultsController::class, 'index'])->name('organization.online-results');
     Route::get('/organization/{id}/online-results/report', [App\Http\Controllers\OnlineResultsController::class, 'report'])->name('organization.online-results.report');

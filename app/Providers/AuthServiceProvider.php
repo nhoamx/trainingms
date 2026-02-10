@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\Organization;
+use App\Models\WorkCenter;
 use App\Policies\OrganizationPolicy;
+use App\Policies\WorkCenterPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -15,6 +17,7 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         Organization::class => OrganizationPolicy::class,
+        WorkCenter::class => WorkCenterPolicy::class,
     ];
 
     /**

@@ -100,7 +100,7 @@ const emit = defineEmits(['update:modelValue']);
 const unlocked = ref({});
 
 const getAudioUrl = (questionId) => {
-    return props.audioUrls?.[questionId] || null;
+    return props.audioUrls?.conditional?.[questionId] || null;
 };
 
 const primeUnlockState = () => {

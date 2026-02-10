@@ -96,9 +96,9 @@ onMounted(() => {
     primeUnlockState();
 });
 
-// Obtener la URL del audio para una pregunta
+// Obtener la URL del audio para una pregunta (índice 1-based)
 const getAudioUrl = (index) => {
-    return props.audioUrls?.[index] || null;
+    return props.audioUrls?.traumatic?.[index] || null;
 };
 
 const isDisabled = (index) => unlocked.value[index] === false;

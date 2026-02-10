@@ -149,7 +149,7 @@ const cisnerosQuestions = [
 ];
 
 const getAudioUrl = (questionId) => {
-    return props.audioUrls?.[questionId] || null;
+    return props.audioUrls?.cisneros?.[questionId] || null;
 };
 
 const getVideoUrl = (questionId) => {

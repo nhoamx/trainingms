@@ -9,7 +9,13 @@ import { computed } from 'vue';
  */
 export function useAudioUrls(quiz) {
     return computed(() => {
-        const urls = {};
+        const urls = {
+            general: {},
+            conditional: {},
+            traumatic: {},
+            cisneros: {},
+            referencia_i: {}
+        };
         
         const audioEnabled = typeof window !== 'undefined' ? window.__AUDIO_ENABLED !== false : true;
 
@@ -22,26 +28,26 @@ export function useAudioUrls(quiz) {
         if (!questions) return urls;
         
         // Preguntas generales (Referencia III)
-        // Usa índices numéricos: 0, 1, 2, ... → 0.mp3, 1.mp3, 2.mp3
+        // Mapea ID de pregunta a URL de audio: { 1: [...], 2: [...], 3: [...], ... }
         const generalQuestions = questions.general || {};
-        Object.entries(generalQuestions).forEach((_, idx) => {
-            urls[idx] = getAudioUrl('general', idx);
+        Object.keys(generalQuestions).forEach((questionId, idx) => {
+            urls.general[questionId] = getAudioUrl('general', idx);
         });
         
         // Preguntas condicionales
-        // Usa índices numéricos para cada sección y sus preguntas de seguimiento
+        // Mapea ID de pregunta a URL de audio
         const conditionalSections = questions.conditional_sections || [];
         let conditionalIdx = 0;
         if (Array.isArray(conditionalSections)) {
             conditionalSections.forEach((section) => {
                 if (section.initial_question_key) {
-                    urls[`conditional_${conditionalIdx}`] = getAudioUrl('conditional', conditionalIdx);
+                    urls.conditional[section.initial_question_key] = getAudioUrl('conditional', conditionalIdx);
                     conditionalIdx++;
                 }
                 
                 if (section.follow_up_questions && Array.isArray(section.follow_up_questions)) {
-                    section.follow_up_questions.forEach(() => {
-                        urls[`conditional_${conditionalIdx}`] = getAudioUrl('conditional', conditionalIdx);
+                    section.follow_up_questions.forEach((fq) => {
+                        urls.conditional[fq.key] = getAudioUrl('conditional', conditionalIdx);
                         conditionalIdx++;
                     });
                 }
@@ -49,26 +55,32 @@ export function useAudioUrls(quiz) {
         }
         
         // Eventos traumáticos
-        // Usa índices numéricos: 0, 1, 2, ... → 0.mp3, 1.mp3, 2.mp3
+        // Mapea índice 1-based a URL de audio: { 1: [...], 2: [...], 3: [...], ... }
         const traumaticQuestions = questions.acontecimientos_traumaticos?.questions || [];
         if (Array.isArray(traumaticQuestions)) {
             traumaticQuestions.forEach((_, idx) => {
-                urls[`traumatic_${idx}`] = getAudioUrl('traumatic', idx);
+                urls.traumatic[idx + 1] = getAudioUrl('traumatic', idx);
             });
         }
         
         // Escala Cisneros
-        // Usa índices numéricos: 0, 1, 2, ... → 0.mp3, 1.mp3, 2.mp3
+        // Mapea ID de pregunta a URL de audio
         const cisnerosQuestions = questions.escala_cisneros?.questions || {};
-        Object.entries(cisnerosQuestions).forEach((_, idx) => {
-            urls[`cisneros_${idx}`] = getAudioUrl('cisneros', idx);
+        Object.keys(cisnerosQuestions).forEach((questionId, idx) => {
+            urls.cisneros[questionId] = getAudioUrl('cisneros', idx);
         });
         
         // Referencia I (preguntas de seguimiento)
-        // Usa índices numéricos: 0, 1, 2, ... → 0.mp3, 1.mp3, 2.mp3
+        // Mapea índice 1-based a URL de audio: { 1: [...], 2: [...], 3: [...], ... }
         if (Array.isArray(reference_i)) {
-            reference_i.forEach((_, idx) => {
-                urls[`referencia_i_${idx}`] = getAudioUrl('referencia_i', idx);
+            let globalIdx = 1;
+            Object.entries(reference_i).forEach(([category, questions]) => {
+                if (Array.isArray(questions)) {
+                    questions.forEach((_, localIdx) => {
+                        urls.referencia_i[globalIdx] = getAudioUrl('referencia_i', globalIdx - 1);
+                        globalIdx++;
+                    });
+                }
             });
         }
         
