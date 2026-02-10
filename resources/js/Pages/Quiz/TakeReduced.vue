@@ -255,13 +255,10 @@ const submitEvaluation = () => {
             <div class="bg-white rounded-lg shadow-sm border border-slate-200">
                 <div class="p-4 sm:p-6">
                     <!-- Encabezado con Indicaciones -->
-                    <div class="mb-8">
+                    <div v-if="currentSection === 'referencia_v'" class="mb-8">
                         <div class="bg-gradient-to-r from-slate-50 to-slate-100 border-l-4 border-slate-800 rounded-lg p-4 sm:p-6">
                             <h1 class="text-lg sm:text-xl font-semibold text-slate-900 mb-4">Indicaciones</h1>
                             <ol class="space-y-3 list-decimal list-inside text-sm sm:text-base text-slate-700">
-                                <li class="leading-relaxed">
-                                    <span class="font-medium">Contestarás tres cuestionarios</span> (Guías de referencia)
-                                </li>
                                 <li class="leading-relaxed">
                                     Contestar <span class="font-medium">objetivamente con sinceridad</span> tu percepción de <span class="font-medium">dos meses a la fecha</span>, tomando en cuenta el departamento y actividades que realizas.
                                 </li>

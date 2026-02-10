@@ -325,7 +325,7 @@ class QuizController extends Controller
                     'name' => $quiz->name,
                     'organization' => $organizationData,
                     'questions' => [
-                        'acontecimientos_traumaticos' => config('referencia_iii_reduced.acontecimientos_traumaticos'),
+                        'acontecimientos_traumaticos' => config('referencia_iii.acontecimientos_traumaticos'),
                     ],
                     'reference_i' => config('referencia_i'),
                     'reference_v' => config('referencia_v'),
