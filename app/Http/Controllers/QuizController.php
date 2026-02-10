@@ -504,6 +504,22 @@ class QuizController extends Controller
 
     public function submit(Request $request, Quiz $quiz)
     {
+        // LOG 1: RAW DATA RECEIVED FROM FRONTEND
+        \Illuminate\Support\Facades\Log::info('📥 [SUBMIT] Datos RAW recibidos del frontend', [
+            'quiz_id' => $quiz->id,
+            'quiz_name' => $quiz->name,
+            'quiz_type' => $quiz->is_reduced ? 'reducido' : ($quiz->is_cisneros ? 'cisneros' : 'normal'),
+            'request_all' => $request->all(),
+            'has_evaluee_name' => $request->has('evaluee_name'),
+            'evaluee_name_value' => $request->input('evaluee_name'),
+            'has_files' => [
+                'ine_frente' => $request->hasFile('ine_frente'),
+                'ine_reverso' => $request->hasFile('ine_reverso'),
+            ],
+            'user_ip' => $request->ip(),
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
         try {
             // Custom validation to handle both test scenarios (arrays) and production (JSON strings)
             $validated = $request->validate([
@@ -543,6 +559,17 @@ class QuizController extends Controller
 
             // Replace validated data with decoded data
             $validated = array_merge($validated, $decodedData);
+
+            // LOG 2: VALIDATED & DECODED DATA
+            \Illuminate\Support\Facades\Log::info('✅ [SUBMIT] Datos validados y decodificados', [
+                'quiz_id' => $quiz->id,
+                'validated_keys' => array_keys($validated),
+                'has_evaluee_name_in_validated' => isset($validated['evaluee_name']),
+                'evaluee_name_validated' => $validated['evaluee_name'] ?? 'NOT SET',
+                'referencia_i_keys' => isset($validated['referencia_i']) ? array_keys($validated['referencia_i']) : [],
+                'referencia_iii_keys' => isset($validated['referencia_iii']) ? array_keys($validated['referencia_iii']) : [],
+                'organization_info' => $validated['organization_info'] ?? [],
+            ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Illuminate\Support\Facades\Log::warning('Validación fallida en quiz submit', [
@@ -599,6 +626,36 @@ class QuizController extends Controller
                 $validated['referencia_v'] = array_merge($validated['referencia_v'], $filesData);
             }
 
+            // LOG 3: DATA SNAPSHOT BEFORE CREATING SUBMISSION
+            $dataSnapshot = [
+                'evaluation_type' => $evaluationType,
+                'referencia_iii' => $validated['referencia_iii'] ?? null,
+                'referencia_i' => $validated['referencia_i'] ?? null,
+                'referencia_v' => $validated['referencia_v'] ?? null,
+                'escala_cisneros' => $validated['escala_cisneros'] ?? null,
+                'custom_fields' => $validated['custom_fields'] ?? null,
+                'organization_info' => $validated['organization_info'] ?? null,
+                'evaluee_name' => $validated['evaluee_name'] ?? null,
+                'quiz_name' => $quiz->name,
+                'quiz_type' => match (true) {
+                    $quiz->is_cisneros => 'cisneros',
+                    $quiz->is_reduced => 'reducido',
+                    default => 'normal',
+                },
+                'submitted_at' => now()->toIso8601String(),
+                'submission_ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ];
+
+            \Illuminate\Support\Facades\Log::info('💾 [SUBMIT] Data snapshot antes de crear SubmissionStatus', [
+                'quiz_id' => $quiz->id,
+                'folio' => $folio,
+                'evaluee_name_in_snapshot' => $dataSnapshot['evaluee_name'] ?? 'NOT SET',
+                'snapshot_keys' => array_keys($dataSnapshot),
+                'has_referencia_i' => ! empty($dataSnapshot['referencia_i']),
+                'referencia_i_count' => ! empty($dataSnapshot['referencia_i']) ? count($dataSnapshot['referencia_i']) : 0,
+            ]);
+
             // Create SubmissionStatus record for async processing
             $submissionStatus = \App\Models\SubmissionStatus::create([
                 'folio' => $folio,
@@ -607,25 +664,7 @@ class QuizController extends Controller
                 'work_center_id' => $quiz->work_center_id,
                 'quiz_id' => $quiz->id,
                 'status' => \App\Models\SubmissionStatus::STATUS_PENDING,
-                'data_snapshot' => [
-                    'evaluation_type' => $evaluationType,
-                    'referencia_iii' => $validated['referencia_iii'] ?? null,
-                    'referencia_i' => $validated['referencia_i'] ?? null,
-                    'referencia_v' => $validated['referencia_v'] ?? null,
-                    'escala_cisneros' => $validated['escala_cisneros'] ?? null,
-                    'custom_fields' => $validated['custom_fields'] ?? null,
-                    'organization_info' => $validated['organization_info'] ?? null,
-                    'evaluee_name' => $validated['evaluee_name'] ?? null,
-                    'quiz_name' => $quiz->name,
-                    'quiz_type' => match (true) {
-                        $quiz->is_cisneros => 'cisneros',
-                        $quiz->is_reduced => 'reducido',
-                        default => 'normal',
-                    },
-                    'submitted_at' => now()->toIso8601String(),
-                    'submission_ip' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                ],
+                'data_snapshot' => $dataSnapshot,
             ]);
 
             // Dispatch job to process evaluation asynchronously

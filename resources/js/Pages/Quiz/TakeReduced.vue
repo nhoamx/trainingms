@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import { useAudioUrls } from '@/composables/useAudioUrls';
@@ -54,6 +54,18 @@ const answers = ref({
     }
 });
 
+// Watcher para debugging evaluee_name
+watch(() => answers.value.evaluee_name, (newValue, oldValue) => {
+    console.log('🟢 [TakeReduced] evaluee_name changed', {
+        oldValue,
+        newValue,
+        type: typeof newValue,
+        isNull: newValue === null,
+        isEmpty: newValue === '',
+        length: newValue?.length
+    });
+});
+
 const answerOptions = {
     yesNo: [
         { label: 'Sí', value: true },
@@ -97,8 +109,17 @@ const isReferenciaIComplete = computed(() => {
     if (!Array.isArray(followUpQuestions) || followUpQuestions.length === 0) return true;
     
     // Validar que todas las preguntas estén respondidas Y que se haya ingresado el nombre
-    const allQuestionsAnswered = followUpQuestions.every((_, idx) => referenciaIAnswers[idx] !== undefined);
+    // IMPORTANTE: Las respuestas usan índices 1-based (1, 2, 3...), no 0-based
+    const allQuestionsAnswered = followUpQuestions.every((_, idx) => referenciaIAnswers[idx + 1] !== undefined);
     const hasName = answers.value.evaluee_name && answers.value.evaluee_name.trim().length > 0;
+    
+    console.log('🔍 [VALIDATION] isReferenciaIComplete', {
+        allQuestionsAnswered,
+        hasName,
+        evaluee_name_value: answers.value.evaluee_name,
+        answered_count: Object.keys(referenciaIAnswers).length,
+        required_count: followUpQuestions.length
+    });
     
     return allQuestionsAnswered && hasName;
 });
@@ -219,12 +240,24 @@ const submitEvaluation = () => {
     // Agregar información de organización ingresada por el usuario
     formData.append('organization_info', JSON.stringify(answers.value.organization_info));
     
-    // Agregar nombre del evaluado
-    if (answers.value.evaluee_name) {
-        formData.append('evaluee_name', answers.value.evaluee_name);
-    }
-
-    console.log('Enviando datos con FormData');
+    // Agregar nombre del evaluado (SIEMPRE, aunque esté vacío)
+    const evalueeNameValue = answers.value.evaluee_name || '';
+    console.log('🟡 [SUBMIT] Preparando evaluee_name para envío', {
+        raw_value: answers.value.evaluee_name,
+        type: typeof answers.value.evaluee_name,
+        isNull: answers.value.evaluee_name === null,
+        isEmpty: answers.value.evaluee_name === '',
+        value_to_send: evalueeNameValue,
+        coerced_type: typeof evalueeNameValue
+    });
+    formData.append('evaluee_name', evalueeNameValue);
+    
+    console.log('📤 [SUBMIT] Enviando datos con FormData', {
+        has_evaluee_name: !!answers.value.evaluee_name,
+        evaluee_name_value: answers.value.evaluee_name,
+        evaluee_name_length: answers.value.evaluee_name?.length || 0,
+        formData_keys: Array.from(formData.keys())
+    });
     
     router.post(route('quiz.submit', props.quiz.id), formData, {
         forceFormData: true,
@@ -342,7 +375,7 @@ const submitEvaluation = () => {
                         <FollowUpQuestionsSection
                             :follow-up-questions="quiz.reference_i"
                             v-model="answers.referencia_i"
-                            v-model:evaluee-name="answers.evaluee_name"
+                            v-model:evalueName="answers.evaluee_name"
                             :answer-options="answerOptions.yesNo"
                             :audio-urls="audioUrls"
                             :video-urls="videoUrls"

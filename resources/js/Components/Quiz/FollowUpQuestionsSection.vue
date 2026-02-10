@@ -169,6 +169,14 @@ const updateAnswer = (index, value) => {
 };
 
 const updateEvalueName = (value) => {
+    console.log('🔵 [FollowUpQuestionsSection] updateEvalueName called', {
+        value,
+        type: typeof value,
+        length: value?.length,
+        isEmpty: value === '',
+        isNull: value === null,
+        isUndefined: value === undefined
+    });
     emit('update:evalueName', value);
 };
 </script>

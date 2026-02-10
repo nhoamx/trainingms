@@ -138,6 +138,17 @@ class ProcessOnlineEvaluation implements ShouldQueue
     {
         $dataSnapshot = $submissionStatus->data_snapshot;
 
+        // LOG 4: DATA SNAPSHOT IN JOB
+        Log::info('📦 [JOB] Data snapshot recibido en ProcessOnlineEvaluation', [
+            'submission_status_id' => $submissionStatus->id,
+            'folio' => $submissionStatus->folio,
+            'snapshot_keys' => array_keys($dataSnapshot),
+            'has_evaluee_name' => isset($dataSnapshot['evaluee_name']),
+            'evaluee_name_value' => $dataSnapshot['evaluee_name'] ?? 'NOT SET',
+            'has_referencia_i' => isset($dataSnapshot['referencia_i']),
+            'referencia_i_count' => isset($dataSnapshot['referencia_i']) ? count($dataSnapshot['referencia_i']) : 0,
+        ]);
+
         // Extract folio components
         $folioComponents = $this->extractFolioComponents($submissionStatus->folio);
 
@@ -157,6 +168,17 @@ class ProcessOnlineEvaluation implements ShouldQueue
             $demographicData['organization_info'] = $dataSnapshot['organization_info'];
         }
 
+        // LOG 5: BEFORE CREATING PAPER EVALUATION
+        $evalueeNameToSave = $dataSnapshot['evaluee_name'] ?? null;
+        Log::info('💾 [JOB] Antes de crear/actualizar PaperEvaluation', [
+            'folio' => $submissionStatus->folio,
+            'evaluee_name_to_save' => $evalueeNameToSave,
+            'evaluation_type_code' => $folioComponents['evaluation_type_code'],
+            'has_referencia_i_answers' => ! empty($referenciaIAnswers),
+            'referencia_i_answer_count' => count($referenciaIAnswers),
+            'data_snapshot_keys' => array_keys($dataSnapshot),
+        ]);
+
         // Create or update PaperEvaluation (prevents duplicates on concurrent submissions)
         $paperEvaluation = PaperEvaluation::updateOrCreate(
             ['folio' => $submissionStatus->folio],
@@ -171,7 +193,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
                 'source' => 'online',
                 'processing_status' => 'completed',
                 'processed_at' => now(),
-                'evaluee_name' => $dataSnapshot['evaluee_name'] ?? null,
+                'evaluee_name' => $evalueeNameToSave,
                 'demographic_data' => $demographicData,
                 'referencia_i_answers' => $referenciaIAnswers,
                 'referencia_iii_answers' => $referenciaIIIAnswers,
@@ -182,10 +204,12 @@ class ProcessOnlineEvaluation implements ShouldQueue
             ]
         );
 
-        Log::info('PaperEvaluation created/updated from online submission', [
+        Log::info('✅ [JOB] PaperEvaluation created/updated from online submission', [
             'paper_evaluation_id' => $paperEvaluation->id,
             'folio' => $paperEvaluation->folio,
             'evaluation_type' => $paperEvaluation->evaluation_type,
+            'evaluee_name_saved' => $paperEvaluation->evaluee_name,
+            'was_recently_created' => $paperEvaluation->wasRecentlyCreated,
         ]);
 
         return $paperEvaluation;
