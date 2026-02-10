@@ -46,12 +46,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
             // 1. Find SubmissionStatus
             $submissionStatus = SubmissionStatus::findOrFail($this->submissionStatusId);
 
-            Log::info('Processing online evaluation', [
-                'submission_id' => $submissionStatus->id,
-                'folio' => $submissionStatus->folio,
-                'organization_id' => $submissionStatus->organization_id,
-            ]);
-
             // 2. Mark as processing
             $submissionStatus->markAsProcessing();
 
@@ -74,12 +68,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
             // 5. Mark as completed
             $submissionStatus->markAsCompleted();
-
-            Log::info('Online evaluation processed successfully', [
-                'submission_id' => $submissionStatus->id,
-                'folio' => $submissionStatus->folio,
-                'paper_evaluation_id' => $paperEvaluation->id,
-            ]);
 
             // 6. Send notification to organization users
             $this->sendCompletionNotification($submissionStatus, $paperEvaluation);
@@ -109,12 +97,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
                 // Re-dispatch with delay
                 static::dispatch($this->submissionStatusId)
                     ->delay(now()->addSeconds($delay));
-
-                Log::info('Online evaluation will be retried', [
-                    'submission_id' => $this->submissionStatusId,
-                    'retry_count' => $submissionStatus->retry_count,
-                    'delay_seconds' => $delay,
-                ]);
             } else {
                 // Mark as failed if max retries reached or cannot retry
                 if ($submissionStatus) {
@@ -138,17 +120,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
     {
         $dataSnapshot = $submissionStatus->data_snapshot;
 
-        // LOG 4: DATA SNAPSHOT IN JOB
-        Log::info('📦 [JOB] Data snapshot recibido en ProcessOnlineEvaluation', [
-            'submission_status_id' => $submissionStatus->id,
-            'folio' => $submissionStatus->folio,
-            'snapshot_keys' => array_keys($dataSnapshot),
-            'has_evaluee_name' => isset($dataSnapshot['evaluee_name']),
-            'evaluee_name_value' => $dataSnapshot['evaluee_name'] ?? 'NOT SET',
-            'has_referencia_i' => isset($dataSnapshot['referencia_i']),
-            'referencia_i_count' => isset($dataSnapshot['referencia_i']) ? count($dataSnapshot['referencia_i']) : 0,
-        ]);
-
         // Extract folio components
         $folioComponents = $this->extractFolioComponents($submissionStatus->folio);
 
@@ -168,16 +139,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
             $demographicData['organization_info'] = $dataSnapshot['organization_info'];
         }
 
-        // LOG 5: BEFORE CREATING PAPER EVALUATION
         $evalueeNameToSave = $dataSnapshot['evaluee_name'] ?? null;
-        Log::info('💾 [JOB] Antes de crear/actualizar PaperEvaluation', [
-            'folio' => $submissionStatus->folio,
-            'evaluee_name_to_save' => $evalueeNameToSave,
-            'evaluation_type_code' => $folioComponents['evaluation_type_code'],
-            'has_referencia_i_answers' => ! empty($referenciaIAnswers),
-            'referencia_i_answer_count' => count($referenciaIAnswers),
-            'data_snapshot_keys' => array_keys($dataSnapshot),
-        ]);
 
         // Create or update PaperEvaluation (prevents duplicates on concurrent submissions)
         $paperEvaluation = PaperEvaluation::updateOrCreate(
@@ -204,14 +166,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
             ]
         );
 
-        Log::info('✅ [JOB] PaperEvaluation created/updated from online submission', [
-            'paper_evaluation_id' => $paperEvaluation->id,
-            'folio' => $paperEvaluation->folio,
-            'evaluation_type' => $paperEvaluation->evaluation_type,
-            'evaluee_name_saved' => $paperEvaluation->evaluee_name,
-            'was_recently_created' => $paperEvaluation->wasRecentlyCreated,
-        ]);
-
         return $paperEvaluation;
     }
 
@@ -227,24 +181,12 @@ class ProcessOnlineEvaluation implements ShouldQueue
             $referenciaV = $dataSnapshot['referencia_v'] ?? [];
 
             if (empty($referenciaV)) {
-                Log::info('No referencia_v data found, skipping demographic data creation');
-
                 return;
             }
 
             $demographicData = $demographicService->updateOrCreate($paperEvaluation, $referenciaV);
 
-            Log::info('Demographic data created successfully', [
-                'paper_evaluation_id' => $paperEvaluation->id,
-                'demographic_data_id' => $demographicData->id,
-            ]);
-
         } catch (\Exception $e) {
-            Log::error('Error creating demographic data', [
-                'paper_evaluation_id' => $paperEvaluation->id,
-                'error' => $e->getMessage(),
-            ]);
-
             throw $e;
         }
     }
@@ -484,11 +426,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
                 'evaluation_type' => $parsed['evaluation_type'],
             ];
         } catch (\Exception $e) {
-            Log::error('Error parsing folio', [
-                'folio' => $folio,
-                'error' => $e->getMessage(),
-            ]);
-
             throw $e;
         }
     }
@@ -523,10 +460,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
             }
 
             if ($users->isEmpty()) {
-                Log::info('No users to notify for evaluation completion', [
-                    'submission_id' => $submissionStatus->id,
-                ]);
-
                 return;
             }
 
@@ -539,12 +472,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
                 organizationName: $submissionStatus->organization?->name,
                 workCenterName: $submissionStatus->workCenter?->name
             ));
-
-            Log::info('Completion notification sent', [
-                'submission_id' => $submissionStatus->id,
-                'folio' => $submissionStatus->folio,
-                'users_notified' => $users->count(),
-            ]);
 
         } catch (\Exception $e) {
             // Don't fail the job if notification fails

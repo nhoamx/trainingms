@@ -84,9 +84,9 @@ const isReferenciaVComplete = computed(() => {
     const dl = rv.datos_laborales;
     const org = answers.value.organization_info;
     
-    return org.nombre_comercial && org.estado && org.ciudad &&
-           rv.sexo && rv.edad && rv.estado_civil && rv.nivel_estudios &&
-           dl.ocupacion_puesto && dl.tipo_puesto && dl.tipo_contratacion &&
+    //return org.nombre_comercial && org.estado && org.ciudad &&
+    return rv.sexo && rv.edad && rv.estado_civil && rv.nivel_estudios &&
+           dl.ocupacion_puesto && dl.departamento_seccion_area && dl.tipo_puesto && dl.tipo_contratacion &&
            dl.tipo_personal && dl.rotacion_turnos &&
            dl.experiencia.tiempo_puesto_actual && dl.experiencia.tiempo_experiencia_laboral;
 });
@@ -103,22 +103,37 @@ const isAcontecimientosComplete = computed(() => {
 const isReferenciaIComplete = computed(() => {
     if (!showFollowUpQuestions.value) return true;
     
-    const followUpQuestions = props.quiz?.reference_i || [];
+    const followUpQuestions = props.quiz?.reference_i || {};
     const referenciaIAnswers = answers.value.referencia_i || {};
     
-    if (!Array.isArray(followUpQuestions) || followUpQuestions.length === 0) return true;
+    // followUpQuestions es un objeto con categorías, cada una con un array de preguntas
+    // Necesitamos contar el TOTAL de preguntas individuales
+    if (typeof followUpQuestions !== 'object' || Object.keys(followUpQuestions).length === 0) return true;
     
-    // Validar que todas las preguntas estén respondidas Y que se haya ingresado el nombre
-    // IMPORTANTE: Las respuestas usan índices 1-based (1, 2, 3...), no 0-based
-    const allQuestionsAnswered = followUpQuestions.every((_, idx) => referenciaIAnswers[idx + 1] !== undefined);
+    // Contar el número total de preguntas sumando las preguntas de cada categoría
+    let totalQuestions = 0;
+    Object.values(followUpQuestions).forEach(categoryQuestions => {
+        if (Array.isArray(categoryQuestions)) {
+            totalQuestions += categoryQuestions.length;
+        }
+    });
+    
+    // Validar que todas las preguntas estén respondidas (índices 1-based)
+    const answeredCount = Object.keys(referenciaIAnswers).length;
+    const allQuestionsAnswered = answeredCount >= totalQuestions && 
+        Array.from({ length: totalQuestions }, (_, i) => i + 1)
+            .every(idx => referenciaIAnswers[idx] !== undefined);
+    
+    // Validar que se haya ingresado el nombre
     const hasName = answers.value.evaluee_name && answers.value.evaluee_name.trim().length > 0;
     
     console.log('🔍 [VALIDATION] isReferenciaIComplete', {
         allQuestionsAnswered,
         hasName,
         evaluee_name_value: answers.value.evaluee_name,
-        answered_count: Object.keys(referenciaIAnswers).length,
-        required_count: followUpQuestions.length
+        answered_count: answeredCount,
+        required_count: totalQuestions,
+        categories: Object.keys(followUpQuestions).length
     });
     
     return allQuestionsAnswered && hasName;
@@ -327,14 +342,25 @@ const submitEvaluation = () => {
                         </div>
                     </div>
 
+                    <div v-if="currentSection === 'acontecimientos_traumaticos'" class="mb-8">
+                        <div class="bg-gradient-to-r from-slate-50 to-slate-100 border-l-4 border-slate-800 rounded-lg p-4 sm:p-6">
+                            <h1 class="text-lg sm:text-xl font-semibold text-slate-900 mb-4">Indicaciones</h1>
+                            <div class="mt-4 pt-4 border-t border-slate-300">
+                                <p class="text-sm sm:text-base text-slate-700 leading-relaxed">
+                                    Si contestas por lo menos un si, de los 6 acontecimientos traumáticos severos, contestaras la sección 2, 3 y 4; que son las afectaciones  o síntomas y escribirás tu nombre en el apartado indicado.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Sección Referencia V -->
                     <div v-if="currentSection === 'referencia_v'" class="space-y-6">
                         <!-- Información de la Organización -->
-                        <OrganizationInfoSection
+                        <!-- <OrganizationInfoSection
                             v-model="answers.organization_info"
                             :organization-name="quiz.organization?.name || ''"
                             :work-center-name="workCenterName"
-                        />
+                        /> -->
 
                         <!-- Datos personales -->
                         <PersonalDataSection 
