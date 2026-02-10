@@ -163,6 +163,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
             [
                 'evaluation_type_code' => $folioComponents['evaluation_type_code'],
                 'organization_code' => $folioComponents['organization_code'],
+                'work_center_code' => $folioComponents['work_center_code'] ?? '01', // Default to '01' for legacy folios
                 'personal_folio' => $folioComponents['personal_folio'],
                 'organization_id' => $submissionStatus->organization_id,
                 'work_center_id' => $submissionStatus->work_center_id,
@@ -453,6 +454,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
             return [
                 'evaluation_type_code' => $parsed['evaluation_type_code'],
                 'organization_code' => $parsed['organization_code'],
+                'work_center_code' => $parsed['work_center_code'],
                 'personal_folio' => $parsed['personal_folio'],
                 'evaluation_type' => $parsed['evaluation_type'],
             ];

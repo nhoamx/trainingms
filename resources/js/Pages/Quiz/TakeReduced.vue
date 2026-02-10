@@ -84,7 +84,7 @@ const isAcontecimientosComplete = computed(() => {
     
     if (!Array.isArray(traumaticQuestions) || traumaticQuestions.length === 0) return true;
     
-    return traumaticQuestions.every((_, idx) => traumaticAnswers[idx] !== undefined);
+    return traumaticQuestions.every((_, idx) => traumaticAnswers[idx + 1] !== undefined);
 });
 
 const isReferenciaIComplete = computed(() => {
@@ -175,7 +175,7 @@ const videoUrls = useVideoUrls(props.quiz);
 const traumaticQuestions = computed(() => props.quiz?.questions?.acontecimientos_traumaticos?.questions || []);
 const traumaticAnswers = computed(() => answers.value.acontecimientos_traumaticos || {});
 const allTraumaticAnswered = computed(() => {
-    return traumaticQuestions.value.length > 0 && traumaticQuestions.value.every((_, idx) => traumaticAnswers.value[idx] !== undefined);
+    return traumaticQuestions.value.length > 0 && traumaticQuestions.value.every((_, idx) => traumaticAnswers.value[idx + 1] !== undefined);
 });
 const allTraumaticNo = computed(() => {
     return traumaticQuestions.value.length > 0 && traumaticQuestions.value.every((_, idx) => traumaticAnswers.value[idx] === false);
