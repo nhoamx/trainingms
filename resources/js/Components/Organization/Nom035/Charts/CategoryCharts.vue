@@ -19,9 +19,6 @@
           <p class="text-sm text-slate-600">
             Promedio: <strong class="text-slate-900">{{ category.average_score }}</strong> / {{ category.max_score }} ({{ category.percentage }}%)
           </p>
-          <p class="text-xs text-slate-500 mt-1">
-            Dominio: {{ category.domain }}
-          </p>
         </div>
         
         <canvas :ref="el => categoryChartRefs[categoryName] = el" style="height: 200px"></canvas>
@@ -54,7 +51,7 @@ interface CategoryData {
   risk_level_label: string;
   distribution: Record<string, number>;
   total_evaluations: number;
-  domain: string;
+  // CORREGIDO: Las categorías no tienen padre (son el primer nivel)
 }
 
 interface Props {

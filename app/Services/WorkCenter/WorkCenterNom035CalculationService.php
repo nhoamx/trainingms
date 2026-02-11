@@ -9,6 +9,7 @@ class WorkCenterNom035CalculationService
 {
     /**
      * Calcular estadísticas de dominios NOM-035 para un centro de trabajo
+     * CORREGIDO: Ahora calcula DOMINIOS (10 - segundo nivel) con su categoría padre
      */
     public function calculateDomainStatistics(WorkCenter $workCenter): array
     {
@@ -25,6 +26,7 @@ class WorkCenterNom035CalculationService
 
         $domainScores = [];
         $domainDistributions = [];
+        $domainCategories = [];
 
         foreach ($domainConfig as $categoryName => $domains) {
             foreach ($domains as $domainName => $dimensions) {
@@ -36,6 +38,7 @@ class WorkCenterNom035CalculationService
                     'alto' => 0,
                     'muy_alto' => 0,
                 ];
+                $domainCategories[$domainName] = $categoryName;
             }
         }
 
@@ -67,6 +70,7 @@ class WorkCenterNom035CalculationService
                 'risk_level_label' => $riskLevels['labels'][$averageLevel],
                 'distribution' => $domainDistributions[$domainName],
                 'total_evaluations' => count($scores),
+                'category' => $domainCategories[$domainName], // Agregar categoría padre
             ];
         }
 
@@ -80,6 +84,7 @@ class WorkCenterNom035CalculationService
 
     /**
      * Calcular estadísticas de categorías NOM-035 para un centro de trabajo
+     * CORREGIDO: Ahora calcula CATEGORÍAS (5 - primer nivel) sin padre
      */
     public function calculateCategoryStatistics(WorkCenter $workCenter): array
     {
@@ -96,43 +101,36 @@ class WorkCenterNom035CalculationService
 
         $categoryScores = [];
         $categoryDistributions = [];
-        $categoryDomains = [];
 
-        foreach ($domainConfig as $domainName => $categories) {
-            foreach ($categories as $categoryName => $subcategories) {
-                $categoryScores[$categoryName] = [];
-                $categoryDistributions[$categoryName] = [
-                    'nulo' => 0,
-                    'bajo' => 0,
-                    'medio' => 0,
-                    'alto' => 0,
-                    'muy_alto' => 0,
-                ];
-                $categoryDomains[$categoryName] = $domainName;
-            }
+        foreach ($domainConfig as $categoryName => $domains) {
+            $categoryScores[$categoryName] = [];
+            $categoryDistributions[$categoryName] = [
+                'nulo' => 0,
+                'bajo' => 0,
+                'medio' => 0,
+                'alto' => 0,
+                'muy_alto' => 0,
+            ];
         }
 
         foreach ($evaluations as $evaluation) {
             $answers = $evaluation->referencia_iii_answers ?? [];
 
-            foreach ($domainConfig as $domainName => $categories) {
-                foreach ($categories as $categoryName => $subcategories) {
-                    $score = $this->calculateCategoryScore($answers, $subcategories);
-                    $categoryScores[$categoryName][] = $score;
+            foreach ($domainConfig as $categoryName => $domains) {
+                $score = $this->calculateCategoryScore($answers, $domains);
+                $categoryScores[$categoryName][] = $score;
 
-                    $level = $this->getCategoryRiskLevel($score, $domainName, $riskLevels);
-                    $categoryDistributions[$categoryName][$level]++;
-                }
+                $level = $this->getCategoryRiskLevel($score, $categoryName, $riskLevels);
+                $categoryDistributions[$categoryName][$level]++;
             }
         }
 
         $result = [];
         foreach ($categoryScores as $categoryName => $scores) {
-            $domainName = $categoryDomains[$categoryName];
             $average = count($scores) > 0 ? array_sum($scores) / count($scores) : 0;
 
-            $maxScore = $this->calculateCategoryMaxScore($domainName, $domainConfig);
-            $averageLevel = $this->getCategoryRiskLevel($average, $domainName, $riskLevels);
+            $maxScore = $this->calculateCategoryMaxScore($categoryName, $domainConfig);
+            $averageLevel = $this->getCategoryRiskLevel($average, $categoryName, $riskLevels);
 
             $result[$categoryName] = [
                 'average_score' => round($average, 2),
@@ -142,7 +140,6 @@ class WorkCenterNom035CalculationService
                 'risk_level_label' => $riskLevels['labels'][$averageLevel],
                 'distribution' => $categoryDistributions[$categoryName],
                 'total_evaluations' => count($scores),
-                'domain' => $domainName,
             ];
         }
 
@@ -638,13 +635,17 @@ class WorkCenterNom035CalculationService
     /**
      * Calcular puntaje para un dominio específico
      */
-    private function calculateDomainScore(array $answers, array $categories): int
+    /**
+     * Calcular puntaje para un dominio específico
+     * CORREGIDO: Un dominio contiene múltiples dimensiones
+     */
+    private function calculateDomainScore(array $answers, array $domains): int
     {
         $score = 0;
         $answerValues = config('answer_values');
 
-        foreach ($categories as $categoryName => $subcategories) {
-            foreach ($subcategories as $subcategoryName => $questions) {
+        foreach ($domains as $domainName => $dimensions) {
+            foreach ($dimensions as $dimensionName => $questions) {
                 foreach ($questions as $questionNumber) {
                     $answer = $answers[$questionNumber] ?? null;
 
@@ -666,25 +667,28 @@ class WorkCenterNom035CalculationService
 
     /**
      * Calcular puntaje para una categoría específica
+     * CORREGIDO: Una categoría contiene múltiples dominios (cada dominio tiene múltiples dimensiones)
      */
-    private function calculateCategoryScore(array $answers, array $subcategories): int
+    private function calculateCategoryScore(array $answers, array $domains): int
     {
         $score = 0;
         $answerValues = config('answer_values');
 
-        foreach ($subcategories as $subcategoryName => $questions) {
-            foreach ($questions as $questionNumber) {
-                $answer = $answers[$questionNumber] ?? null;
+        foreach ($domains as $domainName => $dimensions) {
+            foreach ($dimensions as $dimensionName => $questions) {
+                foreach ($questions as $questionNumber) {
+                    $answer = $answers[$questionNumber] ?? null;
 
-                if ($answer === null) {
-                    continue;
+                    if ($answer === null) {
+                        continue;
+                    }
+
+                    $group = in_array(str_pad($questionNumber, 2, '0', STR_PAD_LEFT), $answerValues['group1']['questions'])
+                        ? 'group1'
+                        : 'group2';
+
+                    $score += $answerValues[$group]['values'][$answer] ?? 0;
                 }
-
-                $group = in_array(str_pad($questionNumber, 2, '0', STR_PAD_LEFT), $answerValues['group1']['questions'])
-                    ? 'group1'
-                    : 'group2';
-
-                $score += $answerValues[$group]['values'][$answer] ?? 0;
             }
         }
 
@@ -842,16 +846,20 @@ class WorkCenterNom035CalculationService
     }
 
     /**
-     * Calcular el max_score de una categoría sumando preguntas de sus dimensiones
+     * Calcular el max_score de una categoría sumando preguntas de todos sus dominios
+     * CORREGIDO: categoryName ahora es realmente una CATEGORÍA (primer nivel)
      */
     private function calculateCategoryMaxScore(string $categoryName, array $domainConfig): int
     {
         $totalQuestions = 0;
 
-        foreach ($domainConfig as $categories) {
-            if (isset($categories[$categoryName])) {
-                foreach ($categories[$categoryName] as $dimensions) {
-                    $totalQuestions += count($dimensions);
+        // Si la categoría existe en el primer nivel
+        if (isset($domainConfig[$categoryName])) {
+            // Iterar sobre todos los dominios de esta categoría
+            foreach ($domainConfig[$categoryName] as $domainName => $dimensions) {
+                // Iterar sobre todas las dimensiones de cada dominio
+                foreach ($dimensions as $dimensionName => $questions) {
+                    $totalQuestions += count($questions);
                 }
             }
         }
@@ -861,6 +869,7 @@ class WorkCenterNom035CalculationService
 
     /**
      * Retornar estructura vacía cuando no hay evaluaciones
+     * CORREGIDO: Devuelve 10 dominios con su categoría padre
      */
     private function getEmptyStatistics(): array
     {
@@ -884,6 +893,7 @@ class WorkCenterNom035CalculationService
                         'muy_alto' => 0,
                     ],
                     'total_evaluations' => 0,
+                    'category' => $categoryName, // Agregar categoría padre
                 ];
             }
         }
@@ -898,6 +908,7 @@ class WorkCenterNom035CalculationService
 
     /**
      * Retornar estructura vacía de categorías cuando no hay evaluaciones
+     * CORREGIDO: Devuelve 5 categorías (primer nivel) sin padre
      */
     private function getEmptyCategoryStatistics(): array
     {
@@ -905,27 +916,24 @@ class WorkCenterNom035CalculationService
         $riskLevels = config('nom035_risk_levels');
 
         $categories = [];
-        foreach ($domainConfig as $domainName => $categoriesInDomain) {
-            foreach (array_keys($categoriesInDomain) as $categoryName) {
-                $maxScore = $this->calculateCategoryMaxScore($categoryName, $domainConfig);
+        foreach ($domainConfig as $categoryName => $domains) {
+            $maxScore = $this->calculateCategoryMaxScore($categoryName, $domainConfig);
 
-                $categories[$categoryName] = [
-                    'average_score' => 0,
-                    'max_score' => $maxScore,
-                    'percentage' => 0,
-                    'risk_level' => 'nulo',
+            $categories[$categoryName] = [
+                'average_score' => 0,
+                'max_score' => $maxScore,
+                'percentage' => 0,
+                'risk_level' => 'nulo',
                     'risk_level_label' => $riskLevels['labels']['nulo'],
-                    'distribution' => [
-                        'nulo' => 0,
-                        'bajo' => 0,
-                        'medio' => 0,
-                        'alto' => 0,
-                        'muy_alto' => 0,
-                    ],
-                    'total_evaluations' => 0,
-                    'domain' => $domainName,
-                ];
-            }
+                'distribution' => [
+                    'nulo' => 0,
+                    'bajo' => 0,
+                    'medio' => 0,
+                    'alto' => 0,
+                    'muy_alto' => 0,
+                ],
+                'total_evaluations' => 0,
+            ];
         }
 
         return [

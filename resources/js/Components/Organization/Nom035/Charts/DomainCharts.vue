@@ -33,6 +33,9 @@
               {{ domain.risk_level_label }}
             </span> -->
           </div>
+          <p class="text-xs text-slate-500 mb-1">
+            Categoría: {{ domain.category }}
+          </p>
           <p class="text-sm text-slate-600">
             Promedio: <strong class="text-slate-900">{{ domain.average_score }}</strong> / {{ domain.max_score }} ({{ domain.percentage }}%)
           </p>
@@ -75,6 +78,7 @@ interface DomainData {
   risk_level_label: string;
   distribution: Record<string, number>;
   total_evaluations: number;
+  category: string; // CORREGIDO: Agregar categoría padre
 }
 
 interface Props {
