@@ -588,11 +588,11 @@ const submitEvaluation = () => {
                     <!-- Sección Referencia V -->
                     <div v-if="currentSection === 'referencia_v'" class="space-y-6">
                         <!-- Información de la Organización -->
-                        <OrganizationInfoSection
+                        <!-- <OrganizationInfoSection
                             v-model="answers.organization_info"
                             :organization-name="quiz.organization?.name || ''"
                             :work-center-name="workCenterName"
-                        />
+                        /> -->
 
                         <!-- Datos personales -->
                         <PersonalDataSection 
