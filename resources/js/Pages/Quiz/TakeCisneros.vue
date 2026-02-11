@@ -80,10 +80,10 @@
                     <div v-if="currentSection === 'final'" class="space-y-6">
                         <FinalSection :is-submitting="isSubmitting" @submit="submitEvaluation" />
                         <div class="flex justify-center mt-6">
-                            <button type="button" @click="currentSection = 'referencia_v'"
+                            <!-- <button type="button" @click="currentSection = 'referencia_v'"
                                 class="px-6 py-2 rounded-md bg-slate-100 text-slate-800 font-medium border border-slate-300 hover:bg-slate-200 transition-colors">
                                 Revisar todas mis respuestas
-                            </button>
+                            </button> -->
                         </div>
                     </div>
                 </div>

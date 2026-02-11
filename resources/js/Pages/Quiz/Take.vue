@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import { useAudioUrls } from '@/composables/useAudioUrls';
@@ -17,6 +17,7 @@ import NavigationButtons from '@/Components/Quiz/NavigationButtons.vue';
 import GeneralQuestionsSection from '@/Components/Quiz/GeneralQuestionsSection.vue';
 import ConditionalQuestionsSection from '@/Components/Quiz/ConditionalQuestionsSection.vue';
 import FinalSection from '@/Components/Quiz/FinalSection.vue';
+import AudioPlayer from '@/Components/Quiz/AudioPlayer.vue';
 
 const currentSection = ref('referencia_v');
 const showTraumaticQuestions = ref(false);
@@ -35,6 +36,7 @@ const props = defineProps({
 const answers = ref({
     referencia_iii: {},
     referencia_i: {},
+    evaluee_name: '',
     organization_info: {
         nombre_comercial: '',
         estado: '',
@@ -64,6 +66,18 @@ const answers = ref({
     custom_fields: {}
 });
 
+// Watcher para debugging evaluee_name
+watch(() => answers.value.evaluee_name, (newValue, oldValue) => {
+    console.log('🟢 [Take] evaluee_name changed', {
+        oldValue,
+        newValue,
+        type: typeof newValue,
+        isNull: newValue === null,
+        isEmpty: newValue === '',
+        length: newValue?.length
+    });
+});
+
 const answerOptions = {
     general: [
         { label: 'Siempre', value: 'A' },
@@ -89,9 +103,9 @@ const isReferenciaVComplete = computed(() => {
     const dl = rv.datos_laborales;
     const org = answers.value.organization_info;
     
-    return org.nombre_comercial && org.estado && org.ciudad &&
-           rv.sexo && rv.edad && rv.estado_civil && rv.nivel_estudios &&
-           dl.ocupacion_puesto && dl.tipo_puesto && dl.tipo_contratacion &&
+    //return org.nombre_comercial && org.estado && org.ciudad &&
+    return rv.sexo && rv.edad && rv.estado_civil && rv.nivel_estudios &&
+           dl.ocupacion_puesto && dl.departamento_seccion_area && dl.tipo_puesto && dl.tipo_contratacion &&
            dl.tipo_personal && dl.rotacion_turnos &&
            dl.experiencia.tiempo_puesto_actual && dl.experiencia.tiempo_experiencia_laboral;
 });
@@ -148,12 +162,40 @@ const isAcontecimientosComplete = computed(() => {
 const isReferenciaIComplete = computed(() => {
     if (!showTraumaticQuestions.value) return true;
     
-    const followUpQuestions = props.quiz?.reference_i || [];
+    const followUpQuestions = props.quiz?.reference_i || {};
     const referenciaIAnswers = answers.value.referencia_i || {};
     
-    if (!Array.isArray(followUpQuestions) || followUpQuestions.length === 0) return true;
+    // followUpQuestions es un objeto con categorías, cada una con un array de preguntas
+    // Necesitamos contar el TOTAL de preguntas individuales
+    if (typeof followUpQuestions !== 'object' || Object.keys(followUpQuestions).length === 0) return true;
     
-    return followUpQuestions.every((_, idx) => referenciaIAnswers[idx] !== undefined);
+    // Contar el número total de preguntas sumando las preguntas de cada categoría
+    let totalQuestions = 0;
+    Object.values(followUpQuestions).forEach(categoryQuestions => {
+        if (Array.isArray(categoryQuestions)) {
+            totalQuestions += categoryQuestions.length;
+        }
+    });
+    
+    // Validar que todas las preguntas estén respondidas (índices 1-based)
+    const answeredCount = Object.keys(referenciaIAnswers).length;
+    const allQuestionsAnswered = answeredCount >= totalQuestions && 
+        Array.from({ length: totalQuestions }, (_, i) => i + 1)
+            .every(idx => referenciaIAnswers[idx] !== undefined);
+    
+    // Validar que se haya ingresado el nombre
+    const hasName = answers.value.evaluee_name && answers.value.evaluee_name.trim().length > 0;
+    
+    console.log('🔍 [VALIDATION] isReferenciaIComplete', {
+        allQuestionsAnswered,
+        hasName,
+        evaluee_name_value: answers.value.evaluee_name,
+        answered_count: answeredCount,
+        required_count: totalQuestions,
+        categories: Object.keys(followUpQuestions).length
+    });
+    
+    return allQuestionsAnswered && hasName;
 });
 
 const canAdvanceFromCurrentSection = computed(() => {
@@ -428,7 +470,24 @@ const submitEvaluation = () => {
     // Agregar campos personalizados
     formData.append('custom_fields', JSON.stringify(answers.value.custom_fields || {}));
     
-    console.log('Enviando datos con FormData');
+    // Agregar nombre del evaluado (SIEMPRE, aunque esté vacío)
+    const evalueeNameValue = answers.value.evaluee_name || '';
+    console.log('🟡 [SUBMIT] Preparando evaluee_name para envío', {
+        raw_value: answers.value.evaluee_name,
+        type: typeof answers.value.evaluee_name,
+        isNull: answers.value.evaluee_name === null,
+        isEmpty: answers.value.evaluee_name === '',
+        value_to_send: evalueeNameValue,
+        coerced_type: typeof evalueeNameValue
+    });
+    formData.append('evaluee_name', evalueeNameValue);
+    
+    console.log('📤 [SUBMIT] Enviando datos con FormData', {
+        has_evaluee_name: !!answers.value.evaluee_name,
+        evaluee_name_value: answers.value.evaluee_name,
+        evaluee_name_length: answers.value.evaluee_name?.length || 0,
+        formData_keys: Array.from(formData.keys())
+    });
     
     // Usar router de Inertia para enviar los datos con FormData
     router.post(route('quiz.submit', props.quiz.id), formData, {
@@ -513,11 +572,11 @@ const submitEvaluation = () => {
                     <!-- Sección Referencia V -->
                     <div v-if="currentSection === 'referencia_v'" class="space-y-6">
                         <!-- Información de la Organización -->
-                        <OrganizationInfoSection
+                        <!-- <OrganizationInfoSection
                             v-model="answers.organization_info"
                             :organization-name="quiz.organization?.name || ''"
                             :work-center-name="workCenterName"
-                        />
+                        /> -->
 
                         <!-- Datos personales -->
                         <PersonalDataSection 
@@ -570,6 +629,21 @@ const submitEvaluation = () => {
 
                         <!-- Acontecimientos traumáticos -->
                         <div v-if="currentSubsection === 'traumatic'">
+                            <div class="mb-8">
+                                <div class="bg-gradient-to-r from-slate-50 to-slate-100 border-l-4 border-slate-800 rounded-lg p-4 sm:p-6">
+                                    <h1 class="text-lg sm:text-xl font-semibold text-slate-900 mb-4">Indicaciones</h1>
+                                    <div class="mt-4 pt-4 border-t border-slate-300">
+                                        <p class="text-sm sm:text-base text-slate-700 leading-relaxed mb-4">
+                                            Si contestas por lo menos un si, de los 6 acontecimientos traumáticos severos, contestaras la sección 2, 3 y 4; que son las afectaciones  o síntomas y escribirás tu nombre en el apartado indicado.
+                                        </p>
+                                        <div class="flex justify-start">
+                                            <AudioPlayer
+                                                audio-url="https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/ats-instructions.m4a"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <TraumaticEventsSection
                                 :title="quiz.questions.acontecimientos_traumaticos.title"
                                 :questions="quiz.questions.acontecimientos_traumaticos.questions"
@@ -588,6 +662,7 @@ const submitEvaluation = () => {
                         <FollowUpQuestionsSection
                             :follow-up-questions="quiz.reference_i"
                             v-model="answers.referencia_i"
+                            v-model:evalueName="answers.evaluee_name"
                             :answer-options="answerOptions.yesNo"
                             :audio-urls="audioUrls"
                             :video-urls="videoUrls"
@@ -602,7 +677,7 @@ const submitEvaluation = () => {
                             @submit="submitEvaluation"
                         />
                         <div class="flex justify-center mt-6">
-                            <button
+                            <!-- <button
                                 type="button"
                                 @click="() => {
                                     currentSection = 'referencia_v';
@@ -612,7 +687,7 @@ const submitEvaluation = () => {
                                 class="px-6 py-2 rounded-md bg-slate-100 text-slate-800 font-medium border border-slate-300 hover:bg-slate-200 transition-colors"
                             >
                                 Revisar todas mis respuestas
-                            </button>
+                            </button> -->
                         </div>
                     </div>
                 </div>

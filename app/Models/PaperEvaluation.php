@@ -18,6 +18,7 @@ class PaperEvaluation extends Model
         'evaluee_name',
         'evaluation_type_code',
         'organization_code',
+        'work_center_code',
         'personal_folio',
         'organization_id',
         'work_center_id',

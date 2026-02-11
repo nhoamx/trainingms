@@ -31,7 +31,8 @@ export function useAudioUrls(quiz) {
         // Mapea ID de pregunta a URL de audio: { 1: [...], 2: [...], 3: [...], ... }
         const generalQuestions = questions.general || {};
         Object.keys(generalQuestions).forEach((questionId, idx) => {
-            urls.general[questionId] = getAudioUrl('general', idx);
+            // Usar questionId para que coincida con archivos: 1.mp3, 2.mp3, 3.mp3...
+            urls.general[questionId] = getAudioUrl('general', questionId);
         });
         
         // Preguntas condicionales
@@ -59,7 +60,8 @@ export function useAudioUrls(quiz) {
         const traumaticQuestions = questions.acontecimientos_traumaticos?.questions || [];
         if (Array.isArray(traumaticQuestions)) {
             traumaticQuestions.forEach((_, idx) => {
-                urls.traumatic[idx + 1] = getAudioUrl('traumatic', idx);
+                // idx es 0-based, pero archivos son 1-based: usar idx+1
+                urls.traumatic[idx + 1] = getAudioUrl('traumatic', idx + 1);
             });
         }
         
@@ -67,7 +69,8 @@ export function useAudioUrls(quiz) {
         // Mapea ID de pregunta a URL de audio
         const cisnerosQuestions = questions.escala_cisneros?.questions || {};
         Object.keys(cisnerosQuestions).forEach((questionId, idx) => {
-            urls.cisneros[questionId] = getAudioUrl('cisneros', idx);
+            // Usar questionId para que coincida con archivos: 1.mp3, 2.mp3, 3.mp3...
+            urls.cisneros[questionId] = getAudioUrl('cisneros', questionId);
         });
         
         // Referencia I (preguntas de seguimiento)
@@ -77,7 +80,8 @@ export function useAudioUrls(quiz) {
             Object.entries(reference_i).forEach(([category, questions]) => {
                 if (Array.isArray(questions)) {
                     questions.forEach((_, localIdx) => {
-                        urls.referencia_i[globalIdx] = getAudioUrl('referencia_i', globalIdx - 1);
+                        // Usar globalIdx directamente para archivos 1-based: 1.mp3, 2.mp3, 3.mp3...
+                        urls.referencia_i[globalIdx] = getAudioUrl('referencia_i', globalIdx);
                         globalIdx++;
                     });
                 }

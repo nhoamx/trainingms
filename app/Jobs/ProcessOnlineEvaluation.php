@@ -46,12 +46,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
             // 1. Find SubmissionStatus
             $submissionStatus = SubmissionStatus::findOrFail($this->submissionStatusId);
 
-            Log::info('Processing online evaluation', [
-                'submission_id' => $submissionStatus->id,
-                'folio' => $submissionStatus->folio,
-                'organization_id' => $submissionStatus->organization_id,
-            ]);
-
             // 2. Mark as processing
             $submissionStatus->markAsProcessing();
 
@@ -74,12 +68,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
             // 5. Mark as completed
             $submissionStatus->markAsCompleted();
-
-            Log::info('Online evaluation processed successfully', [
-                'submission_id' => $submissionStatus->id,
-                'folio' => $submissionStatus->folio,
-                'paper_evaluation_id' => $paperEvaluation->id,
-            ]);
 
             // 6. Send notification to organization users
             $this->sendCompletionNotification($submissionStatus, $paperEvaluation);
@@ -109,12 +97,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
                 // Re-dispatch with delay
                 static::dispatch($this->submissionStatusId)
                     ->delay(now()->addSeconds($delay));
-
-                Log::info('Online evaluation will be retried', [
-                    'submission_id' => $this->submissionStatusId,
-                    'retry_count' => $submissionStatus->retry_count,
-                    'delay_seconds' => $delay,
-                ]);
             } else {
                 // Mark as failed if max retries reached or cannot retry
                 if ($submissionStatus) {
@@ -157,12 +139,15 @@ class ProcessOnlineEvaluation implements ShouldQueue
             $demographicData['organization_info'] = $dataSnapshot['organization_info'];
         }
 
+        $evalueeNameToSave = $dataSnapshot['evaluee_name'] ?? null;
+
         // Create or update PaperEvaluation (prevents duplicates on concurrent submissions)
         $paperEvaluation = PaperEvaluation::updateOrCreate(
             ['folio' => $submissionStatus->folio],
             [
                 'evaluation_type_code' => $folioComponents['evaluation_type_code'],
                 'organization_code' => $folioComponents['organization_code'],
+                'work_center_code' => $folioComponents['work_center_code'] ?? '01', // Default to '01' for legacy folios
                 'personal_folio' => $folioComponents['personal_folio'],
                 'organization_id' => $submissionStatus->organization_id,
                 'work_center_id' => $submissionStatus->work_center_id,
@@ -170,6 +155,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
                 'source' => 'online',
                 'processing_status' => 'completed',
                 'processed_at' => now(),
+                'evaluee_name' => $evalueeNameToSave,
                 'demographic_data' => $demographicData,
                 'referencia_i_answers' => $referenciaIAnswers,
                 'referencia_iii_answers' => $referenciaIIIAnswers,
@@ -179,12 +165,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
                 'raw_data' => $rawData,
             ]
         );
-
-        Log::info('PaperEvaluation created/updated from online submission', [
-            'paper_evaluation_id' => $paperEvaluation->id,
-            'folio' => $paperEvaluation->folio,
-            'evaluation_type' => $paperEvaluation->evaluation_type,
-        ]);
 
         return $paperEvaluation;
     }
@@ -201,24 +181,12 @@ class ProcessOnlineEvaluation implements ShouldQueue
             $referenciaV = $dataSnapshot['referencia_v'] ?? [];
 
             if (empty($referenciaV)) {
-                Log::info('No referencia_v data found, skipping demographic data creation');
-
                 return;
             }
 
             $demographicData = $demographicService->updateOrCreate($paperEvaluation, $referenciaV);
 
-            Log::info('Demographic data created successfully', [
-                'paper_evaluation_id' => $paperEvaluation->id,
-                'demographic_data_id' => $demographicData->id,
-            ]);
-
         } catch (\Exception $e) {
-            Log::error('Error creating demographic data', [
-                'paper_evaluation_id' => $paperEvaluation->id,
-                'error' => $e->getMessage(),
-            ]);
-
             throw $e;
         }
     }
@@ -453,15 +421,11 @@ class ProcessOnlineEvaluation implements ShouldQueue
             return [
                 'evaluation_type_code' => $parsed['evaluation_type_code'],
                 'organization_code' => $parsed['organization_code'],
+                'work_center_code' => $parsed['work_center_code'],
                 'personal_folio' => $parsed['personal_folio'],
                 'evaluation_type' => $parsed['evaluation_type'],
             ];
         } catch (\Exception $e) {
-            Log::error('Error parsing folio', [
-                'folio' => $folio,
-                'error' => $e->getMessage(),
-            ]);
-
             throw $e;
         }
     }
@@ -496,10 +460,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
             }
 
             if ($users->isEmpty()) {
-                Log::info('No users to notify for evaluation completion', [
-                    'submission_id' => $submissionStatus->id,
-                ]);
-
                 return;
             }
 
@@ -512,12 +472,6 @@ class ProcessOnlineEvaluation implements ShouldQueue
                 organizationName: $submissionStatus->organization?->name,
                 workCenterName: $submissionStatus->workCenter?->name
             ));
-
-            Log::info('Completion notification sent', [
-                'submission_id' => $submissionStatus->id,
-                'folio' => $submissionStatus->folio,
-                'users_notified' => $users->count(),
-            ]);
 
         } catch (\Exception $e) {
             // Don't fail the job if notification fails

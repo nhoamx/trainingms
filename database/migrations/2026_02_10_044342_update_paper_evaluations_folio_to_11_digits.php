@@ -21,6 +21,13 @@ return new class extends Migration
             // Expand folio column to support both 9-digit (legacy) and 11-digit (new) formats
             $table->string('folio', 11)->change();
 
+            // Update organization_code to 2 characters (was 3 for legacy, now 2 for new format)
+            // Still supports legacy 3-char codes by left-padding
+            $table->string('organization_code', 3)->change();
+
+            // Update personal_folio to 5 characters (was 4 for legacy, now 5 for new format)
+            $table->string('personal_folio', 5)->change();
+
             // Add work_center_code column (nullable for backward compatibility with legacy 9-digit folios)
             if (! Schema::hasColumn('paper_evaluations', 'work_center_code')) {
                 $table->string('work_center_code', 2)->nullable()->after('organization_code')->index();

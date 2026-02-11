@@ -42,6 +42,25 @@
                 </div>
             </div>
         </div>
+
+        <!-- Nombre Completo Field -->
+        <div class="bg-slate-50 p-4 rounded-lg">
+            <h3 class="font-medium text-slate-900 mb-4">Nombre Completo</h3>
+            <div class="bg-white p-4 rounded-lg border border-slate-100">
+                <label for="evaluee_name" class="block text-sm font-medium text-slate-700 mb-2">
+                    Por favor, ingresa tu nombre completo
+                </label>
+                <input
+                    id="evaluee_name"
+                    type="text"
+                    :value="evalueName"
+                    @input="updateEvalueName($event.target.value)"
+                    placeholder="Nombre completo"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                    required
+                />
+            </div>
+        </div>
     </div>
 </template>
 
@@ -69,10 +88,14 @@ const props = defineProps({
     disableAudioValidation: {
         type: Boolean,
         default: false
+    },
+    evalueName: {
+        type: String,
+        default: ''
     }
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'update:evalueName']);
 
 const unlocked = ref({});
 const questionIndexMap = ref({});
@@ -143,5 +166,17 @@ const updateAnswer = (index, value) => {
         ...props.modelValue,
         [index]: value
     });
+};
+
+const updateEvalueName = (value) => {
+    console.log('🔵 [FollowUpQuestionsSection] updateEvalueName called', {
+        value,
+        type: typeof value,
+        length: value?.length,
+        isEmpty: value === '',
+        isNull: value === null,
+        isUndefined: value === undefined
+    });
+    emit('update:evalueName', value);
 };
 </script>
