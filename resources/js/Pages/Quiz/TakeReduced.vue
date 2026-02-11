@@ -14,6 +14,7 @@ import OrganizationInfoSection from '../../Components/Quiz/OrganizationInfoSecti
 import TraumaticEventsSection from "../../Components/Quiz/TraumaticEventsSection.vue";
 import FollowUpQuestionsSection from '@/Components/Quiz/FollowUpQuestionsSection.vue';
 import FinalSection from '@/Components/Quiz/FinalSection.vue';
+import AudioPlayer from '@/Components/Quiz/AudioPlayer.vue';
 
 const currentSection = ref('referencia_v');
 const showFollowUpQuestions = ref(false);
@@ -346,9 +347,14 @@ const submitEvaluation = () => {
                         <div class="bg-gradient-to-r from-slate-50 to-slate-100 border-l-4 border-slate-800 rounded-lg p-4 sm:p-6">
                             <h1 class="text-lg sm:text-xl font-semibold text-slate-900 mb-4">Indicaciones</h1>
                             <div class="mt-4 pt-4 border-t border-slate-300">
-                                <p class="text-sm sm:text-base text-slate-700 leading-relaxed">
+                                <p class="text-sm sm:text-base text-slate-700 leading-relaxed mb-4">
                                     Si contestas por lo menos un si, de los 6 acontecimientos traumáticos severos, contestaras la sección 2, 3 y 4; que son las afectaciones  o síntomas y escribirás tu nombre en el apartado indicado.
                                 </p>
+                                <div class="flex justify-start">
+                                    <AudioPlayer
+                                        audio-url="https://trainingms.sfo3.cdn.digitaloceanspaces.com/devel/audios/ats-instructions.m4a"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
