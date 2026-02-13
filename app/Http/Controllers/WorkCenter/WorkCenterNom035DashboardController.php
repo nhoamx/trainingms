@@ -12,6 +12,14 @@ use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Dashboard Controller para NOM-035 Referencia III
+ *
+ * Este controlador maneja específicamente el dashboard de Referencia III
+ * que incluye análisis de dominios, categorías y dimensiones de factores de riesgo psicosocial.
+ *
+ * Para el dashboard de Referencia I (ATS), ver: WorkCenterNom035RefIDashboardController
+ */
 class WorkCenterNom035DashboardController extends Controller
 {
     use AuthorizesRequests;
@@ -86,7 +94,7 @@ class WorkCenterNom035DashboardController extends Controller
 
         $availableEvaluationTypes = $this->getAvailableEvaluationTypes($workCenter);
 
-        return Inertia::render('WorkCenters/Nom035Dashboard', [
+        return Inertia::render('WorkCenters/Nom035RefIIIDashboard', [
             'title' => 'NOM-035-STPS-2018 - '.$workCenter->name,
             'dashboardData' => $dashboardData,
             'domainStatistics' => $domainStatistics,

@@ -1,0 +1,229 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Organization;
+use App\Models\PaperEvaluation;
+use App\Models\User;
+use App\Models\WorkCenter;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\TestCase;
+
+class WorkCenterNom035RefIDashboardTest extends TestCase
+{
+    use DatabaseTransactions;
+
+    public function test_work_center_user_can_view_their_ref_i_dashboard(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['work_center_user']);
+        $user->workCenters()->attach($workCenter);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', $workCenter));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIDashboard')
+            ->has('dashboardData')
+            ->has('dashboardData.organization')
+            ->has('dashboardData.work_center')
+            ->has('dashboardData.company_data')
+            ->has('aggregatedStats')
+            ->has('participants')
+            ->has('executiveSummary')
+        );
+    }
+
+    public function test_admin_can_view_any_work_center_ref_i_dashboard(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', $workCenter));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIDashboard')
+        );
+    }
+
+    public function test_work_center_user_cannot_view_unassigned_center_ref_i(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['work_center_user']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', $workCenter));
+
+        $response->assertForbidden();
+    }
+
+    public function test_unauthenticated_user_cannot_view_ref_i_dashboard(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        $response = $this->get(route('work-centers.dashboard.nom-035-ref-i', $workCenter));
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_ref_i_dashboard_returns_correct_data_structure(): void
+    {
+        $organization = Organization::factory()->create([
+            'name' => 'Test Organization',
+        ]);
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+            'name' => 'Centro Norte',
+            'code' => '0001',
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', $workCenter));
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIDashboard')
+            ->has('dashboardData.company_data.general')
+            ->has('dashboardData.company_data.address')
+            ->has('dashboardData.company_data.contact')
+            ->has('dashboardData.company_data.responsible')
+            ->has('dashboardData.company_data.workforce')
+            ->has('dashboardData.company_data.sample')
+            ->has('dashboardData.company_data.committee')
+            ->has('aggregatedStats.total_participants')
+            ->has('aggregatedStats.total_questions')
+            ->has('aggregatedStats.demographic_distribution')
+            ->has('executiveSummary.total_participants')
+            ->has('executiveSummary.evaluation_type')
+        );
+    }
+
+    public function test_ref_i_dashboard_shows_work_center_specific_evaluations(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $workCenter1 = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+        $workCenter2 = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter1->id,
+        ]);
+
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter2->id,
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', $workCenter1));
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIDashboard')
+            ->where('aggregatedStats.total_participants', 1)
+        );
+    }
+
+    public function test_ref_i_dashboard_returns_empty_stats_when_no_evaluations(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', $workCenter));
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIDashboard')
+            ->where('aggregatedStats.total_participants', 0)
+            ->where('participants', [])
+        );
+    }
+
+    public function test_ref_i_dashboard_includes_participant_list_with_demographics(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => '0001',
+        ]);
+
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => '0002',
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', $workCenter));
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIDashboard')
+            ->where('aggregatedStats.total_participants', 2)
+            ->has('participants', 2)
+            ->has('participants.0.id')
+            ->has('participants.0.personal_folio')
+            ->has('participants.0.folio')
+            ->has('participants.0.evaluation_type')
+            ->has('participants.0.demographics')
+        );
+    }
+
+    public function test_ref_i_dashboard_excludes_incomplete_evaluations(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        // Completed evaluation
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+        ]);
+
+        // Pending evaluation
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'pending',
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', $workCenter));
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIDashboard')
+            ->where('aggregatedStats.total_participants', 1)
+            ->has('participants', 1)
+        );
+    }
+}

@@ -91,8 +91,14 @@ Route::middleware(['auth'])->group(function () {
         ->name('organization.dashboard.nom-002');
 
     // Work Center dashboard routes
-    Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035', [\App\Http\Controllers\WorkCenter\WorkCenterNom035DashboardController::class, 'show'])
+    Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035', [\App\Http\Controllers\WorkCenter\WorkCenterNom035IndexController::class, 'show'])
+        ->name('work-centers.dashboard.nom-035-index');
+
+    Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035/ref-iii', [\App\Http\Controllers\WorkCenter\WorkCenterNom035DashboardController::class, 'show'])
         ->name('work-centers.dashboard.nom-035');
+
+    Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035/ref-i', [\App\Http\Controllers\WorkCenter\WorkCenterNom035RefIDashboardController::class, 'show'])
+        ->name('work-centers.dashboard.nom-035-ref-i');
 
     // Online results routes
     Route::get('/organization/{id}/online-results', [App\Http\Controllers\OnlineResultsController::class, 'index'])->name('organization.online-results');

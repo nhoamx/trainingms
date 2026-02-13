@@ -97,14 +97,13 @@
                                     v-if="workCenter.has_evaluations"
                                     type="button"
                                     class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                                    @click="handleViewReport(workCenter)"
+                                    @click="handleViewDashboard(workCenter)"
                                 >
                                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                     </svg>
                                     Ver Dashboard NOM-035
                                 </button>
-                                
                                 <div
                                     v-else
                                     class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-gray-50 text-gray-400 font-medium rounded-lg border-2 border-dashed border-gray-200"
@@ -187,7 +186,7 @@ const getTypeColor = (type) => {
     return colors[type] || 'bg-gray-100 text-gray-800';
 };
 
-const handleViewReport = (workCenter) => {
-    router.visit(route('work-centers.dashboard.nom-035', workCenter.id));
+const handleViewDashboard = (workCenter) => {
+    router.visit(route('work-centers.dashboard.nom-035-index', workCenter.id));
 };
 </script>

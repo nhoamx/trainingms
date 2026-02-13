@@ -27,7 +27,7 @@ class WorkCenterNom035DashboardTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('WorkCenters/Nom035Dashboard')
+            ->component('WorkCenters/Nom035RefIIIDashboard')
             ->has('dashboardData')
             ->has('dashboardData.organization')
             ->has('dashboardData.work_center')
@@ -53,7 +53,7 @@ class WorkCenterNom035DashboardTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('WorkCenters/Nom035Dashboard')
+            ->component('WorkCenters/Nom035RefIIIDashboard')
         );
     }
 
@@ -99,7 +99,7 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->get(route('work-centers.dashboard.nom-035', $workCenter));
 
         $response->assertInertia(fn ($page) => $page
-            ->component('WorkCenters/Nom035Dashboard')
+            ->component('WorkCenters/Nom035RefIIIDashboard')
             ->has('dashboardData.company_data.general')
             ->has('dashboardData.company_data.address')
             ->has('dashboardData.company_data.contact')
@@ -138,7 +138,7 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->get(route('work-centers.dashboard.nom-035', $workCenter1));
 
         $response->assertInertia(fn ($page) => $page
-            ->component('WorkCenters/Nom035Dashboard')
+            ->component('WorkCenters/Nom035RefIIIDashboard')
             ->where('domainStatistics.total_evaluations', 1)
         );
     }
@@ -155,7 +155,7 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->get(route('work-centers.dashboard.nom-035', $workCenter));
 
         $response->assertInertia(fn ($page) => $page
-            ->component('WorkCenters/Nom035Dashboard')
+            ->component('WorkCenters/Nom035RefIIIDashboard')
             ->where('domainStatistics.total_evaluations', 0)
             ->where('globalStatistics.total_evaluations', 0)
         );
