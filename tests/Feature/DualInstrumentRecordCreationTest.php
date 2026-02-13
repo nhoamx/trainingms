@@ -52,7 +52,10 @@ class DualInstrumentRecordCreationTest extends TestCase
                     '1' => 'A',
                     '2' => 'B',
                     '3' => 'C',
-                    'ats_s1' => [
+                ],
+                'referencia_i' => [
+                    // ✅ UNIFIED: ATS now lives in referencia_i
+                    'acontecimientos_traumaticos' => [
                         '1' => true, // Traumatic event "Sí"
                         '2' => false,
                         '3' => false,
@@ -60,8 +63,6 @@ class DualInstrumentRecordCreationTest extends TestCase
                         '5' => false,
                         '6' => false,
                     ],
-                ],
-                'referencia_i' => [
                     '1' => true,
                     '2' => false,
                     '3' => true,
@@ -184,7 +185,10 @@ class DualInstrumentRecordCreationTest extends TestCase
                 'referencia_iii' => [
                     '1' => 'A',
                     '2' => 'B',
-                    'ats_s1' => [
+                ],
+                'referencia_i' => [
+                    // ✅ UNIFIED: ATS now lives in referencia_i
+                    'acontecimientos_traumaticos' => [
                         '1' => false, // All "No"
                         '2' => false,
                         '3' => false,
@@ -225,9 +229,13 @@ class DualInstrumentRecordCreationTest extends TestCase
                 'referencia_v' => ['sexo' => 'Masculino'],
                 'referencia_iii' => [
                     '1' => 'A',
-                    'ats_s1' => ['1' => true, '2' => false, '3' => false, '4' => false, '5' => false, '6' => false],
                 ],
-                'referencia_i' => ['1' => true, '2' => false],
+                'referencia_i' => [
+                    // ✅ UNIFIED: ATS now lives in referencia_i
+                    'acontecimientos_traumaticos' => ['1' => true, '2' => false, '3' => false, '4' => false, '5' => false, '6' => false],
+                    '1' => true,
+                    '2' => false,
+                ],
                 'evaluee_name' => 'Pedro López',
             ],
         ]);
