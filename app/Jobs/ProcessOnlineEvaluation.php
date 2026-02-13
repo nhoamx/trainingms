@@ -55,13 +55,28 @@ class ProcessOnlineEvaluation implements ShouldQueue
             $paperEvaluation = $this->createPaperEvaluation($submissionStatus);
 
             // 4. Create DemographicData using service if referencia_v exists
+            // For dual-instrument records, create demographic data for BOTH records
             if (isset($submissionStatus->data_snapshot['referencia_v']) &&
                 ! empty($submissionStatus->data_snapshot['referencia_v'])) {
+
+                // Create for primary record
                 $this->createDemographicData(
                     $paperEvaluation,
                     $demographicService,
                     $submissionStatus->data_snapshot
                 );
+
+                // If there's a related evaluation (dual-instrument), create for it too
+                if ($paperEvaluation->related_evaluation_folio) {
+                    $relatedEvaluation = PaperEvaluation::where('folio', $paperEvaluation->related_evaluation_folio)->first();
+                    if ($relatedEvaluation) {
+                        $this->createDemographicData(
+                            $relatedEvaluation,
+                            $demographicService,
+                            $submissionStatus->data_snapshot
+                        );
+                    }
+                }
             }
 
             DB::commit();
@@ -115,58 +130,35 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
     /**
      * Create PaperEvaluation from SubmissionStatus
+     * Replicates OCR pattern: creates separate records for each instrument type
      */
     protected function createPaperEvaluation(SubmissionStatus $submissionStatus): PaperEvaluation
     {
         $dataSnapshot = $submissionStatus->data_snapshot;
 
-        // Extract folio components
-        $folioComponents = $this->extractFolioComponents($submissionStatus->folio);
+        // Determine which instruments are present in the submission
+        $hasReferenciaIII = $this->hasReferenciaIII($dataSnapshot);
+        $hasReferenciaI = $this->hasReferenciaI($dataSnapshot);
+        $hasCisneros = $this->hasCisneros($dataSnapshot);
 
-        // Build standardized raw_data
-        $rawData = $this->buildStandardizedRawData($dataSnapshot, $submissionStatus);
-
-        // Extract answers from data_snapshot
-        $referenciaIAnswers = $this->extractReferenciaI($dataSnapshot);
-        $referenciaIIIAnswers = $this->extractReferenciaIII($dataSnapshot);
-        $referenciaIIIConditional = $this->extractConditionals($dataSnapshot);
-        $cisnerosAnswers = $this->extractCisneros($dataSnapshot);
-        $citsatsS1 = $this->extractCitsatsS1($dataSnapshot);
-
-        // Fusionar organization_info con demographic_data (referencia_v)
-        $demographicData = $dataSnapshot['referencia_v'] ?? [];
-        if (isset($dataSnapshot['organization_info'])) {
-            $demographicData['organization_info'] = $dataSnapshot['organization_info'];
+        if ($hasCisneros) {
+            // CASE: Cisneros evaluation (separate instrument)
+            return $this->createSingleInstrumentRecord($submissionStatus, 'cisneros');
         }
 
-        $evalueeNameToSave = $dataSnapshot['evaluee_name'] ?? null;
-
-        // Create or update PaperEvaluation (prevents duplicates on concurrent submissions)
-        $paperEvaluation = PaperEvaluation::updateOrCreate(
-            ['folio' => $submissionStatus->folio],
-            [
-                'evaluation_type_code' => $folioComponents['evaluation_type_code'],
-                'organization_code' => $folioComponents['organization_code'],
-                'work_center_code' => $folioComponents['work_center_code'] ?? '01', // Default to '01' for legacy folios
-                'personal_folio' => $folioComponents['personal_folio'],
-                'organization_id' => $submissionStatus->organization_id,
-                'work_center_id' => $submissionStatus->work_center_id,
-                'evaluation_type' => $folioComponents['evaluation_type'],
-                'source' => 'online',
-                'processing_status' => 'completed',
-                'processed_at' => now(),
-                'evaluee_name' => $evalueeNameToSave,
-                'demographic_data' => $demographicData,
-                'referencia_i_answers' => $referenciaIAnswers,
-                'referencia_iii_answers' => $referenciaIIIAnswers,
-                'referencia_iii_conditional' => $referenciaIIIConditional,
-                'citsats_s1' => $citsatsS1,
-                'cisneros_answers' => $cisnerosAnswers,
-                'raw_data' => $rawData,
-            ]
-        );
-
-        return $paperEvaluation;
+        if ($hasReferenciaIII && $hasReferenciaI) {
+            // CASE: Complete quiz with both instruments (Take.vue)
+            // Create 2 separate records like OCR paper forms
+            return $this->createDualInstrumentRecords($submissionStatus);
+        } elseif ($hasReferenciaI) {
+            // CASE: Only Referencia I (TakeReduced.vue)
+            return $this->createSingleInstrumentRecord($submissionStatus, 'referencia_i');
+        } elseif ($hasReferenciaIII) {
+            // CASE: Only Referencia III (rare - incomplete submission)
+            return $this->createSingleInstrumentRecord($submissionStatus, 'referencia_iii');
+        } else {
+            throw new \Exception('No valid evaluation data found in submission');
+        }
     }
 
     /**
@@ -428,6 +420,368 @@ class ProcessOnlineEvaluation implements ShouldQueue
         } catch (\Exception $e) {
             throw $e;
         }
+    }
+
+    /**
+     * Create dual instrument records (Referencia III + Referencia I)
+     * Replicates OCR pattern: 2 paper forms → 2 JSON files → 2 PaperEvaluation records
+     */
+    protected function createDualInstrumentRecords(SubmissionStatus $submissionStatus): PaperEvaluation
+    {
+        $dataSnapshot = $submissionStatus->data_snapshot;
+
+        // RECORD 1: Referencia III (original folio - type 02)
+        $refIIIEvaluation = $this->createReferenciaIIIRecord($submissionStatus);
+
+        // RECORD 2: Referencia I (new folio - type 01)
+        $refIEvaluation = $this->createReferenciaIRecord($submissionStatus);
+
+        // Link both records bidirectionally (like OCR does with same personal_folio)
+        $refIIIEvaluation->related_evaluation_folio = $refIEvaluation->folio;
+        $refIIIEvaluation->save();
+
+        $refIEvaluation->related_evaluation_folio = $refIIIEvaluation->folio;
+        $refIEvaluation->save();
+
+        Log::info('Dual instrument records created', [
+            'ref_iii_folio' => $refIIIEvaluation->folio,
+            'ref_i_folio' => $refIEvaluation->folio,
+            'submission_id' => $submissionStatus->id,
+        ]);
+
+        // Return the primary record (Ref III)
+        return $refIIIEvaluation;
+    }
+
+    /**
+     * Create Referencia III record (Workplace factors)
+     * Contains: 64 general questions + conditional sections + traumatic events
+     */
+    protected function createReferenciaIIIRecord(SubmissionStatus $submissionStatus): PaperEvaluation
+    {
+        $dataSnapshot = $submissionStatus->data_snapshot;
+        $folio = $submissionStatus->folio; // Original folio (type 02 for Ref III)
+        $folioComponents = $this->extractFolioComponents($folio);
+
+        // Extract ONLY Referencia III data (like OCR)
+        $referenciaIIIAnswers = $this->extractReferenciaIII($dataSnapshot);
+        $referenciaIIIConditional = $this->extractConditionals($dataSnapshot);
+        $citsatsS1 = $this->extractCitsatsS1($dataSnapshot);
+
+        // Prepare demographic data
+        $demographicData = $dataSnapshot['referencia_v'] ?? [];
+        if (isset($dataSnapshot['organization_info'])) {
+            $demographicData['organization_info'] = $dataSnapshot['organization_info'];
+        }
+
+        // Build raw_data for Referencia III
+        $rawData = $this->buildRawDataForReferenciaIII($dataSnapshot, $submissionStatus);
+
+        return PaperEvaluation::updateOrCreate(
+            ['folio' => $folio],
+            [
+                'evaluation_type_code' => $folioComponents['evaluation_type_code'],
+                'organization_code' => $folioComponents['organization_code'],
+                'work_center_code' => $folioComponents['work_center_code'] ?? '01',
+                'personal_folio' => $folioComponents['personal_folio'],
+                'organization_id' => $submissionStatus->organization_id,
+                'work_center_id' => $submissionStatus->work_center_id,
+                'evaluation_type' => 'referencia_iii', // Explicit type
+                'source' => 'online',
+                'processing_status' => 'completed',
+                'processed_at' => now(),
+                'evaluee_name' => null, // Ref III does not have evaluee name
+                'demographic_data' => $demographicData,
+
+                // ONLY Referencia III fields
+                'referencia_iii_answers' => $referenciaIIIAnswers,
+                'referencia_iii_conditional' => $referenciaIIIConditional,
+                'citsats_s1' => $citsatsS1,
+
+                // Ref I fields set to NULL (explicit separation)
+                'referencia_i_answers' => null,
+
+                // Other fields
+                'cisneros_answers' => null,
+                'raw_data' => $rawData,
+            ]
+        );
+    }
+
+    /**
+     * Create Referencia I record (PTSD - Guide I)
+     * Contains: 13 follow-up questions + traumatic events context + evaluee name
+     */
+    protected function createReferenciaIRecord(SubmissionStatus $submissionStatus): PaperEvaluation
+    {
+        $dataSnapshot = $submissionStatus->data_snapshot;
+
+        // Generate NEW folio type 01 (same work center, different type)
+        $refIFolio = $this->generateReferenciaIFolio($submissionStatus);
+        $folioComponents = $this->extractFolioComponents($refIFolio);
+
+        // Extract ONLY Referencia I data
+        $referenciaIAnswers = $this->extractReferenciaI($dataSnapshot);
+        $citsatsS1 = $this->extractCitsatsS1($dataSnapshot); // Intentional duplicate (context)
+
+        // Prepare demographic data (intentional duplicate for independent analysis)
+        $demographicData = $dataSnapshot['referencia_v'] ?? [];
+        if (isset($dataSnapshot['organization_info'])) {
+            $demographicData['organization_info'] = $dataSnapshot['organization_info'];
+        }
+
+        $evalueeNameToSave = $dataSnapshot['evaluee_name'] ?? null;
+
+        // Build raw_data for Referencia I
+        $rawData = $this->buildRawDataForReferenciaI($dataSnapshot, $submissionStatus);
+
+        return PaperEvaluation::create([
+            'folio' => $refIFolio, // NEW folio type 01
+            'evaluation_type_code' => '01', // Explicit type 01 for Referencia I
+            'organization_code' => $folioComponents['organization_code'],
+            'work_center_code' => $folioComponents['work_center_code'] ?? '01',
+            'personal_folio' => $folioComponents['personal_folio'],
+            'organization_id' => $submissionStatus->organization_id,
+            'work_center_id' => $submissionStatus->work_center_id,
+            'evaluation_type' => 'referencia_i', // Explicit type
+            'source' => 'online',
+            'processing_status' => 'completed',
+            'processed_at' => now(),
+            'evaluee_name' => $evalueeNameToSave, // Name ONLY in Ref I
+            'demographic_data' => $demographicData,
+
+            // ONLY Referencia I fields
+            'referencia_i_answers' => $referenciaIAnswers,
+            'citsats_s1' => $citsatsS1, // Context for independent analysis
+
+            // Ref III fields set to NULL (explicit separation)
+            'referencia_iii_answers' => null,
+            'referencia_iii_conditional' => null,
+
+            // Other fields
+            'cisneros_answers' => null,
+            'raw_data' => $rawData,
+        ]);
+    }
+
+    /**
+     * Create single instrument record (for reduced quiz or Cisneros)
+     */
+    protected function createSingleInstrumentRecord(SubmissionStatus $submissionStatus, string $instrumentType): PaperEvaluation
+    {
+        $dataSnapshot = $submissionStatus->data_snapshot;
+        $folio = $submissionStatus->folio;
+        $folioComponents = $this->extractFolioComponents($folio);
+
+        // Prepare demographic data
+        $demographicData = $dataSnapshot['referencia_v'] ?? [];
+        if (isset($dataSnapshot['organization_info'])) {
+            $demographicData['organization_info'] = $dataSnapshot['organization_info'];
+        }
+
+        // Extract data based on instrument type
+        $referenciaIAnswers = null;
+        $referenciaIIIAnswers = null;
+        $referenciaIIIConditional = null;
+        $cisnerosAnswers = null;
+        $citsatsS1 = null;
+        $evalueeNameToSave = null;
+
+        switch ($instrumentType) {
+            case 'referencia_i':
+                $referenciaIAnswers = $this->extractReferenciaI($dataSnapshot);
+                $citsatsS1 = $this->extractCitsatsS1($dataSnapshot);
+                $evalueeNameToSave = $dataSnapshot['evaluee_name'] ?? null;
+                break;
+
+            case 'referencia_iii':
+                $referenciaIIIAnswers = $this->extractReferenciaIII($dataSnapshot);
+                $referenciaIIIConditional = $this->extractConditionals($dataSnapshot);
+                $citsatsS1 = $this->extractCitsatsS1($dataSnapshot);
+                break;
+
+            case 'cisneros':
+                $cisnerosAnswers = $this->extractCisneros($dataSnapshot);
+                break;
+        }
+
+        // Build raw_data
+        $rawData = $this->buildStandardizedRawData($dataSnapshot, $submissionStatus);
+
+        return PaperEvaluation::updateOrCreate(
+            ['folio' => $folio],
+            [
+                'evaluation_type_code' => $folioComponents['evaluation_type_code'],
+                'organization_code' => $folioComponents['organization_code'],
+                'work_center_code' => $folioComponents['work_center_code'] ?? '01',
+                'personal_folio' => $folioComponents['personal_folio'],
+                'organization_id' => $submissionStatus->organization_id,
+                'work_center_id' => $submissionStatus->work_center_id,
+                'evaluation_type' => $instrumentType,
+                'source' => 'online',
+                'processing_status' => 'completed',
+                'processed_at' => now(),
+                'evaluee_name' => $evalueeNameToSave,
+                'demographic_data' => $demographicData,
+                'referencia_i_answers' => $referenciaIAnswers,
+                'referencia_iii_answers' => $referenciaIIIAnswers,
+                'referencia_iii_conditional' => $referenciaIIIConditional,
+                'citsats_s1' => $citsatsS1,
+                'cisneros_answers' => $cisnerosAnswers,
+                'raw_data' => $rawData,
+            ]
+        );
+    }
+
+    /**
+     * Generate new folio for Referencia I (type 01)
+     * Uses same personal_folio as original but with type 01
+     * Handles both old (9-digit) and new (11-digit) folio formats WITHOUT dashes
+     */
+    protected function generateReferenciaIFolio(SubmissionStatus $submissionStatus): string
+    {
+        $originalFolio = $submissionStatus->folio;
+        $folioLength = strlen($originalFolio);
+
+        // Parse original folio
+        $originalFolioComponents = $this->extractFolioComponents($originalFolio);
+
+        if ($folioLength === 11) {
+            // New format (11 chars): [TT][OO][CC][PPPPP] → TTOOCCPPPPP (no dashes)
+            // Example: D0201000015 → 01 02 01 00015 (Type 01 for Ref I)
+            $newFolio = sprintf(
+                '%s%s%s%s',
+                '01', // Type code '01' for Referencia I
+                $originalFolioComponents['organization_code'],
+                $originalFolioComponents['work_center_code'],
+                $originalFolioComponents['personal_folio']
+            );
+        } elseif ($folioLength === 9) {
+            // Legacy format (9 chars): [TT][OOO][PPPP] → TTOOOOPPPP (no dashes)
+            // Example: 020010009 → 01 001 0009 (Type 01 for Ref I)
+            $newFolio = sprintf(
+                '%s%s%s',
+                '01', // Type code '01' for Referencia I
+                $originalFolioComponents['organization_code'],
+                $originalFolioComponents['personal_folio']
+            );
+        } else {
+            throw new \InvalidArgumentException("Cannot generate Ref I folio from invalid folio: {$originalFolio}");
+        }
+
+        return $newFolio;
+    }
+
+    /**
+     * Check if submission has Referencia III data
+     */
+    protected function hasReferenciaIII(array $dataSnapshot): bool
+    {
+        return isset($dataSnapshot['referencia_iii']) &&
+               ! empty($dataSnapshot['referencia_iii']);
+    }
+
+    /**
+     * Check if submission has Referencia I data
+     * Allows Ref I without traumatic events for reduced quizzes
+     */
+    protected function hasReferenciaI(array $dataSnapshot): bool
+    {
+        if (! isset($dataSnapshot['referencia_i']) || empty($dataSnapshot['referencia_i'])) {
+            return false;
+        }
+
+        // If this is a complete quiz (has Ref III), require traumatic events
+        if (isset($dataSnapshot['referencia_iii']) && ! empty($dataSnapshot['referencia_iii'])) {
+            // Only consider it Ref I if there are traumatic events with at least one "Sí"
+            $atsS1 = $dataSnapshot['referencia_iii']['ats_s1'] ?? [];
+
+            return collect($atsS1)->contains(true);
+        }
+
+        // For reduced quizzes (no Ref III), allow Ref I without traumatic events check
+        return true;
+    }
+
+    /**
+     * Check if submission has Cisneros data
+     */
+    protected function hasCisneros(array $dataSnapshot): bool
+    {
+        return isset($dataSnapshot['escala_cisneros']) &&
+               ! empty($dataSnapshot['escala_cisneros']);
+    }
+
+    /**
+     * Build raw_data specifically for Referencia III
+     * Includes all submission data for audit trail (not just Ref III)
+     */
+    protected function buildRawDataForReferenciaIII(array $dataSnapshot, SubmissionStatus $submissionStatus): array
+    {
+        $quiz = $submissionStatus->quiz;
+        $organization = $submissionStatus->organization;
+        $userOrgInfo = $dataSnapshot['organization_info'] ?? [];
+
+        return [
+            'source' => 'online',
+            'source_metadata' => [
+                'quiz_id' => $quiz?->id,
+                'quiz_name' => $quiz?->name,
+                'quiz_type' => 'normal',
+                'instrument' => 'referencia_iii',
+                'submitted_at' => $submissionStatus->created_at->toIso8601String(),
+                'submission_ip' => $dataSnapshot['submission_ip'] ?? null,
+                'user_agent' => $dataSnapshot['user_agent'] ?? null,
+                'organization_info' => [
+                    'nombre_comercial' => $userOrgInfo['nombre_comercial'] ?? $organization?->nombre_comercial,
+                    'division_sucursal' => $userOrgInfo['division_sucursal'] ?? $organization?->division_sucursal,
+                    'estado' => $userOrgInfo['estado'] ?? $organization?->estado,
+                    'ciudad' => $userOrgInfo['ciudad'] ?? $organization?->ciudad,
+                ],
+            ],
+            'custom_fields' => $dataSnapshot['custom_fields'] ?? [],
+            'file_uploads' => $this->extractFileUploads($dataSnapshot),
+            // Include ALL sections for audit trail (complete snapshot)
+            'referencia_i' => $dataSnapshot['referencia_i'] ?? null,
+            'referencia_iii' => $dataSnapshot['referencia_iii'] ?? null,
+            'referencia_v' => $dataSnapshot['referencia_v'] ?? null,
+        ];
+    }
+
+    /**
+     * Build raw_data specifically for Referencia I
+     * Includes all submission data for audit trail (not just Ref I)
+     */
+    protected function buildRawDataForReferenciaI(array $dataSnapshot, SubmissionStatus $submissionStatus): array
+    {
+        $quiz = $submissionStatus->quiz;
+        $organization = $submissionStatus->organization;
+        $userOrgInfo = $dataSnapshot['organization_info'] ?? [];
+
+        return [
+            'source' => 'online',
+            'source_metadata' => [
+                'quiz_id' => $quiz?->id,
+                'quiz_name' => $quiz?->name,
+                'quiz_type' => 'normal',
+                'instrument' => 'referencia_i',
+                'submitted_at' => $submissionStatus->created_at->toIso8601String(),
+                'submission_ip' => $dataSnapshot['submission_ip'] ?? null,
+                'user_agent' => $dataSnapshot['user_agent'] ?? null,
+                'organization_info' => [
+                    'nombre_comercial' => $userOrgInfo['nombre_comercial'] ?? $organization?->nombre_comercial,
+                    'division_sucursal' => $userOrgInfo['division_sucursal'] ?? $organization?->division_sucursal,
+                    'estado' => $userOrgInfo['estado'] ?? $organization?->estado,
+                    'ciudad' => $userOrgInfo['ciudad'] ?? $organization?->ciudad,
+                ],
+            ],
+            'custom_fields' => $dataSnapshot['custom_fields'] ?? [],
+            'file_uploads' => $this->extractFileUploads($dataSnapshot),
+            // Include ALL sections for audit trail (complete snapshot)
+            'referencia_i' => $dataSnapshot['referencia_i'] ?? null,
+            'referencia_iii' => $dataSnapshot['referencia_iii'] ?? null,
+            'referencia_v' => $dataSnapshot['referencia_v'] ?? null,
+        ];
     }
 
     /**
