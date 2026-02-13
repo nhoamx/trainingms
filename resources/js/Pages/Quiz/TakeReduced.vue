@@ -232,9 +232,13 @@ const submitEvaluation = () => {
     // Crear FormData para manejar archivos
     const formData = new FormData();
     
-    // Agregar datos de respuestas como JSON
-    formData.append('referencia_iii', JSON.stringify({ acontecimientos_traumaticos: answers.value.acontecimientos_traumaticos }));
-    formData.append('referencia_i', JSON.stringify(answers.value.referencia_i || {}));
+    // TakeReduced SOLO envía Referencia I (con acontecimientos traumáticos incluidos)
+    // NO enviar referencia_iii para evitar crear 2 registros
+    const referenciaIData = {
+        acontecimientos_traumaticos: answers.value.acontecimientos_traumaticos,
+        ...(answers.value.referencia_i || {})
+    };
+    formData.append('referencia_i', JSON.stringify(referenciaIData));
     
     // Separar archivos de imágenes de los demás datos de referencia_v
     const referenciaVData = { ...answers.value.referencia_v };

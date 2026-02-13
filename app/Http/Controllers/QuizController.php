@@ -1216,8 +1216,8 @@ class QuizController extends Controller
         // Determine evaluation type code based on quiz type
         $evaluationTypeCode = match (true) {
             $quiz->is_cisneros => '04',  // Cisneros scale
-            $quiz->is_reduced => '02',   // Reduced evaluation (Referencia III)
-            default => '03',             // Full evaluation (Referencia V)
+            $quiz->is_reduced => '01',   // Reduced evaluation (Referencia I ONLY) - FIXED
+            default => '02',             // Full evaluation (Referencia III + maybe Referencia I)
         };
 
         // Get organization code (2 digits)
@@ -1274,8 +1274,8 @@ class QuizController extends Controller
     {
         return match (true) {
             $quiz->is_cisneros => 'cisneros',
-            $quiz->is_reduced => 'referencia_iii',
-            default => 'referencia_v',
+            $quiz->is_reduced => 'referencia_i',      // FIXED: Reduced quiz creates Referencia I
+            default => 'referencia_iii',              // FIXED: Complete quiz creates Referencia III
         };
     }
 

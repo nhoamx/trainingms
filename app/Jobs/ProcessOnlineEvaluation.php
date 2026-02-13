@@ -384,11 +384,16 @@ class ProcessOnlineEvaluation implements ShouldQueue
      */
     protected function extractCitsatsS1(array $dataSnapshot): ?array
     {
-        if (! isset($dataSnapshot['referencia_iii']['ats_s1']) || empty($dataSnapshot['referencia_iii']['ats_s1'])) {
+        // ✅ UNIFIED: Both Take.vue and TakeReduced.vue now send ATS in referencia_i
+        if (isset($dataSnapshot['referencia_i']['acontecimientos_traumaticos']) && ! empty($dataSnapshot['referencia_i']['acontecimientos_traumaticos'])) {
+            $atsS1 = $dataSnapshot['referencia_i']['acontecimientos_traumaticos'];
+        }
+        // Fallback for legacy data with ats_s1 in referencia_iii
+        elseif (isset($dataSnapshot['referencia_iii']['ats_s1']) && ! empty($dataSnapshot['referencia_iii']['ats_s1'])) {
+            $atsS1 = $dataSnapshot['referencia_iii']['ats_s1'];
+        } else {
             return null;
         }
-
-        $atsS1 = $dataSnapshot['referencia_iii']['ats_s1'];
 
         // Filter only string keys "1"-"6"
         $answers = [];
@@ -693,10 +698,10 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
         // If this is a complete quiz (has Ref III), require traumatic events
         if (isset($dataSnapshot['referencia_iii']) && ! empty($dataSnapshot['referencia_iii'])) {
-            // Only consider it Ref I if there are traumatic events with at least one "Sí"
-            $atsS1 = $dataSnapshot['referencia_iii']['ats_s1'] ?? [];
+            // ✅ UNIFIED: ATS now lives in referencia_i for both quizzes
+            $acontecimientos = $dataSnapshot['referencia_i']['acontecimientos_traumaticos'] ?? [];
 
-            return collect($atsS1)->contains(true);
+            return collect($acontecimientos)->contains(true);
         }
 
         // For reduced quizzes (no Ref III), allow Ref I without traumatic events check
