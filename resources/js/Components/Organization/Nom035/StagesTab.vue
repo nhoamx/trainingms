@@ -59,17 +59,6 @@
                       Global
                     </button>
                     <button
-                      @click="identificarViewMode = 'domains'"
-                      :class="[
-                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                        identificarViewMode === 'domains'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      ]"
-                    >
-                      Dominios
-                    </button>
-                    <button
                       @click="identificarViewMode = 'categories'"
                       :class="[
                         'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
@@ -79,6 +68,17 @@
                       ]"
                     >
                       Categorías
+                    </button>
+                    <button
+                      @click="identificarViewMode = 'domains'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        identificarViewMode === 'domains'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Dominios
                     </button>
                     <button
                       @click="identificarViewMode = 'dimensions'"
