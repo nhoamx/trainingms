@@ -14,27 +14,36 @@
 <style>
     .folio-instructions-row { 
         display: flex; 
-        gap: 4mm; 
+        gap: 6mm; 
         margin-top: 3mm;
-        margin-bottom: 3mm; 
+        margin-bottom: 3mm;
+        padding-bottom: 3mm;
+        border-bottom: 1.5px solid #333;
         align-items: flex-start; 
     }
     .folio-section { 
         border: 2px solid black; 
-        padding: 2mm; 
+        padding: 2mm 3mm; 
         position: relative; 
-        min-width: 50mm; 
-        max-width: 65mm; 
-        flex: 1; 
+        width: 68mm;
+        flex-shrink: 0;
+    }
+    .folio-title {
+        font-weight: bold;
+        font-size: 9px;
+        text-align: center;
+        margin-bottom: 1.5mm;
+        letter-spacing: 2px;
+        text-transform: uppercase;
     }
     .folio-header { 
         display: flex; 
-        gap: 1mm; 
+        gap: 0.8mm; 
         margin-bottom: 1.5mm; 
         align-items: center; 
     }
     .folio-digit-column { 
-        width: 6mm; 
+        width: 5mm; 
         text-align: center; 
         font-weight: bold; 
         font-size: 6px; 
@@ -42,10 +51,10 @@
     .folio-position-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 10px; 
+        font-size: 9px; 
         font-weight: bold; 
         border: 1px solid black; 
-        height: 3.5mm; 
+        height: 4mm; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
@@ -54,36 +63,50 @@
     .folio-row { 
         display: flex; 
         align-items: center; 
-        gap: 1mm; 
-        margin-bottom: 1mm; 
-        font-size: 10px; 
+        gap: 0.8mm; 
+        margin-bottom: 0.8mm; 
         min-height: 3mm; 
     }
     .folio-digit-number { 
         font-weight: bold; 
-        width: 6mm; 
+        width: 5mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 10px; 
+        font-size: 9px; 
     }
     .folio-bubbles-row { 
         display: flex; 
-        gap: 1mm; 
+        gap: 0.8mm; 
         align-items: center; 
         flex: 1; 
         justify-content: space-between; 
     }
     .instructions { 
-        flex: 2; 
+        flex: 1; 
         min-width: 0; 
-        font-size: 7px;
-        line-height: 1.3;
+        font-size: 12px;
+        line-height: 1.4;
     }
-    
-    .folio-instructions-row {
-        margin-bottom: 2.5mm;
-        padding-bottom: 2mm;
-        border-bottom: 1.5px solid black;
+    .instructions h3 {
+        font-size: 13px;
+        font-weight: bold;
+        margin-bottom: 1.5mm;
+        border-bottom: 1px solid #999;
+        padding-bottom: 1mm;
+    }
+    .instructions ol {
+        padding-left: 4mm;
+        margin: 0;
+    }
+    .instructions ol li {
+        margin-bottom: 0.8mm;
+    }
+    .bubble-folio { 
+        width: 4mm; 
+        height: 4mm; 
+        border: 1.5px solid black; 
+        border-radius: 50%; 
+        flex-shrink: 0; 
     }
     
     .three-column-layout { 
@@ -293,10 +316,11 @@
 
 <div class="folio-instructions-row">
         <div class="folio-section">
+            <div class="folio-title">Folio</div>
             <!-- Header con espacios para escribir los dígitos -->
             <div class="folio-header">
                 <div class="folio-digit-column"></div>
-                @for($i = 0; $i < 9; $i++)
+                @for($i = 0; $i < 11; $i++)
                     <div class="folio-position-header">
                         {{ isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
                     </div>
@@ -307,23 +331,25 @@
                 <div class="folio-row">
                     <div class="folio-digit-number">{{ $digit }}</div>
                     <div class="folio-bubbles-row">
-                        @for($i = 0; $i < 9; $i++)
+                        @for($i = 0; $i < 11; $i++)
                             @php
                                 $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
                                 $isSelected = $folioDigit == $digit;
                             @endphp
-                            <div class="bubble-small {{ $isSelected ? 'bubble-filled' : '' }}"></div>
+                            <div class="bubble-folio {{ $isSelected ? 'bubble-filled' : '' }}"></div>
                         @endfor
                     </div>
                 </div>
             @endfor
         </div>
         <div class="instructions">
-            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 14px;">INDICACIÓNES:</h3>
-            <p style="font-size: 14px; margin-bottom: 0.8mm;">1. Las siguientes preguntas están relacionadas con sus datos generales.</p>
-            <p style="font-size: 14px; margin-bottom: 0.8mm;">2. Utilizar pluma negra, punta mediana</p>
-            <p style="font-size: 14px;">3. No doblar la hoja.</p>
-            <p style="font-size: 14px;">4. Rellenar completamente el círculo.</p>
+            <h3>INDICACIONES</h3>
+            <ol>
+                <li>Las siguientes preguntas están relacionadas con sus datos generales.</li>
+                <li>Utilizar pluma negra, punta mediana.</li>
+                <li>No doblar la hoja.</li>
+                <li>Rellenar completamente el círculo.</li>
+            </ol>
         </div>
     </div>
 

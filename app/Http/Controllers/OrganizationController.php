@@ -75,11 +75,12 @@ class OrganizationController extends Controller
                 $query->orderBy('is_primary', 'desc')->orderBy('type');
             },
             'folioBatches' => function ($query) {
-                $query->withCount([
-                    'folios as used_count' => function ($q) {
-                        $q->where('used', true);
-                    },
-                ]);
+                $query->with('workCenter:id,code,name')
+                    ->withCount([
+                        'folios as used_count' => function ($q) {
+                            $q->where('used', true);
+                        },
+                    ]);
             },
         ]);
 

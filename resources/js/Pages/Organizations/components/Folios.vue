@@ -8,6 +8,18 @@
         <h3 class="text-sm font-medium text-gray-700 mb-3">Crear nuevo lote de folios</h3>
         <form @submit.prevent="addFolioBatch" class="space-y-4">
           <div class="grid grid-cols-1 gap-y-4 sm:grid-cols-2 sm:gap-x-6">
+            <div class="sm:col-span-2">
+              <label for="batch-work-center" class="block text-sm font-medium text-gray-700">Centro de Trabajo</label>
+              <div class="mt-1">
+                <select id="batch-work-center" v-model="folioBatchForm.work_center_id" class="block w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600">
+                  <option value="">Selecciona un centro de trabajo</option>
+                  <option v-for="wc in organization.work_centers" :key="wc.id" :value="wc.id">
+                    {{ wc.code }} - {{ wc.name }} {{ wc.is_primary ? '(Principal)' : '' }}
+                  </option>
+                </select>
+                <p v-if="folioBatchForm.errors.work_center_id" class="mt-1 text-xs text-red-500">{{ folioBatchForm.errors.work_center_id }}</p>
+              </div>
+            </div>
             <div>
               <label for="batch-name" class="block text-sm font-medium text-gray-700">Nombre del lote</label>
               <div class="mt-1">
@@ -67,6 +79,12 @@
                     </span>
                   </div>
                   <p class="mt-1 text-xs text-gray-500">{{ batch.description || 'Sin descripción' }}</p>
+                  <div v-if="batch.work_center" class="mt-1">
+                    <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/10">
+                      <svg class="mr-1 h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5M3.75 3v18m16.5-18v18M5.25 9h1.5m-1.5 3h1.5m-1.5 3h1.5m7.5-9h1.5m-1.5 3h1.5m-1.5 3h1.5M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                      {{ batch.work_center.code }} - {{ batch.work_center.name }}
+                    </span>
+                  </div>
                 </div>
                 <div class="flex shrink-0 items-center gap-x-2">
                   <button v-if="batch.type === 'presencial' || batch.type === 'hibrido'" @click="generatePdfForBatch(batch)" type="button" class="rounded-full bg-white p-1 text-gray-400 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2" :title="batch.type === 'hibrido' ? 'Generar PDF con código QR (OMR + Híbrido)' : 'Generar PDF con folios'">
@@ -180,6 +198,7 @@ const props = defineProps({
 
 const folioBatchForm = useForm({
   organization_id: props.organization.id,
+  work_center_id: '',
   name: '',
   description: '',
   quantity: '',
@@ -197,6 +216,10 @@ const addFolioBatch = () => {
   }
   if (!folioBatchForm.type) {
     folioBatchForm.setError('type', 'El tipo de examen es requerido.');
+    return;
+  }
+  if (!folioBatchForm.work_center_id) {
+    folioBatchForm.setError('work_center_id', 'Debes seleccionar un centro de trabajo.');
     return;
   }
   folioBatchForm.post(route('folio-batches.store'), {

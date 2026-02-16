@@ -93,7 +93,7 @@
         <!-- Header con espacios para escribir los dígitos -->
         <div class="folio-header">
             <div class="folio-digit-column"></div>
-            @for($i = 0; $i < 9; $i++)
+            @for($i = 0; $i < 11; $i++)
                 <div class="folio-position-header">
                     {{ isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
                 </div>
@@ -104,7 +104,7 @@
             <div class="folio-row">
                 <div class="folio-digit-number">{{ $digit }}</div>
                 <div class="folio-bubbles-row">
-                    @for($i = 0; $i < 9; $i++)
+                    @for($i = 0; $i < 11; $i++)
                         @php
                             $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
                             $isSelected = $folioDigit == $digit;

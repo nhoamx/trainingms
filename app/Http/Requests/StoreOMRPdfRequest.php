@@ -27,7 +27,7 @@ class StoreOMRPdfRequest extends FormRequest
             'guide_type' => ['required', 'string', 'in:referencia-i,referencia-iii,referencia-v,escala-cisneros,likert'],
             'generate_all' => ['boolean'],
             'folios' => ['array'],
-            'folios.*' => ['string', 'size:4'],
+            'folios.*' => ['string', 'between:4,5'],
         ];
     }
 
@@ -46,7 +46,7 @@ class StoreOMRPdfRequest extends FormRequest
             'guide_type.required' => 'El tipo de guía es requerido.',
             'guide_type.in' => 'El tipo de guía no es válido.',
             'folios.array' => 'Los folios deben ser un arreglo.',
-            'folios.*.size' => 'Cada folio debe tener exactamente 4 dígitos.',
+            'folios.*.between' => 'Cada folio debe tener entre 4 y 5 dígitos.',
         ];
     }
 }

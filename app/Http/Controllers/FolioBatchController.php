@@ -15,14 +15,21 @@ class FolioBatchController extends Controller
     {
         $validated = $request->validate([
             'organization_id' => 'required|exists:organizations,id',
+            'work_center_id' => 'required|uuid|exists:work_centers,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'quantity' => 'required|integer|min:1',
             'type' => 'required|in:presencial,en_linea,hibrido',
         ]);
 
-        // Calcular el siguiente número disponible para la organización
+        // Validate work_center belongs to the organization
+        $workCenter = \App\Models\WorkCenter::where('id', $validated['work_center_id'])
+            ->where('organization_id', $validated['organization_id'])
+            ->firstOrFail();
+
+        // Calculate next available number scoped to this work center
         $lastBatch = \App\Models\FolioBatch::where('organization_id', $request->organization_id)
+            ->where('work_center_id', $validated['work_center_id'])
             ->orderBy('end_number', 'desc')
             ->first();
 
@@ -39,6 +46,7 @@ class FolioBatchController extends Controller
             // Crear el lote
             $batch = \App\Models\FolioBatch::create([
                 'organization_id' => $validated['organization_id'],
+                'work_center_id' => $validated['work_center_id'],
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'start_number' => $startNumber,

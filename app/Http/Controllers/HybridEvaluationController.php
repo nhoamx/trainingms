@@ -16,11 +16,11 @@ class HybridEvaluationController extends Controller
         // Find the paper evaluation by folio
         // QR scanners may strip leading zeros, so try multiple patterns:
         // 1. Exact match with the provided folio
-        // 2. Pad to 9 digits (full extended folio format)
+        // 2. Pad to 11 digits (full extended folio format: [TT][OO][CC][PPPPP])
         // 3. Match any folio that ends with the provided folio
         $evaluation = PaperEvaluation::with('organization')
             ->where('folio', $folio)
-            ->orWhere('folio', str_pad($folio, 9, '0', STR_PAD_LEFT))
+            ->orWhere('folio', str_pad($folio, 11, '0', STR_PAD_LEFT))
             ->orWhere('folio', 'like', "%$folio")
             ->first();
 

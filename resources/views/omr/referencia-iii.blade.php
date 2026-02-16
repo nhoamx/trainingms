@@ -13,28 +13,36 @@
 <style>
     .folio-instructions-row { 
         display: flex; 
-        gap: 4mm; 
+        gap: 6mm; 
         margin-top: 3mm;
-        margin-bottom: 1mm;
-        padding-bottom: 2mm;
+        margin-bottom: 3mm;
+        padding-bottom: 3mm;
+        border-bottom: 1.5px solid #333;
         align-items: flex-start; 
     }
     .folio-section { 
         border: 2px solid black; 
-        padding: 2mm; 
+        padding: 2mm 3mm; 
         position: relative; 
-        min-width: 55mm; 
-        max-width: 70mm; 
-        flex: 1; 
+        width: 68mm;
+        flex-shrink: 0;
+    }
+    .folio-title {
+        font-weight: bold;
+        font-size: 9px;
+        text-align: center;
+        margin-bottom: 1.5mm;
+        letter-spacing: 2px;
+        text-transform: uppercase;
     }
     .folio-header { 
         display: flex; 
-        gap: 1mm; 
+        gap: 0.8mm; 
         margin-bottom: 1.5mm; 
         align-items: center; 
     }
     .folio-digit-column { 
-        width: 6mm; 
+        width: 5mm; 
         text-align: center; 
         font-weight: bold; 
         font-size: 6px; 
@@ -42,10 +50,10 @@
     .folio-position-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 10px; 
+        font-size: 9px; 
         font-weight: bold; 
         border: 1px solid black; 
-        height: 3.5mm; 
+        height: 4mm; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
@@ -54,39 +62,64 @@
     .folio-row { 
         display: flex; 
         align-items: center; 
-        gap: 1mm; 
-        margin-bottom: 1mm; 
-        font-size: 5px; 
+        gap: 0.8mm; 
+        margin-bottom: 0.8mm; 
         min-height: 3mm; 
     }
     .folio-digit-number { 
         font-weight: bold; 
-        width: 6mm; 
+        width: 5mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 10px; 
+        font-size: 9px; 
     }
     .folio-bubbles-row { 
         display: flex; 
-        gap: 1mm; 
+        gap: 0.8mm; 
         align-items: center; 
         flex: 1; 
         justify-content: space-between; 
     }
     .right-side-container {
-        flex: 2;
+        flex: 1;
         display: flex;
-        flex-direction: row;
-        gap: 2mm;
+        flex-direction: column;
+        gap: 0;
         min-width: 0;
     }
     .instructions { 
-        font-size: 7.5px;
-        line-height: 1.3;
+        font-size: 10px;
+        line-height: 1.4;
+    }
+    .instructions h3 {
+        font-size: 11px;
+        font-weight: bold;
+        margin-bottom: 1.5mm;
+        border-bottom: 1px solid #999;
+        padding-bottom: 1mm;
+    }
+    .instructions ol {
+        padding-left: 4mm;
+        margin: 0;
+    }
+    .instructions ol li {
+        margin-bottom: 0.8mm;
+    }
+    .options-grid {
+        display: grid;
+        grid-template-columns: repeat(3, auto);
+        gap: 0.5mm 4mm;
+        margin: 1mm 0 1mm 4mm;
+        font-weight: bold;
+        font-size: 10px;
+        justify-content: start;
+    }
+    .options-grid span {
+        white-space: nowrap;
     }
     .bubble-small { 
-        width: 4.5mm; 
-        height: 4.5mm; 
+        width: 4mm; 
+        height: 4mm; 
         border: 1.5px solid black; 
         border-radius: 50%; 
         flex-shrink: 0; 
@@ -222,10 +255,11 @@
 
 <div class="folio-instructions-row">
         <div class="folio-section">
+            <div class="folio-title">Folio</div>
             <!-- Header con espacios para escribir los dígitos -->
             <div class="folio-header">
                 <div class="folio-digit-column"></div>
-                @for($i = 0; $i < 9; $i++)
+                @for($i = 0; $i < 11; $i++)
                     <div class="folio-position-header">
                         {{ isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
                     </div>
@@ -236,7 +270,7 @@
                 <div class="folio-row">
                     <div class="folio-digit-number">{{ $digit }}</div>
                     <div class="folio-bubbles-row">
-                        @for($i = 0; $i < 9; $i++)
+                        @for($i = 0; $i < 11; $i++)
                             @php
                                 $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
                                 $isSelected = $folioDigit == $digit;
@@ -250,23 +284,25 @@
         
         <div class="right-side-container">
             <div class="instructions">
-                <h3 style="font-weight: bold; font-size: 12px;">INDICACIONES:</h3>
-                <p style="font-size: 12px;">1. Utilizar pluma negra, punta mediana.</p>
-                <p style="font-size: 12px;">2. No doblar la hoja.</p>
-                <p style="font-size: 12px;">3. Seleccionar solamente 1 opción en cada pregunta.</p>
-                <p style="font-size: 12px;">4. Opciones:</p>
-                <p style="margin-left: 5mm; font-size: 12px;">
-                    <strong>
-                        A. Siempre <br>
-                        B. Casi siempre <br>
-                        C. Algunas veces <br>
-                        D. Casi nunca <br>
-                        E. Nunca
-                    </strong>
-                </p>
-                <p style="font-size: 12px;">5. Importante contestar todas las preguntas.</p>
-                <p style="font-size: 12px;">6. Contestar objetivamente con sineridad tu percepción de 2 meses a la fecha, tomado en cuenta el departamento y las actividades que realizan.</p>
-                <p style="font-size: 12px;">7. Rellenar completamente el circulo.</p>
+                <h3>INDICACIONES</h3>
+                <ol>
+                    <li>Utilizar pluma negra, punta mediana.</li>
+                    <li>No doblar la hoja.</li>
+                    <li>Seleccionar solamente 1 opción en cada pregunta.</li>
+                    <li>Opciones:</li>
+                </ol>
+                <div class="options-grid">
+                    <span>A. Siempre</span>
+                    <span>B. Casi siempre</span>
+                    <span>C. Algunas veces</span>
+                    <span>D. Casi nunca</span>
+                    <span>E. Nunca</span>
+                </div>
+                <ol start="5">
+                    <li>Importante contestar todas las preguntas.</li>
+                    <li>Contestar objetivamente con sinceridad tu percepción de 2 meses a la fecha.</li>
+                    <li>Rellenar completamente el círculo.</li>
+                </ol>
             </div>
         </div>
     </div>

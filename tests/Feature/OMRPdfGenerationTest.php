@@ -156,8 +156,8 @@ class OMRPdfGenerationTest extends TestCase
     public function test_extended_folio_format_is_correct(): void
     {
         // Test that the extended folio format is generated correctly
-        // Format: [template_type(2)][organization(3)][person(4)]
-        // For Referencia I (01) + Organization (123) + Person (0001) = 010120001
+        // New format (11 digits): [template_type(2)][organization(2)][work_center(2)][person(5)]
+        // Example: Referencia I (01) + Organization (03) + Work Center (00) + Person (00001) = 01030000001
 
         $response = $this->actingAs($this->user)
             ->post(route('omr.generate-pdf'), [
@@ -165,7 +165,7 @@ class OMRPdfGenerationTest extends TestCase
                 'folio_batch_id' => $this->batch->id,
                 'guide_type' => 'referencia-i',
                 'generate_all' => false,
-                'folios' => ['0001'],
+                'folios' => ['00001'],
             ]);
 
         $response->assertStatus(200);

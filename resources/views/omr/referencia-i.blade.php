@@ -13,27 +13,36 @@
 <style>
     .folio-instructions-row { 
         display: flex; 
-        gap: 4mm; 
+        gap: 6mm; 
         margin-top: 3mm;
-        margin-bottom: 3mm; 
+        margin-bottom: 3mm;
+        padding-bottom: 3mm;
+        border-bottom: 1.5px solid #333;
         align-items: flex-start; 
     }
     .folio-section { 
         border: 2px solid black; 
-        padding: 2mm; 
+        padding: 2mm 3mm; 
         position: relative; 
-        min-width: 55mm; 
-        max-width: 70mm; 
-        flex: 1; 
+        width: 68mm;
+        flex-shrink: 0;
+    }
+    .folio-title {
+        font-weight: bold;
+        font-size: 9px;
+        text-align: center;
+        margin-bottom: 1.5mm;
+        letter-spacing: 2px;
+        text-transform: uppercase;
     }
     .folio-header { 
         display: flex; 
-        gap: 1mm; 
+        gap: 0.8mm; 
         margin-bottom: 1.5mm; 
         align-items: center; 
     }
     .folio-digit-column { 
-        width: 6mm; 
+        width: 5mm; 
         text-align: center; 
         font-weight: bold; 
         font-size: 6px; 
@@ -41,10 +50,10 @@
     .folio-position-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 10px; 
+        font-size: 9px; 
         font-weight: bold; 
         border: 1px solid black; 
-        height: 3.5mm; 
+        height: 4mm; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
@@ -53,41 +62,57 @@
     .folio-row { 
         display: flex; 
         align-items: center; 
-        gap: 1mm; 
-        margin-bottom: 1mm; 
-        font-size: 10px; 
+        gap: 0.8mm; 
+        margin-bottom: 0.8mm; 
         min-height: 3mm; 
     }
     .folio-digit-number { 
         font-weight: bold; 
-        width: 6mm; 
+        width: 5mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 10px; 
+        font-size: 9px; 
     }
     .folio-bubbles-row { 
         display: flex; 
-        gap: 1mm; 
+        gap: 0.8mm; 
         align-items: center; 
         flex: 1; 
         justify-content: space-between; 
     }
     .instructions { 
-        flex: 2; 
+        flex: 1; 
         min-width: 0; 
-        font-size: 7.5px;
-        line-height: 1.3;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+    .instructions h3 {
+        font-size: 13px;
+        font-weight: bold;
+        margin-bottom: 1.5mm;
+        border-bottom: 1px solid #999;
+        padding-bottom: 1mm;
+    }
+    .instructions ol {
+        padding-left: 4mm;
+        margin: 0;
+    }
+    .instructions ol li {
+        margin-bottom: 0.8mm;
+    }
+    .options-explanation {
+        margin: 1mm 0 1mm 4mm;
+        font-size: 12px;
+    }
+    .options-explanation p {
+        margin-bottom: 0.5mm;
     }
     .bubble-small { 
-        width: 4.5mm; 
-        height: 4.5mm; 
+        width: 4mm; 
+        height: 4mm; 
         border: 1.5px solid black; 
         border-radius: 50%; 
         flex-shrink: 0; 
-    }
-    .folio-instructions-row {
-        margin-bottom: 0mm;
-        padding-bottom: 0mm;
     }
     .content-section {
         margin-top: 0mm;
@@ -170,10 +195,11 @@
 
     <div class="folio-instructions-row">
         <div class="folio-section">
+        <div class="folio-title">Folio</div>
         <!-- Header con espacios para escribir los dígitos -->
         <div class="folio-header">
             <div class="folio-digit-column"></div>
-            @for($i = 0; $i < 9; $i++)
+            @for($i = 0; $i < 11; $i++)
                 <div class="folio-position-header">
                     {{ isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
                 </div>
@@ -184,12 +210,14 @@
             <div class="folio-row">
                 <div class="folio-digit-number">{{ $digit }}</div>
                 <div class="folio-bubbles-row">
-                    @for($i = 0; $i < 9; $i++)
+                    @for($i = 0; $i < 11; $i++)
                         @php
                             $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
-                            // For Referencia I, don't fill bubbles in last 4 positions (person code)
-                            // Only fill template code (0-1) and organization code (2-4)
-                            $shouldFill = $i < 5 && $folioDigit == $digit;
+                            // For Referencia I, don't fill bubbles in last 5 positions (person code)
+                            // New 11-digit format: [TT][OO][CC][PPPPP]
+                            // Fill: template code (0-1), organization code (2-3), work center code (4-5)
+                            // Leave empty: person code (6-10) - user fills manually
+                            $shouldFill = $i < 6 && $folioDigit == $digit;
                             $isSelected = $shouldFill;
                         @endphp
                         <div class="bubble-small {{ $isSelected ? 'bubble-filled' : '' }}"></div>
@@ -199,12 +227,16 @@
         @endfor
         </div>
         <div class="instructions">
-            <h3 style="font-weight: bold; margin-bottom: 1.5mm; font-size: 14px;">INDICACIONES:</h3>
-            <p style="font-size: 14px; margin-bottom: 0.8mm;">1. Las siguientes preguntas están relacionadas con las situaciones que ha experimentado durante o con motivo del trabajo en el ultimo mes.</p>
-            <p style="font-size: 14px; margin-bottom: 0.8mm;">2. Utiliza pluma negra, punta mediana.</p>
-            <p style="font-size: 14px; margin-bottom: 0.8mm;">3. Para responder las preguntas marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</p>
-            <p style="margin-left: 3mm; font-size: 14px; margin-bottom: 0.8mm;"><strong>SÍ</strong> = Si experimentó la situación que se pregunta</p>
-            <p style="margin-left: 3mm; font-size: 14px; margin-bottom: 0.8mm;"><strong>NO</strong> = Si NO experimentó la situación que se pregunta</p>
+            <h3>INDICACIONES</h3>
+            <ol>
+                <li>Las siguientes preguntas están relacionadas con las situaciones que ha experimentado durante o con motivo del trabajo en el último mes.</li>
+                <li>Utiliza pluma negra, punta mediana.</li>
+                <li>Para responder las preguntas marque completamente con tinta azul o negra el círculo de la opción que mejor describa su situación:</li>
+            </ol>
+            <div class="options-explanation">
+                <p><strong>SÍ</strong> = Si experimentó la situación que se pregunta</p>
+                <p><strong>NO</strong> = Si NO experimentó la situación que se pregunta</p>
+            </div>
         </div>
     </div>
 
