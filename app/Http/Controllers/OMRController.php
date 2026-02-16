@@ -7,6 +7,7 @@ use App\Jobs\GenerateOMRPdfJob;
 use App\Models\FolioBatch;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
+use App\Models\PdfGenerationJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Browsershot\Browsershot;
@@ -110,8 +111,17 @@ class OMRController extends Controller
         $jobThreshold = config('omr.pdf_generation.job_threshold', 100);
         $chunkSize = config('omr.pdf_generation.chunk_size', 100);
 
-        // For large batches, split into multiple PDFs
+        // For large batches, split into multiple PDFs and use tracking
         if (count($foliosToGenerate) > $jobThreshold) {
+            // Create tracking record
+            $pdfJob = PdfGenerationJob::create([
+                'organization_id' => $organization->id,
+                'folio_batch_id' => $batch->id,
+                'guide_type' => $validated['guide_type'],
+                'total_folios' => count($foliosToGenerate),
+                'status' => 'pending',
+            ]);
+
             // Split into configurable chunks
             $chunks = array_chunk($foliosToGenerate, $chunkSize);
 
@@ -147,17 +157,20 @@ class OMRController extends Controller
                     $chunk,
                     $viewData,
                     $chunkIndex + 1, // Batch number
-                    count($chunks)   // Total batches
+                    count($chunks),   // Total batches
+                    $pdfJob->id       // Pass the tracking job ID
                 );
             }
 
             $totalFolios = count($foliosToGenerate);
-            $totalBatches = count($chunks);
+            $estimatedMinutes = ceil($totalFolios / 60); // Estimate ~1 folio/second
 
-            return back()->with('flash', [
-                'type' => 'success',
-                'title' => 'Generación de PDFs iniciada',
-                'message' => "Se están generando {$totalBatches} archivos PDF con {$totalFolios} folios en total (100 folios por archivo). Los archivos estarán disponibles en storage/app/public/pdfs/ en unos minutos.",
+            // Return JSON for AJAX handling
+            return response()->json([
+                'job_id' => $pdfJob->id,
+                'total_folios' => $totalFolios,
+                'total_chunks' => count($chunks),
+                'estimated_minutes' => $estimatedMinutes,
             ]);
         }
 

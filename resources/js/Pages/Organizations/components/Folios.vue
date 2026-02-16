@@ -181,15 +181,83 @@
         </div>
       </div>
     </div>
+    
+    <!-- Modal de progreso para lotes grandes -->
+    <div v-if="showProgressModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+        <div class="mb-4">
+          <h3 class="text-lg font-medium text-gray-900">Generando PDFs</h3>
+          <p class="mt-1 text-sm text-gray-500">
+            Por favor espera mientras se generan los archivos PDF...
+          </p>
+        </div>
+        
+        <div class="space-y-4">
+          <!-- Estado del proceso -->
+          <div v-if="jobProgress.status === 'pending'" class="flex items-center space-x-3">
+            <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-sm text-gray-600">Iniciando generación...</span>
+          </div>
+          
+          <div v-if="jobProgress.status === 'processing'" class="space-y-2">
+            <div class="flex justify-between text-sm text-gray-600">
+              <span>Progreso:</span>
+              <span class="font-medium">{{ jobProgress.processed }} / {{ jobProgress.total }} folios</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+              <div class="bg-indigo-600 h-3 rounded-full transition-all duration-500" :style="`width: ${jobProgress.percentage}%`"></div>
+            </div>
+            <p class="text-xs text-gray-500 text-center">{{ Math.round(jobProgress.percentage) }}%</p>
+          </div>
+          
+          <div v-if="jobProgress.status === 'completed'" class="flex items-center space-x-2 text-green-600">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="text-sm font-medium">¡Generación completada!</span>
+          </div>
+          
+          <div v-if="jobProgress.status === 'failed'" class="flex items-center space-x-2 text-red-600">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <span class="text-sm font-medium">Error al generar los PDFs</span>
+          </div>
+        </div>
+        
+        <div class="mt-6 flex justify-end space-x-3">
+          <button 
+            v-if="jobProgress.status === 'completed' || jobProgress.status === 'failed'" 
+            @click="closeProgressModal" 
+            type="button" 
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+          >
+            Cerrar
+          </button>
+          <button 
+            v-if="jobProgress.status === 'completed'" 
+            @click="downloadPdf" 
+            type="button" 
+            class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Descargar PDFs
+          </button>
+        </div>
+      </div>
+    </div>
     <!-- Modal de detalles y eliminación pueden agregarse aquí si se requiere -->
   </div>
 </template>
 
 <script setup>
 
-import { ref } from 'vue';
+import { ref, onUnmounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { PlusIcon, EyeIcon, TrashIcon, ArchiveBoxIcon, LinkIcon, DocumentArrowDownIcon } from '@heroicons/vue/24/solid';
+import axios from 'axios';
 
 
 const props = defineProps({
@@ -274,6 +342,18 @@ const selectedGuideType = ref('');
 const selectedFolios = ref([]);
 const generateAll = ref(false);
 
+// Progress tracking state
+const showProgressModal = ref(false);
+const currentJobId = ref(null);
+const jobProgress = ref({
+  status: 'pending',
+  processed: 0,
+  total: 0,
+  percentage: 0,
+  file_paths: []
+});
+let pollingInterval = null;
+
 const guideTypes = [
   { value: 'referencia-i', label: 'Guía de Referencia I' },
   { value: 'referencia-iii', label: 'Guía de Referencia III' }, 
@@ -290,7 +370,7 @@ const generatePdfForBatch = (batch) => {
   showPdfModal.value = true;
 };
 
-const generatePdf = () => {
+const generatePdf = async () => {
   if (!selectedGuideType.value) {
     alert('Por favor selecciona un tipo de guía');
     return;
@@ -310,7 +390,32 @@ const generatePdf = () => {
     foliosToUse = selectedFolios.value;
   }
 
-  // Create a hidden form and submit it to trigger file download
+  // Si son más de 100 folios, usar AJAX con seguimiento de progreso
+  if (foliosToUse.length > 100) {
+    try {
+      const response = await axios.post(route('omr.generate-pdf'), {
+        organization_id: props.organization.id,
+        folio_batch_id: selectedBatch.value.id,
+        guide_type: selectedGuideType.value,
+        generate_all: generateAll.value ? '1' : '0',
+        folios: foliosToUse
+      });
+
+      if (response.data.job_id) {
+        // Cerrar modal de configuración y abrir modal de progreso
+        showPdfModal.value = false;
+        currentJobId.value = response.data.job_id;
+        showProgressModal.value = true;
+        startPolling();
+      }
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      alert('Error al iniciar la generación del PDF. Por favor intenta de nuevo.');
+    }
+    return;
+  }
+
+  // Para lotes pequeños (<= 100), usar el método tradicional de form submit
   const form = document.createElement('form');
   form.method = 'POST';
   form.action = route('omr.generate-pdf');
@@ -376,4 +481,67 @@ const closePdfModal = () => {
   selectedFolios.value = [];
   generateAll.value = false;
 };
+
+// Polling functions
+const startPolling = () => {
+  // Poll immediately
+  checkJobStatus();
+  
+  // Then poll every 2 seconds
+  pollingInterval = setInterval(checkJobStatus, 2000);
+};
+
+const stopPolling = () => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+};
+
+const checkJobStatus = async () => {
+  if (!currentJobId.value) return;
+  
+  try {
+    const response = await axios.get(route('api.pdf-jobs.show', currentJobId.value));
+    jobProgress.value = response.data;
+    
+    // Si el job terminó (completed o failed), detener el polling
+    if (response.data.status === 'completed' || response.data.status === 'failed') {
+      stopPolling();
+    }
+  } catch (error) {
+    console.error('Error al verificar estado del job:', error);
+    stopPolling();
+  }
+};
+
+const downloadPdf = async () => {
+  if (!currentJobId.value) return;
+  
+  try {
+    // Abrir la URL de descarga en una nueva ventana
+    window.open(route('api.pdf-jobs.download', currentJobId.value), '_blank');
+  } catch (error) {
+    console.error('Error al descargar PDF:', error);
+    alert('Error al descargar el PDF. Por favor intenta de nuevo.');
+  }
+};
+
+const closeProgressModal = () => {
+  stopPolling();
+  showProgressModal.value = false;
+  currentJobId.value = null;
+  jobProgress.value = {
+    status: 'pending',
+    processed: 0,
+    total: 0,
+    percentage: 0,
+    file_paths: []
+  };
+};
+
+// Cleanup on unmount
+onUnmounted(() => {
+  stopPolling();
+});
 </script>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\PdfGenerationJobController;
 use App\Http\Controllers\CategoryReportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemographicReportController;
@@ -572,4 +573,10 @@ Route::prefix('omr')->name('omr.')->group(function () {
     Route::post('/generate-pdf', [OMRController::class, 'generatePdf'])
         ->middleware('auth')
         ->name('generate-pdf');
+});
+
+// API routes for PDF generation job tracking
+Route::middleware('auth')->prefix('api/pdf-jobs')->name('api.pdf-jobs.')->group(function () {
+    Route::get('/{pdfJob}', [PdfGenerationJobController::class, 'show'])->name('show');
+    Route::get('/{pdfJob}/download', [PdfGenerationJobController::class, 'download'])->name('download');
 });
