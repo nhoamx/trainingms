@@ -49,50 +49,14 @@
           </nav>
         </div>
 
-        <!-- Tabs Navigation -->
-        <div class="mb-8">
-          <nav class="flex flex-wrap gap-2 lg:gap-4" aria-label="Tabs">
-            <button
-              v-for="tab in tabs"
-              :key="tab.key"
-              @click="activeTab = tab.key"
-              :class="[
-                'px-4 sm:px-6 py-3 sm:py-4 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200',
-                activeTab === tab.key
-                  ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900',
-              ]"
-              :aria-current="activeTab === tab.key ? 'page' : undefined"
-            >
-              {{ tab.label }}
-            </button>
-          </nav>
-        </div>
-
-        <!-- Tab Content -->
+        <!-- Etapas Content -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200">
           <div class="p-6 sm:p-8">
-            <!-- Empresa -->
-            <div v-show="activeTab === 'empresa'" class="animate-fade-in">
-              <EmpresaTab :company-data="dashboardData.company_data" :organization="dashboardData.organization" />
-            </div>
-
-            <!-- Evaluación -->
-            <div v-show="activeTab === 'evaluacion'" class="animate-fade-in">
-              <EvaluationRefITab
-                :participants="participants"
-                :aggregated-stats="aggregatedStats"
-                :executive-summary="executiveSummary"
-              />
-            </div>
-
-            <!-- Análisis -->
-            <div v-show="activeTab === 'analisis'" class="animate-fade-in">
-              <AnalysisRefITab
-                :aggregated-stats="aggregatedStats"
-                :participants="participants"
-              />
-            </div>
+            <StagesRefITab
+              :analysis-data="analysisData"
+              :question-statistics="questionStatistics"
+              :block-statistics="blockStatistics"
+            />
           </div>
         </div>
       </div>
@@ -101,12 +65,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import Dashboard from '../../Layouts/Dashboard.vue';
-import EmpresaTab from '@/Components/Organization/Nom035/EmpresaTab.vue';
-import EvaluationRefITab from '@/Components/Organization/Nom035/EvaluationRefITab.vue';
-import AnalysisRefITab from '@/Components/Organization/Nom035/AnalysisRefITab.vue';
+import StagesRefITab from '@/Components/Organization/Nom035/StagesRefITab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
 
 interface WorkCenterInfo {
@@ -205,17 +166,56 @@ interface Props {
   aggregatedStats: AggregatedStats;
   participants: Participant[];
   executiveSummary: ExecutiveSummary;
+  analysisData: {
+    evaluations: Array<{
+      id: string;
+      personal_folio: string;
+      demographics: {
+        genero: string;
+        puesto: string;
+        area: string;
+        turno: string;
+      };
+      answers?: Record<string, unknown>;
+      yes_count: number;
+      risk_level: string;
+    }>;
+    demographics: {
+      generos: string[];
+      puestos: string[];
+      areas: string[];
+      turnos: string[];
+    };
+    colors: Record<string, string>;
+    labels: Record<string, string>;
+  };
+  questionStatistics: {
+    questions: Array<{
+      key: string;
+      number: number;
+      text: string;
+      yes_count: number;
+      no_count: number;
+      total_responses: number;
+      yes_percentage: number;
+    }>;
+    total_evaluations: number;
+  };
+  blockStatistics: {
+    blocks: Array<{
+      name: string;
+      question_numbers: number[];
+      question_count: number;
+      yes_count: number;
+      no_count: number;
+      total_responses: number;
+      yes_percentage: number;
+    }>;
+    total_evaluations: number;
+  };
 }
 
 defineProps<Props>();
-
-const tabs = [
-  { key: 'empresa', label: 'Empresa' },
-  { key: 'evaluacion', label: 'Evaluación' },
-  { key: 'analisis', label: 'Análisis' },
-];
-
-const activeTab = ref<string>('empresa');
 </script>
 
 <style scoped>
