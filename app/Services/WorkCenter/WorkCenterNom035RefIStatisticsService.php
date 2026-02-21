@@ -16,6 +16,207 @@ use Illuminate\Support\Collection;
 class WorkCenterNom035RefIStatisticsService
 {
     /**
+     * Build analysis payload for stages (Analizar/Participantes) with demographic filters.
+     */
+    public function getStagesAnalysisData(WorkCenter $workCenter): array
+    {
+        $evaluations = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('evaluation_type', 'referencia_i')
+            ->where('processing_status', 'completed')
+            ->whereNotNull('referencia_i_answers')
+            ->with(['demographicData:id,paper_evaluation_id,gender,position,department,work_schedule'])
+            ->select(['id', 'folio', 'personal_folio', 'evaluee_name', 'referencia_i_answers'])
+            ->get();
+
+        $availableDemographics = [
+            'generos' => [],
+            'puestos' => [],
+            'areas' => [],
+            'turnos' => [],
+        ];
+
+        $evaluationsData = $evaluations->map(function (PaperEvaluation $evaluation) use (&$availableDemographics) {
+            $normalizedAnswers = $this->normalizeRefIAnswers($evaluation->referencia_i_answers ?? []);
+
+            $demographics = [
+                'genero' => $evaluation->demographicData->gender ?? 'No especificado',
+                'puesto' => $evaluation->demographicData->position ?? 'No especificado',
+                'area' => $evaluation->demographicData->department ?? 'No especificado',
+                'turno' => $evaluation->demographicData->work_schedule ?? 'No especificado',
+            ];
+
+            foreach ($demographics as $key => $value) {
+                $target = match ($key) {
+                    'genero' => 'generos',
+                    'puesto' => 'puestos',
+                    'area' => 'areas',
+                    default => 'turnos',
+                };
+
+                if (! in_array($value, $availableDemographics[$target], true)) {
+                    $availableDemographics[$target][] = $value;
+                }
+            }
+
+            $yesCount = $this->countYesAnswers($normalizedAnswers);
+            $riskLevel = $this->getRiskLevelFromYesCount($yesCount);
+
+            return [
+                'id' => $evaluation->id,
+                'folio' => $evaluation->folio,
+                'personal_folio' => $evaluation->personal_folio,
+                'evaluee_name' => $evaluation->evaluee_name,
+                'demographics' => $demographics,
+                'answers' => $normalizedAnswers,
+                'yes_count' => $yesCount,
+                'total_score' => $yesCount,
+                'risk_level' => $riskLevel,
+            ];
+        })->values()->all();
+
+        sort($availableDemographics['generos']);
+        sort($availableDemographics['puestos']);
+        sort($availableDemographics['areas']);
+        sort($availableDemographics['turnos']);
+
+        return [
+            'evaluations' => $evaluationsData,
+            'demographics' => $availableDemographics,
+            'colors' => config('nom035_risk_levels.colors'),
+            'labels' => config('nom035_risk_levels.labels'),
+        ];
+    }
+
+    /**
+     * Build question-level stats for Identificar > Preguntas (Ref I).
+     */
+    public function getQuestionStatistics(WorkCenter $workCenter): array
+    {
+        $evaluations = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('evaluation_type', 'referencia_i')
+            ->where('processing_status', 'completed')
+            ->whereNotNull('referencia_i_answers')
+            ->get(['referencia_i_answers']);
+
+        $questionsConfig = config('guide_i_questions');
+        $questions = [];
+
+        foreach ($questionsConfig as $questionKey => $questionText) {
+            $questionNumber = (int) str_replace('pregunta_', '', $questionKey);
+            $yesCount = 0;
+            $noCount = 0;
+
+            foreach ($evaluations as $evaluation) {
+                $answer = $this->getAnswerByQuestionKey($evaluation->referencia_i_answers ?? [], $questionKey);
+
+                if ($answer === null) {
+                    continue;
+                }
+
+                if ($this->isAffirmativeAnswer($answer)) {
+                    $yesCount++;
+                } else {
+                    $noCount++;
+                }
+            }
+
+            $totalResponses = $yesCount + $noCount;
+
+            $questions[] = [
+                'key' => $questionKey,
+                'number' => $questionNumber,
+                'text' => $questionText,
+                'yes_count' => $yesCount,
+                'no_count' => $noCount,
+                'total_responses' => $totalResponses,
+                'yes_percentage' => $totalResponses > 0 ? round(($yesCount / $totalResponses) * 100, 2) : 0,
+            ];
+        }
+
+        usort($questions, fn (array $left, array $right) => $left['number'] <=> $right['number']);
+
+        return [
+            'questions' => $questions,
+            'total_evaluations' => $evaluations->count(),
+        ];
+    }
+
+    /**
+     * Build block-level stats for Identificar > Bloques (Ref I).
+     */
+    public function getBlockStatistics(WorkCenter $workCenter): array
+    {
+        $evaluations = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('evaluation_type', 'referencia_i')
+            ->where('processing_status', 'completed')
+            ->whereNotNull('referencia_i_answers')
+            ->get(['referencia_i_answers']);
+
+        $questionToKeyMap = [];
+        foreach (config('guide_i_questions') as $questionKey => $questionText) {
+            $questionToKeyMap[$questionText] = $questionKey;
+        }
+
+        $blocks = [];
+        foreach (config('referencia_i') as $blockName => $questions) {
+            $questionKeys = [];
+            $questionNumbers = [];
+
+            foreach ($questions as $questionText) {
+                if (! isset($questionToKeyMap[$questionText])) {
+                    continue;
+                }
+
+                $key = $questionToKeyMap[$questionText];
+                $questionKeys[] = $key;
+                $questionNumbers[] = (int) str_replace('pregunta_', '', $key);
+            }
+
+            $yesCount = 0;
+            $noCount = 0;
+
+            foreach ($evaluations as $evaluation) {
+                $normalizedAnswers = $this->normalizeRefIAnswers($evaluation->referencia_i_answers ?? []);
+
+                foreach ($questionKeys as $questionKey) {
+                    $answer = $normalizedAnswers[$questionKey] ?? null;
+
+                    if ($answer === null) {
+                        continue;
+                    }
+
+                    if ($this->isAffirmativeAnswer($answer)) {
+                        $yesCount++;
+                    } else {
+                        $noCount++;
+                    }
+                }
+            }
+
+            $totalResponses = $yesCount + $noCount;
+
+            sort($questionNumbers);
+            $blocks[] = [
+                'name' => $blockName,
+                'question_numbers' => $questionNumbers,
+                'question_count' => count($questionNumbers),
+                'yes_count' => $yesCount,
+                'no_count' => $noCount,
+                'total_responses' => $totalResponses,
+                'yes_percentage' => $totalResponses > 0 ? round(($yesCount / $totalResponses) * 100, 2) : 0,
+            ];
+        }
+
+        return [
+            'blocks' => $blocks,
+            'total_evaluations' => $evaluations->count(),
+        ];
+    }
+
+    /**
      * Obtener lista de participantes que contestaron Referencia I
      */
     public function getParticipantsList(WorkCenter $workCenter): Collection
@@ -153,7 +354,7 @@ class WorkCenterNom035RefIStatisticsService
         }
 
         foreach ($evaluations as $evaluation) {
-            $answers = $evaluation->referencia_i_answers ?? [];
+            $answers = $this->normalizeRefIAnswers($evaluation->referencia_i_answers ?? []);
 
             foreach ($questions as $questionKey => $questionText) {
                 if (! isset($answers[$questionKey])) {
@@ -198,5 +399,91 @@ class WorkCenterNom035RefIStatisticsService
             'description' => 'Identificación de trabajadores expuestos a acontecimientos traumáticos severos',
             'total_questions' => 14,
         ];
+    }
+
+    private function countYesAnswers(array $answers): int
+    {
+        $count = 0;
+
+        foreach ($answers as $answer) {
+            if ($this->isAffirmativeAnswer($answer)) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    private function isAffirmativeAnswer(mixed $answer): bool
+    {
+        if (is_string($answer)) {
+            $normalizedAnswer = mb_strtolower(trim($answer));
+
+            return in_array($normalizedAnswer, ['sí', 'si', 'true', '1'], true);
+        }
+
+        return in_array($answer, [true, 1], true);
+    }
+
+    private function getRiskLevelFromYesCount(int $yesCount): string
+    {
+        if ($yesCount === 0) {
+            return 'nulo';
+        }
+
+        if ($yesCount <= 2) {
+            return 'bajo';
+        }
+
+        if ($yesCount <= 4) {
+            return 'medio';
+        }
+
+        if ($yesCount <= 6) {
+            return 'alto';
+        }
+
+        return 'muy_alto';
+    }
+
+    /**
+     * Normalize Ref I answers to canonical keys: pregunta_1 ... pregunta_14
+     *
+     * @param  array<string|int, mixed>  $answers
+     * @return array<string, mixed>
+     */
+    private function normalizeRefIAnswers(array $answers): array
+    {
+        $normalized = [];
+
+        foreach ($answers as $rawKey => $value) {
+            $key = (string) $rawKey;
+
+            if (preg_match('/^pregunta_(\d+)$/', $key, $matches) === 1) {
+                $normalized['pregunta_'.((int) $matches[1])] = $value;
+
+                continue;
+            }
+
+            if (preg_match('/^(\d+)$/', $key, $matches) === 1) {
+                $normalized['pregunta_'.((int) $matches[1])] = $value;
+
+                continue;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Resolve an answer by canonical key, supporting legacy numeric keys.
+     *
+     * @param  array<string|int, mixed>  $answers
+     */
+    private function getAnswerByQuestionKey(array $answers, string $questionKey): mixed
+    {
+        $normalized = $this->normalizeRefIAnswers($answers);
+
+        return $normalized[$questionKey] ?? null;
     }
 }
