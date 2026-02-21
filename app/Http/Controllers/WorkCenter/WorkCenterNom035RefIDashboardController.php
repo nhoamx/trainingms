@@ -43,12 +43,19 @@ class WorkCenterNom035RefIDashboardController extends Controller
         // Obtener resumen ejecutivo
         $executiveSummary = $this->statisticsService->getExecutiveSummary($workCenter);
 
+        $analysisData = $this->statisticsService->getStagesAnalysisData($workCenter);
+        $questionStatistics = $this->statisticsService->getQuestionStatistics($workCenter);
+        $blockStatistics = $this->statisticsService->getBlockStatistics($workCenter);
+
         return Inertia::render('WorkCenters/Nom035RefIDashboard', [
             'title' => 'NOM-035 Referencia I (ATS) - '.$workCenter->name,
             'dashboardData' => $dashboardData,
             'aggregatedStats' => $aggregatedStats,
             'participants' => $participants->values()->all(),
             'executiveSummary' => $executiveSummary,
+            'analysisData' => $analysisData,
+            'questionStatistics' => $questionStatistics,
+            'blockStatistics' => $blockStatistics,
         ]);
     }
 
