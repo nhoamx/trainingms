@@ -32,6 +32,7 @@ class WorkCenterNom035IndexController extends Controller
 
         return Inertia::render('WorkCenters/Nom035DashboardIndex', [
             'title' => 'NOM-035-STPS-2018 - '.$workCenter->name,
+            'dashboardData' => $this->buildDashboardData($workCenter),
             'workCenter' => [
                 'id' => $workCenter->id,
                 'name' => $workCenter->name,
@@ -46,7 +47,76 @@ class WorkCenterNom035IndexController extends Controller
             ],
             'instruments' => $instruments,
             'totalEvaluations' => array_sum(array_column($instruments, 'count')),
+            'evaluations' => $this->getGeneralEvaluations($workCenter),
+            'availableEvaluationTypes' => $this->getAvailableEvaluationTypes($workCenter),
         ]);
+    }
+
+    /**
+     * Build common dashboard data used across NOM-035 pages.
+     */
+    private function buildDashboardData(WorkCenter $workCenter): array
+    {
+        $organization = $workCenter->organization;
+
+        return [
+            'organization' => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+                'logo' => $organization->logo ? asset('storage/'.$organization->logo) : null,
+            ],
+            'work_center' => [
+                'id' => $workCenter->id,
+                'name' => $workCenter->name,
+                'code' => $workCenter->code,
+            ],
+            'company_data' => [
+                'general' => [
+                    'name' => $workCenter->name,
+                    'razon_social' => $workCenter->legal_name,
+                    'rfc' => $workCenter->tax_id,
+                    'registro_patronal' => $workCenter->employer_registration,
+                    'actividad_principal' => $organization->actividad_principal,
+                    'folio_organization' => $organization->folio_organization,
+                ],
+                'address' => [
+                    'calle_numero' => $workCenter->street_address,
+                    'colonia' => $workCenter->neighborhood,
+                    'codigo_postal' => $workCenter->postal_code,
+                    'municipio' => $workCenter->municipality,
+                    'estado' => $workCenter->state,
+                ],
+                'contact' => [
+                    'nombre' => $workCenter->contact_name,
+                    'puesto' => $workCenter->contact_position,
+                    'email' => $workCenter->contact_email,
+                    'movil' => $workCenter->contact_phone,
+                ],
+                'responsible' => [
+                    'nombre' => $workCenter->responsible_name,
+                    'puesto' => $workCenter->responsible_position,
+                    'email' => $workCenter->responsible_email,
+                    'movil' => $workCenter->responsible_phone,
+                ],
+                'workforce' => [
+                    'total_trabajadores' => $workCenter->total_workers,
+                    'total_hombres' => $workCenter->total_men,
+                    'total_mujeres' => $workCenter->total_women,
+                ],
+                'sample' => [
+                    'muestra_aplicada' => $workCenter->sample_applied,
+                    'muestra_hombres' => $workCenter->sample_men,
+                    'muestra_mujeres' => $workCenter->sample_women,
+                    'justificacion_muestra' => $workCenter->sample_justification,
+                ],
+                'evaluation_date' => $workCenter->application_date,
+                'committee' => [
+                    'comite_integrantes' => $workCenter->committee_members,
+                    'comite_hombres' => $workCenter->committee_men,
+                    'comite_mujeres' => $workCenter->committee_women,
+                ],
+            ],
+        ];
     }
 
     /**
@@ -90,5 +160,94 @@ class WorkCenterNom035IndexController extends Controller
 
             return $definition;
         }, $definitions);
+    }
+
+    /**
+     * Get evaluations payload used by the general evaluation tab.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getGeneralEvaluations(WorkCenter $workCenter): array
+    {
+        return PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])
+            ->where('processing_status', 'completed')
+            ->with(['demographicData', 'comments'])
+            ->get()
+            ->map(function (PaperEvaluation $evaluation) {
+                return [
+                    'id' => $evaluation->id,
+                    'evaluation_type' => $evaluation->evaluation_type,
+                    'personal_folio' => $evaluation->personal_folio,
+                    'demographicData' => $evaluation->demographicData ? [
+                        'gender' => $evaluation->demographicData->gender,
+                        'contract_type' => $evaluation->demographicData->contract_type,
+                        'position' => $evaluation->demographicData->position,
+                        'department' => $evaluation->demographicData->department,
+                        'work_schedule' => $evaluation->demographicData->work_schedule,
+                    ] : null,
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * Get available evaluation types with metadata for general tabs.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function getAvailableEvaluationTypes(WorkCenter $workCenter): array
+    {
+        $evaluationTypes = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('processing_status', 'completed')
+            ->distinct()
+            ->pluck('evaluation_type')
+            ->toArray();
+
+        $typeConfigurations = [
+            'referencia_i' => [
+                'key' => 'referencia_i',
+                'label' => 'Referencia I (ATS)',
+                'description' => 'Identificación de trabajadores con ATS (Acontecimiento Traumáticos Severos)',
+                'badge' => 'Evaluación ATS',
+                'color' => 'red',
+                'icon' => 'DocumentTextIcon',
+            ],
+            'referencia_iii' => [
+                'key' => 'referencia_iii',
+                'label' => 'Referencia III',
+                'description' => 'Identificación de factores de riesgo psicosocial en el trabajo',
+                'badge' => 'Factores de Riesgo',
+                'color' => 'amber',
+                'icon' => 'AdjustmentsHorizontalIcon',
+            ],
+            'referencia_v' => [
+                'key' => 'referencia_v',
+                'label' => 'Referencia V',
+                'description' => 'Datos demográficos y características del entorno de trabajo',
+                'badge' => 'Datos Demográficos',
+                'color' => 'green',
+                'icon' => 'UserGroupIcon',
+            ],
+            'cisneros' => [
+                'key' => 'cisneros',
+                'label' => 'Escala Cisneros',
+                'description' => 'Evaluación de violencia laboral, acoso y mobbing',
+                'badge' => 'Violencia Laboral',
+                'color' => 'orange',
+                'icon' => 'ShieldCheckIcon',
+            ],
+        ];
+
+        $availableTypes = [];
+        foreach ($evaluationTypes as $type) {
+            if (isset($typeConfigurations[$type])) {
+                $availableTypes[] = $typeConfigurations[$type];
+            }
+        }
+
+        return $availableTypes;
     }
 }

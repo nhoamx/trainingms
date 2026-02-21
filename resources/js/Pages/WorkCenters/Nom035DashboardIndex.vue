@@ -53,6 +53,58 @@
           </div>
         </div>
 
+        <!-- General Layer -->
+        <div class="mb-8 bg-white rounded-2xl border border-gray-200 shadow-sm">
+          <div class="px-6 pt-6 pb-3 border-b border-gray-100">
+            <h2 class="text-xl font-bold text-gray-900">Capa General NOM-035</h2>
+            <p class="mt-1 text-sm text-gray-600">Información compartida para GRI y GRIII antes de entrar a Etapas</p>
+          </div>
+
+          <div class="px-6 pt-4">
+            <nav class="flex flex-wrap gap-2 lg:gap-4" aria-label="Tabs">
+              <button
+                v-for="tab in generalTabs"
+                :key="tab.key"
+                @click="activeGeneralTab = tab.key"
+                :class="[
+                  'px-4 sm:px-6 py-3 sm:py-4 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200',
+                  activeGeneralTab === tab.key
+                    ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900',
+                ]"
+                :aria-current="activeGeneralTab === tab.key ? 'page' : undefined"
+              >
+                {{ tab.label }}
+              </button>
+            </nav>
+          </div>
+
+          <div class="p-6 sm:p-8">
+            <div v-show="activeGeneralTab === 'empresa'" class="animate-fade-in">
+              <EmpresaTab :company-data="dashboardData.company_data" :organization="dashboardData.organization" />
+            </div>
+
+            <div v-show="activeGeneralTab === 'evaluacion'" class="animate-fade-in">
+              <EvaluationTab
+                :evaluations="evaluations"
+                :available-evaluation-types="availableEvaluationTypes"
+              />
+            </div>
+
+            <div v-show="activeGeneralTab === 'comite'" class="animate-fade-in">
+              <CommitteeTab :company-data="dashboardData.company_data" />
+            </div>
+
+            <div v-show="activeGeneralTab === 'sensibilizacion'" class="animate-fade-in">
+              <SensibilizationTab />
+            </div>
+
+            <div v-show="activeGeneralTab === 'politica'" class="animate-fade-in">
+              <PolicyTab />
+            </div>
+          </div>
+        </div>
+
         <!-- Instrument Cards Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Link
@@ -153,8 +205,14 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import Dashboard from '../../Layouts/Dashboard.vue';
+import EmpresaTab from '@/Components/Organization/Nom035/EmpresaTab.vue';
+import CommitteeTab from '@/Components/Organization/Nom035/CommitteeTab.vue';
+import SensibilizationTab from '@/Components/Organization/Nom035/SensibilizationTab.vue';
+import PolicyTab from '@/Components/Organization/Nom035/PolicyTab.vue';
+import EvaluationTab from '@/Components/Organization/Nom035/EvaluationTab.vue';
 
 interface WorkCenterInfo {
   id: string;
@@ -179,12 +237,101 @@ interface Instrument {
   icon: string;
 }
 
-defineProps<{
+interface CompanyData {
+  general: {
+    name: string | null;
+    razon_social: string | null;
+    rfc: string | null;
+    registro_patronal: string | null;
+    actividad_principal: string | null;
+    folio_organization: number | null;
+  };
+  address: {
+    calle_numero: string | null;
+    colonia: string | null;
+    codigo_postal: string | null;
+    municipio: string | null;
+    estado: string | null;
+  };
+  contact: {
+    nombre: string | null;
+    puesto: string | null;
+    email: string | null;
+    movil: string | null;
+  };
+  responsible: {
+    nombre: string | null;
+    puesto: string | null;
+    email: string | null;
+    movil: string | null;
+  };
+  workforce?: {
+    total_trabajadores: number | null;
+    total_hombres: number | null;
+    total_mujeres: number | null;
+  };
+  sample?: {
+    muestra_aplicada: number | null;
+    muestra_hombres: number | null;
+    muestra_mujeres: number | null;
+    justificacion_muestra: string | null;
+  };
+  committee?: {
+    comite_integrantes: number | null;
+    comite_mujeres: number | null;
+    comite_hombres: number | null;
+  };
+  evaluation_date?: string | null;
+}
+
+interface DashboardData {
+  organization: {
+    id: string;
+    name: string;
+    logo: string | null;
+  };
+  work_center: WorkCenterInfo;
+  company_data: CompanyData;
+}
+
+interface Evaluation {
+  id: string;
+  evaluation_type?: string;
+  personal_folio?: string;
+  demographicData?: Record<string, unknown>;
+}
+
+interface EvaluationType {
+  key: string;
+  label: string;
+  description: string;
+  badge: string;
+  color: string;
+  icon: string;
+}
+
+withDefaults(defineProps<{
   workCenter: WorkCenterInfo;
   organization: OrganizationInfo;
+  dashboardData: DashboardData;
   instruments: Instrument[];
   totalEvaluations: number;
-}>();
+  evaluations?: Evaluation[];
+  availableEvaluationTypes?: EvaluationType[];
+}>(), {
+  evaluations: () => [],
+  availableEvaluationTypes: () => [],
+});
+
+const generalTabs = [
+  { key: 'empresa', label: 'Empresa' },
+  { key: 'evaluacion', label: 'Evaluación' },
+  { key: 'comite', label: 'Comité' },
+  { key: 'sensibilizacion', label: 'Sensibilización' },
+  { key: 'politica', label: 'Política' },
+];
+
+const activeGeneralTab = ref('empresa');
 
 const colorAccent = (color: string): string => {
   const map: Record<string, string> = {
@@ -256,3 +403,18 @@ const dotColor = (color: string): string => {
   return map[color] ?? 'bg-gray-500';
 };
 </script>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-in;
+}
+</style>

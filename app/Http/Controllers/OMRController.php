@@ -7,6 +7,7 @@ use App\Jobs\GenerateOMRPdfJob;
 use App\Models\FolioBatch;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
+use App\Models\PdfGenerationJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Browsershot\Browsershot;
@@ -25,23 +26,39 @@ class OMRController extends Controller
     ];
 
     /**
-     * Generate extended folio format: [template_type(2)][organization(3)][person(4)]
-     * For Referencia I, person code is left empty (filled manually later)
+     * Generate extended folio format with work center support.
+     *
+     * New format (11 digits): [template_type(2)][organization(2)][work_center(2)][person(5)]
+     * Legacy format (9 digits): [template_type(2)][organization(3)][person(4)]
+     *
+     * For Referencia I, person code is left empty (filled manually later).
      */
-    private function generateExtendedFolio(string $templateType, int $organizationFolio, string $personFolio): string
+    private function generateExtendedFolio(string $templateType, int $organizationFolio, string $personFolio, ?string $workCenterCode = null): string
     {
         $typeCode = self::TEMPLATE_TYPES[$templateType] ?? '00';
+
+        if ($workCenterCode !== null) {
+            $orgCode = str_pad((string) $organizationFolio, 2, '0', STR_PAD_LEFT);
+            $centerCode = str_pad($workCenterCode, 2, '0', STR_PAD_LEFT);
+
+            if ($templateType === 'referencia-i') {
+                $personCode = str_repeat(' ', 5);
+            } else {
+                $personCode = str_pad($personFolio, 5, '0', STR_PAD_LEFT);
+            }
+
+            return $typeCode.$orgCode.$centerCode.$personCode;
+        }
+
         $orgCode = str_pad((string) $organizationFolio, 3, '0', STR_PAD_LEFT);
 
-        // For Referencia I, leave person code empty (to be filled manually)
         if ($templateType === 'referencia-i') {
-            $personCode = ''; // 4 spaces - no bubbles filled
+            $personCode = '';
         } else {
             $personCode = str_pad($personFolio, 4, '0', STR_PAD_LEFT);
         }
 
-        // return $typeCode.$orgCode.$personCode;
-        return $typeCode.'030'.$personCode;
+        return $typeCode.$orgCode.$personCode;
     }
 
     /**
@@ -63,17 +80,27 @@ class OMRController extends Controller
         $organization = Organization::findOrFail($validated['organization_id']);
         $batch = FolioBatch::where('id', $validated['folio_batch_id'])
             ->where('organization_id', $organization->id)
+            ->with('workCenter')
             ->firstOrFail();
+
+        // Resolve work center code for folio generation
+        $workCenterCode = $batch->workCenter?->code;
+
+        // Determine folio padding based on work center presence
+        $folioPadLength = $workCenterCode !== null ? 5 : 4;
 
         // Determine which folios to generate
         $foliosToGenerate = [];
         if ($validated['generate_all'] ?? false) {
             // Generate all folios in the batch range
             for ($i = $batch->start_number; $i <= $batch->end_number; $i++) {
-                $foliosToGenerate[] = str_pad((string) $i, 4, '0', STR_PAD_LEFT);
+                $foliosToGenerate[] = str_pad((string) $i, $folioPadLength, '0', STR_PAD_LEFT);
             }
         } else {
-            $foliosToGenerate = $validated['folios'] ?? [];
+            $foliosToGenerate = array_map(
+                fn ($f) => str_pad($f, $folioPadLength, '0', STR_PAD_LEFT),
+                $validated['folios'] ?? []
+            );
         }
 
         if (empty($foliosToGenerate)) {
@@ -84,8 +111,17 @@ class OMRController extends Controller
         $jobThreshold = config('omr.pdf_generation.job_threshold', 100);
         $chunkSize = config('omr.pdf_generation.chunk_size', 100);
 
-        // For large batches, split into multiple PDFs
+        // For large batches, split into multiple PDFs and use tracking
         if (count($foliosToGenerate) > $jobThreshold) {
+            // Create tracking record
+            $pdfJob = PdfGenerationJob::create([
+                'organization_id' => $organization->id,
+                'folio_batch_id' => $batch->id,
+                'guide_type' => $validated['guide_type'],
+                'total_folios' => count($foliosToGenerate),
+                'status' => 'pending',
+            ]);
+
             // Split into configurable chunks
             $chunks = array_chunk($foliosToGenerate, $chunkSize);
 
@@ -121,17 +157,20 @@ class OMRController extends Controller
                     $chunk,
                     $viewData,
                     $chunkIndex + 1, // Batch number
-                    count($chunks)   // Total batches
+                    count($chunks),   // Total batches
+                    $pdfJob->id       // Pass the tracking job ID
                 );
             }
 
             $totalFolios = count($foliosToGenerate);
-            $totalBatches = count($chunks);
+            $estimatedMinutes = ceil($totalFolios / 60); // Estimate ~1 folio/second
 
-            return back()->with('flash', [
-                'type' => 'success',
-                'title' => 'Generación de PDFs iniciada',
-                'message' => "Se están generando {$totalBatches} archivos PDF con {$totalFolios} folios en total (100 folios por archivo). Los archivos estarán disponibles en storage/app/public/pdfs/ en unos minutos.",
+            // Return JSON for AJAX handling
+            return response()->json([
+                'job_id' => $pdfJob->id,
+                'total_folios' => $totalFolios,
+                'total_chunks' => count($chunks),
+                'estimated_minutes' => $estimatedMinutes,
             ]);
         }
 
@@ -167,7 +206,8 @@ class OMRController extends Controller
             $extendedFolio = $this->generateExtendedFolio(
                 $guideType,
                 $organization->folio_organization ?? 0,
-                $personFolio
+                $personFolio,
+                $workCenterCode
             );
 
             // For hybrid batches generating Referencia V, create empty PaperEvaluation records

@@ -35,7 +35,9 @@ const props = defineProps({
 
 const answers = ref({
     referencia_iii: {},
-    referencia_i: {},
+    referencia_i: {
+        acontecimientos_traumaticos: {}  // ✅ ATS ahora viven en referencia_i
+    },
     evaluee_name: '',
     organization_info: {
         nombre_comercial: '',
@@ -93,7 +95,7 @@ const answerOptions = {
 };
 
 const checkTraumaticEvents = () => {
-    const traumaticAnswers = answers.value.referencia_iii.acontecimientos_traumaticos || {};
+    const traumaticAnswers = answers.value.referencia_i.acontecimientos_traumaticos || {};
     showTraumaticQuestions.value = Object.values(traumaticAnswers).some(answer => answer === true);
 };
 
@@ -146,7 +148,7 @@ const isConditionalQuestionsComplete = computed(() => {
 
 const isAcontecimientosComplete = computed(() => {
     const traumaticQuestions = props.quiz?.questions?.acontecimientos_traumaticos?.questions || [];
-    const traumaticAnswers = answers.value.referencia_iii.acontecimientos_traumaticos || {};
+    const traumaticAnswers = answers.value.referencia_i.acontecimientos_traumaticos || {};
     
     if (!Array.isArray(traumaticQuestions) || traumaticQuestions.length === 0) return true;
     
@@ -339,47 +341,8 @@ const isLastSection = computed(() => {
     return currentSection.value === 'final';
 });
 
-const transformToStandardizedStructure = () => {
-    const refIII = answers.value.referencia_iii || {};
-    const refI = answers.value.referencia_i || {};
-    
-    // Extraer preguntas generales (1-64)
-    const generalQuestions = {};
-    for (let i = 1; i <= 64; i++) {
-        if (refIII[i] !== undefined) {
-            generalQuestions[i] = refIII[i];
-        }
-    }
-    
-    // Construir referencia_iii estandarizada
-    const referenciaIII = {
-        ...generalQuestions
-    };
-    
-    // Extraer sección customer_service (65-68) - SOLO si existe
-    if (refIII.customer_service !== undefined) {
-        referenciaIII.customer_service = refIII.customer_service;
-    }
-    
-    // Extraer sección management (69-72) - SOLO si existe
-    if (refIII.management !== undefined) {
-        referenciaIII.management = refIII.management;
-    }
-    
-    // Extraer acontecimientos traumáticos (ats_s1) - índices 1-6
-    const atsS1 = refIII.acontecimientos_traumaticos || {};
-    if (Object.keys(atsS1).length > 0) {
-        referenciaIII.ats_s1 = atsS1;
-    }
-    
-    // Referencia I ya viene con índices 1-13
-    const referenciaI = { ...refI };
-    
-    return {
-        referencia_iii: referenciaIII,
-        referencia_i: referenciaI
-    };
-};
+// ✅ YA NO NECESITAMOS transformToStandardizedStructure()
+// Los acontecimientos_traumaticos ahora viven directamente en referencia_i
 
 // Actualizar el progreso para incluir subsecciones
 const progress = computed(() => {
@@ -437,15 +400,12 @@ const handleSubsectionChange = (subsection) => {
 const submitEvaluation = () => {
     isSubmitting.value = true;
     
-    // Transformar datos a estructura estandarizada
-    const standardizedData = transformToStandardizedStructure();
-    
     // Crear FormData para manejar archivos
     const formData = new FormData();
     
-    // Agregar datos de respuestas como JSON
-    formData.append('referencia_iii', JSON.stringify(standardizedData.referencia_iii));
-    formData.append('referencia_i', JSON.stringify(standardizedData.referencia_i));
+    // Enviar datos directamente sin transformación
+    formData.append('referencia_iii', JSON.stringify(answers.value.referencia_iii));
+    formData.append('referencia_i', JSON.stringify(answers.value.referencia_i));
     
     // Separar archivos de imágenes de los demás datos de referencia_v
     const referenciaVData = { ...answers.value.referencia_v };
@@ -647,7 +607,7 @@ const submitEvaluation = () => {
                             <TraumaticEventsSection
                                 :title="quiz.questions.acontecimientos_traumaticos.title"
                                 :questions="quiz.questions.acontecimientos_traumaticos.questions"
-                                v-model="answers.referencia_iii.acontecimientos_traumaticos"
+                                v-model="answers.referencia_i.acontecimientos_traumaticos"
                                 :answer-options="answerOptions.yesNo"
                                 name-prefix="trauma"
                                 :audio-urls="audioUrls"

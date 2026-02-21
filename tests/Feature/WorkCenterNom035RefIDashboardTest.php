@@ -35,6 +35,9 @@ class WorkCenterNom035RefIDashboardTest extends TestCase
             ->has('aggregatedStats')
             ->has('participants')
             ->has('executiveSummary')
+            ->has('analysisData')
+            ->has('questionStatistics')
+            ->has('blockStatistics')
         );
     }
 
@@ -110,6 +113,13 @@ class WorkCenterNom035RefIDashboardTest extends TestCase
             ->has('aggregatedStats.demographic_distribution')
             ->has('executiveSummary.total_participants')
             ->has('executiveSummary.evaluation_type')
+            ->has('analysisData.evaluations')
+            ->has('analysisData.demographics.generos')
+            ->has('analysisData.demographics.puestos')
+            ->has('analysisData.demographics.areas')
+            ->has('analysisData.demographics.turnos')
+            ->has('questionStatistics.questions')
+            ->has('blockStatistics.blocks')
         );
     }
 

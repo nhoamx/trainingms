@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FolioBatch extends Model
 {
@@ -24,6 +25,7 @@ class FolioBatch extends Model
      */
     protected $fillable = [
         'organization_id',
+        'work_center_id',
         'name',
         'description',
         'start_number',
@@ -36,9 +38,17 @@ class FolioBatch extends Model
     /**
      * Relación con la organización a la que pertenece este lote.
      */
-    public function organization()
+    public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Relación con el centro de trabajo al que pertenece este lote.
+     */
+    public function workCenter(): BelongsTo
+    {
+        return $this->belongsTo(WorkCenter::class);
     }
 
     /**

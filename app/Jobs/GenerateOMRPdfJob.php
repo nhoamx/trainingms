@@ -3,10 +3,12 @@
 namespace App\Jobs;
 
 use App\Models\Organization;
+use App\Models\PdfGenerationJob;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Spatie\Browsershot\Browsershot;
+use Throwable;
 
 class GenerateOMRPdfJob implements ShouldQueue
 {
@@ -25,7 +27,8 @@ class GenerateOMRPdfJob implements ShouldQueue
         public array $foliosToGenerate,
         public array $viewData,
         public int $batchNumber = 1,
-        public int $totalBatches = 1
+        public int $totalBatches = 1,
+        public ?string $pdfJobId = null
     ) {}
 
     /**
@@ -36,12 +39,21 @@ class GenerateOMRPdfJob implements ShouldQueue
         $startTime = now();
         $totalFolios = count($this->foliosToGenerate);
 
+        // Load tracking job if provided
+        $pdfJob = $this->pdfJobId ? PdfGenerationJob::find($this->pdfJobId) : null;
+
+        // Mark as started (only first batch should do this)
+        if ($pdfJob && $this->batchNumber === 1) {
+            $pdfJob->markAsStarted();
+        }
+
         Log::info('=== INICIANDO GENERACIÓN DE PDFs OMR ===', [
             'organization' => $this->organization->name,
             'guide_type' => $this->guideType,
             'total_folios' => $totalFolios,
             'batch_number' => $this->batchNumber,
             'total_batches' => $this->totalBatches,
+            'pdf_job_id' => $this->pdfJobId,
             'start_time' => $startTime->toDateTimeString(),
         ]);
 
@@ -157,6 +169,12 @@ class GenerateOMRPdfJob implements ShouldQueue
                 'pages' => count($chunk),
             ]);
 
+            // Update tracking job if provided
+            if ($pdfJob) {
+                $pdfJob->incrementProcessed(count($chunk));
+                $pdfJob->addFilePath($storagePath);
+            }
+
             // Clear memory after each chunk
             unset($htmlContent);
             gc_collect_cycles();
@@ -173,6 +191,31 @@ class GenerateOMRPdfJob implements ShouldQueue
             'total_duration_minutes' => round($totalDuration / 60, 2),
             'avg_seconds_per_chunk' => round($totalDuration / count($chunks), 2),
             'end_time' => $endTime->toDateTimeString(),
+        ]);
+
+        // Mark tracking job as completed (only last batch should do this)
+        if ($pdfJob && $this->batchNumber === $this->totalBatches) {
+            $pdfJob->markAsCompleted();
+        }
+    }
+
+    /**
+     * Handle job failure
+     */
+    public function failed(?Throwable $exception): void
+    {
+        if ($this->pdfJobId) {
+            $pdfJob = PdfGenerationJob::find($this->pdfJobId);
+            if ($pdfJob) {
+                $pdfJob->markAsFailed($exception ? $exception->getMessage() : 'Error desconocido');
+            }
+        }
+
+        Log::error('=== ERROR EN GENERACIÓN DE PDFs OMR ===', [
+            'organization' => $this->organization->name,
+            'batch_number' => $this->batchNumber,
+            'error' => $exception?->getMessage(),
+            'trace' => $exception?->getTraceAsString(),
         ]);
     }
 

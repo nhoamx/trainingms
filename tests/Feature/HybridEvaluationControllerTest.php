@@ -214,13 +214,13 @@ class HybridEvaluationControllerTest extends TestCase
 
     public function test_show_finds_evaluation_with_padded_folio_from_qr_scanner(): void
     {
-        // Extended folio format: [type(2)][org(3)][person(4)] = 9 digits
-        // Example: 03 + 030 + 0042 = 030300042
-        // QR scanners may strip leading zeros: 030300042 -> 30300042 (or more if there are more leading zeros)
+        // New extended folio format: [type(2)][org(2)][work_center(2)][person(5)] = 11 digits
+        // Example: 03 + 03 + 00 + 00042 = 03030000042
+        // QR scanners may strip leading zeros: 03030000042 -> 3030000042 (or more if there are more leading zeros)
         $organization = Organization::factory()->create();
 
         $evaluation = PaperEvaluation::factory()->create([
-            'folio' => '030300042',  // Full 9-digit format stored in DB
+            'folio' => '03030000042',  // Full 11-digit format stored in DB
             'organization_id' => $organization->id,
             'source' => 'hybrid',
             'processing_status' => 'pending',
@@ -229,14 +229,14 @@ class HybridEvaluationControllerTest extends TestCase
         ]);
 
         // Access with folio that may have lost leading zeros
-        // 030300042 -> 30300042 (lost first 0)
-        $response = $this->get(route('hybrid.show', '30300042'));
+        // 03030000042 -> 3030000042 (lost first 0)
+        $response = $this->get(route('hybrid.show', '3030000042'));
 
         $response->assertStatus(200);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Hibrido/Take')
             ->where('evaluationId', $evaluation->id)
-            ->where('folio', '030300042')
+            ->where('folio', '03030000042')
         );
     }
 
