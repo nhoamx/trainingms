@@ -53,6 +53,10 @@ class WorkCenter extends Model
         'committee_women',
         'application_date',
         'sample_justification',
+        'constitutive_act_submitted_path',
+        'constitutive_act_submitted_at',
+        'constitutive_act_admin_path',
+        'constitutive_act_admin_at',
     ];
 
     protected function casts(): array
@@ -62,6 +66,8 @@ class WorkCenter extends Model
             'is_primary' => 'boolean',
             'emails' => 'array',
             'application_date' => 'date',
+            'constitutive_act_submitted_at' => 'datetime',
+            'constitutive_act_admin_at' => 'datetime',
             // Integer casts
             'total_workers' => 'integer',
             'total_men' => 'integer',
@@ -148,6 +154,14 @@ class WorkCenter extends Model
     public function departmentAreas(): HasMany
     {
         return $this->hasMany(DepartmentArea::class);
+    }
+
+    /**
+     * Get all committee members for this work center.
+     */
+    public function committeeMembers(): HasMany
+    {
+        return $this->hasMany(WorkCenterCommitteeMember::class);
     }
 
     /**

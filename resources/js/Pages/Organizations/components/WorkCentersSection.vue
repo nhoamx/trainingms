@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useForm, router } from '@inertiajs/vue3'
+import { Link, useForm, router } from '@inertiajs/vue3'
 import { PlusIcon, PencilIcon, TrashIcon, BuildingOffice2Icon, CheckCircleIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/solid'
 import ImportDataModal from '../../../Components/ImportDataModal.vue'
 
@@ -214,6 +214,15 @@ const handleImportSuccess = () => {
                             <p class="text-xs text-blue-800">
                                 ℹ️ Este centro se sincroniza automáticamente con los datos de la organización. Para editarlo, actualiza la información en la pestaña "Información General".
                             </p>
+                        </div>
+
+                        <div class="mt-3">
+                            <Link
+                                :href="route('work-centers.dashboard.nom-035-index', primaryWorkCenter.id)"
+                                class="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+                            >
+                                Ver Dashboard NOM-035
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -469,6 +478,13 @@ const handleImportSuccess = () => {
                     </div>
 
                     <div class="flex items-center space-x-2 ml-4">
+                        <Link
+                            :href="route('work-centers.dashboard.nom-035-index', workCenter.id)"
+                            class="px-2 py-1 text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                            title="Ver dashboard NOM-035"
+                        >
+                            Dashboard
+                        </Link>
                         <button
                             @click="editWorkCenter(workCenter)"
                             class="p-2 text-gray-400 hover:text-indigo-600 transition-colors"

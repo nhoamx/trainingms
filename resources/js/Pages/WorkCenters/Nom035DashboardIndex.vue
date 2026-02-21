@@ -91,8 +91,19 @@
               />
             </div>
 
-            <div v-show="activeGeneralTab === 'comite'" class="animate-fade-in">
-              <CommitteeTab :company-data="dashboardData.company_data" />
+            <div v-show="activeGeneralTab === 'comite'" class="animate-fade-in space-y-6">
+              <CommitteeTab
+                :company-data="dashboardData.company_data"
+                :committee-members="committeeMembers"
+                :can-manage-committee-members="isAdmin"
+                :work-center-id="workCenter.id"
+                :constitutive-act="constitutiveAct"
+                :can-view-submitted-act="isAdmin"
+                :can-upload-submitted-act="canUploadSubmittedAct"
+                :can-upload-admin-act="isAdmin"
+                @add-member="openCommitteeMemberModal"
+                @delete-member="confirmDeleteMember"
+              />
             </div>
 
             <div v-show="activeGeneralTab === 'sensibilizacion'" class="animate-fade-in">
@@ -199,14 +210,90 @@
             Una vez que se importen evaluaciones, podrás acceder a los dashboards por instrumento.
           </p>
         </div>
+
+        <div v-if="showCommitteeMemberModal && isAdmin" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div class="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-semibold text-gray-900">Agregar Miembro del Comité</h3>
+              <button @click="closeCommitteeMemberModal" type="button" class="text-gray-400 hover:text-gray-500" aria-label="Cerrar modal">
+                ×
+              </button>
+            </div>
+
+            <form @submit.prevent="submitCommitteeMember" class="space-y-4">
+              <div>
+                <label for="member_name" class="block text-sm font-medium text-gray-700">Nombre</label>
+                <input id="member_name" v-model="committeeMemberForm.name" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                <p v-if="committeeMemberForm.errors.name" class="mt-1 text-xs text-red-500">{{ committeeMemberForm.errors.name }}</p>
+              </div>
+              <div>
+                <label for="member_department" class="block text-sm font-medium text-gray-700">Área</label>
+                <input id="member_department" v-model="committeeMemberForm.department_area" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                <p v-if="committeeMemberForm.errors.department_area" class="mt-1 text-xs text-red-500">{{ committeeMemberForm.errors.department_area }}</p>
+              </div>
+              <div>
+                <label for="member_position" class="block text-sm font-medium text-gray-700">Puesto</label>
+                <input id="member_position" v-model="committeeMemberForm.position" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                <p v-if="committeeMemberForm.errors.position" class="mt-1 text-xs text-red-500">{{ committeeMemberForm.errors.position }}</p>
+              </div>
+              <div>
+                <label for="member_factor" class="block text-sm font-medium text-gray-700">Factor</label>
+                <input id="member_factor" v-model="committeeMemberForm.factor" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                <p v-if="committeeMemberForm.errors.factor" class="mt-1 text-xs text-red-500">{{ committeeMemberForm.errors.factor }}</p>
+              </div>
+
+              <div class="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  @click="closeCommitteeMemberModal"
+                  class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="committeeMemberForm.processing"
+                  class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                >
+                  {{ committeeMemberForm.processing ? 'Guardando...' : 'Guardar' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div v-if="showDeleteConfirmModal && isAdmin" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 class="text-lg font-semibold text-gray-900">Eliminar Miembro</h3>
+            <p class="mt-2 text-sm text-gray-500">
+              ¿Estás seguro de que deseas eliminar a <strong>{{ memberToDelete?.name }}</strong>? Esta acción no se puede deshacer.
+            </p>
+            <div class="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                @click="showDeleteConfirmModal = false"
+                class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                @click="deleteMember"
+                class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </Dashboard>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import Dashboard from '../../Layouts/Dashboard.vue';
 import EmpresaTab from '@/Components/Organization/Nom035/EmpresaTab.vue';
 import CommitteeTab from '@/Components/Organization/Nom035/CommitteeTab.vue';
@@ -310,7 +397,22 @@ interface EvaluationType {
   icon: string;
 }
 
-withDefaults(defineProps<{
+interface CommitteeMember {
+  id: number;
+  name: string;
+  department_area: string;
+  position: string;
+  factor: string;
+}
+
+interface ConstitutiveActData {
+  submitted_path: string | null;
+  submitted_at: string | null;
+  admin_path: string | null;
+  admin_at: string | null;
+}
+
+const props = withDefaults(defineProps<{
   workCenter: WorkCenterInfo;
   organization: OrganizationInfo;
   dashboardData: DashboardData;
@@ -318,9 +420,34 @@ withDefaults(defineProps<{
   totalEvaluations: number;
   evaluations?: Evaluation[];
   availableEvaluationTypes?: EvaluationType[];
+  committeeMembers?: CommitteeMember[];
+  constitutiveAct?: ConstitutiveActData;
 }>(), {
   evaluations: () => [],
   availableEvaluationTypes: () => [],
+  committeeMembers: () => [],
+  constitutiveAct: () => ({
+    submitted_path: null,
+    submitted_at: null,
+    admin_path: null,
+    admin_at: null,
+  }),
+});
+
+const committeeMembers = ref<CommitteeMember[]>(props.committeeMembers);
+const constitutiveAct = computed<ConstitutiveActData>(() => props.constitutiveAct);
+const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);
+const page = usePage();
+
+const isAdmin = computed(() => {
+  const roles = (page.props.auth as { user?: { roles?: Array<{ name: string }> } })?.user?.roles ?? [];
+  return roles.some((role) => role.name === 'admin' || role.name === 'super-admin');
+});
+
+const canUploadSubmittedAct = computed(() => {
+  const roles = (page.props.auth as { user?: { roles?: Array<{ name: string }> } })?.user?.roles ?? [];
+  const hasWorkCenterUserRole = roles.some((role) => role.name === 'work_center_user');
+  return hasWorkCenterUserRole && !isAdmin.value;
 });
 
 const generalTabs = [
@@ -332,6 +459,84 @@ const generalTabs = [
 ];
 
 const activeGeneralTab = ref('empresa');
+
+const showCommitteeMemberModal = ref(false);
+const showDeleteConfirmModal = ref(false);
+const memberToDelete = ref<CommitteeMember | null>(null);
+
+const committeeMemberForm = useForm({
+  name: '',
+  department_area: '',
+  position: '',
+  factor: '',
+});
+
+const openCommitteeMemberModal = (): void => {
+  if (!isAdmin.value) {
+    return;
+  }
+
+  committeeMemberForm.reset();
+  committeeMemberForm.clearErrors();
+  showCommitteeMemberModal.value = true;
+};
+
+const closeCommitteeMemberModal = (): void => {
+  showCommitteeMemberModal.value = false;
+  committeeMemberForm.reset();
+};
+
+const submitCommitteeMember = (): void => {
+  if (!isAdmin.value) {
+    return;
+  }
+
+  committeeMemberForm.post(route('work-centers.committee-members.store', props.workCenter.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      closeCommitteeMemberModal();
+      router.reload({
+        only: ['committeeMembers'],
+        onSuccess: (page) => {
+          committeeMembers.value = (page.props.committeeMembers as CommitteeMember[]) ?? [];
+        },
+      });
+    },
+  });
+};
+
+const confirmDeleteMember = (member: CommitteeMember): void => {
+  if (!isAdmin.value) {
+    return;
+  }
+
+  memberToDelete.value = member;
+  showDeleteConfirmModal.value = true;
+};
+
+const deleteMember = (): void => {
+  if (!isAdmin.value) {
+    return;
+  }
+
+  if (!memberToDelete.value) {
+    return;
+  }
+
+  router.delete(route('work-centers.committee-members.destroy', [props.workCenter.id, memberToDelete.value.id]), {
+    preserveScroll: true,
+    onSuccess: () => {
+      showDeleteConfirmModal.value = false;
+      memberToDelete.value = null;
+      router.reload({
+        only: ['committeeMembers'],
+        onSuccess: (page) => {
+          committeeMembers.value = (page.props.committeeMembers as CommitteeMember[]) ?? [];
+        },
+      });
+    },
+  });
+};
 
 const colorAccent = (color: string): string => {
   const map: Record<string, string> = {

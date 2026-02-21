@@ -26,7 +26,7 @@ class WorkCenterNom035IndexController extends Controller
     {
         $this->authorize('viewWorkCenterDashboard', $workCenter);
 
-        $workCenter->load('organization');
+        $workCenter->load(['organization', 'committeeMembers']);
 
         $instruments = $this->buildInstrumentsSummary($workCenter);
 
@@ -49,6 +49,22 @@ class WorkCenterNom035IndexController extends Controller
             'totalEvaluations' => array_sum(array_column($instruments, 'count')),
             'evaluations' => $this->getGeneralEvaluations($workCenter),
             'availableEvaluationTypes' => $this->getAvailableEvaluationTypes($workCenter),
+            'committeeMembers' => $workCenter->committeeMembers
+                ->map(fn ($member) => [
+                    'id' => $member->id,
+                    'name' => $member->name,
+                    'department_area' => $member->department_area,
+                    'position' => $member->position,
+                    'factor' => $member->factor,
+                ])
+                ->values()
+                ->all(),
+            'constitutiveAct' => [
+                'submitted_path' => $workCenter->constitutive_act_submitted_path,
+                'submitted_at' => $workCenter->constitutive_act_submitted_at,
+                'admin_path' => $workCenter->constitutive_act_admin_path,
+                'admin_at' => $workCenter->constitutive_act_admin_at,
+            ],
         ]);
     }
 

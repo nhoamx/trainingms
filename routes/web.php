@@ -101,6 +101,30 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035/ref-i', [\App\Http\Controllers\WorkCenter\WorkCenterNom035RefIDashboardController::class, 'show'])
         ->name('work-centers.dashboard.nom-035-ref-i');
 
+    Route::post('/centro-trabajo/{workCenter}/comite/miembros', [\App\Http\Controllers\WorkCenter\WorkCenterCommitteeMemberController::class, 'store'])
+        ->name('work-centers.committee-members.store')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::delete('/centro-trabajo/{workCenter}/comite/miembros/{committeeMember}', [\App\Http\Controllers\WorkCenter\WorkCenterCommitteeMemberController::class, 'destroy'])
+        ->name('work-centers.committee-members.destroy')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::post('/centro-trabajo/{workCenter}/acta-constitutiva/carga-centro', [\App\Http\Controllers\WorkCenter\WorkCenterConstitutiveActController::class, 'uploadSubmitted'])
+        ->name('work-centers.constitutive-act.upload-submitted')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:work_center_user']);
+
+    Route::post('/centro-trabajo/{workCenter}/acta-constitutiva/carga-admin', [\App\Http\Controllers\WorkCenter\WorkCenterConstitutiveActController::class, 'uploadAdmin'])
+        ->name('work-centers.constitutive-act.upload-admin')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::get('/centro-trabajo/{workCenter}/acta-constitutiva/descargar-centro', [\App\Http\Controllers\WorkCenter\WorkCenterConstitutiveActController::class, 'downloadSubmitted'])
+        ->name('work-centers.constitutive-act.download-submitted')
+        ->middleware('can:viewWorkCenterDashboard,workCenter');
+
+    Route::get('/centro-trabajo/{workCenter}/acta-constitutiva/descargar-admin', [\App\Http\Controllers\WorkCenter\WorkCenterConstitutiveActController::class, 'downloadAdmin'])
+        ->name('work-centers.constitutive-act.download-admin')
+        ->middleware('can:viewWorkCenterDashboard,workCenter');
+
     // Online results routes
     Route::get('/organization/{id}/online-results', [App\Http\Controllers\OnlineResultsController::class, 'index'])->name('organization.online-results');
     Route::get('/organization/{id}/online-results/report', [App\Http\Controllers\OnlineResultsController::class, 'report'])->name('organization.online-results.report');

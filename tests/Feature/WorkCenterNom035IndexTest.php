@@ -38,6 +38,8 @@ class WorkCenterNom035IndexTest extends TestCase
             ->has('totalEvaluations')
             ->has('evaluations')
             ->has('availableEvaluationTypes')
+            ->has('committeeMembers')
+            ->has('constitutiveAct')
         );
     }
 
@@ -118,6 +120,8 @@ class WorkCenterNom035IndexTest extends TestCase
             ->has('instruments.1.key')
             ->has('evaluations')
             ->has('availableEvaluationTypes')
+            ->has('committeeMembers')
+            ->has('constitutiveAct')
         );
     }
 
