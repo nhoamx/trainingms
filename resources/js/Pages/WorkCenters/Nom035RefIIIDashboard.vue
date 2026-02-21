@@ -49,75 +49,19 @@
           </nav>
         </div>
 
-        <!-- Tabs Navigation -->
-        <div class="mb-8">
-          <nav class="flex flex-wrap gap-2 lg:gap-4" aria-label="Tabs">
-            <button
-              v-for="tab in translatedTabs"
-              :key="tab.key"
-              @click="activeTab = tab.key"
-              :class="[
-                'px-4 sm:px-6 py-3 sm:py-4 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200',
-                activeTab === tab.key
-                  ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900',
-              ]"
-              :aria-current="activeTab === tab.key ? 'page' : undefined"
-            >
-              {{ tab.label }}
-            </button>
-          </nav>
-        </div>
-
-        <!-- Tab Content -->
+        <!-- Etapas Content -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200">
           <div class="p-6 sm:p-8">
-            <!-- Empresa -->
-            <div v-show="activeTab === 'empresa'" class="animate-fade-in">
-              <EmpresaTab :company-data="dashboardData.company_data" :organization="dashboardData.organization" />
-            </div>
-
-            <!-- Comité -->
-            <div v-show="activeTab === 'comite'" class="animate-fade-in">
-              <CommitteeTab :company-data="dashboardData.company_data" />
-            </div>
-
-            <!-- Sensibilización -->
-            <div v-show="activeTab === 'sensibilizacion'" class="animate-fade-in">
-              <SensibilizationTab />
-            </div>
-
-            <!-- Política -->
-            <div v-show="activeTab === 'politica'" class="animate-fade-in">
-              <PolicyTab />
-            </div>
-
-            <!-- Evaluación -->
-            <div v-show="activeTab === 'evaluacion'" class="animate-fade-in">
-              <EvaluationTab
-                :evaluations="evaluations"
-                :available-evaluation-types="props.availableEvaluationTypes"
-              />
-            </div>
-
-            <!-- Etapas -->
-            <div v-show="activeTab === 'etapas'" class="animate-fade-in">
-              <StagesTab
-                :domain-statistics="props.domainStatistics"
-                :category-statistics="props.categoryStatistics"
-                :dimension-statistics="props.dimensionStatistics"
-                :question-statistics="props.questionStatistics"
-                :block-statistics="props.blockStatistics"
-                :global-statistics="props.globalStatistics"
-                :analysis-data="props.analysisData"
-                :organization-id="props.dashboardData.organization.id"
-              />
-            </div>
-
-            <!-- Referencia -->
-            <div v-show="activeTab === 'referencia'" class="animate-fade-in">
-              <ReferenceTab />
-            </div>
+            <StagesTab
+              :domain-statistics="props.domainStatistics"
+              :category-statistics="props.categoryStatistics"
+              :dimension-statistics="props.dimensionStatistics"
+              :question-statistics="props.questionStatistics"
+              :block-statistics="props.blockStatistics"
+              :global-statistics="props.globalStatistics"
+              :analysis-data="props.analysisData"
+              :organization-id="props.dashboardData.organization.id"
+            />
           </div>
         </div>
       </div>
@@ -126,25 +70,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import Dashboard from '../../Layouts/Dashboard.vue';
-import EmpresaTab from '@/Components/Organization/Nom035/EmpresaTab.vue';
-import CommitteeTab from '@/Components/Organization/Nom035/CommitteeTab.vue';
-import SensibilizationTab from '@/Components/Organization/Nom035/SensibilizationTab.vue';
-import PolicyTab from '@/Components/Organization/Nom035/PolicyTab.vue';
-import EvaluationTab from '@/Components/Organization/Nom035/EvaluationTab.vue';
 import StagesTab from '@/Components/Organization/Nom035/StagesTab.vue';
-import ReferenceTab from '@/Components/Organization/Nom035/ReferenceTab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
-import { useTranslations } from '@/composables/useTranslations';
-
-const { t } = useTranslations();
-
-interface Tab {
-  key: string;
-  labelKey: string;
-}
 
 interface WorkCenterInfo {
   id: string;
@@ -311,25 +240,6 @@ const props = withDefaults(defineProps<Props>(), {
   evaluations: () => [],
   availableEvaluationTypes: () => [],
 });
-
-const tabs: Tab[] = [
-  { key: 'empresa', labelKey: 'Empresa' },
-  { key: 'comite', labelKey: 'Comité' },
-  { key: 'sensibilizacion', labelKey: 'Sensibilización' },
-  { key: 'politica', labelKey: 'Política' },
-  { key: 'evaluacion', labelKey: 'Evaluación' },
-  { key: 'etapas', labelKey: 'Etapas' },
-  { key: 'referencia', labelKey: 'Referencia' },
-];
-
-const translatedTabs = computed(() =>
-  tabs.map(tab => ({
-    key: tab.key,
-    label: t(tab.labelKey),
-  }))
-);
-
-const activeTab = ref<string>('empresa');
 </script>
 
 <style scoped>
