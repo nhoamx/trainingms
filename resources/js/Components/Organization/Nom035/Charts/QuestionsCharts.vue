@@ -5,7 +5,7 @@
       <div class="flex items-center justify-between mb-4">
         <div>
           <h3 class="text-xl font-bold text-slate-900">Análisis por Pregunta Individual</h3>
-          <p class="text-sm text-slate-600 mt-1">Distribución de respuestas para cada una de las 72 preguntas del cuestionario</p>
+          <p class="text-sm text-slate-600 mt-1">Distribución de respuestas para cada una de las {{ totalQuestions }} preguntas del cuestionario</p>
         </div>
         <div class="flex items-center gap-2">
           <DocumentTextIcon class="w-8 h-8 text-purple-600" />
@@ -17,41 +17,20 @@
       </div>
 
       <!-- Leyenda de respuestas -->
-      <div class="grid grid-cols-5 gap-3 mt-4">
-        <div class="bg-white rounded-lg p-3 border border-slate-200 text-center">
+      <div
+        class="mt-4"
+        :class="isBinaryMode ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'grid grid-cols-1 md:grid-cols-5 gap-3'"
+      >
+        <div
+          v-for="legendItem in responseLegendItems"
+          :key="legendItem.key"
+          class="bg-white rounded-lg p-3 border border-slate-200 text-center"
+        >
           <div class="flex items-center justify-center gap-2 mb-1">
-            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
-            <span class="text-xs font-medium text-slate-700">Siempre</span>
+            <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: legendItem.color }"></div>
+            <span class="text-xs font-medium text-slate-700">{{ legendItem.label }}</span>
           </div>
-          <p class="text-xs text-slate-500">Respuesta favorable</p>
-        </div>
-        <div class="bg-white rounded-lg p-3 border border-slate-200 text-center">
-          <div class="flex items-center justify-center gap-2 mb-1">
-            <div class="w-3 h-3 rounded-full bg-blue-500"></div>
-            <span class="text-xs font-medium text-slate-700">Casi siempre</span>
-          </div>
-          <p class="text-xs text-slate-500">Favorable</p>
-        </div>
-        <div class="bg-white rounded-lg p-3 border border-slate-200 text-center">
-          <div class="flex items-center justify-center gap-2 mb-1">
-            <div class="w-3 h-3 rounded-full bg-amber-500"></div>
-            <span class="text-xs font-medium text-slate-700">Algunas veces</span>
-          </div>
-          <p class="text-xs text-slate-500">Neutro</p>
-        </div>
-        <div class="bg-white rounded-lg p-3 border border-slate-200 text-center">
-          <div class="flex items-center justify-center gap-2 mb-1">
-            <div class="w-3 h-3 rounded-full bg-orange-500"></div>
-            <span class="text-xs font-medium text-slate-700">Casi nunca</span>
-          </div>
-          <p class="text-xs text-slate-500">Desfavorable</p>
-        </div>
-        <div class="bg-white rounded-lg p-3 border border-slate-200 text-center">
-          <div class="flex items-center justify-center gap-2 mb-1">
-            <div class="w-3 h-3 rounded-full bg-red-500"></div>
-            <span class="text-xs font-medium text-slate-700">Nunca</span>
-          </div>
-          <p class="text-xs text-slate-500">Muy desfavorable</p>
+          <p class="text-xs text-slate-500">{{ legendItem.description }}</p>
         </div>
       </div>
     </div>
@@ -64,8 +43,8 @@
           <select v-model="itemsPerPage" class="rounded-lg border-slate-300 text-sm">
             <option :value="10">10 preguntas</option>
             <option :value="20">20 preguntas</option>
-            <option :value="36">36 preguntas</option>
-            <option :value="72">Todas (72)</option>
+            <option :value="36" v-if="totalQuestions >= 36">36 preguntas</option>
+            <option :value="totalQuestions">Todas ({{ totalQuestions }})</option>
           </select>
         </div>
         <div class="flex items-center gap-2">
@@ -122,8 +101,8 @@
                 {{ getCriticalityLabel(question.criticality) }}
               </div>
               <div class="text-right">
-                <p class="text-xs text-slate-500">Promedio</p>
-                <p class="text-lg font-bold text-slate-900">{{ question.averageScore }}</p>
+                <p class="text-xs text-slate-500">{{ isBinaryMode ? 'Sí (%)' : 'Promedio' }}</p>
+                <p class="text-lg font-bold text-slate-900">{{ isBinaryMode ? getYesPercentage(question.responses) + '%' : question.averageScore }}</p>
               </div>
             </div>
           </div>
@@ -140,25 +119,25 @@
             <!-- Estadísticas detalladas -->
             <div class="space-y-2">
               <div 
-                v-for="(count, response) in question.responses" 
-                :key="response"
+                v-for="item in getResponseItems(question.responses)" 
+                :key="item.key"
                 class="flex items-center justify-between p-3 rounded-lg border"
                 :style="{ 
-                  borderColor: getResponseColor(response), 
-                  backgroundColor: `${getResponseColor(response)}10` 
+                  borderColor: getResponseColor(item.key), 
+                  backgroundColor: `${getResponseColor(item.key)}10` 
                 }"
               >
                 <div class="flex items-center gap-2">
                   <div 
                     class="w-3 h-3 rounded-full" 
-                    :style="{ backgroundColor: getResponseColor(response) }"
+                    :style="{ backgroundColor: getResponseColor(item.key) }"
                   ></div>
-                  <span class="text-sm font-medium text-slate-700">{{ getResponseLabel(response) }}</span>
+                  <span class="text-sm font-medium text-slate-700">{{ getResponseLabel(item.key) }}</span>
                 </div>
                 <div class="text-right">
-                  <p class="text-lg font-bold text-slate-900">{{ count }}</p>
+                  <p class="text-lg font-bold text-slate-900">{{ item.count }}</p>
                   <p class="text-xs text-slate-500">
-                    {{ ((count / totalEvaluations) * 100).toFixed(1) }}%
+                    {{ totalEvaluations > 0 ? ((item.count / totalEvaluations) * 100).toFixed(1) : '0.0' }}%
                   </p>
                 </div>
               </div>
@@ -241,9 +220,16 @@ interface QuestionData {
 interface Props {
   questionsData: Record<string, QuestionData>;
   totalEvaluations: number;
+  binaryMode?: boolean;
 }
 
 const props = defineProps<Props>();
+
+type ResponseKey = keyof QuestionData['responses'];
+
+const isBinaryMode = computed(() => props.binaryMode === true);
+
+const totalQuestions = computed(() => Object.keys(props.questionsData).length);
 
 // Estados
 const chartRefs = ref<Record<number, HTMLCanvasElement | null>>({});
@@ -261,11 +247,40 @@ const responseColors = {
   nunca: '#EF4444'         // Rojo
 };
 
-const getResponseColor = (response: string): string => {
+const responseLegendItems = computed(() => {
+  if (isBinaryMode.value) {
+    return [
+      { key: 'siempre', label: 'Sí', description: 'Respuesta afirmativa', color: responseColors.siempre },
+      { key: 'nunca', label: 'No', description: 'Respuesta negativa', color: responseColors.nunca },
+    ];
+  }
+
+  return [
+    { key: 'siempre', label: 'Siempre', description: 'Respuesta favorable', color: responseColors.siempre },
+    { key: 'casi_siempre', label: 'Casi siempre', description: 'Favorable', color: responseColors.casi_siempre },
+    { key: 'algunas_veces', label: 'Algunas veces', description: 'Neutro', color: responseColors.algunas_veces },
+    { key: 'casi_nunca', label: 'Casi nunca', description: 'Desfavorable', color: responseColors.casi_nunca },
+    { key: 'nunca', label: 'Nunca', description: 'Muy desfavorable', color: responseColors.nunca },
+  ];
+});
+
+const getResponseColor = (response: ResponseKey): string => {
   return responseColors[response as keyof typeof responseColors] || '#94A3B8';
 };
 
-const getResponseLabel = (response: string): string => {
+const getResponseLabel = (response: ResponseKey): string => {
+  if (isBinaryMode.value) {
+    const binaryLabels: Record<ResponseKey, string> = {
+      siempre: 'Sí',
+      casi_siempre: 'Casi siempre',
+      algunas_veces: 'Algunas veces',
+      casi_nunca: 'Casi nunca',
+      nunca: 'No',
+    };
+
+    return binaryLabels[response] || response;
+  }
+
   const labels: Record<string, string> = {
     siempre: 'Siempre',
     casi_siempre: 'Casi siempre',
@@ -274,6 +289,34 @@ const getResponseLabel = (response: string): string => {
     nunca: 'Nunca'
   };
   return labels[response] || response;
+};
+
+const getResponseItems = (responses: QuestionData['responses']): Array<{ key: ResponseKey; count: number }> => {
+  if (isBinaryMode.value) {
+    return [
+      { key: 'siempre', count: responses.siempre || 0 },
+      { key: 'nunca', count: responses.nunca || 0 },
+    ];
+  }
+
+  return [
+    { key: 'siempre', count: responses.siempre || 0 },
+    { key: 'casi_siempre', count: responses.casi_siempre || 0 },
+    { key: 'algunas_veces', count: responses.algunas_veces || 0 },
+    { key: 'casi_nunca', count: responses.casi_nunca || 0 },
+    { key: 'nunca', count: responses.nunca || 0 },
+  ];
+};
+
+const getYesPercentage = (responses: QuestionData['responses']): string => {
+  const totalResponses = (responses.siempre || 0) + (responses.nunca || 0);
+  const yesResponses = responses.siempre || 0;
+
+  if (totalResponses === 0) {
+    return '0.0';
+  }
+
+  return ((yesResponses / totalResponses) * 100).toFixed(1);
 };
 
 const getCriticalityColor = (criticality: string) => {
@@ -311,6 +354,12 @@ const sortedQuestions = computed(() => {
     
     case 'responses':
       return questions.sort((a, b) => {
+        if (isBinaryMode.value) {
+          const negativeA = a.responses.nunca || 0;
+          const negativeB = b.responses.nunca || 0;
+          return negativeB - negativeA;
+        }
+
         const negativeA = (a.responses.casi_nunca || 0) + (a.responses.nunca || 0);
         const negativeB = (b.responses.casi_nunca || 0) + (b.responses.nunca || 0);
         return negativeB - negativeA;
@@ -374,21 +423,25 @@ const createQuestionChart = (question: QuestionData) => {
   }
 
   const responses = question.responses;
-  const labels = ['Siempre', 'Casi siempre', 'Algunas veces', 'Casi nunca', 'Nunca'];
-  const data = [
-    responses.siempre || 0,
-    responses.casi_siempre || 0,
-    responses.algunas_veces || 0,
-    responses.casi_nunca || 0,
-    responses.nunca || 0
-  ];
-  const colors = [
-    responseColors.siempre,
-    responseColors.casi_siempre,
-    responseColors.algunas_veces,
-    responseColors.casi_nunca,
-    responseColors.nunca
-  ];
+  const labels = isBinaryMode.value ? ['Sí', 'No'] : ['Siempre', 'Casi siempre', 'Algunas veces', 'Casi nunca', 'Nunca'];
+  const data = isBinaryMode.value
+    ? [responses.siempre || 0, responses.nunca || 0]
+    : [
+        responses.siempre || 0,
+        responses.casi_siempre || 0,
+        responses.algunas_veces || 0,
+        responses.casi_nunca || 0,
+        responses.nunca || 0
+      ];
+  const colors = isBinaryMode.value
+    ? [responseColors.siempre, responseColors.nunca]
+    : [
+        responseColors.siempre,
+        responseColors.casi_siempre,
+        responseColors.algunas_veces,
+        responseColors.casi_nunca,
+        responseColors.nunca
+      ];
 
   const chart = new Chart(ctx, {
     type: 'bar',
