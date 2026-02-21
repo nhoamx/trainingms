@@ -23,25 +23,9 @@
 
       <!-- Response Legend -->
       <div class="mt-6 flex flex-wrap gap-4 text-xs">
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded" :style="{ backgroundColor: responseColors.siempre }"></div>
-          <span class="text-slate-600"><strong>Siempre</strong> - Respuesta favorable</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded" :style="{ backgroundColor: responseColors.casi_siempre }"></div>
-          <span class="text-slate-600"><strong>Casi siempre</strong> - Favorable</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded" :style="{ backgroundColor: responseColors.algunas_veces }"></div>
-          <span class="text-slate-600"><strong>Algunas veces</strong> - Neutro</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded" :style="{ backgroundColor: responseColors.casi_nunca }"></div>
-          <span class="text-slate-600"><strong>Casi nunca</strong> - Desfavorable</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded" :style="{ backgroundColor: responseColors.nunca }"></div>
-          <span class="text-slate-600"><strong>Nunca</strong> - Muy desfavorable</span>
+        <div v-for="legendItem in responseLegendItems" :key="legendItem.key" class="flex items-center gap-2">
+          <div class="w-4 h-4 rounded" :style="{ backgroundColor: legendItem.color }"></div>
+          <span class="text-slate-600"><strong>{{ legendItem.label }}</strong> - {{ legendItem.description }}</span>
         </div>
       </div>
     </div>
@@ -92,8 +76,8 @@
             <!-- Statistics -->
             <div class="space-y-3">
               <div class="flex items-center justify-between text-sm">
-                <span class="text-slate-600">Promedio:</span>
-                <span class="font-semibold text-slate-900">{{ block.average_score }}</span>
+                <span class="text-slate-600">{{ isBinaryMode ? 'Sí (%)' : 'Promedio:' }}</span>
+                <span class="font-semibold text-slate-900">{{ isBinaryMode ? getYesPercentage(block) + '%' : block.average_score }}</span>
               </div>
               <div class="flex items-center justify-between text-sm">
                 <span class="text-slate-600">Total respuestas:</span>
@@ -109,15 +93,15 @@
               <!-- Response Breakdown -->
               <div class="mt-4 space-y-2">
                 <div
-                  v-for="(count, response) in block.responses"
-                  :key="response"
+                  v-for="item in getResponseItems(block.responses)"
+                  :key="item.key"
                   class="flex items-center gap-2 text-xs"
                 >
-                  <div class="w-3 h-3 rounded" :style="{ backgroundColor: responseColors[response] }"></div>
-                  <span class="text-slate-600 capitalize w-24">{{ formatResponseLabel(response) }}</span>
-                  <span class="font-semibold text-slate-900">{{ count }}</span>
+                  <div class="w-3 h-3 rounded" :style="{ backgroundColor: responseColors[item.key] }"></div>
+                  <span class="text-slate-600 capitalize w-24">{{ formatResponseLabel(item.key) }}</span>
+                  <span class="font-semibold text-slate-900">{{ item.count }}</span>
                   <span class="text-slate-500">
-                    ({{ block.total_responses > 0 ? ((count / block.total_responses) * 100).toFixed(1) : 0 }}%)
+                    ({{ block.total_responses > 0 ? ((item.count / block.total_responses) * 100).toFixed(1) : 0 }}%)
                   </span>
                 </div>
               </div>
@@ -173,9 +157,14 @@ interface BlockData {
 interface Props {
   blocksData: Record<string, BlockData>;
   totalEvaluations: number;
+  binaryMode?: boolean;
 }
 
 const props = defineProps<Props>();
+
+type ResponseKey = keyof BlockData['responses'];
+
+const isBinaryMode = computed(() => props.binaryMode === true);
 
 // Estados
 const chartRefs = ref<Record<number, HTMLCanvasElement | null>>({});
@@ -189,6 +178,23 @@ const responseColors = {
   casi_nunca: '#F97316',
   nunca: '#EF4444',
 };
+
+const responseLegendItems = computed(() => {
+  if (isBinaryMode.value) {
+    return [
+      { key: 'siempre', label: 'Sí', description: 'Respuesta afirmativa', color: responseColors.siempre },
+      { key: 'nunca', label: 'No', description: 'Respuesta negativa', color: responseColors.nunca },
+    ];
+  }
+
+  return [
+    { key: 'siempre', label: 'Siempre', description: 'Respuesta favorable', color: responseColors.siempre },
+    { key: 'casi_siempre', label: 'Casi siempre', description: 'Favorable', color: responseColors.casi_siempre },
+    { key: 'algunas_veces', label: 'Algunas veces', description: 'Neutro', color: responseColors.algunas_veces },
+    { key: 'casi_nunca', label: 'Casi nunca', description: 'Desfavorable', color: responseColors.casi_nunca },
+    { key: 'nunca', label: 'Nunca', description: 'Muy desfavorable', color: responseColors.nunca },
+  ];
+});
 
 // Computed: Sorted blocks
 const sortedBlocks = computed(() => {
@@ -207,8 +213,49 @@ const formatQuestionRange = (questions: number[]): string => {
 };
 
 // Format response label
-const formatResponseLabel = (response: string): string => {
+const formatResponseLabel = (response: ResponseKey): string => {
+  if (isBinaryMode.value) {
+    const binaryLabels: Record<ResponseKey, string> = {
+      siempre: 'sí',
+      casi_siempre: 'casi siempre',
+      algunas_veces: 'algunas veces',
+      casi_nunca: 'casi nunca',
+      nunca: 'no',
+    };
+
+    return binaryLabels[response] ?? response;
+  }
+
   return response.replace('_', ' ');
+};
+
+const getResponseItems = (responses: BlockData['responses']): Array<{ key: ResponseKey; count: number }> => {
+  if (isBinaryMode.value) {
+    return [
+      { key: 'siempre', count: responses.siempre || 0 },
+      { key: 'nunca', count: responses.nunca || 0 },
+    ];
+  }
+
+  return [
+    { key: 'siempre', count: responses.siempre || 0 },
+    { key: 'casi_siempre', count: responses.casi_siempre || 0 },
+    { key: 'algunas_veces', count: responses.algunas_veces || 0 },
+    { key: 'casi_nunca', count: responses.casi_nunca || 0 },
+    { key: 'nunca', count: responses.nunca || 0 },
+  ];
+};
+
+const getYesPercentage = (block: BlockData): string => {
+  const yesResponses = block.responses.siempre || 0;
+  const noResponses = block.responses.nunca || 0;
+  const totalResponses = yesResponses + noResponses;
+
+  if (totalResponses === 0) {
+    return '0.0';
+  }
+
+  return ((yesResponses / totalResponses) * 100).toFixed(1);
 };
 
 // Get criticality class
@@ -258,26 +305,34 @@ const createBlockChart = (block: BlockData) => {
     const responses = block.responses;
     const total = block.total_responses;
 
+    const labels = isBinaryMode.value ? ['Sí', 'No'] : ['Siempre', 'Casi siempre', 'Algunas veces', 'Casi nunca', 'Nunca'];
+    const data = isBinaryMode.value
+      ? [responses.siempre, responses.nunca]
+      : [
+          responses.siempre,
+          responses.casi_siempre,
+          responses.algunas_veces,
+          responses.casi_nunca,
+          responses.nunca,
+        ];
+    const colors = isBinaryMode.value
+      ? [responseColors.siempre, responseColors.nunca]
+      : [
+          responseColors.siempre,
+          responseColors.casi_siempre,
+          responseColors.algunas_veces,
+          responseColors.casi_nunca,
+          responseColors.nunca,
+        ];
+
     chartInstances.value[block.block_number] = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: ['Siempre', 'Casi siempre', 'Algunas veces', 'Casi nunca', 'Nunca'],
+        labels,
         datasets: [{
           label: 'Respuestas',
-          data: [
-            responses.siempre,
-            responses.casi_siempre,
-            responses.algunas_veces,
-            responses.casi_nunca,
-            responses.nunca,
-          ],
-          backgroundColor: [
-            responseColors.siempre,
-            responseColors.casi_siempre,
-            responseColors.algunas_veces,
-            responseColors.casi_nunca,
-            responseColors.nunca,
-          ],
+          data,
+          backgroundColor: colors,
           borderWidth: 0,
         }],
       },
