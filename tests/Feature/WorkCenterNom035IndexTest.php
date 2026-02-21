@@ -28,10 +28,16 @@ class WorkCenterNom035IndexTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
             ->component('WorkCenters/Nom035DashboardIndex')
+            ->has('dashboardData')
+            ->has('dashboardData.organization')
+            ->has('dashboardData.work_center')
+            ->has('dashboardData.company_data')
             ->has('workCenter')
             ->has('organization')
             ->has('instruments')
             ->has('totalEvaluations')
+            ->has('evaluations')
+            ->has('availableEvaluationTypes')
         );
     }
 
@@ -93,6 +99,13 @@ class WorkCenterNom035IndexTest extends TestCase
 
         $response->assertInertia(fn ($page) => $page
             ->component('WorkCenters/Nom035DashboardIndex')
+            ->has('dashboardData.company_data.general')
+            ->has('dashboardData.company_data.address')
+            ->has('dashboardData.company_data.contact')
+            ->has('dashboardData.company_data.responsible')
+            ->has('dashboardData.company_data.workforce')
+            ->has('dashboardData.company_data.sample')
+            ->has('dashboardData.company_data.committee')
             ->where('workCenter.id', $workCenter->id)
             ->where('workCenter.name', 'Centro Norte')
             ->where('workCenter.code', '0001')
@@ -103,6 +116,8 @@ class WorkCenterNom035IndexTest extends TestCase
             ->has('instruments.0.count')
             ->has('instruments.0.route')
             ->has('instruments.1.key')
+            ->has('evaluations')
+            ->has('availableEvaluationTypes')
         );
     }
 
