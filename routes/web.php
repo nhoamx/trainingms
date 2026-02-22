@@ -109,6 +109,26 @@ Route::middleware(['auth'])->group(function () {
         ->name('work-centers.committee-members.destroy')
         ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
 
+    Route::post('/centro-trabajo/{workCenter}/prevenir/acciones', [\App\Http\Controllers\WorkCenter\WorkCenterPreventionActionController::class, 'store'])
+        ->name('work-centers.prevention-actions.store')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::put('/centro-trabajo/{workCenter}/prevenir/acciones/{preventionAction}', [\App\Http\Controllers\WorkCenter\WorkCenterPreventionActionController::class, 'update'])
+        ->name('work-centers.prevention-actions.update')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::delete('/centro-trabajo/{workCenter}/prevenir/acciones/{preventionAction}', [\App\Http\Controllers\WorkCenter\WorkCenterPreventionActionController::class, 'destroy'])
+        ->name('work-centers.prevention-actions.destroy')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::post('/centro-trabajo/{workCenter}/sensibilizacion/videos', [\App\Http\Controllers\WorkCenter\WorkCenterSensitizationVideoController::class, 'store'])
+        ->name('work-centers.sensitization-videos.store')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::delete('/centro-trabajo/{workCenter}/sensibilizacion/videos/{video}', [\App\Http\Controllers\WorkCenter\WorkCenterSensitizationVideoController::class, 'destroy'])
+        ->name('work-centers.sensitization-videos.destroy')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
     Route::post('/centro-trabajo/{workCenter}/acta-constitutiva/carga-centro', [\App\Http\Controllers\WorkCenter\WorkCenterConstitutiveActController::class, 'uploadSubmitted'])
         ->name('work-centers.constitutive-act.upload-submitted')
         ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:work_center_user']);

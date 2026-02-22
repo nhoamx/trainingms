@@ -65,6 +65,23 @@ class WorkCenterNom035IndexController extends Controller
                 'admin_path' => $workCenter->constitutive_act_admin_path,
                 'admin_at' => $workCenter->constitutive_act_admin_at,
             ],
+            'sensitizationVideos' => $workCenter->sensitizationVideos()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn ($video) => [
+                    'id' => $video->id,
+                    'title' => $video->title,
+                    'description' => $video->description,
+                    'audience' => $video->audience,
+                    'video_url' => asset('storage/'.$video->storage_path),
+                    'original_filename' => $video->original_filename,
+                    'file_size_human' => $video->file_size_human,
+                    'created_at' => $video->created_at?->format('Y-m-d H:i'),
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 

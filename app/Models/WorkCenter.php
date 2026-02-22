@@ -165,6 +165,22 @@ class WorkCenter extends Model
     }
 
     /**
+     * Get prevention actions for this work center.
+     */
+    public function preventionActions(): HasMany
+    {
+        return $this->hasMany(WorkCenterPreventionAction::class);
+    }
+
+    /**
+     * Get sensitization videos for this work center.
+     */
+    public function sensitizationVideos(): HasMany
+    {
+        return $this->hasMany(WorkCenterSensitizationVideo::class);
+    }
+
+    /**
      * Scope to get only primary work centers
      */
     public function scopePrimary($query)

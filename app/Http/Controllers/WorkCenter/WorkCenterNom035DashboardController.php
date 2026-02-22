@@ -106,6 +106,24 @@ class WorkCenterNom035DashboardController extends Controller
             'analysisData' => $analysisData,
             'evaluations' => $evaluations,
             'availableEvaluationTypes' => $availableEvaluationTypes,
+            'preventionActions' => $workCenter->preventionActions()
+                ->where('instrument_type', 'referencia_iii')
+                ->orderBy('sort_order')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn ($action) => [
+                    'id' => $action->id,
+                    'instrument_type' => $action->instrument_type,
+                    'title' => $action->title,
+                    'description' => $action->description,
+                    'responsible' => $action->responsible,
+                    'status' => $action->status,
+                    'due_date' => $action->due_date?->format('Y-m-d'),
+                    'sort_order' => $action->sort_order,
+                    'updated_at' => $action->updated_at?->format('Y-m-d H:i'),
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 
