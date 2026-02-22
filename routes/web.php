@@ -309,6 +309,18 @@ Route::middleware(['auth'])->group(function () {
         ->name('committee-members.destroy')
         ->middleware('can:view-organization-results,organization');
 
+    Route::post('/organizacion/{organization}/analizar/bloques', [\App\Http\Controllers\Organization\OrganizationAnalysisBlockController::class, 'store'])
+        ->name('organization.analysis-blocks.store')
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
+
+    Route::put('/organizacion/{organization}/analizar/bloques/{analysisBlock}', [\App\Http\Controllers\Organization\OrganizationAnalysisBlockController::class, 'update'])
+        ->name('organization.analysis-blocks.update')
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
+
+    Route::delete('/organizacion/{organization}/analizar/bloques/{analysisBlock}', [\App\Http\Controllers\Organization\OrganizationAnalysisBlockController::class, 'destroy'])
+        ->name('organization.analysis-blocks.destroy')
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
+
     // Rutas accesibles para usuarios de organización y administradores
     Route::get('/organizacion/{organization}/resultados', [ResultsController::class, 'listResults'])
         ->name('organization.results.list')

@@ -88,6 +88,8 @@
                 :global-statistics="props.globalStatistics"
                 :analysis-data="props.analysisData"
                 :organization-id="props.dashboardData.organization.id"
+                :analysis-blocks="props.analysisBlocks"
+                :can-manage-analysis-blocks="props.canManageAnalysisBlocks"
               />
             </div>
 
@@ -267,6 +269,11 @@ interface Props {
   blockStatistics?: { blocks: Record<string, unknown>; total_evaluations: number };
   globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
+  analysisBlocks?: {
+    referencia_i: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+    referencia_iii: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+  };
+  canManageAnalysisBlocks?: boolean;
   evaluations?: Evaluation[];
   availableEvaluationTypes?: EvaluationType[];
 }
@@ -277,6 +284,8 @@ const props = withDefaults(defineProps<Props>(), {
   dimensionStatistics: () => ({ dimensions: {}, total_evaluations: 0, colors: {}, labels: {} }),
   globalStatistics: () => ({ global: {}, total_evaluations: 0, colors: {}, labels: {} }),
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
+  analysisBlocks: () => ({ referencia_i: [], referencia_iii: [] }),
+  canManageAnalysisBlocks: false,
   evaluations: () => [],
   availableEvaluationTypes: () => [],
 });

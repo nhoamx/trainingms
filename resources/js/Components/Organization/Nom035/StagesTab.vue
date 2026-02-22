@@ -360,6 +360,7 @@
                 </div>
               </div>
             </div>
+
           </div>
 
           <!-- Sin datos -->
@@ -372,6 +373,14 @@
               </div>
             </div>
           </div>
+
+          <AnalysisWysiwygBlocks
+            v-if="organizationId && (canManageAnalysisBlocks || analysisBlocks.referencia_iii.length > 0)"
+            :organization-id="organizationId"
+            instrument-type="referencia_iii"
+            :blocks="analysisBlocks.referencia_iii"
+            :can-manage="canManageAnalysisBlocks"
+          />
         </div>
       </div>
 
@@ -725,6 +734,7 @@ import AnalysisFilters from './Charts/AnalysisFilters.vue';
 import RiskDistributionCards from './Charts/RiskDistributionCards.vue';
 import RiskPieChart from './Charts/RiskPieChart.vue';
 import RiskBarChart from './Charts/RiskBarChart.vue';
+import AnalysisWysiwygBlocks from './AnalysisWysiwygBlocks.vue';
 import {
   ChartBarIcon,
   MagnifyingGlassIcon,
@@ -822,6 +832,11 @@ interface Props {
   }>;
   canManagePreventionActions?: boolean;
   workCenterId?: string;
+  analysisBlocks?: {
+    referencia_i: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+    referencia_iii: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+  };
+  canManageAnalysisBlocks?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -834,6 +849,8 @@ const props = withDefaults(defineProps<Props>(), {
   preventionActions: () => [],
   canManagePreventionActions: false,
   workCenterId: undefined,
+  analysisBlocks: () => ({ referencia_i: [], referencia_iii: [] }),
+  canManageAnalysisBlocks: false,
 });
 
 const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);

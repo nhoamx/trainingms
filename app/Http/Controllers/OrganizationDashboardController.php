@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Organization;
+use App\Models\OrganizationAnalysisBlock;
 use App\Models\PaperEvaluation;
 use App\Services\LikertScoreService;
 use App\Services\OrganizationDataService;
@@ -193,6 +194,22 @@ class OrganizationDashboardController extends Controller
         // Get unique evaluation types used by this organization
         $availableEvaluationTypes = $this->getAvailableEvaluationTypes($organization);
 
+        $analysisBlocks = OrganizationAnalysisBlock::query()
+            ->where('organization_id', $organization->id)
+            ->orderBy('instrument_type')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('instrument_type')
+            ->map(fn ($blocks) => $blocks->map(fn (OrganizationAnalysisBlock $block) => [
+                'id' => $block->id,
+                'instrument_type' => $block->instrument_type,
+                'title' => $block->title,
+                'content_html' => $block->content_html,
+                'sort_order' => $block->sort_order,
+            ])->values())
+            ->all();
+
         return Inertia::render('Organizations/CalizaDashboard', [
             'title' => 'NOM-035-STPS-2018',
             'dashboardData' => $data,
@@ -205,6 +222,11 @@ class OrganizationDashboardController extends Controller
             'analysisData' => $analysisData,
             'evaluations' => $evaluations,
             'availableEvaluationTypes' => $availableEvaluationTypes,
+            'analysisBlocks' => [
+                'referencia_i' => $analysisBlocks['referencia_i'] ?? [],
+                'referencia_iii' => $analysisBlocks['referencia_iii'] ?? [],
+            ],
+            'canManageAnalysisBlocks' => request()->user()?->hasRole(['admin', 'super-admin']) ?? false,
         ]);
     }
 

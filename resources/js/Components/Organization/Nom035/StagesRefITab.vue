@@ -159,6 +159,14 @@
             <p class="text-sm font-medium text-slate-700">Sin datos para los filtros seleccionados</p>
             <p class="text-xs text-slate-500 mt-1">Ajusta los filtros para visualizar resultados de análisis</p>
           </div>
+
+          <AnalysisWysiwygBlocks
+            v-if="organizationId && (canManageAnalysisBlocks || analysisBlocks.referencia_i.length > 0)"
+            :organization-id="organizationId"
+            instrument-type="referencia_i"
+            :blocks="analysisBlocks.referencia_i"
+            :can-manage="canManageAnalysisBlocks"
+          />
         </div>
       </div>
     </div>
@@ -383,6 +391,7 @@ import { router, useForm } from '@inertiajs/vue3';
 import AnalysisFilters from './Charts/AnalysisFilters.vue';
 import QuestionsCharts from './Charts/QuestionsCharts.vue';
 import BlocksCharts from './Charts/BlocksCharts.vue';
+import AnalysisWysiwygBlocks from './AnalysisWysiwygBlocks.vue';
 import { Chart, registerables } from 'chart.js';
 import {
   ArrowPathIcon,
@@ -495,12 +504,21 @@ interface Props {
   }>;
   canManagePreventionActions?: boolean;
   workCenterId?: string;
+  organizationId?: string | number;
+  analysisBlocks?: {
+    referencia_i: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+    referencia_iii: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+  };
+  canManageAnalysisBlocks?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   preventionActions: () => [],
   canManagePreventionActions: false,
   workCenterId: undefined,
+  organizationId: undefined,
+  analysisBlocks: () => ({ referencia_i: [], referencia_iii: [] }),
+  canManageAnalysisBlocks: false,
 });
 
 const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);

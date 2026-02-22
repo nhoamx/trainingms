@@ -56,6 +56,9 @@
               :analysis-data="analysisData"
               :question-statistics="questionStatistics"
               :block-statistics="blockStatistics"
+                :organization-id="dashboardData.organization.id"
+                :analysis-blocks="analysisBlocks"
+                :can-manage-analysis-blocks="canManageAnalysisBlocks"
               :prevention-actions="preventionActions"
               :can-manage-prevention-actions="isAdmin"
               :work-center-id="dashboardData.work_center.id"
@@ -217,6 +220,11 @@ interface Props {
     }>;
     total_evaluations: number;
   };
+  analysisBlocks?: {
+    referencia_i: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+    referencia_iii: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+  };
+  canManageAnalysisBlocks?: boolean;
   preventionActions?: Array<{
     id: number;
     title: string;
@@ -229,6 +237,8 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   preventionActions: () => [],
+  analysisBlocks: () => ({ referencia_i: [], referencia_iii: [] }),
+  canManageAnalysisBlocks: false,
 });
 
 const page = usePage();
