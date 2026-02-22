@@ -61,6 +61,9 @@
               :global-statistics="props.globalStatistics"
               :analysis-data="props.analysisData"
               :organization-id="props.dashboardData.organization.id"
+              :prevention-actions="preventionActions"
+              :can-manage-prevention-actions="isAdmin"
+              :work-center-id="props.dashboardData.work_center.id"
             />
           </div>
         </div>
@@ -70,7 +73,8 @@
 </template>
 
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
 import Dashboard from '../../Layouts/Dashboard.vue';
 import StagesTab from '@/Components/Organization/Nom035/StagesTab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
@@ -229,6 +233,14 @@ interface Props {
   analysisData?: AnalysisData;
   evaluations?: Evaluation[];
   availableEvaluationTypes?: EvaluationType[];
+  preventionActions?: Array<{
+    id: number;
+    title: string;
+    description: string | null;
+    responsible: string | null;
+    status: string;
+    due_date: string | null;
+  }>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -239,7 +251,18 @@ const props = withDefaults(defineProps<Props>(), {
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
   evaluations: () => [],
   availableEvaluationTypes: () => [],
+  preventionActions: () => [],
 });
+
+const page = usePage();
+
+const isAdmin = computed(() => {
+  const roles = (page.props.auth as { user?: { roles?: Array<{ name: string }> } })?.user?.roles ?? [];
+
+  return roles.some((role) => role.name === 'admin' || role.name === 'super-admin');
+});
+
+const preventionActions = computed(() => props.preventionActions ?? []);
 </script>
 
 <style scoped>

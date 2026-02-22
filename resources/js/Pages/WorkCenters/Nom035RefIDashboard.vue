@@ -56,6 +56,9 @@
               :analysis-data="analysisData"
               :question-statistics="questionStatistics"
               :block-statistics="blockStatistics"
+              :prevention-actions="preventionActions"
+              :can-manage-prevention-actions="isAdmin"
+              :work-center-id="dashboardData.work_center.id"
             />
           </div>
         </div>
@@ -65,7 +68,8 @@
 </template>
 
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
 import Dashboard from '../../Layouts/Dashboard.vue';
 import StagesRefITab from '@/Components/Organization/Nom035/StagesRefITab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
@@ -213,9 +217,29 @@ interface Props {
     }>;
     total_evaluations: number;
   };
+  preventionActions?: Array<{
+    id: number;
+    title: string;
+    description: string | null;
+    responsible: string | null;
+    status: string;
+    due_date: string | null;
+  }>;
 }
 
-defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  preventionActions: () => [],
+});
+
+const page = usePage();
+
+const isAdmin = computed(() => {
+  const roles = (page.props.auth as { user?: { roles?: Array<{ name: string }> } })?.user?.roles ?? [];
+
+  return roles.some((role) => role.name === 'admin' || role.name === 'super-admin');
+});
+
+const preventionActions = computed(() => props.preventionActions ?? []);
 </script>
 
 <style scoped>

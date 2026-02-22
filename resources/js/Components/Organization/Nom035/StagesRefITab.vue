@@ -240,13 +240,119 @@
           </div>
           <h3 class="text-2xl font-bold text-emerald-900">Prevenir y Controlar ATS</h3>
         </div>
-        <div class="bg-white rounded-lg p-6">
-          <div class="flex items-center justify-center p-8 border-2 border-dashed border-emerald-300 rounded-lg">
+        <div class="bg-white rounded-lg p-6 space-y-4">
+          <form
+            v-if="canManagePreventionActions && workCenterId"
+            @submit.prevent="submitPreventionAction"
+            class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-4"
+          >
+            <h4 class="text-sm font-semibold text-emerald-900">Agregar acción preventiva ATS</h4>
+
+            <div>
+              <label for="ref1_prevent_title" class="block text-sm font-medium text-slate-700">Título</label>
+              <input
+                id="ref1_prevent_title"
+                v-model="preventionForm.title"
+                type="text"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+              />
+              <p v-if="preventionForm.errors.title" class="mt-1 text-xs text-red-500">{{ preventionForm.errors.title }}</p>
+            </div>
+
+            <div>
+              <label for="ref1_prevent_desc" class="block text-sm font-medium text-slate-700">Descripción</label>
+              <textarea
+                id="ref1_prevent_desc"
+                v-model="preventionForm.description"
+                rows="4"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label for="ref1_prevent_responsible" class="block text-sm font-medium text-slate-700">Responsable</label>
+                <input
+                  id="ref1_prevent_responsible"
+                  v-model="preventionForm.responsible"
+                  type="text"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label for="ref1_prevent_due" class="block text-sm font-medium text-slate-700">Fecha objetivo</label>
+                <input
+                  id="ref1_prevent_due"
+                  v-model="preventionForm.due_date"
+                  type="date"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label for="ref1_prevent_status" class="block text-sm font-medium text-slate-700">Estatus</label>
+                <select
+                  id="ref1_prevent_status"
+                  v-model="preventionForm.status"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                >
+                  <option value="pendiente">Pendiente</option>
+                  <option value="en_proceso">En proceso</option>
+                  <option value="completada">Completada</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex justify-end">
+              <button
+                type="submit"
+                :disabled="preventionForm.processing"
+                class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-50"
+              >
+                {{ preventionForm.processing ? 'Guardando...' : 'Guardar acción' }}
+              </button>
+            </div>
+          </form>
+
+          <div v-if="preventionActions.length === 0" class="flex items-center justify-center p-8 border-2 border-dashed border-emerald-300 rounded-lg">
             <div class="text-center">
               <PencilSquareIcon class="w-12 h-12 text-emerald-400 mx-auto mb-3" />
               <p class="text-emerald-700 font-medium">Gestión operativa T&amp;MS</p>
               <p class="text-sm text-emerald-600 mt-1">El equipo de T&amp;MS documenta, actualiza y da seguimiento al plan de prevención</p>
             </div>
+          </div>
+
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <article
+              v-for="action in preventionActions"
+              :key="action.id"
+              class="rounded-lg border border-slate-200 p-4 space-y-2"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <h4 class="font-semibold text-slate-900">{{ action.title }}</h4>
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" :class="statusClasses[action.status]">
+                  {{ statusLabels[action.status] ?? action.status }}
+                </span>
+              </div>
+
+              <p v-if="action.description" class="text-sm text-slate-600">{{ action.description }}</p>
+
+              <div class="text-xs text-slate-500 flex flex-wrap gap-4">
+                <span v-if="action.responsible">Responsable: {{ action.responsible }}</span>
+                <span v-if="action.due_date">Fecha: {{ action.due_date }}</span>
+              </div>
+
+              <div v-if="canManagePreventionActions && workCenterId" class="flex justify-end">
+                <button
+                  type="button"
+                  @click="deletePreventionAction(action.id)"
+                  class="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-red-500"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </article>
           </div>
         </div>
       </div>
@@ -273,6 +379,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { router, useForm } from '@inertiajs/vue3';
 import AnalysisFilters from './Charts/AnalysisFilters.vue';
 import QuestionsCharts from './Charts/QuestionsCharts.vue';
 import BlocksCharts from './Charts/BlocksCharts.vue';
@@ -378,9 +485,73 @@ interface Props {
     blocks: RefIBlockStatistic[];
     total_evaluations: number;
   };
+  preventionActions?: Array<{
+    id: number;
+    title: string;
+    description: string | null;
+    responsible: string | null;
+    status: string;
+    due_date: string | null;
+  }>;
+  canManagePreventionActions?: boolean;
+  workCenterId?: string;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  preventionActions: () => [],
+  canManagePreventionActions: false,
+  workCenterId: undefined,
+});
+
+const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);
+
+const preventionForm = useForm({
+  instrument_type: 'referencia_i',
+  title: '',
+  description: '',
+  responsible: '',
+  status: 'pendiente',
+  due_date: '',
+  sort_order: 0,
+});
+
+const statusLabels: Record<string, string> = {
+  pendiente: 'Pendiente',
+  en_proceso: 'En proceso',
+  completada: 'Completada',
+};
+
+const statusClasses: Record<string, string> = {
+  pendiente: 'bg-yellow-100 text-yellow-800',
+  en_proceso: 'bg-blue-100 text-blue-800',
+  completada: 'bg-emerald-100 text-emerald-800',
+};
+
+const submitPreventionAction = (): void => {
+  if (!props.workCenterId) {
+    return;
+  }
+
+  preventionForm.post(route('work-centers.prevention-actions.store', props.workCenterId), {
+    preserveScroll: true,
+    onSuccess: () => {
+      preventionForm.reset();
+      preventionForm.instrument_type = 'referencia_i';
+      preventionForm.status = 'pendiente';
+      preventionForm.sort_order = 0;
+    },
+  });
+};
+
+const deletePreventionAction = (actionId: number): void => {
+  if (!props.workCenterId) {
+    return;
+  }
+
+  router.delete(route('work-centers.prevention-actions.destroy', [props.workCenterId, actionId]), {
+    preserveScroll: true,
+  });
+};
 
 const activeSubTab = ref<'identificar' | 'analizar' | 'participantes' | 'prevenir'>('identificar');
 const identifyViewMode = ref<'blocks' | 'questions'>('blocks');

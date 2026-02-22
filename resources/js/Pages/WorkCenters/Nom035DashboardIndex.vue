@@ -107,7 +107,11 @@
             </div>
 
             <div v-show="activeGeneralTab === 'sensibilizacion'" class="animate-fade-in">
-              <SensibilizationTab />
+              <SensibilizationTab
+                :videos="sensitizationVideos"
+                :can-manage-videos="isAdmin"
+                :work-center-id="workCenter.id"
+              />
             </div>
 
             <div v-show="activeGeneralTab === 'politica'" class="animate-fade-in">
@@ -412,6 +416,17 @@ interface ConstitutiveActData {
   admin_at: string | null;
 }
 
+interface SensitizationVideo {
+  id: number;
+  title: string;
+  description: string | null;
+  audience: string;
+  video_url: string;
+  original_filename: string;
+  file_size_human: string;
+  created_at: string | null;
+}
+
 const props = withDefaults(defineProps<{
   workCenter: WorkCenterInfo;
   organization: OrganizationInfo;
@@ -422,6 +437,7 @@ const props = withDefaults(defineProps<{
   availableEvaluationTypes?: EvaluationType[];
   committeeMembers?: CommitteeMember[];
   constitutiveAct?: ConstitutiveActData;
+  sensitizationVideos?: SensitizationVideo[];
 }>(), {
   evaluations: () => [],
   availableEvaluationTypes: () => [],
@@ -432,10 +448,12 @@ const props = withDefaults(defineProps<{
     admin_path: null,
     admin_at: null,
   }),
+  sensitizationVideos: () => [],
 });
 
 const committeeMembers = ref<CommitteeMember[]>(props.committeeMembers);
 const constitutiveAct = computed<ConstitutiveActData>(() => props.constitutiveAct);
+const sensitizationVideos = computed<SensitizationVideo[]>(() => props.sensitizationVideos ?? []);
 const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);
 const page = usePage();
 
