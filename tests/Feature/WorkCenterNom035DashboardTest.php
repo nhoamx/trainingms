@@ -37,6 +37,7 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->has('dimensionStatistics')
             ->has('globalStatistics')
             ->has('evaluations')
+            ->has('preventionActions')
         );
     }
 
@@ -111,6 +112,7 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->has('blockStatistics')
             ->has('analysisData')
             ->has('availableEvaluationTypes')
+            ->has('preventionActions')
         );
     }
 

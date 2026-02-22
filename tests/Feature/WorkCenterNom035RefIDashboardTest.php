@@ -38,6 +38,7 @@ class WorkCenterNom035RefIDashboardTest extends TestCase
             ->has('analysisData')
             ->has('questionStatistics')
             ->has('blockStatistics')
+            ->has('preventionActions')
         );
     }
 
@@ -120,6 +121,7 @@ class WorkCenterNom035RefIDashboardTest extends TestCase
             ->has('analysisData.demographics.turnos')
             ->has('questionStatistics.questions')
             ->has('blockStatistics.blocks')
+            ->has('preventionActions')
         );
     }
 

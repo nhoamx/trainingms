@@ -40,6 +40,7 @@ class WorkCenterNom035IndexTest extends TestCase
             ->has('availableEvaluationTypes')
             ->has('committeeMembers')
             ->has('constitutiveAct')
+            ->has('sensitizationVideos')
         );
     }
 
@@ -122,6 +123,7 @@ class WorkCenterNom035IndexTest extends TestCase
             ->has('availableEvaluationTypes')
             ->has('committeeMembers')
             ->has('constitutiveAct')
+            ->has('sensitizationVideos')
         );
     }
 
