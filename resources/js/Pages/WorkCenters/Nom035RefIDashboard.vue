@@ -1,7 +1,7 @@
 <template>
   <Dashboard>
     <div class="py-8">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="mb-8">
           <div class="flex flex-col sm:flex-row sm:items-center gap-6 mb-4">
@@ -56,6 +56,8 @@
               :analysis-data="analysisData"
               :question-statistics="questionStatistics"
               :block-statistics="blockStatistics"
+              :ats-panorama-statistics="atsPanoramaStatistics"
+              :acontecimiento-participants="acontecimientoParticipants"
                 :organization-id="dashboardData.organization.id"
                 :analysis-blocks="analysisBlocks"
                 :can-manage-analysis-blocks="canManageAnalysisBlocks"
@@ -219,6 +221,43 @@ interface Props {
       yes_percentage: number;
     }>;
     total_evaluations: number;
+  };
+  atsPanoramaStatistics: {
+    items: Array<{
+      index: number;
+      label: string;
+      yes_count: number;
+      no_count: number;
+      total_responses: number;
+    }>;
+    total_evaluations: number;
+    with_traumatic_event_count: number;
+    without_traumatic_event_count: number;
+  };
+  acontecimientoParticipants: {
+    participants: Array<{
+      id: string;
+      personal_folio: string;
+      name: string;
+      has_any_event: boolean;
+      events: Record<string, boolean>;
+      demographics: {
+        genero: string;
+        edad: string;
+        estado_civil: string;
+        estudios: string;
+        puesto: string;
+        area: string;
+        tipo_puesto: string;
+        tipo_contratacion: string;
+        tipo_personal: string;
+        turno: string;
+        rotacion_turnos: string;
+        tiempo_puesto_actual: string;
+        tiempo_experiencia_laboral_total: string;
+      };
+    }>;
+    total: number;
   };
   analysisBlocks?: {
     referencia_i: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;

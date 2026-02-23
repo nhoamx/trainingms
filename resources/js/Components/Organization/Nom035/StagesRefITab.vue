@@ -7,7 +7,7 @@
         </div>
         <h2 class="text-3xl font-bold text-slate-900">Etapas - Referencia I (ATS)</h2>
       </div>
-      <p class="text-slate-600 mt-2 ml-11">Identificar, analizar, revisar participantes y prevenir por instrumento</p>
+      <p class="text-slate-600 mt-2 ml-11">Panorama general y análisis de acontecimientos traumáticos severos</p>
     </div>
 
     <div class="border-b border-slate-200">
@@ -31,62 +31,266 @@
       </nav>
     </div>
 
-    <div v-if="activeSubTab === 'identificar'" class="space-y-6">
-      <div class="bg-white rounded-lg p-4 border border-slate-200">
-        <div class="flex items-center gap-4">
-          <span class="text-sm font-medium text-slate-700">Vista:</span>
-          <div class="flex gap-2">
-            <button
-              @click="identifyViewMode = 'blocks'"
-              :class="[
-                'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                identifyViewMode === 'blocks' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              ]"
+    <div v-if="activeSubTab === 'panorama'" class="space-y-6">
+      <div class="bg-white rounded-lg p-6 border border-slate-200">
+        <h3 class="text-lg font-bold text-slate-900 mb-2">Panorama general de Acontecimientos</h3>
+        <p class="text-sm text-slate-600 mb-1">
+          Esta gráfica muestra el panorama general de las personas que respondieron sí a alguna de las 6 preguntas de los acontecimientos traumáticos severos..
+        </p>
+        <p class="text-xs text-slate-500">Participantes considerados: {{ atsPanoramaStatistics.total_evaluations }} ({{ atsPanoramaStatistics.without_traumatic_event_count }} sin acontecimientos traumáticos)</p>
+
+        <div class="mt-6 overflow-x-auto">
+          <div class="min-w-[720px] px-2">
+            <div class="h-72 flex items-end gap-4 border-b border-slate-200 pb-3">
+              <div
+                v-for="item in atsPanoramaItems"
+                :key="item.index"
+                class="flex-1 min-w-[100px] flex flex-col items-center gap-2"
+              >
+                <span class="text-xs font-semibold text-slate-700">{{ item.yes_count }}</span>
+                <div class="w-full max-w-16 rounded-t-md transition-all duration-300" :class="item.colorClass" :style="{ height: item.barHeight }"></div>
+                <span class="text-[11px] font-medium text-slate-600">{{ item.shortLabel }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+          <h4 class="text-xl font-semibold text-indigo-900 mb-2">Resumen por acontecimiento</h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div
+              v-for="item in atsPanoramaItems"
+              :key="`legend_${item.index}`"
+              class="rounded-md border border-indigo-100 bg-white px-3 py-2"
             >
-              Bloques
-            </button>
-            <button
-              @click="identifyViewMode = 'questions'"
-              :class="[
-                'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                identifyViewMode === 'questions' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              ]"
-            >
-              Preguntas
-            </button>
+              <div class="flex items-center gap-2">
+                <span class="inline-block h-3 w-3 rounded-full" :class="item.colorClass"></span>
+                <p class="text font-semibold text-slate-900">{{ item.shortLabel }}</p>
+              </div>
+              <p class="mt-1 text-xs text-slate-700"><span class="font-semibold">{{ item.yes_count }}</span> persona(s) han seleccionado sí para {{ item.shortLabel.toLowerCase() }}.</p>
+            </div>
+          </div>
+
+          <p class="mt-4 text-xs text-indigo-900">
+            <span class="font-semibold">{{ atsPanoramaStatistics.without_traumatic_event_count }}</span>
+            persona(s) indicaron que no han sufrido un acontecimiento traumático.
+          </p>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+          <div class="flex flex-col gap-3">
+            <h4 class="text-base font-semibold text-slate-900">Personas que respondieron sí a un acontecimiento</h4>
+
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                @click="selectedAcontecimientoFilter = 'all'"
+                :class="[
+                  'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                  selectedAcontecimientoFilter === 'all'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ]"
+              >
+                Todos
+              </button>
+
+              <button
+                v-for="item in atsPanoramaItems"
+                :key="`chip_${item.index}`"
+                type="button"
+                @click="selectedAcontecimientoFilter = String(item.index)"
+                :class="[
+                  'rounded-full px-4 py-2 text-sm font-medium transition-colors border',
+                  selectedAcontecimientoFilter === String(item.index)
+                    ? 'text-white border-transparent'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                ]"
+                :style="selectedAcontecimientoFilter === String(item.index) ? { backgroundColor: item.hexColor } : undefined"
+              >
+                {{ item.shortLabel }}
+              </button>
+            </div>
+
+            <div class="flex flex-col lg:flex-row lg:items-center gap-3 lg:justify-between">
+              <div class="w-full lg:max-w-sm">
+                <label for="panorama-folio-search" class="sr-only">Buscar por folio</label>
+                <input
+                  id="panorama-folio-search"
+                  v-model="panoramaSearch"
+                  type="text"
+                  placeholder="Buscar por folio..."
+                  class="w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+              </div>
+
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-slate-600">Mostrar</span>
+                <div class="flex items-center gap-2">
+                  <button
+                    v-for="size in pageSizeOptions"
+                    :key="`size_${size}`"
+                    type="button"
+                    @click="panoramaPageSize = size"
+                    :class="[
+                      'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                      panoramaPageSize === size
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ]"
+                  >
+                    {{ size }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-auto rounded-lg border border-slate-200">
+            <table class="min-w-[960px] w-full text-sm">
+              <thead class="bg-slate-50 text-slate-700">
+                <tr>
+                  <th class="px-3 py-2 text-left font-semibold">Folio</th>
+                  <th class="px-3 py-2 text-left font-semibold">Género</th>
+                  <th class="px-3 py-2 text-left font-semibold">Edad</th>
+                  <th class="px-3 py-2 text-left font-semibold">Puesto</th>
+                  <th class="px-3 py-2 text-left font-semibold">Área</th>
+                  <th class="px-3 py-2 text-left font-semibold">Tiempo en el puesto actual</th>
+                  <th class="px-3 py-2 text-right font-semibold">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 bg-white">
+                <tr v-if="paginatedPanoramaParticipants.length === 0">
+                  <td colspan="7" class="px-4 py-8 text-center text-slate-500">
+                    No hay personas para los filtros seleccionados.
+                  </td>
+                </tr>
+                <tr
+                  v-for="person in paginatedPanoramaParticipants"
+                  :key="person.id"
+                  class="hover:bg-slate-50"
+                >
+                  <td class="px-3 py-2 font-semibold text-slate-900">{{ person.personal_folio }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ person.demographics.genero }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ person.demographics.edad }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ person.demographics.puesto }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ person.demographics.area }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ person.demographics.tiempo_puesto_actual }}</td>
+                  <td class="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      @click="openPanoramaDetails(person.id)"
+                      class="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                    >
+                      Ver detalles
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <p class="text-sm text-slate-600">
+              Mostrando {{ paginationSummary.from }}-{{ paginationSummary.to }} de {{ paginationSummary.total }} personas
+            </p>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                @click="panoramaPage = Math.max(1, panoramaPage - 1)"
+                :disabled="panoramaPage === 1"
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <span class="text-sm text-slate-700">Página {{ panoramaPage }} de {{ totalPanoramaPages }}</span>
+              <button
+                type="button"
+                @click="panoramaPage = Math.min(totalPanoramaPages, panoramaPage + 1)"
+                :disabled="panoramaPage >= totalPanoramaPages"
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 pt-2">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <h5 class="text-sm font-semibold text-slate-900 mb-2">Resumen</h5>
+              <div class="rounded-md border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-600">
+                Sin datos de la Guía de referencia III.
+              </div>
+            </div>
+
+            <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+              <h5 class="text-sm font-semibold text-slate-900">Distribución por</h5>
+
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  @click="distributionMode = 'area'"
+                  :class="[
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    distributionMode === 'area'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ]"
+                >
+                  Área
+                </button>
+                <button
+                  type="button"
+                  @click="distributionMode = 'puesto'"
+                  :class="[
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    distributionMode === 'puesto'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ]"
+                >
+                  Puesto
+                </button>
+              </div>
+
+              <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="min-w-full text-sm">
+                  <thead class="bg-slate-50">
+                    <tr>
+                      <th class="px-3 py-2 text-left font-semibold text-slate-700">Acontecimiento</th>
+                      <th class="px-3 py-2 text-right font-semibold text-slate-700">Total participantes</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 bg-white">
+                    <tr
+                      v-for="row in distributionAcontecimientoRows"
+                      :key="`dist_row_${row.index}`"
+                    >
+                      <td class="px-3 py-2 text-slate-700">{{ row.label }}</td>
+                      <td class="px-3 py-2 text-right font-semibold text-slate-900">{{ row.total }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <div v-if="identifyViewMode === 'blocks'" class="bg-white rounded-lg p-6">
-        <BlocksCharts
-          :blocks-data="refIBlocksForCharts"
-          :total-evaluations="blockStatistics.total_evaluations"
-          :binaryMode="true"
-        />
-      </div>
-
-      <div v-else class="bg-white rounded-lg p-6">
-        <QuestionsCharts
-          :questions-data="refIQuestionsForCharts"
-          :total-evaluations="questionStatistics.total_evaluations"
-          :binaryMode="true"
-        />
-      </div>
     </div>
 
-    <div v-if="activeSubTab === 'analizar'" class="space-y-6">
+    <div v-if="activeSubTab === 'acontecimientos'" class="space-y-6">
       <AnalysisFilters :demographics="analysisData.demographics" v-model="analysisFilters" />
 
       <div class="bg-white rounded-xl border border-slate-200 p-6">
         <div class="flex flex-col gap-4">
           <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h3 class="text-lg font-bold text-slate-900">Análisis de respuestas (Ref I)</h3>
-              <p class="text-sm text-slate-600 mt-1">Visualización basada en filtros demográficos, sin niveles de riesgo</p>
+              <h3 class="text-lg font-bold text-slate-900">Acontecimientos ATS</h3>
+              <p class="text-sm text-slate-600 mt-1">Filtro de participantes por acontecimiento y análisis contextual por trabajador.</p>
             </div>
             <p class="text-sm text-slate-600">
-              <span class="font-semibold">{{ filteredEvaluations.length }}</span> evaluaciones filtradas
+              <span class="font-semibold">{{ eventFilteredEvaluations.length }}</span> participantes en el filtro activo
             </p>
           </div>
 
@@ -115,24 +319,24 @@
           </div>
 
           <div class="flex items-center gap-4">
-            <label for="question-filter" class="text-sm font-medium text-slate-700">Pregunta:</label>
+            <label for="question-filter" class="text-sm font-medium text-slate-700">Acontecimiento ATS:</label>
             <select
               id="question-filter"
               v-model="selectedQuestionKey"
               class="flex-1 max-w-3xl rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
             >
-              <option value="">Todas</option>
+              <option value="">Todos (al menos un ATS afirmativo)</option>
               <option
                 v-for="question in questionStatistics.questions"
                 :key="question.key"
                 :value="question.key"
               >
-                {{ `Pregunta ${question.number} - ${question.text}` }}
+                {{ `ATS ${question.number} - ${question.text}` }}
               </option>
             </select>
           </div>
 
-          <div v-if="filteredEvaluations.length > 0" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div v-if="eventFilteredEvaluations.length > 0" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-1 space-y-3">
               <div class="rounded-lg border border-slate-200 p-4">
                 <p class="text-xs uppercase tracking-wide text-slate-500">Total respuestas</p>
@@ -160,6 +364,94 @@
             <p class="text-xs text-slate-500 mt-1">Ajusta los filtros para visualizar resultados de análisis</p>
           </div>
 
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+            <div class="lg:col-span-2 rounded-lg border border-slate-200 overflow-hidden">
+              <div class="bg-slate-50 px-4 py-3 border-b border-slate-200">
+                <h4 class="font-semibold text-slate-900">Lista de participantes</h4>
+              </div>
+              <div v-if="eventFilteredEvaluations.length === 0" class="p-4 text-sm text-slate-500">
+                No hay participantes para el acontecimiento seleccionado.
+              </div>
+              <div v-else class="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                <button
+                  v-for="worker in eventFilteredEvaluations"
+                  :key="worker.id"
+                  type="button"
+                  @click="selectedWorkerId = worker.id"
+                  :class="[
+                    'w-full text-left px-4 py-3 transition-colors',
+                    selectedWorkerId === worker.id ? 'bg-indigo-50' : 'hover:bg-slate-50'
+                  ]"
+                >
+                  <div class="flex items-center justify-between gap-3">
+                    <div>
+                      <p class="font-medium text-slate-900">Folio {{ worker.personal_folio }}</p>
+                      <p class="text-xs text-slate-500">{{ worker.demographics.genero }} · {{ worker.demographics.puesto }} · {{ worker.demographics.area }}</p>
+                    </div>
+                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full px-2 py-1">Sí: {{ worker.yes_count }}</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div class="rounded-lg border border-slate-200 p-4 space-y-3">
+              <h4 class="font-semibold text-slate-900">Trabajador</h4>
+              <div v-if="selectedWorker">
+                <p class="text-sm font-medium text-slate-900">Folio {{ selectedWorker.personal_folio }}</p>
+                <p class="text-xs text-slate-600 mt-1">{{ selectedWorker.demographics.genero }} · {{ selectedWorker.demographics.puesto }}</p>
+                <p class="text-xs text-slate-600">{{ selectedWorker.demographics.area }} · {{ selectedWorker.demographics.turno }}</p>
+
+                <div class="mt-3 pt-3 border-t border-slate-200 space-y-2">
+                  <h5 class="text-xs font-semibold text-slate-700 uppercase tracking-wide">ATS Sí/No</h5>
+                  <div class="max-h-44 overflow-y-auto space-y-1">
+                    <div v-for="question in questionStatistics.questions" :key="`detail_${question.key}`" class="flex items-center justify-between text-xs">
+                      <span class="text-slate-600 mr-2">{{ `ATS ${question.number}` }}</span>
+                      <span :class="isAffirmativeAnswer(selectedWorker.answers?.[question.key]) ? 'text-emerald-700 font-semibold' : 'text-slate-500'">
+                        {{ isAffirmativeAnswer(selectedWorker.answers?.[question.key]) ? 'Sí' : 'No' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="text-sm text-slate-500">Selecciona un trabajador para ver detalle.</p>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 p-4 space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <h4 class="font-semibold text-slate-900">Distribución por</h4>
+              <select
+                v-model="distributionField"
+                class="rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+              >
+                <option value="area">Área</option>
+                <option value="puesto">Puesto</option>
+                <option value="genero">Sexo</option>
+                <option value="turno">Turno</option>
+              </select>
+            </div>
+
+            <div v-if="distributionRows.length === 0" class="text-sm text-slate-500">
+              Sin datos para esta distribución.
+            </div>
+            <div v-else class="overflow-x-auto">
+              <table class="min-w-full text-sm">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th class="px-3 py-2 text-left font-semibold text-slate-700">{{ distributionLabel }}</th>
+                    <th class="px-3 py-2 text-right font-semibold text-slate-700">Incidencias</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr v-for="row in distributionRows" :key="row.label">
+                    <td class="px-3 py-2 text-slate-700">{{ row.label }}</td>
+                    <td class="px-3 py-2 text-right font-medium text-slate-900">{{ row.count }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <AnalysisWysiwygBlocks
             v-if="organizationId && (canManageAnalysisBlocks || analysisBlocks.referencia_i.length > 0)"
             :organization-id="organizationId"
@@ -171,226 +463,129 @@
       </div>
     </div>
 
-    <div v-if="activeSubTab === 'participantes'" class="space-y-6">
-      <div class="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-8 border border-teal-200 hover:shadow-lg transition-shadow">
-        <div class="flex items-center gap-3 mb-6">
-          <div class="p-2 bg-teal-100 rounded-lg">
-            <UserGroupIcon class="w-6 h-6 text-teal-600" />
-          </div>
-          <h3 class="text-2xl font-bold text-teal-900">Informe de Participantes</h3>
-        </div>
-
-        <div v-if="filteredEvaluations.length > 0" class="space-y-6">
-          <div class="bg-white rounded-lg p-4 border border-slate-200">
-            <div class="text-sm text-slate-700">
-              <span class="font-medium">Total de participantes:</span>
-              <span class="font-bold text-teal-600 ml-2">{{ filteredEvaluations.length }}</span>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <ul class="divide-y divide-slate-200">
-              <li
-                v-for="(evaluation, index) in filteredEvaluations"
-                :key="evaluation.id"
-                class="hover:bg-slate-50 transition-colors duration-150 p-4"
-              >
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div class="flex items-center gap-3">
-                    <div class="bg-teal-100 text-teal-800 font-bold rounded-full h-8 w-8 flex items-center justify-center">
-                      {{ index + 1 }}
-                    </div>
-                    <div>
-                      <p class="font-medium text-slate-900">Folio {{ evaluation.personal_folio }}</p>
-                      <p class="text-xs text-slate-500 mt-1">
-                        {{ evaluation.demographics.genero }} · {{ evaluation.demographics.puesto }} · {{ evaluation.demographics.area }} · {{ evaluation.demographics.turno }}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div class="flex items-center gap-3">
-                    <div class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold min-w-[94px] text-center">
-                      Sí: {{ evaluation.yes_count }} / 14
-                    </div>
-                    <span
-                      class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
-                      :style="{
-                        color: '#111827',
-                        backgroundColor: `${analysisData.colors[evaluation.risk_level] ?? '#94A3B8'}33`
-                      }"
-                    >
-                      ATS: {{ analysisData.labels[evaluation.risk_level] ?? evaluation.risk_level }}
-                    </span>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div v-else class="bg-white rounded-lg p-6">
-          <div class="flex items-center justify-center p-8 border-2 border-dashed border-teal-300 rounded-lg">
-            <div class="text-center">
-              <UserGroupIcon class="w-12 h-12 text-teal-400 mx-auto mb-3" />
-              <p class="text-teal-700 font-medium">Sin datos disponibles</p>
-              <p class="text-sm text-teal-600 mt-1">No se han encontrado evaluaciones de participantes para mostrar</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="activeSubTab === 'prevenir'" class="space-y-6">
+    <div v-if="activeSubTab === 'prevencion'" class="space-y-6">
       <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-8 border border-emerald-200 hover:shadow-lg transition-shadow">
         <div class="flex items-center gap-3 mb-6">
           <div class="p-2 bg-emerald-100 rounded-lg">
             <ShieldCheckIcon class="w-6 h-6 text-emerald-600" />
           </div>
-          <h3 class="text-2xl font-bold text-emerald-900">Prevenir y Controlar ATS</h3>
+          <h3 class="text-2xl font-bold text-emerald-900">Prevención y recomendaciones</h3>
         </div>
-        <div class="bg-white rounded-lg p-6 space-y-4">
-          <form
-            v-if="canManagePreventionActions && workCenterId"
-            @submit.prevent="submitPreventionAction"
-            class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-4"
-          >
-            <h4 class="text-sm font-semibold text-emerald-900">Agregar acción preventiva ATS</h4>
-
-            <div>
-              <label for="ref1_prevent_title" class="block text-sm font-medium text-slate-700">Título</label>
-              <input
-                id="ref1_prevent_title"
-                v-model="preventionForm.title"
-                type="text"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
-              />
-              <p v-if="preventionForm.errors.title" class="mt-1 text-xs text-red-500">{{ preventionForm.errors.title }}</p>
-            </div>
-
-            <div>
-              <label for="ref1_prevent_desc" class="block text-sm font-medium text-slate-700">Descripción</label>
-              <textarea
-                id="ref1_prevent_desc"
-                v-model="preventionForm.description"
-                rows="4"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
-              />
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label for="ref1_prevent_responsible" class="block text-sm font-medium text-slate-700">Responsable</label>
-                <input
-                  id="ref1_prevent_responsible"
-                  v-model="preventionForm.responsible"
-                  type="text"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
-                />
-              </div>
-
-              <div>
-                <label for="ref1_prevent_due" class="block text-sm font-medium text-slate-700">Fecha objetivo</label>
-                <input
-                  id="ref1_prevent_due"
-                  v-model="preventionForm.due_date"
-                  type="date"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
-                />
-              </div>
-
-              <div>
-                <label for="ref1_prevent_status" class="block text-sm font-medium text-slate-700">Estatus</label>
-                <select
-                  id="ref1_prevent_status"
-                  v-model="preventionForm.status"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
-                >
-                  <option value="pendiente">Pendiente</option>
-                  <option value="en_proceso">En proceso</option>
-                  <option value="completada">Completada</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="flex justify-end">
-              <button
-                type="submit"
-                :disabled="preventionForm.processing"
-                class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-50"
-              >
-                {{ preventionForm.processing ? 'Guardando...' : 'Guardar acción' }}
-              </button>
-            </div>
-          </form>
-
-          <div v-if="preventionActions.length === 0" class="flex items-center justify-center p-8 border-2 border-dashed border-emerald-300 rounded-lg">
-            <div class="text-center">
+        <div class="bg-white rounded-lg p-8">
+          <div class="flex items-center justify-center border-2 border-dashed border-emerald-300 rounded-lg p-8">
+            <div class="text-center max-w-xl">
               <PencilSquareIcon class="w-12 h-12 text-emerald-400 mx-auto mb-3" />
-              <p class="text-emerald-700 font-medium">Gestión operativa T&amp;MS</p>
-              <p class="text-sm text-emerald-600 mt-1">El equipo de T&amp;MS documenta, actualiza y da seguimiento al plan de prevención</p>
+              <p class="text-emerald-700 font-semibold">Aún no se han subido los análisis o resultados para esta sección.</p>
+              <p class="text-sm text-emerald-600 mt-1">Próxima fase: definición e integración de recomendaciones con el cliente.</p>
             </div>
-          </div>
-
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <article
-              v-for="action in preventionActions"
-              :key="action.id"
-              class="rounded-lg border border-slate-200 p-4 space-y-2"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <h4 class="font-semibold text-slate-900">{{ action.title }}</h4>
-                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" :class="statusClasses[action.status]">
-                  {{ statusLabels[action.status] ?? action.status }}
-                </span>
-              </div>
-
-              <p v-if="action.description" class="text-sm text-slate-600">{{ action.description }}</p>
-
-              <div class="text-xs text-slate-500 flex flex-wrap gap-4">
-                <span v-if="action.responsible">Responsable: {{ action.responsible }}</span>
-                <span v-if="action.due_date">Fecha: {{ action.due_date }}</span>
-              </div>
-
-              <div v-if="canManagePreventionActions && workCenterId" class="flex justify-end">
-                <button
-                  type="button"
-                  @click="deletePreventionAction(action.id)"
-                  class="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-red-500"
-                >
-                  Eliminar
-                </button>
-              </div>
-            </article>
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-3 mb-4">
-            <LightBulbIcon class="w-6 h-6 text-emerald-600" />
-            <h4 class="font-bold text-slate-900">Medidas Preventivas</h4>
+    <div v-if="activeSubTab === 'conclusiones'" class="space-y-6">
+      <div class="bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl p-8 border border-slate-200 hover:shadow-lg transition-shadow">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="p-2 bg-indigo-100 rounded-lg">
+            <LightBulbIcon class="w-6 h-6 text-indigo-600" />
           </div>
-          <p class="text-sm text-slate-600">Definición de acciones para atención de ATS identificados en respuestas Sí/No.</p>
+          <h3 class="text-2xl font-bold text-slate-900">Conclusiones</h3>
         </div>
-        <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-3 mb-4">
-            <ArrowPathIcon class="w-6 h-6 text-emerald-600" />
-            <h4 class="font-bold text-slate-900">Seguimiento</h4>
+        <div class="bg-white rounded-lg p-8">
+          <div class="flex items-center justify-center border-2 border-dashed border-slate-300 rounded-lg p-8">
+            <div class="text-center max-w-xl">
+              <ArrowPathIcon class="w-12 h-12 text-slate-400 mx-auto mb-3" />
+              <p class="text-slate-700 font-semibold">Aún no se han subido los análisis o resultados para esta sección.</p>
+              <p class="text-sm text-slate-500 mt-1">Aquí se mostrará el cierre ejecutivo de hallazgos y acuerdos.</p>
+            </div>
           </div>
-          <p class="text-sm text-slate-600">Control periódico del avance de acciones registradas por el equipo de T&amp;MS.</p>
         </div>
       </div>
     </div>
   </div>
+
+  <div
+      v-if="isPanoramaDetailsOpen"
+      class="fixed inset-0 z-50 "
+      aria-labelledby="panorama-details-title"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="absolute inset-0 bg-slate-900/50" @click="closePanoramaDetails"></div>
+
+      <div class="absolute inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl border-l border-slate-200 overflow-y-auto">
+        <div class="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+          <h3 id="panorama-details-title" class="text-lg font-bold text-slate-900">Detalle de persona</h3>
+          <button
+            type="button"
+            @click="closePanoramaDetails"
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div v-if="selectedPanoramaParticipant" class="p-6 space-y-6">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="text-sm font-semibold text-slate-800 mb-3">Identificación</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div>
+                <p class="text-slate-500">Folio</p>
+                <p class="font-semibold text-slate-900">{{ selectedPanoramaParticipant.personal_folio }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Nombre</p>
+                <p class="font-semibold text-slate-900">{{ selectedPanoramaParticipant.name }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="text-sm font-semibold text-slate-800 mb-3">Datos demográficos</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div><p class="text-slate-500">Género</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.genero }}</p></div>
+              <div><p class="text-slate-500">Edad</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.edad }}</p></div>
+              <div><p class="text-slate-500">Estado civil</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.estado_civil }}</p></div>
+              <div><p class="text-slate-500">Estudios</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.estudios }}</p></div>
+              <div><p class="text-slate-500">Puesto</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.puesto }}</p></div>
+              <div><p class="text-slate-500">Área</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.area }}</p></div>
+              <div><p class="text-slate-500">Tipo de puesto</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.tipo_puesto }}</p></div>
+              <div><p class="text-slate-500">Tipo de contratación</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.tipo_contratacion }}</p></div>
+              <div><p class="text-slate-500">Tipo de personal</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.tipo_personal }}</p></div>
+              <div><p class="text-slate-500">Turno</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.turno }}</p></div>
+              <div><p class="text-slate-500">Rotación de turnos</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.rotacion_turnos }}</p></div>
+              <div><p class="text-slate-500">Tiempo en el puesto actual</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.tiempo_puesto_actual }}</p></div>
+              <div class="md:col-span-2"><p class="text-slate-500">Tiempo de experiencia laboral total</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.tiempo_experiencia_laboral_total }}</p></div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="text-sm font-semibold text-slate-800 mb-3">Respuestas de Acontecimientos</h4>
+            <div class="space-y-2">
+              <div
+                v-for="item in atsPanoramaItems"
+                :key="`detail_event_${item.index}`"
+                class="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2"
+              >
+                <p class="text-sm text-slate-700">{{ item.shortLabel }}</p>
+                <span
+                  :class="selectedPanoramaParticipant.events[String(item.index)] ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'"
+                  class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                >
+                  {{ selectedPanoramaParticipant.events[String(item.index)] ? 'Sí' : 'No' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AnalysisFilters from './Charts/AnalysisFilters.vue';
-import QuestionsCharts from './Charts/QuestionsCharts.vue';
-import BlocksCharts from './Charts/BlocksCharts.vue';
 import AnalysisWysiwygBlocks from './AnalysisWysiwygBlocks.vue';
 import { Chart, registerables } from 'chart.js';
 import {
@@ -415,23 +610,6 @@ interface RefIQuestionStatistic {
   yes_percentage: number;
 }
 
-interface QuestionChartData {
-  number: number;
-  text: string;
-  category: string;
-  domain: string;
-  dimension: string;
-  responses: {
-    siempre: number;
-    casi_siempre: number;
-    algunas_veces: number;
-    casi_nunca: number;
-    nunca: number;
-  };
-  averageScore: number;
-  criticality: 'low' | 'medium' | 'high' | 'critical';
-}
-
 interface RefIBlockStatistic {
   name: string;
   question_numbers: number[];
@@ -440,24 +618,6 @@ interface RefIBlockStatistic {
   no_count: number;
   total_responses: number;
   yes_percentage: number;
-}
-
-interface BlockChartData {
-  block_number: number;
-  instructions: string;
-  question_count: number;
-  questions: number[];
-  responses: {
-    siempre: number;
-    casi_siempre: number;
-    algunas_veces: number;
-    casi_nunca: number;
-    nunca: number;
-  };
-  total_responses: number;
-  average_score: number;
-  negative_percentage: number;
-  criticality: 'low' | 'medium' | 'high' | 'critical';
 }
 
 interface RefIEvaluation {
@@ -494,6 +654,43 @@ interface Props {
     blocks: RefIBlockStatistic[];
     total_evaluations: number;
   };
+  atsPanoramaStatistics: {
+    items: Array<{
+      index: number;
+      label: string;
+      yes_count: number;
+      no_count: number;
+      total_responses: number;
+    }>;
+    total_evaluations: number;
+    with_traumatic_event_count: number;
+    without_traumatic_event_count: number;
+  };
+  acontecimientoParticipants: {
+    participants: Array<{
+      id: string;
+      personal_folio: string;
+      name: string;
+      has_any_event: boolean;
+      events: Record<string, boolean>;
+      demographics: {
+        genero: string;
+        edad: string;
+        estado_civil: string;
+        estudios: string;
+        puesto: string;
+        area: string;
+        tipo_puesto: string;
+        tipo_contratacion: string;
+        tipo_personal: string;
+        turno: string;
+        rotacion_turnos: string;
+        tiempo_puesto_actual: string;
+        tiempo_experiencia_laboral_total: string;
+      };
+    }>;
+    total: number;
+  };
   preventionActions?: Array<{
     id: number;
     title: string;
@@ -519,6 +716,8 @@ const props = withDefaults(defineProps<Props>(), {
   organizationId: undefined,
   analysisBlocks: () => ({ referencia_i: [], referencia_iii: [] }),
   canManageAnalysisBlocks: false,
+  atsPanoramaStatistics: () => ({ items: [], total_evaluations: 0, with_traumatic_event_count: 0, without_traumatic_event_count: 0 }),
+  acontecimientoParticipants: () => ({ participants: [], total: 0 }),
 });
 
 const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);
@@ -571,10 +770,19 @@ const deletePreventionAction = (actionId: number): void => {
   });
 };
 
-const activeSubTab = ref<'identificar' | 'analizar' | 'participantes' | 'prevenir'>('identificar');
-const identifyViewMode = ref<'blocks' | 'questions'>('blocks');
+const activeSubTab = ref<'panorama' | 'acontecimientos' | 'prevencion' | 'conclusiones'>('panorama');
 const chartType = ref<'pie' | 'bar'>('pie');
 const selectedQuestionKey = ref('');
+const selectedWorkerId = ref<string>('');
+const distributionField = ref<'area' | 'puesto' | 'genero' | 'turno'>('area');
+const selectedAcontecimientoFilter = ref<'all' | string>('all');
+const panoramaSearch = ref('');
+const panoramaPage = ref(1);
+const panoramaPageSize = ref(10);
+const distributionMode = ref<'area' | 'puesto'>('area');
+const isPanoramaDetailsOpen = ref(false);
+const selectedPanoramaParticipantId = ref<string | null>(null);
+const pageSizeOptions = [10, 25, 50];
 const analysisFilters = ref({
   genero: '',
   puesto: '',
@@ -583,6 +791,128 @@ const analysisFilters = ref({
 });
 const analysisChartRef = ref<HTMLCanvasElement | null>(null);
 const analysisChartInstance = ref<Chart | null>(null);
+
+const atsColorClasses = [
+  'bg-rose-500',
+  'bg-amber-500',
+  'bg-emerald-500',
+  'bg-sky-500',
+  'bg-violet-500',
+  'bg-fuchsia-500',
+];
+
+const maxAtsYesCount = computed(() => {
+  const values = props.atsPanoramaStatistics.items.map((item) => item.yes_count);
+  return Math.max(...values, 1);
+});
+
+const acontecimientoLabels = [
+  'Accidente',
+  'Asaltos',
+  'Actos violentos',
+  'Secuestro',
+  'Amenazas',
+  'Situación de riesgo',
+];
+
+const atsPanoramaItems = computed(() => {
+  return props.atsPanoramaStatistics.items.map((item, idx) => {
+    const ratio = item.yes_count / maxAtsYesCount.value;
+    const barPixels = Math.max(12, Math.round(ratio * 220));
+
+    return {
+      ...item,
+      shortLabel: acontecimientoLabels[idx] ?? `Acontecimiento ${item.index}`,
+      colorClass: atsColorClasses[idx % atsColorClasses.length],
+      hexColor: atsColorHex[idx % atsColorHex.length],
+      barHeight: `${barPixels}px`,
+    };
+  });
+});
+
+const panoramaParticipantsFiltered = computed(() => {
+  const query = panoramaSearch.value.trim().toLowerCase();
+
+  return props.acontecimientoParticipants.participants.filter((person) => {
+    if (!person.has_any_event) {
+      return false;
+    }
+
+    if (selectedAcontecimientoFilter.value !== 'all' && person.events[selectedAcontecimientoFilter.value] !== true) {
+      return false;
+    }
+
+    if (query.length > 0) {
+      return String(person.personal_folio ?? '').toLowerCase().includes(query);
+    }
+
+    return true;
+  });
+});
+
+const totalPanoramaPages = computed(() => {
+  const total = panoramaParticipantsFiltered.value.length;
+  const pages = Math.ceil(total / panoramaPageSize.value);
+  return Math.max(pages, 1);
+});
+
+const paginatedPanoramaParticipants = computed(() => {
+  const start = (panoramaPage.value - 1) * panoramaPageSize.value;
+  const end = start + panoramaPageSize.value;
+
+  return panoramaParticipantsFiltered.value.slice(start, end);
+});
+
+const paginationSummary = computed(() => {
+  const total = panoramaParticipantsFiltered.value.length;
+
+  if (total === 0) {
+    return {
+      from: 0,
+      to: 0,
+      total,
+    };
+  }
+
+  const from = (panoramaPage.value - 1) * panoramaPageSize.value + 1;
+  const to = Math.min(total, panoramaPage.value * panoramaPageSize.value);
+
+  return {
+    from,
+    to,
+    total,
+  };
+});
+
+const distributionAcontecimientoRows = computed(() => {
+  return atsPanoramaItems.value.map((item) => {
+    const key = String(item.index);
+    const total = panoramaParticipantsFiltered.value.reduce((acc, person) => acc + (person.events[key] ? 1 : 0), 0);
+
+    return {
+      index: item.index,
+      label: item.shortLabel,
+      total,
+    };
+  });
+});
+
+const selectedPanoramaParticipant = computed(() => {
+  if (!selectedPanoramaParticipantId.value) {
+    return null;
+  }
+
+  return props.acontecimientoParticipants.participants.find((person) => person.id === selectedPanoramaParticipantId.value) ?? null;
+});
+
+const openPanoramaDetails = (participantId: string): void => {
+  selectedPanoramaParticipantId.value = participantId;
+  isPanoramaDetailsOpen.value = true;
+};
+
+const closePanoramaDetails = (): void => {
+  isPanoramaDetailsOpen.value = false;
+};
 
 const filteredEvaluations = computed(() => {
   return props.analysisData.evaluations.filter((evaluation) => {
@@ -603,14 +933,54 @@ const filteredEvaluations = computed(() => {
   });
 });
 
+const eventFilteredEvaluations = computed(() => {
+  if (!selectedQuestionKey.value) {
+    return filteredEvaluations.value.filter((evaluation) => (evaluation.yes_count ?? 0) > 0);
+  }
+
+  return filteredEvaluations.value.filter((evaluation) => isAffirmativeAnswer(evaluation.answers?.[selectedQuestionKey.value]));
+});
+
+const selectedWorker = computed(() => {
+  if (!selectedWorkerId.value) {
+    return eventFilteredEvaluations.value[0] ?? null;
+  }
+
+  return eventFilteredEvaluations.value.find((evaluation) => evaluation.id === selectedWorkerId.value) ?? null;
+});
+
+const distributionRows = computed(() => {
+  const bucket = new Map<string, number>();
+
+  eventFilteredEvaluations.value.forEach((evaluation) => {
+    const label = evaluation.demographics[distributionField.value] ?? 'No especificado';
+    bucket.set(label, (bucket.get(label) ?? 0) + 1);
+  });
+
+  return Array.from(bucket.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((left, right) => right.count - left.count);
+});
+
+const distributionLabel = computed(() => {
+  const labels = {
+    area: 'Área',
+    puesto: 'Puesto',
+    genero: 'Sexo',
+    turno: 'Turno',
+  };
+
+  return labels[distributionField.value];
+});
+
 const responseSummary = computed(() => {
-  const participants = filteredEvaluations.value.length;
+  const participants = eventFilteredEvaluations.value.length;
 
   if (selectedQuestionKey.value) {
     let totalResponses = 0;
     let yesCount = 0;
 
-    filteredEvaluations.value.forEach((evaluation) => {
+    eventFilteredEvaluations.value.forEach((evaluation) => {
       const answer = evaluation.answers?.[selectedQuestionKey.value];
 
       if (answer === null || answer === undefined) {
@@ -635,7 +1005,7 @@ const responseSummary = computed(() => {
   }
 
   const totalResponses = participants * 14;
-  const yesCount = filteredEvaluations.value.reduce((total, evaluation) => total + (evaluation.yes_count ?? 0), 0);
+  const yesCount = eventFilteredEvaluations.value.reduce((total, evaluation) => total + (evaluation.yes_count ?? 0), 0);
   const noCount = Math.max(totalResponses - yesCount, 0);
 
   return {
@@ -647,85 +1017,6 @@ const responseSummary = computed(() => {
   };
 });
 
-const refIQuestionsForCharts = computed(() => {
-  const mappedQuestions = props.questionStatistics.questions.map<QuestionChartData>((question) => {
-    const negativePercentage = question.total_responses > 0
-      ? Number(((question.no_count / question.total_responses) * 100).toFixed(2))
-      : 0;
-
-    let criticality: 'low' | 'medium' | 'high' | 'critical' = 'low';
-    if (negativePercentage >= 50) {
-      criticality = 'critical';
-    } else if (negativePercentage >= 30) {
-      criticality = 'high';
-    } else if (negativePercentage >= 15) {
-      criticality = 'medium';
-    }
-
-    return {
-      number: question.number,
-      text: question.text,
-      category: 'Referencia I',
-      domain: 'ATS',
-      dimension: 'Acontecimientos Traumáticos Severos',
-      responses: {
-        siempre: question.yes_count,
-        casi_siempre: 0,
-        algunas_veces: 0,
-        casi_nunca: 0,
-        nunca: question.no_count,
-      },
-      averageScore: Number((question.yes_percentage / 25).toFixed(2)),
-      criticality,
-    };
-  });
-
-  return mappedQuestions.reduce<Record<string, QuestionChartData>>((accumulator, question) => {
-    accumulator[String(question.number)] = question;
-    return accumulator;
-  }, {});
-});
-
-const refIBlocksForCharts = computed(() => {
-  const mappedBlocks = props.blockStatistics.blocks.map<BlockChartData>((block, index) => {
-    const negativePercentage = block.total_responses > 0
-      ? Number(((block.no_count / block.total_responses) * 100).toFixed(2))
-      : 0;
-
-    let criticality: 'low' | 'medium' | 'high' | 'critical' = 'low';
-    if (negativePercentage >= 50) {
-      criticality = 'critical';
-    } else if (negativePercentage >= 30) {
-      criticality = 'high';
-    } else if (negativePercentage >= 15) {
-      criticality = 'medium';
-    }
-
-    return {
-      block_number: index + 1,
-      instructions: block.name,
-      question_count: block.question_count,
-      questions: block.question_numbers,
-      responses: {
-        siempre: block.yes_count,
-        casi_siempre: 0,
-        algunas_veces: 0,
-        casi_nunca: 0,
-        nunca: block.no_count,
-      },
-      total_responses: block.total_responses,
-      average_score: Number((block.yes_percentage / 25).toFixed(2)),
-      negative_percentage: negativePercentage,
-      criticality,
-    };
-  });
-
-  return mappedBlocks.reduce<Record<string, BlockChartData>>((accumulator, block) => {
-    accumulator[String(block.block_number)] = block;
-    return accumulator;
-  }, {});
-});
-
 const isAffirmativeAnswer = (answer: unknown): boolean => {
   if (typeof answer === 'string') {
     const normalizedAnswer = answer.trim().toLowerCase();
@@ -734,6 +1025,15 @@ const isAffirmativeAnswer = (answer: unknown): boolean => {
 
   return answer === true || answer === 1;
 };
+
+const atsColorHex = [
+  '#F43F5E',
+  '#F59E0B',
+  '#10B981',
+  '#0EA5E9',
+  '#8B5CF6',
+  '#D946EF',
+];
 
 const destroyAnalysisChart = (): void => {
   if (analysisChartInstance.value) {
@@ -745,7 +1045,7 @@ const destroyAnalysisChart = (): void => {
 const renderAnalysisChart = async (): Promise<void> => {
   await nextTick();
 
-  if (activeSubTab.value !== 'analizar' || filteredEvaluations.value.length === 0 || !analysisChartRef.value) {
+  if (activeSubTab.value !== 'acontecimientos' || eventFilteredEvaluations.value.length === 0 || !analysisChartRef.value) {
     destroyAnalysisChart();
     return;
   }
@@ -813,13 +1113,35 @@ const renderAnalysisChart = async (): Promise<void> => {
 };
 
 const subTabs = [
-  { key: 'identificar', label: 'Identificar', icon: MagnifyingGlassIcon },
-  { key: 'analizar', label: 'Analizar', icon: ChartBarIcon },
-  { key: 'participantes', label: 'Participantes', icon: UserGroupIcon },
-  { key: 'prevenir', label: 'Prevenir', icon: ShieldCheckIcon },
+  { key: 'panorama', label: 'Panorama general', icon: ChartBarIcon },
+  { key: 'acontecimientos', label: 'Acontecimientos', icon: MagnifyingGlassIcon },
+  { key: 'prevencion', label: 'Prevención y recomendaciones', icon: ShieldCheckIcon },
+  { key: 'conclusiones', label: 'Conclusiones', icon: UserGroupIcon },
 ] as const;
 
-watch([activeSubTab, chartType, filteredEvaluations, selectedQuestionKey], () => {
+watch([eventFilteredEvaluations, selectedQuestionKey], () => {
+  if (!selectedWorkerId.value && eventFilteredEvaluations.value.length > 0) {
+    selectedWorkerId.value = eventFilteredEvaluations.value[0].id;
+    return;
+  }
+
+  const exists = eventFilteredEvaluations.value.some((evaluation) => evaluation.id === selectedWorkerId.value);
+  if (!exists) {
+    selectedWorkerId.value = eventFilteredEvaluations.value[0]?.id ?? '';
+  }
+}, { immediate: true, deep: true });
+
+watch([selectedAcontecimientoFilter, panoramaSearch, panoramaPageSize], () => {
+  panoramaPage.value = 1;
+}, { deep: true });
+
+watch(totalPanoramaPages, (pages) => {
+  if (panoramaPage.value > pages) {
+    panoramaPage.value = pages;
+  }
+});
+
+watch([activeSubTab, chartType, eventFilteredEvaluations, selectedQuestionKey], () => {
   renderAnalysisChart();
 }, { deep: true });
 
