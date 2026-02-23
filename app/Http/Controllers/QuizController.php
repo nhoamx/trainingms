@@ -306,6 +306,7 @@ class QuizController extends Controller
                     ],
                     'reference_i' => config('referencia_i'),
                     'reference_v' => config('referencia_v'),
+                    'demographic_data' => config('demographic-data'),
                     'custom_fields' => $quiz->customFields->map(function ($field) {
                         return [
                             'id' => $field->id,
@@ -329,6 +330,7 @@ class QuizController extends Controller
                     ],
                     'reference_i' => config('referencia_i'),
                     'reference_v' => config('referencia_v'),
+                    'demographic_data' => config('demographic-data'),
                     'custom_fields' => $quiz->customFields->map(function ($field) {
                         return [
                             'id' => $field->id,
@@ -355,6 +357,7 @@ class QuizController extends Controller
                     ],
                     'reference_i' => config('referencia_i'),
                     'reference_v' => config('referencia_v'),
+                    'demographic_data' => config('demographic-data'),
                     'custom_fields' => $quiz->customFields->map(function ($field) {
                         return [
                             'id' => $field->id,
@@ -419,6 +422,7 @@ class QuizController extends Controller
                         ],
                         'reference_i' => config('referencia_i'),
                         'reference_v' => config('referencia_v'),
+                        'demographic_data' => config('demographic-data'),
                         'custom_fields' => $quiz->customFields->map(function ($field) {
                             return [
                                 'id' => $field->id,
@@ -441,6 +445,7 @@ class QuizController extends Controller
                         ],
                         'reference_i' => config('referencia_i'),
                         'reference_v' => config('referencia_v'),
+                        'demographic_data' => config('demographic-data'),
                         'custom_fields' => $quiz->customFields->map(function ($field) {
                             return [
                                 'id' => $field->id,
@@ -466,6 +471,7 @@ class QuizController extends Controller
                         ],
                         'reference_i' => config('referencia_i'),
                         'reference_v' => config('referencia_v'),
+                        'demographic_data' => config('demographic-data'),
                         'custom_fields' => $quiz->customFields->map(function ($field) {
                             return [
                                 'id' => $field->id,

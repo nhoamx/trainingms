@@ -282,9 +282,9 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
         $referenciaI = $dataSnapshot['referencia_i'];
 
-        // Filter only numeric keys (1-13)
+        // Filter only numeric keys (1-14)
         $answers = [];
-        for ($i = 1; $i <= 13; $i++) {
+        for ($i = 1; $i <= 14; $i++) {
             if (isset($referenciaI[$i])) {
                 $answers[$i] = $referenciaI[$i];
             }

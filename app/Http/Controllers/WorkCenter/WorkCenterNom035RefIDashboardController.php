@@ -49,6 +49,7 @@ class WorkCenterNom035RefIDashboardController extends Controller
         $blockStatistics = $this->statisticsService->getBlockStatistics($workCenter);
         $atsPanoramaStatistics = $this->statisticsService->getAtsPanoramaStatistics($workCenter);
         $acontecimientoParticipants = $this->statisticsService->getAcontecimientoParticipants($workCenter);
+        $clinicalAssessmentParticipants = $this->statisticsService->getClinicalAssessmentParticipants($workCenter);
 
         $analysisBlocks = OrganizationAnalysisBlock::query()
             ->where('organization_id', $workCenter->organization_id)
@@ -77,6 +78,7 @@ class WorkCenterNom035RefIDashboardController extends Controller
             'blockStatistics' => $blockStatistics,
             'atsPanoramaStatistics' => $atsPanoramaStatistics,
             'acontecimientoParticipants' => $acontecimientoParticipants,
+            'clinicalAssessmentParticipants' => $clinicalAssessmentParticipants,
             'analysisBlocks' => [
                 'referencia_i' => $analysisBlocks['referencia_i'] ?? [],
                 'referencia_iii' => $analysisBlocks['referencia_iii'] ?? [],

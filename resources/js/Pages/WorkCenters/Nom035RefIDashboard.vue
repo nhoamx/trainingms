@@ -58,6 +58,7 @@
               :block-statistics="blockStatistics"
               :ats-panorama-statistics="atsPanoramaStatistics"
               :acontecimiento-participants="acontecimientoParticipants"
+              :clinical-assessment-participants="clinicalAssessmentParticipants"
                 :organization-id="dashboardData.organization.id"
                 :analysis-blocks="analysisBlocks"
                 :can-manage-analysis-blocks="canManageAnalysisBlocks"
@@ -258,6 +259,59 @@ interface Props {
       };
     }>;
     total: number;
+  };
+  clinicalAssessmentParticipants: {
+    participants: Array<{
+      id: string;
+      personal_folio: string;
+      name: string;
+      has_sections_ii_iii_iv_answers: boolean;
+      requires_clinical_assessment: boolean;
+      criteria_met: string[];
+      sections: {
+        ii: {
+          label: string;
+          yes_count: number;
+          answered_count: number;
+          threshold: number;
+          meets_rule: boolean;
+          responses: Array<{ key: string; number: number; text: string; answer: unknown; is_yes: boolean }>;
+        };
+        iii: {
+          label: string;
+          yes_count: number;
+          answered_count: number;
+          threshold: number;
+          meets_rule: boolean;
+          responses: Array<{ key: string; number: number; text: string; answer: unknown; is_yes: boolean }>;
+        };
+        iv: {
+          label: string;
+          yes_count: number;
+          answered_count: number;
+          threshold: number;
+          meets_rule: boolean;
+          responses: Array<{ key: string; number: number; text: string; answer: unknown; is_yes: boolean }>;
+        };
+      };
+      demographics: {
+        genero: string;
+        edad: string;
+        estado_civil: string;
+        estudios: string;
+        puesto: string;
+        area: string;
+        tipo_puesto: string;
+        tipo_contratacion: string;
+        tipo_personal: string;
+        turno: string;
+        rotacion_turnos: string;
+        tiempo_puesto_actual: string;
+        tiempo_experiencia_laboral_total: string;
+      };
+    }>;
+    total: number;
+    requires_clinical_count: number;
   };
   analysisBlocks?: {
     referencia_i: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;

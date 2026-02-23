@@ -3,13 +3,11 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessOnlineEvaluation;
-use App\Models\DemographicData;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\Quiz;
 use App\Models\SubmissionStatus;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class ProcessOnlineEvaluationTest extends TestCase
@@ -55,6 +53,7 @@ class ProcessOnlineEvaluationTest extends TestCase
                     '11' => true,
                     '12' => false,
                     '13' => true,
+                    '14' => false,
                 ],
             ],
         ]);
@@ -65,13 +64,14 @@ class ProcessOnlineEvaluationTest extends TestCase
         $this->assertNotNull($paperEvaluation);
         $this->assertNotNull($paperEvaluation->referencia_i_answers);
 
-        // Verify indices 1-13 with correct values
+        // Verify indices 1-14 with correct values
         $this->assertEquals(true, $paperEvaluation->referencia_i_answers['1']);
         $this->assertEquals(false, $paperEvaluation->referencia_i_answers['2']);
         $this->assertEquals(true, $paperEvaluation->referencia_i_answers['13']);
+        $this->assertEquals(false, $paperEvaluation->referencia_i_answers['14']);
 
-        // Verify only indices 1-13 are present
-        $this->assertCount(13, $paperEvaluation->referencia_i_answers);
+        // Verify only indices 1-14 are present
+        $this->assertCount(14, $paperEvaluation->referencia_i_answers);
     }
 
     public function test_extracts_standardized_referencia_iii_with_numeric_indices(): void

@@ -403,6 +403,11 @@ class DemographicDataNormalizationService
             return null;
         }
 
+        $configuredOptions = config('demographic-data.work_schedule.options', []);
+        if (is_array($configuredOptions) && array_key_exists($value, $configuredOptions)) {
+            return (string) $configuredOptions[$value];
+        }
+
         $lowerValue = strtolower($value);
 
         // Map for standard Likert (05) - Detailed shift names
