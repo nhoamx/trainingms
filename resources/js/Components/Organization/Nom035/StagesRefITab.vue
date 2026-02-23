@@ -80,7 +80,46 @@
 
         <div class="mt-6 rounded-lg border border-slate-200 bg-white p-4 space-y-4">
           <div class="flex flex-col gap-3">
-            <h4 class="text-base font-semibold text-slate-900">Personas que respondieron sí a un acontecimiento</h4>
+            <h4 class="text-base font-semibold text-slate-900">Personas evaluadas en acontecimientos</h4>
+
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                @click="panoramaResponseFilter = 'all'"
+                :class="[
+                  'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                  panoramaResponseFilter === 'all'
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ]"
+              >
+                Todos
+              </button>
+              <button
+                type="button"
+                @click="panoramaResponseFilter = 'yes'"
+                :class="[
+                  'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                  panoramaResponseFilter === 'yes'
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ]"
+              >
+                Respondieron sí
+              </button>
+              <button
+                type="button"
+                @click="panoramaResponseFilter = 'no'"
+                :class="[
+                  'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                  panoramaResponseFilter === 'no'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ]"
+              >
+                Respondieron no
+              </button>
+            </div>
 
             <div class="flex flex-wrap gap-2">
               <button
@@ -556,6 +595,29 @@
       </div>
     </div>
 
+    <div v-if="activeSubTab === 'seguimiento'" class="space-y-6">
+      <div class="bg-gradient-to-r from-sky-50 to-indigo-50 rounded-xl p-8 border border-sky-200 hover:shadow-lg transition-shadow">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="p-2 bg-sky-100 rounded-lg">
+            <ClipboardDocumentListIcon class="w-6 h-6 text-sky-600" />
+          </div>
+          <h3 class="text-2xl font-bold text-slate-900">Seguimiento</h3>
+        </div>
+        <div class="bg-white rounded-lg p-8">
+          <div class="flex items-center justify-center border-2 border-dashed border-sky-300 rounded-lg p-8">
+            <div class="text-center max-w-2xl space-y-2">
+              <p class="text-sky-800 font-semibold">Próximamente: expediente de seguimiento clínico por persona.</p>
+              <p class="text-sm text-slate-600">
+                Esta sección concentrará el expediente de las personas que pasaron a valoración clínica,
+                incluyendo responsable del equipo, estatus y campos de seguimiento definidos por el cliente.
+              </p>
+              <p class="text-xs text-slate-500">En la siguiente fase se incorporarán los campos y acciones del flujo operativo.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div v-if="activeSubTab === 'prevencion'" class="space-y-6">
       <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-8 border border-emerald-200 hover:shadow-lg transition-shadow">
         <div class="flex items-center gap-3 mb-6">
@@ -795,6 +857,7 @@ import { Chart, registerables } from 'chart.js';
 import {
   ArrowPathIcon,
   ChartBarIcon,
+  ClipboardDocumentListIcon,
   LightBulbIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
@@ -1028,10 +1091,11 @@ const deletePreventionAction = (actionId: number): void => {
   });
 };
 
-const activeSubTab = ref<'panorama' | 'analisis' | 'acontecimientos_traumaticos' | 'prevencion' | 'conclusiones'>('panorama');
+const activeSubTab = ref<'panorama' | 'analisis' | 'acontecimientos_traumaticos' | 'seguimiento' | 'prevencion' | 'conclusiones'>('panorama');
 const chartType = ref<'pie' | 'bar'>('pie');
 const selectedQuestionKey = ref('');
 const selectedAcontecimientoFilter = ref<'all' | string>('all');
+const panoramaResponseFilter = ref<'all' | 'yes' | 'no'>('all');
 const panoramaSearch = ref('');
 const panoramaPage = ref(1);
 const panoramaPageSize = ref(10);
@@ -1096,7 +1160,11 @@ const panoramaParticipantsFiltered = computed(() => {
   const query = panoramaSearch.value.trim().toLowerCase();
 
   return props.acontecimientoParticipants.participants.filter((person) => {
-    if (!person.has_any_event) {
+    if (panoramaResponseFilter.value === 'yes' && !person.has_any_event) {
+      return false;
+    }
+
+    if (panoramaResponseFilter.value === 'no' && person.has_any_event) {
       return false;
     }
 
@@ -1441,14 +1509,21 @@ const renderAnalysisChart = async (): Promise<void> => {
 const subTabs = [
   { key: 'panorama', label: 'Panorama general', icon: ChartBarIcon },
   { key: 'acontecimientos_traumaticos', label: 'Acontecimientos traumáticos', icon: UserGroupIcon },
+  { key: 'seguimiento', label: 'Seguimiento', icon: ClipboardDocumentListIcon },
   { key: 'analisis', label: 'Análisis', icon: MagnifyingGlassIcon },
   { key: 'prevencion', label: 'Prevención y recomendaciones', icon: ShieldCheckIcon },
   { key: 'conclusiones', label: 'Conclusiones', icon: UserGroupIcon },
 ] as const;
 
-watch([selectedAcontecimientoFilter, panoramaSearch, panoramaPageSize], () => {
+watch([selectedAcontecimientoFilter, panoramaResponseFilter, panoramaSearch, panoramaPageSize], () => {
   panoramaPage.value = 1;
 }, { deep: true });
+
+watch(panoramaResponseFilter, (value) => {
+  if (value === 'no' && selectedAcontecimientoFilter.value !== 'all') {
+    selectedAcontecimientoFilter.value = 'all';
+  }
+});
 
 watch([clinicalSearch, clinicalPageSize, clinicalRequirementFilter], () => {
   clinicalPage.value = 1;
