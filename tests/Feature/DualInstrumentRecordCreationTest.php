@@ -168,9 +168,9 @@ class DualInstrumentRecordCreationTest extends TestCase
         $this->assertNull($evaluation->related_evaluation_folio, 'Single record should not have related folio');
     }
 
-    public function test_creates_single_record_for_complete_quiz_without_traumatic_events(): void
+    public function test_creates_two_records_for_complete_quiz_even_when_traumatic_events_are_all_no(): void
     {
-        // Simulate complete quiz but NO traumatic events (no Ref I triggered)
+        // Simulate complete quiz with ATS all "No" (Ref I should still be created)
         $submissionStatus = SubmissionStatus::create([
             'folio' => '020010003', // Type 02 = Ref III
             'personal_id' => '0003',
@@ -203,17 +203,27 @@ class DualInstrumentRecordCreationTest extends TestCase
         // Process submission
         ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
 
-        // Assert: Only 1 record created (Ref III)
-        $evaluations = PaperEvaluation::where('organization_id', $this->organization->id)->get();
-        $this->assertCount(1, $evaluations, 'Should create only 1 record when no traumatic events');
+        // Assert: 2 records created (Ref III + Ref I)
+        $evaluations = PaperEvaluation::where('organization_id', $this->organization->id)
+            ->orderBy('evaluation_type')
+            ->get();
+        $this->assertCount(2, $evaluations, 'Should create 2 records even when ATS are all No');
 
-        $evaluation = $evaluations[0];
-        $this->assertEquals('referencia_iii', $evaluation->evaluation_type);
-        $this->assertEquals('020010003', $evaluation->folio);
-        $this->assertNotNull($evaluation->referencia_iii_answers);
-        $this->assertNull($evaluation->referencia_i_answers);
-        $this->assertNotNull($evaluation->citsats_s1);
-        $this->assertNull($evaluation->related_evaluation_folio);
+        $refI = $evaluations[0];
+        $this->assertEquals('referencia_i', $refI->evaluation_type);
+        $this->assertEquals('010010003', $refI->folio);
+        $this->assertNull($refI->referencia_i_answers, 'Ref I follow-up answers can be null when ATS are all No');
+        $this->assertNotNull($refI->citsats_s1);
+
+        $refIII = $evaluations[1];
+        $this->assertEquals('referencia_iii', $refIII->evaluation_type);
+        $this->assertEquals('020010003', $refIII->folio);
+        $this->assertNotNull($refIII->referencia_iii_answers);
+        $this->assertNull($refIII->referencia_i_answers);
+        $this->assertNotNull($refIII->citsats_s1);
+
+        $this->assertEquals($refI->folio, $refIII->related_evaluation_folio);
+        $this->assertEquals($refIII->folio, $refI->related_evaluation_folio);
     }
 
     public function test_both_records_have_complete_raw_data_for_audit_trail(): void

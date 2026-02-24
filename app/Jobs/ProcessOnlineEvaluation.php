@@ -688,7 +688,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
 
     /**
      * Check if submission has Referencia I data
-     * Allows Ref I without traumatic events for reduced quizzes
+     * For complete quizzes (Ref III + Ref I), Ref I record should exist even if ATS are all "No"
      */
     protected function hasReferenciaI(array $dataSnapshot): bool
     {
@@ -696,12 +696,10 @@ class ProcessOnlineEvaluation implements ShouldQueue
             return false;
         }
 
-        // If this is a complete quiz (has Ref III), require traumatic events
+        // If this is a complete quiz (has Ref III), create Ref I record whenever Ref I block exists.
+        // This guarantees same folio coverage between Ref III and Ref I.
         if (isset($dataSnapshot['referencia_iii']) && ! empty($dataSnapshot['referencia_iii'])) {
-            // ✅ UNIFIED: ATS now lives in referencia_i for both quizzes
-            $acontecimientos = $dataSnapshot['referencia_i']['acontecimientos_traumaticos'] ?? [];
-
-            return collect($acontecimientos)->contains(true);
+            return true;
         }
 
         // For reduced quizzes (no Ref III), allow Ref I without traumatic events check
