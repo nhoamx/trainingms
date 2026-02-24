@@ -71,6 +71,18 @@ class PaperEvaluationObserver
      */
     private function invalidateCache(PaperEvaluation $paperEvaluation, string $event): void
     {
+        if ($paperEvaluation->work_center_id) {
+            $this->cacheService->forgetWorkCenterCaches($paperEvaluation->work_center_id);
+        }
+
+        if ($event === 'updated' && $paperEvaluation->wasChanged('work_center_id')) {
+            $originalWorkCenterId = $paperEvaluation->getOriginal('work_center_id');
+
+            if ($originalWorkCenterId && $originalWorkCenterId !== $paperEvaluation->work_center_id) {
+                $this->cacheService->forgetWorkCenterCaches($originalWorkCenterId);
+            }
+        }
+
         if ($paperEvaluation->organization_id) {
             $orgId = $paperEvaluation->organization_id;
             $isBatchMode = BatchModeContext::isEnabledForOrganization($orgId);
