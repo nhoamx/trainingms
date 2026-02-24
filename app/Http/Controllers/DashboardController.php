@@ -6,6 +6,8 @@ use App\Models\Category;
 use App\Models\Dimension;
 use App\Models\Domain;
 use App\Models\Organization;
+use App\Models\PaperEvaluation;
+use App\Models\WorkCenter;
 use App\Services\EvaluationService;
 use App\Services\ReportService;
 use Illuminate\Http\Request;
@@ -195,6 +197,7 @@ class DashboardController extends Controller
             $data['organizations'] = $this->addOnlineEvaluationCounts($data['organizations']);
             // Add likert-only flag per organization
             $data['organizations'] = $this->addLikertOnlyFlag($data['organizations']);
+            $data['organizations'] = $this->addOrganizationOverviewData($data['organizations']);
         } elseif ($user->hasRole('super-admin')) {
             $data['organizations'] = $this->evaluationService->getAllEvaluationsByOrganization();
             // Admins/SuperAdmins see global demographics
@@ -206,6 +209,7 @@ class DashboardController extends Controller
             $data['organizations'] = $this->addOnlineEvaluationCounts($data['organizations']);
             // Add likert-only flag per organization
             $data['organizations'] = $this->addLikertOnlyFlag($data['organizations']);
+            $data['organizations'] = $this->addOrganizationOverviewData($data['organizations']);
         }
 
         return Inertia::render('Dashboard', $data);
@@ -366,5 +370,64 @@ class DashboardController extends Controller
 
             return $org;
         });
+    }
+
+    /**
+     * Add summarized organization overview fields for admin dashboard.
+     */
+    protected function addOrganizationOverviewData($organizations)
+    {
+        $organizationIds = $organizations->pluck('id')->filter()->values();
+
+        if ($organizationIds->isEmpty()) {
+            return $organizations;
+        }
+
+        $workCenterCounts = WorkCenter::query()
+            ->whereIn('organization_id', $organizationIds)
+            ->selectRaw('organization_id, COUNT(*) as total')
+            ->groupBy('organization_id')
+            ->pluck('total', 'organization_id');
+
+        $lastEvaluationDates = PaperEvaluation::query()
+            ->whereIn('organization_id', $organizationIds)
+            ->where('processing_status', 'completed')
+            ->selectRaw('organization_id, MAX(created_at) as last_evaluation_at')
+            ->groupBy('organization_id')
+            ->pluck('last_evaluation_at', 'organization_id');
+
+        return $organizations->map(function ($org) use ($workCenterCounts, $lastEvaluationDates) {
+            $org['work_centers_count'] = (int) ($workCenterCounts[$org['id']] ?? 0);
+            $org['last_evaluation_at'] = $lastEvaluationDates[$org['id']] ?? null;
+            $org['instrument_labels'] = $this->buildInstrumentLabels($org);
+
+            return $org;
+        });
+    }
+
+    /**
+     * Build human-readable instruments list based on available flags.
+     */
+    protected function buildInstrumentLabels(array $organization): array
+    {
+        $labels = [];
+
+        if (! empty($organization['has_nom_035'])) {
+            $labels[] = 'NOM-035';
+        }
+
+        if (! empty($organization['has_clima_laboral'])) {
+            $labels[] = 'Clima Laboral';
+        }
+
+        if (! empty($organization['has_online_evaluations'])) {
+            $labels[] = 'En Línea';
+        }
+
+        if (! empty($organization['has_nom_002'])) {
+            $labels[] = 'NOM-002';
+        }
+
+        return $labels;
     }
 }

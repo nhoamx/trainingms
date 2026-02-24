@@ -31,9 +31,7 @@ class EvaluationService
     {
         // Traer organizaciones con conteo de quizzes
         $orgs = Organization::withCount('quizzes')->get();
-        $orgIds = $orgs->pluck('id');
         $paperCounts = PaperEvaluation::groupBy('organization_id')
-            ->where('source', 'paper')
             ->where('processing_status', 'completed')
             ->selectRaw('organization_id, COUNT(*) as count')
             ->pluck('count', 'organization_id');

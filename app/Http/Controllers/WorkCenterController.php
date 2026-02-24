@@ -22,7 +22,9 @@ class WorkCenterController extends Controller
     public function index(Organization $organization): Response
     {
         $workCenters = $organization->workCenters()
-            ->withCount(['quizzes', 'paperEvaluations'])
+            ->withCount(['quizzes', 'paperEvaluations' => function ($query) {
+                $query->where('processing_status', 'completed');
+            }])
             ->orderByDesc('is_primary')
             ->orderBy('name')
             ->get();
@@ -93,7 +95,9 @@ class WorkCenterController extends Controller
             abort(403, 'No autorizado.');
         }
 
-        $workCenter->loadCount(['quizzes', 'paperEvaluations']);
+        $workCenter->loadCount(['quizzes', 'paperEvaluations' => function ($query) {
+            $query->where('processing_status', 'completed');
+        }]);
 
         return Inertia::render('WorkCenters/Edit', [
             'title' => 'Editar Centro de Trabajo',
@@ -245,7 +249,9 @@ class WorkCenterController extends Controller
 
         $workCenters = $user->workCenters()
             ->with('organization:id,name')
-            ->withCount('paperEvaluations')
+            ->withCount(['paperEvaluations' => function ($query) {
+                $query->where('processing_status', 'completed');
+            }])
             ->get()
             ->map(function ($workCenter) {
                 return [
