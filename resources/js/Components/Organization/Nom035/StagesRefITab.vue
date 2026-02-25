@@ -265,6 +265,9 @@
 
             <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
               <h5 class="text-sm font-semibold text-slate-900">Distribución por</h5>
+              <p class="text-xs text-slate-600">
+                Objetivo: identificar en qué {{ distributionMode === 'area' ? 'áreas' : 'puestos' }} se concentra la mayor cantidad de respuestas <span class="font-semibold text-rose-700">Sí</span>.
+              </p>
 
               <div class="flex flex-wrap gap-2">
                 <button
@@ -297,17 +300,24 @@
                 <table class="min-w-full text-sm">
                   <thead class="bg-slate-50">
                     <tr>
-                      <th class="px-3 py-2 text-left font-semibold text-slate-700">Acontecimiento</th>
-                      <th class="px-3 py-2 text-right font-semibold text-slate-700">Total participantes</th>
+                      <th class="px-3 py-2 text-left font-semibold text-slate-700">{{ distributionMode === 'area' ? 'Área' : 'Puesto' }}</th>
+                      <th class="px-3 py-2 text-right font-semibold text-slate-700">Personas con Sí</th>
+                      <th class="px-3 py-2 text-right font-semibold text-slate-700">Total personas</th>
+                      <th class="px-3 py-2 text-right font-semibold text-slate-700">% con Sí</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-100 bg-white">
+                    <tr v-if="distributionByGroupRows.length === 0">
+                      <td colspan="4" class="px-3 py-4 text-center text-slate-500">Sin datos para los filtros seleccionados.</td>
+                    </tr>
                     <tr
-                      v-for="row in distributionAcontecimientoRows"
-                      :key="`dist_row_${row.index}`"
+                      v-for="row in distributionByGroupRows"
+                      :key="`dist_row_${distributionMode}_${row.group}`"
                     >
-                      <td class="px-3 py-2 text-slate-700">{{ row.label }}</td>
+                      <td class="px-3 py-2 text-slate-700">{{ row.group }}</td>
+                      <td class="px-3 py-2 text-right font-semibold text-rose-700">{{ row.yesCount }}</td>
                       <td class="px-3 py-2 text-right font-semibold text-slate-900">{{ row.total }}</td>
+                      <td class="px-3 py-2 text-right font-semibold text-indigo-700">{{ row.yesPercentage }}%</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1214,17 +1224,51 @@ const paginationSummary = computed(() => {
   };
 });
 
-const distributionAcontecimientoRows = computed(() => {
-  return atsPanoramaItems.value.map((item) => {
-    const key = String(item.index);
-    const total = panoramaParticipantsFiltered.value.reduce((acc, person) => acc + (person.events[key] ? 1 : 0), 0);
+const distributionByGroupRows = computed(() => {
+  const grouped = new Map<string, { total: number; yesCount: number }>();
+  const selectedEventKey = selectedAcontecimientoFilter.value === 'all' ? null : selectedAcontecimientoFilter.value;
 
-    return {
-      index: item.index,
-      label: item.shortLabel,
-      total,
-    };
+  panoramaParticipantsFiltered.value.forEach((person) => {
+    const rawGroupValue = distributionMode.value === 'area'
+      ? person.demographics.area
+      : person.demographics.puesto;
+
+    const groupValue = String(rawGroupValue ?? '').trim() || 'Sin especificar';
+
+    if (!grouped.has(groupValue)) {
+      grouped.set(groupValue, { total: 0, yesCount: 0 });
+    }
+
+    const entry = grouped.get(groupValue);
+    if (!entry) {
+      return;
+    }
+
+    entry.total += 1;
+
+    const hasYes = selectedEventKey
+      ? person.events[selectedEventKey] === true
+      : person.has_any_event;
+
+    if (hasYes) {
+      entry.yesCount += 1;
+    }
   });
+
+  return [...grouped.entries()]
+    .map(([group, values]) => {
+      const yesPercentage = values.total > 0
+        ? Math.round((values.yesCount / values.total) * 100)
+        : 0;
+
+      return {
+        group,
+        total: values.total,
+        yesCount: values.yesCount,
+        yesPercentage,
+      };
+    })
+    .sort((left, right) => right.yesCount - left.yesCount || right.total - left.total || left.group.localeCompare(right.group, 'es'));
 });
 
 const selectedPanoramaParticipant = computed(() => {
@@ -1477,12 +1521,15 @@ const renderAnalysisChart = async (): Promise<void> => {
         tooltip: {
           callbacks: {
             label: (tooltipItem) => {
-              const value = tooltipItem.parsed as number;
+              const parsedValue = tooltipItem.parsed;
+              const value = typeof parsedValue === 'number'
+                ? parsedValue
+                : Number(tooltipItem.raw ?? parsedValue?.y ?? parsedValue?.x ?? 0);
               const percentage = responseSummary.value.totalResponses > 0
                 ? ((value / responseSummary.value.totalResponses) * 100).toFixed(2)
                 : '0.00';
 
-              return `${value} (${percentage}%)`;
+              return `${Number.isFinite(value) ? value : 0} (${percentage}%)`;
             },
           },
         },
