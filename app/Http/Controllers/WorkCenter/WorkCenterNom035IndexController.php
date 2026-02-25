@@ -46,7 +46,7 @@ class WorkCenterNom035IndexController extends Controller
                     : null,
             ],
             'instruments' => $instruments,
-            'totalEvaluations' => array_sum(array_column($instruments, 'count')),
+            'totalEvaluations' => $this->countTotalParticipants($workCenter),
             'evaluations' => $this->getGeneralEvaluations($workCenter),
             'availableEvaluationTypes' => $this->getAvailableEvaluationTypes($workCenter),
             'committeeMembers' => $workCenter->committeeMembers
@@ -83,6 +83,25 @@ class WorkCenterNom035IndexController extends Controller
                 ->values()
                 ->all(),
         ]);
+    }
+
+    /**
+     * Count unique participants for NOM-035 instruments (Ref I + Ref III).
+     */
+    private function countTotalParticipants(WorkCenter $workCenter): int
+    {
+        return PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('processing_status', 'completed')
+            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii'])
+            ->get(['id', 'personal_folio'])
+            ->map(function (PaperEvaluation $evaluation): string {
+                $folio = trim((string) ($evaluation->personal_folio ?? ''));
+
+                return $folio !== '' ? "folio:{$folio}" : "evaluation:{$evaluation->id}";
+            })
+            ->unique()
+            ->count();
     }
 
     /**

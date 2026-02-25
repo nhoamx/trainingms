@@ -47,7 +47,7 @@
             <div class="flex items-center gap-3">
               <div class="bg-white/20 backdrop-blur-sm rounded-xl px-5 py-3 text-center">
                 <p class="text-3xl font-bold">{{ totalEvaluations }}</p>
-                <p class="text-xs text-blue-100 mt-0.5">Evaluaciones totales</p>
+                <p class="text-xs text-blue-100 mt-0.5">Participantes evaluados</p>
               </div>
             </div>
           </div>
