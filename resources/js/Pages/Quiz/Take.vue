@@ -149,12 +149,12 @@ const isConditionalQuestionsComplete = computed(() => {
 const isAcontecimientosComplete = computed(() => {
     const traumaticQuestions = props.quiz?.questions?.acontecimientos_traumaticos?.questions || [];
     const traumaticAnswers = answers.value.referencia_i.acontecimientos_traumaticos || {};
-    
+
     if (!Array.isArray(traumaticQuestions) || traumaticQuestions.length === 0) return true;
-    
-    // Verificar que todas las preguntas (1-6) tengan respuesta
+
+    // Verificar que todas las preguntas (1-6) tengan respuesta (null es sin responder)
     for (let i = 1; i <= traumaticQuestions.length; i++) {
-        if (traumaticAnswers[i] === undefined) {
+        if (traumaticAnswers[i] == null) {
             return false;
         }
     }

@@ -95,10 +95,10 @@ const isReferenciaVComplete = computed(() => {
 const isAcontecimientosComplete = computed(() => {
     const traumaticQuestions = props.quiz?.questions?.acontecimientos_traumaticos?.questions || [];
     const traumaticAnswers = answers.value.acontecimientos_traumaticos || {};
-    
+
     if (!Array.isArray(traumaticQuestions) || traumaticQuestions.length === 0) return true;
-    
-    return traumaticQuestions.every((_, idx) => traumaticAnswers[idx + 1] !== undefined);
+
+    return traumaticQuestions.every((_, idx) => traumaticAnswers[idx + 1] != null);
 });
 
 const isReferenciaIComplete = computed(() => {
