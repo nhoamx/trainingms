@@ -339,27 +339,27 @@
               <p class="text-sm text-slate-600 mt-1">Explora resultados por perfil demográfico y por pregunta para identificar focos de atención.</p>
             </div>
             <div class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">
-              <span class="font-semibold text-slate-900">{{ eventFilteredEvaluations.length }}</span>
-              <span class="ml-1">participantes en el filtro activo</span>
+              <span class="font-semibold text-slate-900">{{ analysisParticipantSummary.atsEntrants }}</span>
+              <span class="ml-1">personas entraron a ATS (filtro demográfico activo)</span>
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p class="text-xs uppercase tracking-wide text-slate-500">Participantes</p>
-              <p class="mt-1 text-xl font-bold text-slate-900">{{ eventFilteredEvaluations.length }}</p>
+              <p class="text-xs uppercase tracking-wide text-slate-500">Entraron a ATS</p>
+              <p class="mt-1 text-xl font-bold text-slate-900">{{ analysisParticipantSummary.atsEntrants }}</p>
             </div>
             <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-              <p class="text-xs uppercase tracking-wide text-emerald-700">Respuestas Sí</p>
-              <p class="mt-1 text-xl font-bold text-emerald-800">{{ responseSummary.yesCount }}</p>
+              <p class="text-xs uppercase tracking-wide text-emerald-700">Con al menos 1 Sí (bloques II, III y IV)</p>
+              <p class="mt-1 text-xl font-bold text-emerald-800">{{ analysisParticipantSummary.withYesInBlocks }}</p>
             </div>
             <div class="rounded-lg border border-rose-200 bg-rose-50 p-3">
-              <p class="text-xs uppercase tracking-wide text-rose-700">Respuestas No</p>
-              <p class="mt-1 text-xl font-bold text-rose-800">{{ responseSummary.noCount }}</p>
+              <p class="text-xs uppercase tracking-wide text-rose-700">Requieren atención clínica</p>
+              <p class="mt-1 text-xl font-bold text-rose-800">{{ analysisParticipantSummary.requiresClinical }}</p>
             </div>
             <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-              <p class="text-xs uppercase tracking-wide text-indigo-700">% Sí</p>
-              <p class="mt-1 text-xl font-bold text-indigo-800">{{ responseSummary.yesPercentage }}%</p>
+              <p class="text-xs uppercase tracking-wide text-indigo-700">No requieren atención clínica</p>
+              <p class="mt-1 text-xl font-bold text-indigo-800">{{ analysisParticipantSummary.noClinical }}</p>
             </div>
           </div>
 
@@ -372,7 +372,7 @@
                   v-model="selectedQuestionKey"
                   class="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
                 >
-                  <option value="">Todos (al menos un ATS afirmativo)</option>
+                  <option value="">Todos (personas ATS: con o sin Sí en bloques II, III y IV)</option>
                   <option
                     v-for="question in questionStatistics.questions"
                     :key="question.key"
@@ -409,10 +409,10 @@
             </div>
           </div>
 
-          <div v-if="eventFilteredEvaluations.length > 0" class="rounded-xl border border-slate-200 p-4 sm:p-5 bg-white">
+          <div v-if="filteredEvaluations.length > 0" class="rounded-xl border border-slate-200 p-4 sm:p-5 bg-white">
             <div class="mb-3 flex items-center justify-between gap-2">
-              <h4 class="text-sm font-semibold text-slate-900">Visualización de respuestas</h4>
-              <p class="text-xs text-slate-500">Total respuestas consideradas: {{ responseSummary.totalResponses }}</p>
+              <h4 class="text-sm font-semibold text-slate-900">Visualización de participantes</h4>
+              <p class="text-xs text-slate-500">Participantes considerados: {{ participantResponseSummary.totalParticipants }}</p>
             </div>
             <div class="h-[340px]">
               <canvas ref="analysisChartRef" class="w-full" style="height: 320px"></canvas>
@@ -1411,47 +1411,39 @@ const eventFilteredEvaluations = computed(() => {
   return filteredEvaluations.value.filter((evaluation) => isAffirmativeAnswer(evaluation.answers?.[selectedQuestionKey.value]));
 });
 
-const responseSummary = computed(() => {
-  const participants = eventFilteredEvaluations.value.length;
-
-  if (selectedQuestionKey.value) {
-    let totalResponses = 0;
-    let yesCount = 0;
-
-    eventFilteredEvaluations.value.forEach((evaluation) => {
-      const answer = evaluation.answers?.[selectedQuestionKey.value];
-
-      if (answer === null || answer === undefined) {
-        return;
-      }
-
-      totalResponses++;
-      if (isAffirmativeAnswer(answer)) {
-        yesCount++;
-      }
-    });
-
-    const noCount = Math.max(totalResponses - yesCount, 0);
-
-    return {
-      totalResponses,
-      yesCount,
-      noCount,
-      yesPercentage: totalResponses > 0 ? Number(((yesCount / totalResponses) * 100).toFixed(2)) : 0,
-      noPercentage: totalResponses > 0 ? Number(((noCount / totalResponses) * 100).toFixed(2)) : 0,
-    };
-  }
-
-  const totalResponses = participants * 14;
-  const yesCount = eventFilteredEvaluations.value.reduce((total, evaluation) => total + (evaluation.yes_count ?? 0), 0);
-  const noCount = Math.max(totalResponses - yesCount, 0);
+const analysisParticipantSummary = computed(() => {
+  const atsEntrants = filteredEvaluations.value.length;
+  const withYesInBlocks = filteredEvaluations.value.filter((evaluation) => (evaluation.yes_count ?? 0) > 0).length;
+  const requiresClinical = props.clinicalAssessmentParticipants.requires_clinical_count;
+  const noClinical = Math.max(props.clinicalAssessmentParticipants.total - requiresClinical, 0);
 
   return {
-    totalResponses,
-    yesCount,
-    noCount,
-    yesPercentage: totalResponses > 0 ? Number(((yesCount / totalResponses) * 100).toFixed(2)) : 0,
-    noPercentage: totalResponses > 0 ? Number(((noCount / totalResponses) * 100).toFixed(2)) : 0,
+    atsEntrants,
+    withYesInBlocks,
+    requiresClinical,
+    noClinical,
+  };
+});
+
+const participantResponseSummary = computed(() => {
+  const totalParticipants = filteredEvaluations.value.length;
+
+  const yesParticipants = filteredEvaluations.value.filter((evaluation) => {
+    if (!selectedQuestionKey.value) {
+      return (evaluation.yes_count ?? 0) > 0;
+    }
+
+    return isAffirmativeAnswer(evaluation.answers?.[selectedQuestionKey.value]);
+  }).length;
+
+  const noParticipants = Math.max(totalParticipants - yesParticipants, 0);
+
+  return {
+    totalParticipants,
+    yesParticipants,
+    noParticipants,
+    yesPercentage: totalParticipants > 0 ? Number(((yesParticipants / totalParticipants) * 100).toFixed(2)) : 0,
+    noPercentage: totalParticipants > 0 ? Number(((noParticipants / totalParticipants) * 100).toFixed(2)) : 0,
   };
 });
 
@@ -1483,7 +1475,7 @@ const destroyAnalysisChart = (): void => {
 const renderAnalysisChart = async (): Promise<void> => {
   await nextTick();
 
-  if (activeSubTab.value !== 'analisis' || eventFilteredEvaluations.value.length === 0 || !analysisChartRef.value) {
+  if (activeSubTab.value !== 'analisis' || filteredEvaluations.value.length === 0 || !analysisChartRef.value) {
     destroyAnalysisChart();
     return;
   }
@@ -1501,8 +1493,8 @@ const renderAnalysisChart = async (): Promise<void> => {
       labels: ['Sí', 'No'],
       datasets: [
         {
-          label: 'Respuestas',
-          data: [responseSummary.value.yesCount, responseSummary.value.noCount],
+          label: 'Participantes',
+          data: [participantResponseSummary.value.yesParticipants, participantResponseSummary.value.noParticipants],
           backgroundColor: ['#10B981', '#EF4444'],
           borderColor: ['#059669', '#DC2626'],
           borderWidth: 1,
@@ -1525,8 +1517,8 @@ const renderAnalysisChart = async (): Promise<void> => {
               const value = typeof parsedValue === 'number'
                 ? parsedValue
                 : Number(tooltipItem.raw ?? parsedValue?.y ?? parsedValue?.x ?? 0);
-              const percentage = responseSummary.value.totalResponses > 0
-                ? ((value / responseSummary.value.totalResponses) * 100).toFixed(2)
+              const percentage = participantResponseSummary.value.totalParticipants > 0
+                ? ((value / participantResponseSummary.value.totalParticipants) * 100).toFixed(2)
                 : '0.00';
 
               return `${Number.isFinite(value) ? value : 0} (${percentage}%)`;
