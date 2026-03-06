@@ -20,42 +20,53 @@ const props = defineProps({
 
 const searchQuery = ref('');
 const sortBy = ref('default');
+const clinicalFilter = ref('all');
 
 const sortChips = [
   { key: 'default', label: 'Predeterminado' },
-  { key: 'evaluations_desc', label: 'Más evaluaciones' },
-  { key: 'evaluations_asc', label: 'Menos evaluaciones' },
+  { key: 'evaluated_people_desc', label: 'Más personas evaluadas' },
+  { key: 'evaluated_people_asc', label: 'Menos personas evaluadas' },
+];
+
+const clinicalFilterChips = [
+  { key: 'all', label: 'Todos' },
+  { key: 'requires_clinical', label: 'Con atención clínica' },
 ];
 
 const filteredWorkCenters = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
 
-  if (!query) {
-    return props.workCenters;
-  }
-
   return props.workCenters.filter((workCenter) => {
     const name = String(workCenter.name ?? '').toLowerCase();
     const code = String(workCenter.code ?? '').toLowerCase();
     const type = String(workCenter.work_center_type ?? '').toLowerCase();
+    const matchesText = !query || name.includes(query) || code.includes(query) || type.includes(query);
 
-    return name.includes(query) || code.includes(query) || type.includes(query);
+    if (!matchesText) {
+      return false;
+    }
+
+    if (clinicalFilter.value === 'requires_clinical') {
+      return Number(workCenter.requires_clinical_attention_count ?? 0) > 0;
+    }
+
+    return true;
   });
 });
 
 const visibleWorkCenters = computed(() => {
   const workCenters = [...filteredWorkCenters.value];
 
-  if (sortBy.value === 'evaluations_desc') {
+  if (sortBy.value === 'evaluated_people_desc') {
     return workCenters.sort((left, right) => {
-      return Number(right.paper_evaluations_count ?? 0) - Number(left.paper_evaluations_count ?? 0)
+      return Number(right.evaluated_people_count ?? 0) - Number(left.evaluated_people_count ?? 0)
         || String(left.name ?? '').localeCompare(String(right.name ?? ''), 'es');
     });
   }
 
-  if (sortBy.value === 'evaluations_asc') {
+  if (sortBy.value === 'evaluated_people_asc') {
     return workCenters.sort((left, right) => {
-      return Number(left.paper_evaluations_count ?? 0) - Number(right.paper_evaluations_count ?? 0)
+      return Number(left.evaluated_people_count ?? 0) - Number(right.evaluated_people_count ?? 0)
         || String(left.name ?? '').localeCompare(String(right.name ?? ''), 'es');
     });
   }
@@ -63,15 +74,15 @@ const visibleWorkCenters = computed(() => {
   return workCenters;
 });
 
-const totalEvaluations = computed(() => {
-  return visibleWorkCenters.value.reduce((total, workCenter) => total + Number(workCenter.paper_evaluations_count ?? 0), 0);
+const totalEvaluatedPeople = computed(() => {
+  return visibleWorkCenters.value.reduce((total, workCenter) => total + Number(workCenter.evaluated_people_count ?? 0), 0);
 });
 
-const primaryCentersCount = computed(() => {
-  return visibleWorkCenters.value.filter((workCenter) => workCenter.is_primary).length;
+const totalClinicalAttention = computed(() => {
+  return visibleWorkCenters.value.reduce((total, workCenter) => total + Number(workCenter.requires_clinical_attention_count ?? 0), 0);
 });
 
-const getEvaluationsBadgeClass = (count) => {
+const getEvaluatedPeopleBadgeClass = (count) => {
   const safeCount = Number(count ?? 0);
 
   if (safeCount === 0) {
@@ -83,6 +94,16 @@ const getEvaluationsBadgeClass = (count) => {
   }
 
   return 'bg-emerald-100 text-emerald-800';
+};
+
+const getClinicalBadgeClass = (count) => {
+  const safeCount = Number(count ?? 0);
+
+  if (safeCount === 0) {
+    return 'bg-slate-100 text-slate-600';
+  }
+
+  return 'bg-rose-100 text-rose-800';
 };
 
 const getFilterChipClass = (isActive) => {
@@ -122,16 +143,16 @@ const getFilterChipClass = (isActive) => {
 
       <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
         <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <p class="text-xs uppercase tracking-wide text-blue-700">Centros visibles</p>
+          <p class="text-xs uppercase tracking-wide text-blue-700">Total centros de trabajo</p>
           <p class="mt-1 text-2xl font-bold text-blue-900">{{ visibleWorkCenters.length }}</p>
         </div>
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-          <p class="text-xs uppercase tracking-wide text-emerald-700">Evaluaciones acumuladas</p>
-          <p class="mt-1 text-2xl font-bold text-emerald-900">{{ totalEvaluations }}</p>
+          <p class="text-xs uppercase tracking-wide text-emerald-700">Total personas evaluadas</p>
+          <p class="mt-1 text-2xl font-bold text-emerald-900">{{ totalEvaluatedPeople }}</p>
         </div>
-        <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
-          <p class="text-xs uppercase tracking-wide text-violet-700">Centros principales</p>
-          <p class="mt-1 text-2xl font-bold text-violet-900">{{ primaryCentersCount }}</p>
+        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+          <p class="text-xs uppercase tracking-wide text-rose-700">Personas que requieren atención clínica</p>
+          <p class="mt-1 text-2xl font-bold text-rose-900">{{ totalClinicalAttention }}</p>
         </div>
       </div>
 
@@ -178,6 +199,22 @@ const getFilterChipClass = (isActive) => {
               </button>
             </div>
           </div>
+
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700">Filtro de atención clínica</label>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="chip in clinicalFilterChips"
+                :key="chip.key"
+                type="button"
+                :aria-pressed="clinicalFilter === chip.key"
+                :class="getFilterChipClass(clinicalFilter === chip.key)"
+                @click="clinicalFilter = chip.key"
+              >
+                {{ chip.label }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -196,7 +233,8 @@ const getFilterChipClass = (isActive) => {
                 <th class="px-4 py-3 text-left font-semibold text-slate-700">Código</th>
                 <th class="px-4 py-3 text-left font-semibold text-slate-700">Centro de trabajo</th>
                 <th class="px-4 py-3 text-left font-semibold text-slate-700">Tipo</th>
-                <th class="px-4 py-3 text-left font-semibold text-slate-700">Evaluaciones</th>
+                <th class="px-4 py-3 text-left font-semibold text-slate-700">Personas evaluadas</th>
+                <th class="px-4 py-3 text-left font-semibold text-slate-700">Atención clínica</th>
                 <th class="px-4 py-3 text-right font-semibold text-slate-700">Acciones</th>
               </tr>
             </thead>
@@ -205,7 +243,15 @@ const getFilterChipClass = (isActive) => {
                 <td class="px-4 py-3 font-semibold text-slate-900">{{ workCenter.code }}</td>
                 <td class="px-4 py-3">
                   <p class="font-medium text-slate-900">{{ workCenter.name }}</p>
-                  <span v-if="workCenter.is_primary" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">Principal</span>
+                  <div class="mt-1 flex flex-wrap gap-1.5">
+                    <span v-if="workCenter.is_primary" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">Principal</span>
+                    <span
+                      v-if="Number(workCenter.requires_clinical_attention_count ?? 0) > 0"
+                      class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700"
+                    >
+                      Requieren atención clínica: {{ workCenter.requires_clinical_attention_count ?? 0 }}
+                    </span>
+                  </div>
                 </td>
                 <td class="px-4 py-3 text-slate-700">
                   <span class="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
@@ -213,8 +259,13 @@ const getFilterChipClass = (isActive) => {
                   </span>
                 </td>
                 <td class="px-4 py-3">
-                  <span :class="getEvaluationsBadgeClass(workCenter.paper_evaluations_count)" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold">
-                    {{ workCenter.paper_evaluations_count ?? 0 }}
+                  <span :class="getEvaluatedPeopleBadgeClass(workCenter.evaluated_people_count)" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold">
+                    {{ workCenter.evaluated_people_count ?? 0 }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <span :class="getClinicalBadgeClass(workCenter.requires_clinical_attention_count)" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold">
+                    {{ workCenter.requires_clinical_attention_count ?? 0 }}
                   </span>
                 </td>
                 <td class="px-4 py-3">
