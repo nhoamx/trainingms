@@ -6,6 +6,7 @@ use App\Jobs\ProcessPaperEvaluation;
 use App\Models\Evaluation;
 use App\Models\Organization;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -44,7 +45,6 @@ class EvaluationController extends Controller
         ]);
 
         $userId = optional($request->user())->id;
-        $containerName = 'training-and-ms';
         $batchId = Str::uuid()->toString();
         $uploadedFiles = $request->file('files');
         $totalFiles = count($uploadedFiles);
@@ -70,7 +70,6 @@ class EvaluationController extends Controller
             // Crear job con metadata del lote
             $jobs[] = new ProcessPaperEvaluation(
                 $fullPath,
-                $containerName,
                 $userId,
                 $batchId,
                 $index + 1,
@@ -79,10 +78,8 @@ class EvaluationController extends Controller
             );
         }
 
-        // 3. Despachar cada job independientemente (si uno falla, los demás continúan)
-        foreach ($jobs as $job) {
-            dispatch($job);
-        }
+        // 3. Encadenar jobs para garantizar ejecución secuencial y evitar race conditions
+        Bus::chain($jobs)->dispatch();
 
         // 4. Retornar a la misma página con datos del lote para tracking
         return back()->with('batch', [

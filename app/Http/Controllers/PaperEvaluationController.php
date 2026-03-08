@@ -357,14 +357,18 @@ class PaperEvaluationController extends Controller
      */
     public function checkFolioAvailability(Request $request, PaperEvaluation $paperEvaluation): JsonResponse
     {
+        $isElevenDigitFormat = strlen((string) $paperEvaluation->folio) === 11 || ! empty($paperEvaluation->work_center_code);
+        $requiredDigits = $isElevenDigitFormat ? 5 : 4;
+
         $validated = $request->validate([
-            'personal_folio' => ['required', 'string', 'regex:/^\d{4}$/'],
+            'personal_folio' => ['required', 'string', 'regex:/^\d{'.$requiredDigits.'}$/'],
         ]);
 
         $newFolio = PaperEvaluation::generateFolio(
             $paperEvaluation->evaluation_type_code,
             $paperEvaluation->organization_code,
-            $validated['personal_folio']
+            $validated['personal_folio'],
+            $isElevenDigitFormat ? $paperEvaluation->work_center_code : null
         );
 
         $isAvailable = PaperEvaluation::isFolioAvailable($newFolio, $paperEvaluation->id);

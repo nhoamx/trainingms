@@ -30,13 +30,22 @@ class UpdatePaperEvaluationRequest extends FormRequest
             'personal_folio' => [
                 'nullable',
                 'string',
-                'regex:/^\d{4}$/',
                 function ($attribute, $value, $fail) use ($evaluation) {
                     if ($value && $evaluation) {
+                        $isElevenDigitFormat = strlen((string) $evaluation->folio) === 11 || ! empty($evaluation->work_center_code);
+                        $requiredDigits = $isElevenDigitFormat ? 5 : 4;
+
+                        if (! preg_match('/^\d{'.$requiredDigits.'}$/', $value)) {
+                            $fail("El folio personal debe tener exactamente {$requiredDigits} dígitos.");
+
+                            return;
+                        }
+
                         $newFolio = PaperEvaluation::generateFolio(
                             $evaluation->evaluation_type_code,
                             $evaluation->organization_code,
-                            $value
+                            $value,
+                            $isElevenDigitFormat ? $evaluation->work_center_code : null
                         );
 
                         if (! PaperEvaluation::isFolioAvailable($newFolio, $evaluation->id)) {
@@ -56,7 +65,6 @@ class UpdatePaperEvaluationRequest extends FormRequest
         return [
             'evaluee_name.string' => 'El nombre debe ser texto.',
             'evaluee_name.max' => 'El nombre no puede exceder 255 caracteres.',
-            'personal_folio.regex' => 'El folio personal debe tener exactamente 4 dígitos.',
         ];
     }
 

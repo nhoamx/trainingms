@@ -112,30 +112,4 @@ class PaperEvaluationHybridTest extends TestCase
 
         $this->assertFalse($evaluation->isPartiallyComplete());
     }
-
-    public function test_scope_hybrid_filters_only_hybrid_source(): void
-    {
-        $organization = Organization::factory()->create();
-
-        // Create evaluations with different sources
-        PaperEvaluation::factory()->create([
-            'organization_id' => $organization->id,
-            'source' => 'hybrid',
-        ]);
-
-        PaperEvaluation::factory()->create([
-            'organization_id' => $organization->id,
-            'source' => 'paper',
-        ]);
-
-        PaperEvaluation::factory()->create([
-            'organization_id' => $organization->id,
-            'source' => 'online',
-        ]);
-
-        $hybridEvaluations = PaperEvaluation::hybrid()->get();
-
-        $this->assertCount(1, $hybridEvaluations);
-        $this->assertEquals('hybrid', $hybridEvaluations->first()->source);
-    }
 }

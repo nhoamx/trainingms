@@ -490,19 +490,56 @@
             <div class="bg-white rounded-lg p-4 border border-slate-200">
               <div class="text-sm text-slate-700">
                 <span class="font-medium">Total de participantes:</span>
-                <span class="font-bold text-teal-600 ml-2">{{ participantsWithScores.length }}</span>
+                <span class="font-bold text-teal-600 ml-2">{{ filteredParticipants.length }}</span>
+              </div>
+            </div>
+
+            <!-- Filtros de participantes -->
+            <div class="bg-white rounded-lg p-4 border border-slate-200">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label for="participants_sort" class="block text-sm font-medium text-slate-700 mb-1">
+                    Ordenar por
+                  </label>
+                  <select
+                    id="participants_sort"
+                    v-model="participantsSortBy"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="folio">Por folio</option>
+                    <option value="risk">Por nivel de riesgo</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="participants_risk" class="block text-sm font-medium text-slate-700 mb-1">
+                    Filtrar nivel de riesgo
+                  </label>
+                  <select
+                    id="participants_risk"
+                    v-model="participantsRiskFilter"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="">Todos</option>
+                    <option value="nulo">Nulo</option>
+                    <option value="bajo">Bajo</option>
+                    <option value="medio">Medio</option>
+                    <option value="alto">Alto</option>
+                    <option value="muy_alto">Muy Alto</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             <!-- Lista de participantes -->
             <div class="bg-white rounded-lg shadow-md overflow-hidden">
-              <div v-if="participantsWithScores.length === 0" class="p-6 text-center text-slate-500">
+              <div v-if="filteredParticipants.length === 0" class="p-6 text-center text-slate-500">
                 No se encontraron datos de participantes
               </div>
 
               <ul v-else class="divide-y divide-slate-200">
                 <li
-                  v-for="(participant, index) in participantsWithScores"
+                  v-for="(participant, index) in filteredParticipants"
                   :key="participant.personal_folio"
                   class="hover:bg-slate-50 transition-colors duration-150 p-0"
                 >
@@ -521,6 +558,12 @@
                       <span class="font-medium text-slate-900">Folio {{ participant.personal_folio }}</span>
                     </div>
                     <div class="flex items-center gap-4">
+                      <span
+                        :class="getRiskLevelPillClass(participant.risk_level)"
+                        class="px-2 py-1 rounded-full text-xs font-semibold uppercase tracking-wide"
+                      >
+                        {{ getRiskLevelLabel(participant.risk_level) }}
+                      </span>
                       <div class="hidden sm:block w-32 border-b border-dotted border-slate-300"></div>
                       <div :class="getScoreClass(participant.score)" class="px-3 py-1 rounded-full text-white font-medium min-w-[80px] text-center">
                         {{ participant.score }} pts
@@ -924,6 +967,8 @@ const analysisFilters = ref({
 const showRiskModal = ref(false);
 const selectedRiskLevel = ref<string>('');
 const filteredRiskPersonal = ref<any[]>([]);
+const participantsSortBy = ref<'folio' | 'risk'>('folio');
+const participantsRiskFilter = ref<string>('');
 
 // Filtered evaluations based on demographic filters
 const filteredEvaluations = computed(() => {
@@ -1173,10 +1218,9 @@ const participantsWithScores = computed(() => {
   const participants = props.analysisData.evaluations.map((evaluation: any) => {
     // Use the total_score from backend calculation
     const score = evaluation.total_score ?? 0;
-    
-    // Get highest risk level across all domains
-    const riskLevels = Object.values(evaluation.domain_scores).map((s: any) => s.risk_level);
-    const riskLevel = getHighestRiskLevel(riskLevels);
+
+    // Keep risk level consistent with displayed total score in participants tab
+    const riskLevel = getTotalScoreRiskLevel(score);
 
     return {
       personal_folio: evaluation.personal_folio,
@@ -1185,8 +1229,42 @@ const participantsWithScores = computed(() => {
     };
   });
 
-  // Sort by score in descending order (highest to lowest)
-  return participants.sort((a, b) => b.score - a.score);
+  return participants;
+});
+
+const filteredParticipants = computed(() => {
+  const riskWeight: Record<string, number> = {
+    nulo: 0,
+    bajo: 1,
+    medio: 2,
+    alto: 3,
+    muy_alto: 4,
+  };
+
+  let participants = [...participantsWithScores.value];
+
+  if (participantsRiskFilter.value) {
+    participants = participants.filter((participant) => participant.risk_level === participantsRiskFilter.value);
+  }
+
+  if (participantsSortBy.value === 'risk') {
+    participants.sort((a, b) => {
+      const left = riskWeight[a.risk_level] ?? -1;
+      const right = riskWeight[b.risk_level] ?? -1;
+
+      if (right !== left) {
+        return right - left;
+      }
+
+      return b.score - a.score;
+    });
+
+    return participants;
+  }
+
+  participants.sort((a, b) => Number(a.personal_folio) - Number(b.personal_folio));
+
+  return participants;
 });
 
 // Function to get score color class - aligned with nom035_risk_levels.php config
@@ -1196,6 +1274,14 @@ const getScoreClass = (score: number): string => {
   if (score <= 98) return 'bg-amber-500';       // Medio
   if (score <= 139) return 'bg-orange-500';     // Alto
   return 'bg-red-500';                          // Muy Alto
+};
+
+const getTotalScoreRiskLevel = (score: number): string => {
+  if (score <= 49) return 'nulo';
+  if (score <= 74) return 'bajo';
+  if (score <= 98) return 'medio';
+  if (score <= 139) return 'alto';
+  return 'muy_alto';
 };
 
 // Map risk level to appropriate color class
@@ -1208,6 +1294,30 @@ const getRiskLevelColorClass = (level: string): string => {
     'muy_alto': 'text-red-700 font-semibold',
   };
   return classMap[level.toLowerCase()] || 'font-semibold';
+};
+
+const getRiskLevelLabel = (level: string): string => {
+  const labels: Record<string, string> = {
+    nulo: 'Nulo',
+    bajo: 'Bajo',
+    medio: 'Medio',
+    alto: 'Alto',
+    muy_alto: 'Muy Alto',
+  };
+
+  return labels[level] ?? level;
+};
+
+const getRiskLevelPillClass = (level: string): string => {
+  const classes: Record<string, string> = {
+    nulo: 'bg-blue-100 text-blue-700',
+    bajo: 'bg-green-100 text-green-700',
+    medio: 'bg-amber-100 text-amber-700',
+    alto: 'bg-orange-100 text-orange-700',
+    muy_alto: 'bg-red-100 text-red-700',
+  };
+
+  return classes[level] ?? 'bg-slate-100 text-slate-700';
 };
 
 const subTabs = [
