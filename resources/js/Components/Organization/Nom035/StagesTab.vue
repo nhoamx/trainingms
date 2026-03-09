@@ -184,7 +184,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow">
             <div class="flex items-center gap-3 mb-4">
               <ClipboardDocumentListIcon class="w-6 h-6 text-blue-600" />
@@ -198,6 +198,21 @@
               <h4 class="font-bold text-slate-900">Entrevistas</h4>
             </div>
             <p class="text-sm text-slate-600">Conversaciones con trabajadores para detectar situaciones de riesgo</p>
+          </div>
+
+          <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow">
+            <div class="flex items-center gap-3 mb-4">
+              <ExclamationTriangleIcon class="w-6 h-6 text-red-600" />
+              <h4 class="font-bold text-slate-900">Violencia Laboral</h4>
+            </div>
+            <p class="text-sm text-slate-600 mb-4">Monitorea el dominio de violencia laboral (preguntas 57 a 64) y conecta hallazgos con acciones preventivas.</p>
+            <button
+              type="button"
+              @click="openViolenceAnalysisView"
+              class="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-red-500"
+            >
+              Ver analisis de violencia laboral
+            </button>
           </div>
         </div>
       </div>
@@ -248,9 +263,20 @@
                     >
                       Categorías
                     </button>
+                    <button
+                      @click="analysisViewMode = 'violencia'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        analysisViewMode === 'violencia'
+                          ? 'bg-red-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Violencia Laboral
+                    </button>
                   </div>
                   <div class="ml-auto text-sm text-slate-600">
-                    <span class="font-semibold">{{ filteredEvaluations.length }}</span> evaluaciones filtradas
+                    <span class="font-semibold">{{ analysisViewMode === 'violencia' ? filteredViolenceParticipants.length : filteredEvaluations.length }}</span> evaluaciones filtradas
                   </div>
                 </div>
 
@@ -307,7 +333,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
                       </svg>
-                      Pastel
+                      {{ analysisViewMode === 'violencia' ? 'Dona' : 'Pastel' }}
                     </button>
                     <button
                       @click="chartType = 'bar'"
@@ -329,7 +355,7 @@
             </div>
 
             <!-- Distribución y Gráfica -->
-            <div class="bg-white rounded-lg p-6 border border-slate-200">
+            <div v-if="analysisViewMode !== 'violencia'" class="bg-white rounded-lg p-6 border border-slate-200">
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- Cards de distribución -->
                 <div>
@@ -358,6 +384,92 @@
                     :title="analysisViewMode === 'domains' ? (selectedDomain || 'Distribución Global') : (selectedCategory || 'Distribución Global')"
                   />
                 </div>
+              </div>
+            </div>
+
+            <div v-else class="space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-red-700">Total evaluados (dominio)</p>
+                  <p class="mt-1 text-2xl font-bold text-red-900">{{ filteredViolenceParticipants.length }}</p>
+                </div>
+                <div class="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-orange-700">Personas con violencia laboral muy alta</p>
+                  <p class="mt-1 text-2xl font-bold text-orange-900">{{ filteredViolenceVeryHighCount }}</p>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-lg p-6 border border-slate-200">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div>
+                    <RiskDistributionCards
+                      :distribution="filteredViolenceDistribution"
+                      :colors="violenceColors"
+                      :labels="violenceLabels"
+                      @showDetails="showViolenceRiskDetailsModal"
+                    />
+                  </div>
+
+                  <div>
+                    <RiskPieChart
+                      v-if="chartType === 'pie'"
+                      :distribution="filteredViolenceDistribution"
+                      :colors="violenceColors"
+                      :labels="violenceLabels"
+                      :title="'Violencia Laboral (57-64)'"
+                      variant="doughnut"
+                    />
+                    <RiskBarChart
+                      v-else
+                      :distribution="filteredViolenceDistribution"
+                      :colors="violenceColors"
+                      :labels="violenceLabels"
+                      :title="'Violencia Laboral (57-64)'"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                  <h4 class="text-sm font-semibold text-slate-900">Tabla por pregunta (57-64)</h4>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50">
+                      <tr>
+                        <th class="px-4 py-3 text-left font-semibold text-slate-700">Pregunta</th>
+                        <th class="px-4 py-3 text-center font-semibold text-slate-700">Nulo</th>
+                        <th class="px-4 py-3 text-center font-semibold text-slate-700">Bajo</th>
+                        <th class="px-4 py-3 text-center font-semibold text-slate-700">Medio</th>
+                        <th class="px-4 py-3 text-center font-semibold text-slate-700">Alto</th>
+                        <th class="px-4 py-3 text-center font-semibold text-slate-700">Muy Alto</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      <tr v-for="question in filteredViolenceQuestions" :key="question.number">
+                        <td class="px-4 py-3 text-slate-800">
+                          <p class="font-semibold">{{ question.number }}. {{ question.text }}</p>
+                        </td>
+                        <td class="px-4 py-3 text-center">{{ question.distribution.nulo }}</td>
+                        <td class="px-4 py-3 text-center">{{ question.distribution.bajo }}</td>
+                        <td class="px-4 py-3 text-center">{{ question.distribution.medio }}</td>
+                        <td class="px-4 py-3 text-center">{{ question.distribution.alto }}</td>
+                        <td class="px-4 py-3 text-center">{{ question.distribution.muy_alto }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="flex justify-end pb-6">
+                <button
+                  type="button"
+                  @click="openParticipantsWithViolenceRisk"
+                  class="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500"
+                >
+                  Ver participantes que han sufrido violencia laboral muy alta
+                </button>
               </div>
             </div>
 
@@ -528,6 +640,20 @@
                     <option value="muy_alto">Muy Alto</option>
                   </select>
                 </div>
+
+                <div>
+                  <label for="participants_violence" class="block text-sm font-medium text-slate-700 mb-1">
+                    Filtro violencia laboral
+                  </label>
+                  <select
+                    id="participants_violence"
+                    v-model="participantsViolenceFilter"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="">Todos</option>
+                    <option value="muy_alto">Solo violencia laboral muy alta</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -626,6 +752,24 @@
             <h3 class="text-2xl font-bold text-emerald-900">Prevenir y Controlar Riesgos</h3>
           </div>
           <div class="bg-white rounded-lg p-6 space-y-4">
+            <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-red-700">Conexión Violencia Laboral</p>
+                  <p class="text-sm text-red-900 mt-1">
+                    Casos detectados con violencia laboral muy alta: <span class="font-bold">{{ props.violenceLaborStatistics.total_by_level.muy_alto ?? 0 }}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  @click="openViolenceAnalysisView"
+                  class="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-red-500"
+                >
+                  Revisar en Analizar
+                </button>
+              </div>
+            </div>
+
             <form
               v-if="canManagePreventionActions && workCenterId"
               @submit.prevent="submitPreventionAction"
@@ -789,6 +933,7 @@ import {
   LightBulbIcon,
   ArrowPathIcon,
   Cog6ToothIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/vue/24/outline';
 
 interface DomainStatistics {
@@ -856,6 +1001,39 @@ interface AnalysisData {
   labels: Record<string, string>;
 }
 
+interface ViolenceLaborQuestion {
+  number: number;
+  text: string;
+  distribution: Record<string, number>;
+  total_responses: number;
+  high_risk_total: number;
+}
+
+interface ViolenceLaborParticipant {
+  personal_folio: string;
+  demographics: {
+    genero: string;
+    puesto: string;
+    area: string;
+    turno: string;
+  };
+  violence_score: number;
+  risk_level: string;
+  question_levels: Record<string, string>;
+}
+
+interface ViolenceLaborStatistics {
+  question_numbers: number[];
+  labels: Record<string, string>;
+  colors: Record<string, string>;
+  domain_levels: Record<string, { min: number; max: number }>;
+  total_evaluated: number;
+  total_by_level: Record<string, number>;
+  high_risk_total: number;
+  questions: ViolenceLaborQuestion[];
+  participants: ViolenceLaborParticipant[];
+}
+
 interface Props {
   domainStatistics?: DomainStatistics;
   categoryStatistics?: CategoryStatistics;
@@ -864,6 +1042,7 @@ interface Props {
   blockStatistics?: BlockStatistics;
   globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
+  violenceLaborStatistics?: ViolenceLaborStatistics;
   organizationId?: string | number;
   preventionActions?: Array<{
     id: number;
@@ -888,6 +1067,23 @@ const props = withDefaults(defineProps<Props>(), {
   dimensionStatistics: () => ({ dimensions: {}, total_evaluations: 0, colors: {}, labels: {} }),
   globalStatistics: () => ({ global: {}, total_evaluations: 0, colors: {}, labels: {} }),
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
+  violenceLaborStatistics: () => ({
+    question_numbers: [],
+    labels: {},
+    colors: {},
+    domain_levels: {},
+    total_evaluated: 0,
+    total_by_level: {
+      nulo: 0,
+      bajo: 0,
+      medio: 0,
+      alto: 0,
+      muy_alto: 0,
+    },
+    high_risk_total: 0,
+    questions: [],
+    participants: [],
+  }),
   organizationId: () => '',
   preventionActions: () => [],
   canManagePreventionActions: false,
@@ -952,7 +1148,7 @@ const activeSubTab = ref('identificar');
 const identificarViewMode = ref<'global' | 'domains' | 'categories' | 'dimensions' | 'questions' | 'blocks'>('global');
 
 // Analysis state
-const analysisViewMode = ref<'domains' | 'categories'>('domains');
+const analysisViewMode = ref<'domains' | 'categories' | 'violencia'>('domains');
 const selectedDomain = ref<string>(''); // Empty string means "Global" (all domains)
 const selectedCategory = ref<string>(''); // Empty string means "Global" (all categories)
 const chartType = ref<'pie' | 'bar'>('pie'); // Chart type toggle
@@ -969,6 +1165,90 @@ const selectedRiskLevel = ref<string>('');
 const filteredRiskPersonal = ref<any[]>([]);
 const participantsSortBy = ref<'folio' | 'risk'>('folio');
 const participantsRiskFilter = ref<string>('');
+const participantsViolenceFilter = ref<string>('');
+
+const violenceLabels = computed(() => {
+  return Object.keys(props.violenceLaborStatistics.labels || {}).length > 0
+    ? props.violenceLaborStatistics.labels
+    : props.analysisData.labels;
+});
+
+const violenceColors = computed(() => {
+  return Object.keys(props.violenceLaborStatistics.colors || {}).length > 0
+    ? props.violenceLaborStatistics.colors
+    : props.analysisData.colors;
+});
+
+const filteredViolenceParticipants = computed(() => {
+  const participants = props.violenceLaborStatistics.participants ?? [];
+
+  return participants.filter((participant) => {
+    if (analysisFilters.value.genero && participant.demographics.genero !== analysisFilters.value.genero) {
+      return false;
+    }
+    if (analysisFilters.value.puesto && participant.demographics.puesto !== analysisFilters.value.puesto) {
+      return false;
+    }
+    if (analysisFilters.value.area && participant.demographics.area !== analysisFilters.value.area) {
+      return false;
+    }
+    if (analysisFilters.value.turno && participant.demographics.turno !== analysisFilters.value.turno) {
+      return false;
+    }
+
+    return true;
+  });
+});
+
+const filteredViolenceDistribution = computed(() => {
+  const distribution: Record<string, number> = {
+    nulo: 0,
+    bajo: 0,
+    medio: 0,
+    alto: 0,
+    muy_alto: 0,
+  };
+
+  filteredViolenceParticipants.value.forEach((participant) => {
+    if (Object.prototype.hasOwnProperty.call(distribution, participant.risk_level)) {
+      distribution[participant.risk_level]++;
+    }
+  });
+
+  return distribution;
+});
+
+const filteredViolenceVeryHighCount = computed(() => {
+  return filteredViolenceDistribution.value.muy_alto ?? 0;
+});
+
+const filteredViolenceQuestions = computed(() => {
+  const baseQuestions = props.violenceLaborStatistics.questions ?? [];
+
+  return baseQuestions.map((question) => {
+    const distribution: Record<string, number> = {
+      nulo: 0,
+      bajo: 0,
+      medio: 0,
+      alto: 0,
+      muy_alto: 0,
+    };
+
+    filteredViolenceParticipants.value.forEach((participant) => {
+      const level = participant.question_levels?.[String(question.number)];
+      if (level && Object.prototype.hasOwnProperty.call(distribution, level)) {
+        distribution[level]++;
+      }
+    });
+
+    return {
+      ...question,
+      distribution,
+      total_responses: Object.values(distribution).reduce((sum, current) => sum + current, 0),
+      high_risk_total: (distribution.alto ?? 0) + (distribution.muy_alto ?? 0),
+    };
+  });
+});
 
 // Filtered evaluations based on demographic filters
 const filteredEvaluations = computed(() => {
@@ -1202,6 +1482,32 @@ const showRiskDetailsModal = (level: string) => {
   showRiskModal.value = true;
 };
 
+const showViolenceRiskDetailsModal = (level: string): void => {
+  selectedRiskLevel.value = level;
+
+  filteredRiskPersonal.value = filteredViolenceParticipants.value
+    .filter((participant) => participant.risk_level === level)
+    .map((participant) => ({
+      personal_folio: participant.personal_folio,
+      score: participant.violence_score,
+    }));
+
+  showRiskModal.value = true;
+};
+
+const openViolenceAnalysisView = (): void => {
+  activeSubTab.value = 'analizar';
+  analysisViewMode.value = 'violencia';
+  chartType.value = 'pie';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const openParticipantsWithViolenceRisk = (): void => {
+  activeSubTab.value = 'participantes';
+  participantsViolenceFilter.value = 'muy_alto';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 // Function to close risk details modal
 const closeRiskModal = () => {
   showRiskModal.value = false;
@@ -1215,6 +1521,10 @@ const participantsWithScores = computed(() => {
     return [];
   }
 
+  const violenceByFolio = new Map(
+    (props.violenceLaborStatistics.participants ?? []).map((participant) => [participant.personal_folio, participant.risk_level])
+  );
+
   const participants = props.analysisData.evaluations.map((evaluation: any) => {
     // Use the total_score from backend calculation
     const score = evaluation.total_score ?? 0;
@@ -1226,6 +1536,7 @@ const participantsWithScores = computed(() => {
       personal_folio: evaluation.personal_folio,
       score: score,
       risk_level: riskLevel,
+      violence_risk_level: violenceByFolio.get(evaluation.personal_folio) ?? 'nulo',
     };
   });
 
@@ -1242,6 +1553,16 @@ const filteredParticipants = computed(() => {
   };
 
   let participants = [...participantsWithScores.value];
+
+  if (participantsViolenceFilter.value) {
+    participants = participants.filter((participant: any) => {
+      if (participantsViolenceFilter.value === 'muy_alto') {
+        return participant.violence_risk_level === 'muy_alto';
+      }
+
+      return true;
+    });
+  }
 
   if (participantsRiskFilter.value) {
     participants = participants.filter((participant) => participant.risk_level === participantsRiskFilter.value);

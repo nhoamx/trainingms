@@ -36,6 +36,7 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->has('categoryStatistics')
             ->has('dimensionStatistics')
             ->has('globalStatistics')
+            ->has('violenceLaborStatistics')
             ->has('evaluations')
             ->has('preventionActions')
         );
@@ -111,6 +112,7 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->has('questionStatistics')
             ->has('blockStatistics')
             ->has('analysisData')
+            ->has('violenceLaborStatistics.questions')
             ->has('availableEvaluationTypes')
             ->has('preventionActions')
         );
@@ -192,5 +194,39 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->get(route('work-centers.dashboard.nom-035', $workCenter));
 
         $response->assertForbidden();
+    }
+
+    public function test_dashboard_exposes_violence_labor_questions_57_to_64(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->referenciaIII()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => [
+                57 => 'A',
+                58 => 'B',
+                59 => 'C',
+                60 => 'D',
+                61 => 'E',
+                62 => 'A',
+                63 => 'B',
+                64 => 'C',
+            ],
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035', $workCenter));
+
+        $response->assertInertia(fn ($page) => $page
+            ->where('violenceLaborStatistics.question_numbers', [57, 58, 59, 60, 61, 62, 63, 64])
+            ->where('violenceLaborStatistics.total_evaluated', 1)
+            ->has('violenceLaborStatistics.questions', 8)
+        );
     }
 }

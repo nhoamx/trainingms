@@ -73,6 +73,11 @@ class WorkCenterNom035DashboardController extends Controller
 
         $analysisData = $this->calculationService->getEvaluationsWithDemographicsAndScores($workCenter);
 
+        $violenceLaborStatistics = Cache::rememberForever(
+            $this->cacheService->getWcNom035ViolenceCacheKey($workCenter->id),
+            fn () => $this->calculationService->calculateViolenceLaborStatistics($workCenter)
+        );
+
         $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
             ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])
             ->where('processing_status', 'completed')
@@ -121,6 +126,7 @@ class WorkCenterNom035DashboardController extends Controller
             'blockStatistics' => $blockStatistics,
             'globalStatistics' => $globalStatistics,
             'analysisData' => $analysisData,
+            'violenceLaborStatistics' => $violenceLaborStatistics,
             'evaluations' => $evaluations,
             'availableEvaluationTypes' => $availableEvaluationTypes,
             'analysisBlocks' => [

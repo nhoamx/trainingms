@@ -60,6 +60,7 @@
               :block-statistics="props.blockStatistics"
               :global-statistics="props.globalStatistics"
               :analysis-data="props.analysisData"
+              :violence-labor-statistics="props.violenceLaborStatistics"
               :organization-id="props.dashboardData.organization.id"
               :analysis-blocks="props.analysisBlocks"
               :can-manage-analysis-blocks="props.canManageAnalysisBlocks"
@@ -233,6 +234,34 @@ interface Props {
   blockStatistics?: { blocks: Record<string, unknown>; total_evaluations: number };
   globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
+  violenceLaborStatistics?: {
+    question_numbers: number[];
+    labels: Record<string, string>;
+    colors: Record<string, string>;
+    domain_levels: Record<string, { min: number; max: number }>;
+    total_evaluated: number;
+    total_by_level: Record<string, number>;
+    high_risk_total: number;
+    questions: Array<{
+      number: number;
+      text: string;
+      distribution: Record<string, number>;
+      total_responses: number;
+      high_risk_total: number;
+    }>;
+    participants: Array<{
+      personal_folio: string;
+      demographics: {
+        genero: string;
+        puesto: string;
+        area: string;
+        turno: string;
+      };
+      violence_score: number;
+      risk_level: string;
+      question_levels: Record<string, string>;
+    }>;
+  };
   analysisBlocks?: {
     referencia_i: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
     referencia_iii: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
@@ -256,6 +285,17 @@ const props = withDefaults(defineProps<Props>(), {
   dimensionStatistics: () => ({ dimensions: {}, total_evaluations: 0, colors: {}, labels: {} }),
   globalStatistics: () => ({ global: {}, total_evaluations: 0, colors: {}, labels: {} }),
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
+  violenceLaborStatistics: () => ({
+    question_numbers: [],
+    labels: {},
+    colors: {},
+    domain_levels: {},
+    total_evaluated: 0,
+    total_by_level: {},
+    high_risk_total: 0,
+    questions: [],
+    participants: [],
+  }),
   analysisBlocks: () => ({ referencia_i: [], referencia_iii: [] }),
   canManageAnalysisBlocks: false,
   evaluations: () => [],

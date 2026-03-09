@@ -307,6 +307,14 @@ class OrganizationReportCacheService
     }
 
     /**
+     * Get the cache key for WorkCenter NOM-035 violence labor statistics
+     */
+    public function getWcNom035ViolenceCacheKey(int|string $workCenterId): string
+    {
+        return self::WC_PREFIX."_nom035_violence_{$workCenterId}";
+    }
+
+    /**
      * Get the cache key for WorkCenter NOM-035 Referencia I (ATS) statistics
      */
     public function getWcNom035RefIStatsCacheKey(int|string $workCenterId): string
@@ -325,6 +333,7 @@ class OrganizationReportCacheService
         Cache::forget($this->getWcNom035QuestionsCacheKey($workCenterId));
         Cache::forget($this->getWcNom035BlocksCacheKey($workCenterId));
         Cache::forget($this->getWcNom035GlobalCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035ViolenceCacheKey($workCenterId));
         Cache::forget($this->getWcNom035RefIStatsCacheKey($workCenterId));
     }
 }

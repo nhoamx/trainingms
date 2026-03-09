@@ -536,6 +536,117 @@ class WorkCenterNom035CalculationService
     }
 
     /**
+     * Calculate violence labor statistics for questions 57-64.
+     */
+    public function calculateViolenceLaborStatistics(WorkCenter $workCenter): array
+    {
+        $violenceQuestions = [57, 58, 59, 60, 61, 62, 63, 64];
+        $evaluations = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('processing_status', 'completed')
+            ->whereNotNull('referencia_iii_answers')
+            ->with(['demographicData:id,paper_evaluation_id,gender,position,department,work_schedule'])
+            ->select(['id', 'personal_folio', 'referencia_iii_answers'])
+            ->get();
+
+        $riskLevels = config('nom035_risk_levels');
+        $answerValues = config('answer_values');
+        $questionsConfig = config('referencia_iii.general', []);
+
+        $totalByLevel = [
+            'nulo' => 0,
+            'bajo' => 0,
+            'medio' => 0,
+            'alto' => 0,
+            'muy_alto' => 0,
+        ];
+
+        $questionDistributions = [];
+        foreach ($violenceQuestions as $questionNumber) {
+            $questionDistributions[$questionNumber] = [
+                'nulo' => 0,
+                'bajo' => 0,
+                'medio' => 0,
+                'alto' => 0,
+                'muy_alto' => 0,
+            ];
+        }
+
+        $participants = [];
+
+        foreach ($evaluations as $evaluation) {
+            $answers = $evaluation->referencia_iii_answers ?? [];
+            $violenceScore = 0;
+            $answeredQuestions = 0;
+            $questionLevels = [];
+
+            foreach ($violenceQuestions as $questionNumber) {
+                $answer = $answers[$questionNumber] ?? null;
+                if ($answer === null || is_array($answer)) {
+                    continue;
+                }
+
+                $questionKey = str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT);
+                $group = in_array($questionKey, $answerValues['group1']['questions'])
+                    ? 'group1'
+                    : 'group2';
+
+                $score = (int) ($answerValues[$group]['values'][$answer] ?? 0);
+                $level = $this->mapScoreToRiskLevel($score);
+
+                $violenceScore += $score;
+                $answeredQuestions++;
+                $questionLevels[$questionNumber] = $level;
+                $questionDistributions[$questionNumber][$level]++;
+            }
+
+            if ($answeredQuestions === 0) {
+                continue;
+            }
+
+            $overallLevel = $this->getRiskLevel($violenceScore, 'Violencia', $riskLevels);
+            $totalByLevel[$overallLevel]++;
+
+            $participants[] = [
+                'personal_folio' => (string) ($evaluation->personal_folio ?? ''),
+                'demographics' => [
+                    'genero' => $evaluation->demographicData->gender ?? 'No especificado',
+                    'puesto' => $evaluation->demographicData->position ?? 'No especificado',
+                    'area' => $evaluation->demographicData->department ?? 'No especificado',
+                    'turno' => $evaluation->demographicData->work_schedule ?? 'No especificado',
+                ],
+                'violence_score' => $violenceScore,
+                'risk_level' => $overallLevel,
+                'question_levels' => $questionLevels,
+            ];
+        }
+
+        $questions = [];
+        foreach ($violenceQuestions as $questionNumber) {
+            $distribution = $questionDistributions[$questionNumber];
+            $questions[] = [
+                'number' => $questionNumber,
+                'text' => $questionsConfig[$questionNumber] ?? "Pregunta {$questionNumber}",
+                'distribution' => $distribution,
+                'total_responses' => array_sum($distribution),
+                'high_risk_total' => ($distribution['alto'] ?? 0) + ($distribution['muy_alto'] ?? 0),
+            ];
+        }
+
+        return [
+            'question_numbers' => $violenceQuestions,
+            'labels' => $riskLevels['labels'],
+            'colors' => $riskLevels['colors'],
+            'domain_levels' => $riskLevels['domains']['Violencia']['levels'] ?? [],
+            'total_evaluated' => count($participants),
+            'total_by_level' => $totalByLevel,
+            'high_risk_total' => ($totalByLevel['alto'] ?? 0) + ($totalByLevel['muy_alto'] ?? 0),
+            'questions' => $questions,
+            'participants' => $participants,
+        ];
+    }
+
+    /**
      * Get evaluations with demographics and scores for analysis
      */
     public function getEvaluationsWithDemographicsAndScores(WorkCenter $workCenter): array
@@ -776,6 +887,17 @@ class WorkCenterNom035CalculationService
         }
 
         return $totalScore;
+    }
+
+    private function mapScoreToRiskLevel(int $score): string
+    {
+        return match ($score) {
+            0 => 'nulo',
+            1 => 'bajo',
+            2 => 'medio',
+            3 => 'alto',
+            default => 'muy_alto',
+        };
     }
 
     /**
