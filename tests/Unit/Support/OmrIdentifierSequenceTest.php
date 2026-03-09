@@ -9,7 +9,7 @@ class OmrIdentifierSequenceTest extends TestCase
 {
     public function test_total_combinations_matches_expected_catalog_size(): void
     {
-        $this->assertSame(3854, OmrIdentifierSequence::totalCombinations());
+        $this->assertSame(971, OmrIdentifierSequence::totalCombinations());
     }
 
     public function test_catalog_starts_with_expected_order(): void
@@ -20,7 +20,7 @@ class OmrIdentifierSequenceTest extends TestCase
         $this->assertSame('1e', $catalog[4]);
         $this->assertSame('2a', $catalog[5]);
         $this->assertSame('2e', $catalog[9]);
-        $this->assertSame('1a1a', $catalog[10]);
+        $this->assertSame('1a2a', $catalog[10]);
     }
 
     public function test_validation_only_accepts_identifiers_from_catalog(): void
@@ -30,6 +30,9 @@ class OmrIdentifierSequenceTest extends TestCase
         $this->assertTrue(OmrIdentifierSequence::isValid('1ab2cd'));
 
         $this->assertFalse(OmrIdentifierSequence::isValid('1_a'));
+        $this->assertFalse(OmrIdentifierSequence::isValid('1a1b'));
+        $this->assertFalse(OmrIdentifierSequence::isValid('2a1b'));
+        $this->assertFalse(OmrIdentifierSequence::isValid('2a2b'));
         $this->assertFalse(OmrIdentifierSequence::isValid('1aa'));
         $this->assertFalse(OmrIdentifierSequence::isValid('3a'));
     }

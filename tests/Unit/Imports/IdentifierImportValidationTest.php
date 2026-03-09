@@ -67,6 +67,24 @@ class IdentifierImportValidationTest extends TestCase
         $this->assertTrue($validator->passes());
     }
 
+    public function test_department_import_rejects_identifier_with_wrong_row_order(): void
+    {
+        $organization = Organization::factory()->create();
+        $import = new DepartmentAreasImport($organization, app(DepartmentAreaService::class));
+
+        $validator = Validator::make(
+            [
+                'nombre_del_departamento' => 'Area Test',
+                'identificador' => '2a1b',
+            ],
+            $import->rules(),
+            $import->customValidationMessages()
+        );
+
+        $this->assertTrue($validator->fails());
+        $this->assertStringContainsString('solo se permite 1...2...', $validator->errors()->first('identificador'));
+    }
+
     public function test_department_import_rejects_identifier_longer_than_twelve_characters(): void
     {
         $organization = Organization::factory()->create();

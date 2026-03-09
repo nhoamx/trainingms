@@ -6,7 +6,11 @@ use RuntimeException;
 
 class OmrIdentifierSequence
 {
-    private const ROWS = ['1', '2'];
+    private const SINGLE_BLOCK_ROWS = ['1', '2'];
+
+    private const FIRST_DOUBLE_BLOCK_ROW = '1';
+
+    private const SECOND_DOUBLE_BLOCK_ROW = '2';
 
     private const LETTERS = ['a', 'b', 'c', 'd', 'e'];
 
@@ -37,7 +41,7 @@ class OmrIdentifierSequence
 
         $catalog = [];
 
-        foreach (self::ROWS as $row) {
+        foreach (self::SINGLE_BLOCK_ROWS as $row) {
             foreach ($letterCombinations[1] as $letters) {
                 $catalog[] = $row.$letters;
             }
@@ -45,13 +49,9 @@ class OmrIdentifierSequence
 
         foreach (range(1, count(self::LETTERS)) as $secondBlockLength) {
             foreach (range(1, count(self::LETTERS)) as $firstBlockLength) {
-                foreach (self::ROWS as $firstRow) {
-                    foreach ($letterCombinations[$firstBlockLength] as $firstLetters) {
-                        foreach (self::ROWS as $secondRow) {
-                            foreach ($letterCombinations[$secondBlockLength] as $secondLetters) {
-                                $catalog[] = $firstRow.$firstLetters.$secondRow.$secondLetters;
-                            }
-                        }
+                foreach ($letterCombinations[$firstBlockLength] as $firstLetters) {
+                    foreach ($letterCombinations[$secondBlockLength] as $secondLetters) {
+                        $catalog[] = self::FIRST_DOUBLE_BLOCK_ROW.$firstLetters.self::SECOND_DOUBLE_BLOCK_ROW.$secondLetters;
                     }
                 }
             }
@@ -97,7 +97,7 @@ class OmrIdentifierSequence
 
     public static function validationMessage(): string
     {
-        return 'Formato de identificador invalido. Ejemplos validos: 1a, 2a, 1a2b, 1ab2cd.';
+        return 'Formato de identificador invalido. Ejemplos validos: 1a, 2a, 1a2b, 1ab2cd. En doble bloque solo se permite 1...2...';
     }
 
     /**
