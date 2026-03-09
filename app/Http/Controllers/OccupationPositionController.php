@@ -7,6 +7,7 @@ use App\Imports\OccupationPositionsImport;
 use App\Models\OccupationPosition;
 use App\Models\Organization;
 use App\Services\OccupationPositionService;
+use App\Support\OmrIdentifierSequence;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -30,6 +31,20 @@ class OccupationPositionController extends Controller
         $validated = $request->validate([
             'organization_id' => 'required|uuid|exists:organizations,id',
             'name' => 'required|string|max:255',
+            'identifier' => [
+                'nullable',
+                'string',
+                'max:12',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+
+                    if (! OmrIdentifierSequence::isValid((string) $value)) {
+                        $fail(OmrIdentifierSequence::validationMessage());
+                    }
+                },
+            ],
         ]);
 
         // Buscar la organización
@@ -38,7 +53,8 @@ class OccupationPositionController extends Controller
         // Crear el puesto usando nuestro servicio
         $position = $this->occupationService->createPosition(
             $organization,
-            $validated['name']
+            $validated['name'],
+            $validated['identifier'] ?? null
         );
 
         // Redireccionar con un mensaje flash de éxito y devolver el puesto creado

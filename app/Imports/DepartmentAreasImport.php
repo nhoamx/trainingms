@@ -4,6 +4,7 @@ namespace App\Imports;
 
 use App\Models\Organization;
 use App\Services\DepartmentAreaService;
+use App\Support\OmrIdentifierSequence;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -39,6 +40,7 @@ class DepartmentAreasImport implements ToCollection, WithHeadingRow, WithValidat
                 });
 
                 $identifier = $row['identificador'] ?? null;
+                $normalizedIdentifier = $identifier ? OmrIdentifierSequence::normalize($identifier) : null;
                 $name = $row['nombre_del_departamento'] ?? null;
 
                 // Validar que tengamos el nombre
@@ -50,9 +52,9 @@ class DepartmentAreasImport implements ToCollection, WithHeadingRow, WithValidat
                 }
 
                 // Si tiene identificador, buscar el departamento existente
-                if (! empty($identifier)) {
+                if (! empty($normalizedIdentifier)) {
                     $existingArea = $this->organization->departmentAreas()
-                        ->where('identifier', $identifier)
+                        ->where('identifier', $normalizedIdentifier)
                         ->first();
 
                     if ($existingArea) {
@@ -70,7 +72,7 @@ class DepartmentAreasImport implements ToCollection, WithHeadingRow, WithValidat
                 }
 
                 // Si no existe o no tiene identificador, crear nuevo departamento
-                $this->departmentService->createArea($this->organization, $name);
+                $this->departmentService->createArea($this->organization, $name, $normalizedIdentifier);
                 $this->createdCount++;
             } catch (\Exception $e) {
                 $this->errors[] = "Fila {$rowNumber}: {$e->getMessage()}";
@@ -86,7 +88,20 @@ class DepartmentAreasImport implements ToCollection, WithHeadingRow, WithValidat
     {
         return [
             'nombre_del_departamento' => 'required|string|max:255',
-            'identificador' => 'nullable|string|max:10',
+            'identificador' => [
+                'nullable',
+                'string',
+                'max:12',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+
+                    if (! OmrIdentifierSequence::isValid((string) $value)) {
+                        $fail(OmrIdentifierSequence::validationMessage());
+                    }
+                },
+            ],
         ];
     }
 
@@ -99,6 +114,7 @@ class DepartmentAreasImport implements ToCollection, WithHeadingRow, WithValidat
             'nombre_del_departamento.required' => 'El nombre del departamento es requerido',
             'nombre_del_departamento.string' => 'El nombre del departamento debe ser texto',
             'nombre_del_departamento.max' => 'El nombre del departamento no debe exceder 255 caracteres',
+            'identificador.max' => 'El identificador no debe exceder 12 caracteres',
         ];
     }
 
