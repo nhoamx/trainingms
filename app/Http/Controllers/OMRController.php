@@ -319,6 +319,7 @@ class OMRController extends Controller
             'questions' => $questions,
             'totalQuestions' => count($questions),
             'folio' => $request->input('folio', '000000000'), // Default 9-digit folio
+            'showPrefilledFolio' => false,
         ]);
     }
 

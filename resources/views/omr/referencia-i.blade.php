@@ -158,9 +158,17 @@
         font-size: 9px;
         text-align: center;
     }
+    .folio-section.no-prefill .bubble-filled,
+    .folio-section.no-prefill .bubble-small.bubble-filled,
+    .folio-section.no-prefill .bubble-tiny.bubble-filled {
+        background-color: transparent !important;
+    }
 </style>
 
 <div>
+    @php
+        $showPrefilledFolio = $showPrefilledFolio ?? true;
+    @endphp
 
     @section('date-row')
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 5mm; width: 100%;">
@@ -194,14 +202,14 @@
     @endsection
 
     <div class="folio-instructions-row">
-        <div class="folio-section">
+        <div class="folio-section {{ $showPrefilledFolio ? '' : 'no-prefill' }}">
         <div class="folio-title">Folio</div>
         <!-- Header con espacios para escribir los dígitos -->
         <div class="folio-header">
             <div class="folio-digit-column"></div>
             @for($i = 0; $i < 11; $i++)
                 <div class="folio-position-header">
-                    {{ isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
+                    {{ $showPrefilledFolio && isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
                 </div>
             @endfor
         </div>
@@ -212,7 +220,7 @@
                 <div class="folio-bubbles-row">
                     @for($i = 0; $i < 11; $i++)
                         @php
-                            $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
+                            $folioDigit = $showPrefilledFolio && isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
                             // For Referencia I, don't fill bubbles in last 5 positions (person code)
                             // New 11-digit format: [TT][OO][CC][PPPPP]
                             // Fill: template code (0-1), organization code (2-3), work center code (4-5)

@@ -171,4 +171,21 @@ class OMRPdfGenerationTest extends TestCase
         $response->assertStatus(200);
         $response->assertDownload();
     }
+
+    public function test_referencia_i_web_preview_disables_prefilled_folio(): void
+    {
+        $response = $this->get(route('omr.referencia-i'));
+
+        $response->assertOk();
+        $response->assertViewHas('showPrefilledFolio', false);
+    }
+
+    public function test_referencia_i_web_preview_keeps_query_folio_but_hides_prefill(): void
+    {
+        $response = $this->get(route('omr.referencia-i', ['folio' => '01020300001']));
+
+        $response->assertOk();
+        $response->assertViewHas('folio', '01020300001');
+        $response->assertViewHas('showPrefilledFolio', false);
+    }
 }
