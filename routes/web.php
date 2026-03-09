@@ -625,6 +625,20 @@ Route::prefix('omr')->name('omr.')->group(function () {
     Route::get('/escala-cisneros', [OMRController::class, 'escalaCisneros'])->name('escala-cisneros');
     Route::get('/likert', [OMRController::class, 'likert'])->name('likert');
 
+    // Admin-only blank templates (without folio prefill)
+    Route::get('/download/blank/referencia-i', [OMRController::class, 'downloadBlankReferenciaI'])
+        ->middleware(['auth', 'role:admin|super-admin'])
+        ->name('download.blank.referencia-i');
+    Route::get('/download/blank/referencia-iii', [OMRController::class, 'downloadBlankReferenciaIII'])
+        ->middleware(['auth', 'role:admin|super-admin'])
+        ->name('download.blank.referencia-iii');
+    Route::get('/download/blank/referencia-v', [OMRController::class, 'downloadBlankReferenciaV'])
+        ->middleware(['auth', 'role:admin|super-admin'])
+        ->name('download.blank.referencia-v');
+    Route::get('/download/blank/escala-cisneros', [OMRController::class, 'downloadBlankEscalaCisneros'])
+        ->middleware(['auth', 'role:admin|super-admin'])
+        ->name('download.blank.escala-cisneros');
+
     // POST route for PDF generation (authenticated)
     Route::post('/generate-pdf', [OMRController::class, 'generatePdf'])
         ->middleware('auth')

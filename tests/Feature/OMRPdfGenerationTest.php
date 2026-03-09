@@ -6,6 +6,7 @@ use App\Models\FolioBatch;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class OMRPdfGenerationTest extends TestCase
@@ -21,6 +22,10 @@ class OMRPdfGenerationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'organization', 'guard_name' => 'web']);
 
         // Create test user
         $this->user = User::factory()->create();
@@ -187,5 +192,44 @@ class OMRPdfGenerationTest extends TestCase
         $response->assertOk();
         $response->assertViewHas('folio', '01020300001');
         $response->assertViewHas('showPrefilledFolio', false);
+    }
+
+    public function test_blank_template_download_requires_authentication(): void
+    {
+        $response = $this->get(route('omr.download.blank.referencia-i'));
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_blank_template_download_requires_admin_role(): void
+    {
+        $organizationUser = User::factory()->create();
+        $organizationUser->assignRole('organization');
+
+        $response = $this->actingAs($organizationUser)
+            ->get(route('omr.download.blank.referencia-i'));
+
+        $response->assertStatus(403);
+    }
+
+    public function test_admin_can_download_all_blank_omr_templates(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $routes = [
+            'omr.download.blank.referencia-i',
+            'omr.download.blank.referencia-iii',
+            'omr.download.blank.referencia-v',
+            'omr.download.blank.escala-cisneros',
+        ];
+
+        foreach ($routes as $routeName) {
+            $response = $this->actingAs($admin)->get(route($routeName));
+
+            $response->assertStatus(200);
+            $response->assertHeader('content-type', 'application/pdf');
+            $response->assertDownload();
+        }
     }
 }
