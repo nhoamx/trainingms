@@ -36,6 +36,7 @@ class WorkCenterNom035CisnerosDashboardController extends Controller
             'cisnerosSummary' => $cisnerosDashboard['summary'],
             'authorsChart' => $cisnerosDashboard['authors_chart'],
             'frequencyChart' => $cisnerosDashboard['frequency_chart'],
+            'participants' => $cisnerosDashboard['participants'],
             'responsesTable' => $cisnerosDashboard['responses_table'],
         ]);
     }

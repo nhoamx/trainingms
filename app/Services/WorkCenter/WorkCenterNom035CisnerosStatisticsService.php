@@ -14,12 +14,16 @@ class WorkCenterNom035CisnerosStatisticsService
      *   summary: array{total_evaluations: int, victim_yes: int, victim_no: int, victim_unknown: int, victim_yes_percentage: float},
      *   authors_chart: array<int, array{key: string, label: string, count: int, color: string}>,
      *   frequency_chart: array<int, array{key: string, label: string, count: int, color: string}>,
+     *   participants: array<int, array{id: string, folio: string, personal_folio: string, gender: string, position: string, department: string, victim_last_6_months: bool|null, victim_last_6_months_label: string, answered_questions: int}>,
      *   responses_table: array<int, array{folio: string, personal_folio: string, question_number: int, question_text: string, author_code: string|null, author_label: string|null, frequency_value: int|null, frequency_label: string|null, victim_last_6_months: bool|null, victim_last_6_months_label: string}>
      * }
      */
     public function getDashboardData(WorkCenter $workCenter): array
     {
         $evaluations = PaperEvaluation::query()
+            ->with([
+                'demographicData:paper_evaluation_id,gender,position,department',
+            ])
             ->where('work_center_id', $workCenter->id)
             ->where('evaluation_type', 'cisneros')
             ->where('processing_status', 'completed')
@@ -76,6 +80,7 @@ class WorkCenterNom035CisnerosStatisticsService
         ];
 
         $responsesTable = [];
+        $participants = [];
         $victimYes = 0;
         $victimNo = 0;
         $victimUnknown = 0;
@@ -85,6 +90,7 @@ class WorkCenterNom035CisnerosStatisticsService
         foreach ($evaluations as $evaluation) {
             $answers = is_array($evaluation->cisneros_answers) ? $evaluation->cisneros_answers : [];
             $victimInLastSixMonths = $this->normalizeVictimAnswer($answers['44'] ?? null);
+            $answeredQuestions = 0;
 
             if ($victimInLastSixMonths === true) {
                 $victimYes++;
@@ -109,6 +115,8 @@ class WorkCenterNom035CisnerosStatisticsService
                     continue;
                 }
 
+                $answeredQuestions++;
+
                 if ($authorCode !== null) {
                     $authorDistribution[$authorCode]++;
                 }
@@ -132,6 +140,20 @@ class WorkCenterNom035CisnerosStatisticsService
                         : ($victimInLastSixMonths ? 'SI' : 'NO'),
                 ];
             }
+
+            $participants[] = [
+                'id' => $evaluation->id,
+                'folio' => $evaluation->folio,
+                'personal_folio' => $evaluation->personal_folio,
+                'gender' => $evaluation->demographicData?->gender ?: 'No registrado',
+                'position' => $evaluation->demographicData?->position ?: 'No registrado',
+                'department' => $evaluation->demographicData?->department ?: 'No registrado',
+                'victim_last_6_months' => $victimInLastSixMonths,
+                'victim_last_6_months_label' => $victimInLastSixMonths === null
+                    ? 'Sin respuesta'
+                    : ($victimInLastSixMonths ? 'SI' : 'NO'),
+                'answered_questions' => $answeredQuestions,
+            ];
         }
 
         usort($responsesTable, function (array $left, array $right): int {
@@ -177,6 +199,7 @@ class WorkCenterNom035CisnerosStatisticsService
             ],
             'authors_chart' => $authorsChart,
             'frequency_chart' => $frequencyChart,
+            'participants' => $participants,
             'responses_table' => $responsesTable,
         ];
     }

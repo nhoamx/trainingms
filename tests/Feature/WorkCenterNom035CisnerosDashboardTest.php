@@ -34,9 +34,11 @@ class WorkCenterNom035CisnerosDashboardTest extends TestCase
             ->has('cisnerosSummary')
             ->has('authorsChart')
             ->has('frequencyChart')
+            ->has('participants')
             ->has('responsesTable')
             ->where('cisnerosEvaluationsCount', 0)
             ->where('cisnerosSummary.total_evaluations', 0)
+            ->where('participants', [])
             ->where('responsesTable', [])
         );
     }
@@ -118,6 +120,8 @@ class WorkCenterNom035CisnerosDashboardTest extends TestCase
             ->where('cisnerosSummary.victim_no', 1)
             ->has('authorsChart', 3)
             ->has('frequencyChart', 7)
+            ->has('participants', 2)
+            ->where('participants.0.folio', '049990001')
             ->has('responsesTable', 3)
             ->where('responsesTable.0.folio', '049990001')
             ->where('responsesTable.0.question_number', 1)
