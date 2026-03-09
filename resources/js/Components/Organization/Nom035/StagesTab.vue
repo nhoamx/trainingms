@@ -242,6 +242,17 @@
                   <span class="text-sm font-medium text-slate-700">Vista:</span>
                   <div class="flex gap-2">
                     <button
+                      @click="analysisViewMode = 'general_report'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        analysisViewMode === 'general_report'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Reporte General
+                    </button>
+                    <button
                       @click="analysisViewMode = 'domains'"
                       :class="[
                         'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
@@ -276,7 +287,8 @@
                     </button>
                   </div>
                   <div class="ml-auto text-sm text-slate-600">
-                    <span class="font-semibold">{{ analysisViewMode === 'violencia' ? filteredViolenceParticipants.length : filteredEvaluations.length }}</span> evaluaciones filtradas
+                    <span class="font-semibold">{{ analysisViewMode === 'violencia' ? filteredViolenceParticipants.length : (analysisViewMode === 'general_report' ? (props.generalReport?.total_evaluations ?? 0) : filteredEvaluations.length) }}</span>
+                    {{ analysisViewMode === 'general_report' ? 'evaluaciones incluidas' : 'evaluaciones filtradas' }}
                   </div>
                 </div>
 
@@ -317,7 +329,7 @@
                 </div>
 
                 <!-- Chart Type Toggle -->
-                <div class="flex items-center gap-4">
+                <div v-if="analysisViewMode !== 'general_report'" class="flex items-center gap-4">
                   <span class="text-sm font-medium text-slate-700">Tipo de Gráfica:</span>
                   <div class="flex gap-2">
                     <button
@@ -354,8 +366,77 @@
               </div>
             </div>
 
+            <div v-if="analysisViewMode === 'general_report'" class="bg-white rounded-lg p-6 border border-slate-200 space-y-4">
+              <div class="flex flex-col gap-1">
+                <h4 class="text-lg font-semibold text-slate-900">Detalle por Categoría, Dominio y Dimensión</h4>
+                <p class="text-sm text-slate-600">Promedio de puntajes por ítem considerando a todas las evaluaciones del centro de trabajo.</p>
+              </div>
+
+              <div v-if="props.generalReport && props.generalReport.rows.length > 0" class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead class="bg-slate-50">
+                    <tr>
+                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Categoría</th>
+                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Dominio</th>
+                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Dimensión</th>
+                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Ítem</th>
+                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Puntaje Promedio</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-slate-200">
+                    <template v-for="(cat, catIdx) in groupedGeneralReport" :key="`cat_${catIdx}`">
+                      <template v-for="(dom, domIdx) in cat.dominios" :key="`dom_${catIdx}_${domIdx}`">
+                        <template v-for="(dim, dimIdx) in dom.dimensiones" :key="`dim_${catIdx}_${domIdx}_${dimIdx}`">
+                          <template v-for="(item, itemIdx) in dim.items" :key="`item_${catIdx}_${domIdx}_${dimIdx}_${itemIdx}`">
+                            <tr>
+                              <td v-if="domIdx === 0 && dimIdx === 0 && itemIdx === 0" :rowspan="cat.rowspan" class="px-4 py-3 border border-slate-200 text-center align-middle bg-slate-50">
+                                <div class="font-medium text-slate-900">{{ cat.nombre }}</div>
+                                <div class="mt-1">
+                                  <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskBadgeClass(cat.nivel_riesgo)]">
+                                    {{ cat.nivel_riesgo }}: {{ formatScore(cat.puntaje) }}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td v-if="dimIdx === 0 && itemIdx === 0" :rowspan="dom.rowspan" class="px-4 py-3 border border-slate-200 text-center align-middle">
+                                <div class="font-medium text-slate-900">{{ dom.nombre }}</div>
+                                <div class="mt-1">
+                                  <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskBadgeClass(dom.nivel_riesgo)]">
+                                    {{ dom.nivel_riesgo }}: {{ formatScore(dom.puntaje) }}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td v-if="itemIdx === 0" :rowspan="dim.rowspan" class="px-4 py-3 border border-slate-200 text-center align-middle text-slate-700">
+                                {{ dim.nombre }}
+                              </td>
+
+                              <td class="px-4 py-3 border border-slate-200 text-slate-800">
+                                <span class="font-semibold text-indigo-600">{{ item.item_numero }}.</span>
+                                {{ item.nombre }}
+                              </td>
+
+                              <td class="px-4 py-3 border border-slate-200 text-center">
+                                <span class="inline-flex rounded px-2 py-1 font-semibold" :class="getAverageItemScoreClass(item.puntaje)">
+                                  {{ formatScore(item.puntaje) }}
+                                </span>
+                              </td>
+                            </tr>
+                          </template>
+                        </template>
+                      </template>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+
+              <div v-else class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                <p class="text-slate-600">No hay datos suficientes para generar el reporte general.</p>
+              </div>
+            </div>
+
             <!-- Distribución y Gráfica -->
-            <div v-if="analysisViewMode !== 'violencia'" class="bg-white rounded-lg p-6 border border-slate-200">
+            <div v-if="analysisViewMode !== 'violencia' && analysisViewMode !== 'general_report'" class="bg-white rounded-lg p-6 border border-slate-200">
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- Cards de distribución -->
                 <div>
@@ -387,7 +468,7 @@
               </div>
             </div>
 
-            <div v-else class="space-y-6">
+            <div v-if="analysisViewMode === 'violencia'" class="space-y-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="rounded-lg border border-red-200 bg-red-50 p-4">
                   <p class="text-xs font-semibold uppercase tracking-wide text-red-700">Total evaluados (dominio)</p>
@@ -1001,6 +1082,29 @@ interface AnalysisData {
   labels: Record<string, string>;
 }
 
+interface GeneralReportRow {
+  categoria: {
+    nombre: string;
+    puntaje: number;
+    nivel_riesgo: string;
+  };
+  dominio: {
+    nombre: string;
+    puntaje: number;
+    nivel_riesgo: string;
+  };
+  dimension: string;
+  item: string;
+  item_numero: number;
+  puntaje: number;
+}
+
+interface GeneralReport {
+  total_evaluations: number;
+  average_total_score: number;
+  rows: GeneralReportRow[];
+}
+
 interface ViolenceLaborQuestion {
   number: number;
   text: string;
@@ -1042,6 +1146,7 @@ interface Props {
   blockStatistics?: BlockStatistics;
   globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
+  generalReport?: GeneralReport;
   violenceLaborStatistics?: ViolenceLaborStatistics;
   organizationId?: string | number;
   preventionActions?: Array<{
@@ -1067,6 +1172,7 @@ const props = withDefaults(defineProps<Props>(), {
   dimensionStatistics: () => ({ dimensions: {}, total_evaluations: 0, colors: {}, labels: {} }),
   globalStatistics: () => ({ global: {}, total_evaluations: 0, colors: {}, labels: {} }),
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
+  generalReport: () => ({ total_evaluations: 0, average_total_score: 0, rows: [] }),
   violenceLaborStatistics: () => ({
     question_numbers: [],
     labels: {},
@@ -1148,7 +1254,7 @@ const activeSubTab = ref('identificar');
 const identificarViewMode = ref<'global' | 'domains' | 'categories' | 'dimensions' | 'questions' | 'blocks'>('global');
 
 // Analysis state
-const analysisViewMode = ref<'domains' | 'categories' | 'violencia'>('domains');
+const analysisViewMode = ref<'general_report' | 'domains' | 'categories' | 'violencia'>('general_report');
 const selectedDomain = ref<string>(''); // Empty string means "Global" (all domains)
 const selectedCategory = ref<string>(''); // Empty string means "Global" (all categories)
 const chartType = ref<'pie' | 'bar'>('pie'); // Chart type toggle
@@ -1248,6 +1354,71 @@ const filteredViolenceQuestions = computed(() => {
       high_risk_total: (distribution.alto ?? 0) + (distribution.muy_alto ?? 0),
     };
   });
+});
+
+const groupedGeneralReport = computed(() => {
+  type GroupedDimension = { nombre: string; rowspan: number; items: Array<{ nombre: string; item_numero: number; puntaje: number }> };
+  type GroupedDomain = { nombre: string; puntaje: number; nivel_riesgo: string; rowspan: number; dimensiones: GroupedDimension[] };
+  type GroupedCategory = { nombre: string; puntaje: number; nivel_riesgo: string; rowspan: number; dominios: GroupedDomain[] };
+
+  const grouped: GroupedCategory[] = [];
+  const rows = props.generalReport?.rows ?? [];
+
+  rows.forEach((row) => {
+    let category = grouped.find((item) => item.nombre === row.categoria.nombre);
+    if (!category) {
+      category = {
+        nombre: row.categoria.nombre,
+        puntaje: row.categoria.puntaje,
+        nivel_riesgo: row.categoria.nivel_riesgo,
+        rowspan: 0,
+        dominios: [],
+      };
+      grouped.push(category);
+    }
+
+    let domain = category.dominios.find((item) => item.nombre === row.dominio.nombre);
+    if (!domain) {
+      domain = {
+        nombre: row.dominio.nombre,
+        puntaje: row.dominio.puntaje,
+        nivel_riesgo: row.dominio.nivel_riesgo,
+        rowspan: 0,
+        dimensiones: [],
+      };
+      category.dominios.push(domain);
+    }
+
+    let dimension = domain.dimensiones.find((item) => item.nombre === row.dimension);
+    if (!dimension) {
+      dimension = {
+        nombre: row.dimension,
+        rowspan: 0,
+        items: [],
+      };
+      domain.dimensiones.push(dimension);
+    }
+
+    dimension.items.push({
+      nombre: row.item,
+      item_numero: row.item_numero,
+      puntaje: row.puntaje,
+    });
+  });
+
+  grouped.forEach((category) => {
+    category.rowspan = 0;
+    category.dominios.forEach((domain) => {
+      domain.rowspan = 0;
+      domain.dimensiones.forEach((dimension) => {
+        dimension.rowspan = dimension.items.length;
+        domain.rowspan += dimension.rowspan;
+      });
+      category.rowspan += domain.rowspan;
+    });
+  });
+
+  return grouped;
 });
 
 // Filtered evaluations based on demographic filters
@@ -1639,6 +1810,44 @@ const getRiskLevelPillClass = (level: string): string => {
   };
 
   return classes[level] ?? 'bg-slate-100 text-slate-700';
+};
+
+const formatScore = (score: number): string => {
+  return Number(score).toFixed(2);
+};
+
+const normalizeRiskLevel = (riskLevel: string): string => {
+  return riskLevel.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/\s+/g, '_');
+};
+
+const getRiskBadgeClass = (riskLevel: string): string => {
+  const normalizedRiskLevel = normalizeRiskLevel(riskLevel);
+
+  const classes: Record<string, string> = {
+    nulo: 'bg-blue-100 text-blue-700',
+    bajo: 'bg-green-100 text-green-700',
+    medio: 'bg-amber-100 text-amber-700',
+    alto: 'bg-orange-100 text-orange-700',
+    muy_alto: 'bg-red-100 text-red-700',
+  };
+
+  return classes[normalizedRiskLevel] ?? 'bg-slate-100 text-slate-700';
+};
+
+const getAverageItemScoreClass = (score: number): string => {
+  if (score <= 1) {
+    return 'bg-emerald-50 text-emerald-700';
+  }
+
+  if (score <= 2) {
+    return 'bg-lime-100 text-lime-800';
+  }
+
+  if (score <= 3) {
+    return 'bg-amber-100 text-amber-800';
+  }
+
+  return 'bg-rose-100 text-rose-800';
 };
 
 const subTabs = [

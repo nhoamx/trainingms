@@ -203,12 +203,12 @@
                         v-for="frequency in frequencyScale"
                         :key="`q_${item.questionNumber}_${frequency}`"
                         class="px-3 py-2.5 text-center font-semibold"
-                        :class="intensityClass(item.frequencies[frequency], frequencyMax, 'sky')"
+                        :class="frequencyIntensityClass(item.frequencies[frequency], frequencyMax, frequency)"
                       >
                         {{ item.frequencies[frequency] }}
                       </td>
-                      <td class="px-3 py-2.5 text-center font-semibold" :class="intensityClass(item.victim.yes, victimMax, 'emerald')">{{ item.victim.yes }}</td>
-                      <td class="px-3 py-2.5 text-center font-semibold" :class="intensityClass(item.victim.no, victimMax, 'slate')">{{ item.victim.no }}</td>
+                      <td class="px-3 py-2.5 text-center font-semibold" :class="intensityClass(item.victim.yes, victimMax, 'red')">{{ item.victim.yes }}</td>
+                      <td class="px-3 py-2.5 text-center font-semibold" :class="intensityClass(item.victim.no, victimMax, 'green')">{{ item.victim.no }}</td>
                       <td class="px-3 py-2.5 text-center font-semibold" :class="intensityClass(item.victim.unknown, victimMax, 'amber')">{{ item.victim.unknown }}</td>
                     </tr>
                   </tbody>
@@ -505,7 +505,7 @@ const victimMax = computed(() => {
   return Math.max(1, ...questionSummary.value.map((item) => Math.max(item.victim.yes, item.victim.no, item.victim.unknown)));
 });
 
-const intensityClass = (count: number, maxCount: number, palette: 'amber' | 'sky' | 'emerald' | 'slate'): string => {
+const intensityClass = (count: number, maxCount: number, palette: 'amber' | 'sky' | 'red' | 'green'): string => {
   const ratio = maxCount > 0 ? count / maxCount : 0;
 
   if (count === 0) {
@@ -517,14 +517,22 @@ const intensityClass = (count: number, maxCount: number, palette: 'amber' | 'sky
   }
 
   if (palette === 'sky') {
-    return ratio > 0.66 ? 'bg-sky-300 text-sky-900' : ratio > 0.33 ? 'bg-sky-200 text-sky-900' : 'bg-sky-100 text-sky-800';
+    return ratio > 0.66 ? 'bg-indigo-300 text-indigo-900' : ratio > 0.33 ? 'bg-indigo-200 text-indigo-900' : 'bg-indigo-100 text-indigo-800';
   }
 
-  if (palette === 'emerald') {
-    return ratio > 0.66 ? 'bg-emerald-300 text-emerald-900' : ratio > 0.33 ? 'bg-emerald-200 text-emerald-900' : 'bg-emerald-100 text-emerald-800';
+  if (palette === 'red') {
+    return ratio > 0.66 ? 'bg-red-300 text-red-900' : ratio > 0.33 ? 'bg-red-200 text-red-900' : 'bg-red-100 text-red-800';
   }
 
-  return ratio > 0.66 ? 'bg-slate-300 text-slate-900' : ratio > 0.33 ? 'bg-slate-200 text-slate-900' : 'bg-slate-100 text-slate-700';
+  return ratio > 0.66 ? 'bg-green-300 text-green-900' : ratio > 0.33 ? 'bg-green-200 text-green-900' : 'bg-green-100 text-green-800';
+};
+
+const frequencyIntensityClass = (count: number, maxCount: number, frequency: number): string => {
+  if (count === 0 && (frequency === 0 || frequency === 1 || frequency === 2)) {
+    return 'bg-indigo-50 text-indigo-500';
+  }
+
+  return intensityClass(count, maxCount, 'sky');
 };
 
 const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);

@@ -73,6 +73,11 @@ class WorkCenterNom035DashboardController extends Controller
 
         $analysisData = $this->calculationService->getEvaluationsWithDemographicsAndScores($workCenter);
 
+        $generalReport = Cache::rememberForever(
+            $this->cacheService->getWcNom035GeneralReportCacheKey($workCenter->id),
+            fn () => $this->calculationService->getGeneralDetailedReport($workCenter)
+        );
+
         $violenceLaborStatistics = Cache::rememberForever(
             $this->cacheService->getWcNom035ViolenceCacheKey($workCenter->id),
             fn () => $this->calculationService->calculateViolenceLaborStatistics($workCenter)
@@ -126,6 +131,7 @@ class WorkCenterNom035DashboardController extends Controller
             'blockStatistics' => $blockStatistics,
             'globalStatistics' => $globalStatistics,
             'analysisData' => $analysisData,
+            'generalReport' => $generalReport,
             'violenceLaborStatistics' => $violenceLaborStatistics,
             'evaluations' => $evaluations,
             'availableEvaluationTypes' => $availableEvaluationTypes,

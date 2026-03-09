@@ -36,6 +36,7 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->has('categoryStatistics')
             ->has('dimensionStatistics')
             ->has('globalStatistics')
+            ->has('generalReport')
             ->has('violenceLaborStatistics')
             ->has('evaluations')
             ->has('preventionActions')
@@ -112,6 +113,7 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->has('questionStatistics')
             ->has('blockStatistics')
             ->has('analysisData')
+            ->has('generalReport.rows')
             ->has('violenceLaborStatistics.questions')
             ->has('availableEvaluationTypes')
             ->has('preventionActions')
@@ -162,6 +164,7 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->component('WorkCenters/Nom035RefIIIDashboard')
             ->where('domainStatistics.total_evaluations', 0)
             ->where('globalStatistics.total_evaluations', 0)
+            ->where('generalReport.total_evaluations', 0)
         );
     }
 

@@ -60,6 +60,7 @@
               :block-statistics="props.blockStatistics"
               :global-statistics="props.globalStatistics"
               :analysis-data="props.analysisData"
+              :general-report="props.generalReport"
               :violence-labor-statistics="props.violenceLaborStatistics"
               :organization-id="props.dashboardData.organization.id"
               :analysis-blocks="props.analysisBlocks"
@@ -209,6 +210,27 @@ interface AnalysisData {
   labels: Record<string, string>;
 }
 
+interface GeneralReport {
+  total_evaluations: number;
+  average_total_score: number;
+  rows: Array<{
+    categoria: {
+      nombre: string;
+      puntaje: number;
+      nivel_riesgo: string;
+    };
+    dominio: {
+      nombre: string;
+      puntaje: number;
+      nivel_riesgo: string;
+    };
+    dimension: string;
+    item: string;
+    item_numero: number;
+    puntaje: number;
+  }>;
+}
+
 interface Evaluation {
   id: string;
   evaluation_type?: string;
@@ -234,6 +256,7 @@ interface Props {
   blockStatistics?: { blocks: Record<string, unknown>; total_evaluations: number };
   globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
+  generalReport?: GeneralReport;
   violenceLaborStatistics?: {
     question_numbers: number[];
     labels: Record<string, string>;
