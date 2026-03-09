@@ -48,31 +48,90 @@
           </nav>
         </div>
 
-        <div class="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
-          <div class="flex items-start gap-4">
-            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 3.944a11.955 11.955 0 01-8.618 2.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622C17.176 19.29 21 14.59 21 9c0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
+        <div class="space-y-6">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-orange-700">Evaluaciones</p>
+              <p class="mt-1 text-2xl font-bold text-orange-900">{{ cisnerosSummary.total_evaluations }}</p>
             </div>
-            <div>
-              <h2 class="text-xl font-bold text-gray-900">Dashboard de Escala Cisneros</h2>
-              <p class="mt-1 text-sm text-gray-600">
-                Esta vista ya está habilitada y será extendida con indicadores de violencia laboral, análisis por área y seguimiento de casos prioritarios.
-              </p>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Victima (SI)</p>
+              <p class="mt-1 text-2xl font-bold text-emerald-900">{{ cisnerosSummary.victim_yes }}</p>
+            </div>
+            <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-sky-700">Victima (NO)</p>
+              <p class="mt-1 text-2xl font-bold text-sky-900">{{ cisnerosSummary.victim_no }}</p>
+            </div>
+            <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-violet-700">Tasa SI</p>
+              <p class="mt-1 text-2xl font-bold text-violet-900">{{ cisnerosSummary.victim_yes_percentage }}%</p>
             </div>
           </div>
 
-          <div
-            class="mt-6 rounded-xl border p-4"
-            :class="cisnerosEvaluationsCount > 0 ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200 bg-gray-50'"
-          >
-            <p class="text-sm font-semibold" :class="cisnerosEvaluationsCount > 0 ? 'text-emerald-800' : 'text-gray-700'">
-              {{ cisnerosEvaluationsCount > 0 ? 'Hay evaluaciones disponibles para análisis.' : 'No hay evaluaciones de Cisneros procesadas para este centro de trabajo.' }}
-            </p>
-            <p class="mt-1 text-sm text-gray-600">
-              {{ cisnerosEvaluationsCount > 0 ? 'Siguiente paso: incorporar resumen ejecutivo, factores críticos y plan de acción.' : 'Cuando se carguen evaluaciones, aquí verás el resumen del instrumento y sus etapas.' }}
-            </p>
+          <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <CisnerosDistributionCharts
+              title="Autores (A, B, C)"
+              description="Distribucion por tipo de persona involucrada."
+              :items="authorsChart"
+            />
+            <CisnerosDistributionCharts
+              title="Frecuencia (0-6)"
+              description="Distribucion de frecuencia reportada en las respuestas."
+              :items="frequencyChart"
+            />
+          </div>
+
+          <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+            <div class="mb-4 flex items-center justify-between">
+              <h2 class="text-lg font-bold text-gray-900">Tabla de respuestas por pregunta</h2>
+              <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                {{ responsesTable.length }} respuestas
+              </span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Folio</th>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Pregunta</th>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Autor</th>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Frecuencia</th>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Victima ultimos 6 meses</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white">
+                  <tr v-for="row in responsesTable" :key="`${row.folio}-${row.question_number}`" class="hover:bg-gray-50">
+                    <td class="whitespace-nowrap px-3 py-2 font-medium text-gray-900">{{ row.folio }}</td>
+                    <td class="px-3 py-2 text-gray-700">
+                      <span class="font-semibold">{{ row.question_number }}.</span>
+                      {{ row.question_text }}
+                    </td>
+                    <td class="px-3 py-2 text-gray-700">{{ row.author_code ? `${row.author_code} - ${row.author_label}` : 'Sin respuesta' }}</td>
+                    <td class="px-3 py-2 text-gray-700">{{ row.frequency_value !== null ? `${row.frequency_value} - ${row.frequency_label}` : 'Sin respuesta' }}</td>
+                    <td class="px-3 py-2">
+                      <span
+                        class="inline-flex rounded-full px-2 py-1 text-xs font-semibold"
+                        :class="
+                          row.victim_last_6_months === true
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : row.victim_last_6_months === false
+                              ? 'bg-slate-100 text-slate-700'
+                              : 'bg-amber-100 text-amber-800'
+                        "
+                      >
+                        {{ row.victim_last_6_months_label }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr v-if="responsesTable.length === 0">
+                    <td colspan="5" class="px-3 py-8 text-center text-sm text-gray-500">
+                      No hay respuestas de Escala Cisneros para mostrar en este centro de trabajo.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -83,6 +142,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import Dashboard from '../../Layouts/Dashboard.vue';
+import CisnerosDistributionCharts from '@/Components/Organization/Nom035/Charts/CisnerosDistributionCharts.vue';
 
 interface WorkCenterInfo {
   id: string;
@@ -102,6 +162,37 @@ interface DashboardData {
 defineProps<{
   dashboardData: DashboardData;
   cisnerosEvaluationsCount: number;
+  cisnerosSummary: {
+    total_evaluations: number;
+    victim_yes: number;
+    victim_no: number;
+    victim_unknown: number;
+    victim_yes_percentage: number;
+  };
+  authorsChart: Array<{
+    key: string;
+    label: string;
+    count: number;
+    color: string;
+  }>;
+  frequencyChart: Array<{
+    key: string;
+    label: string;
+    count: number;
+    color: string;
+  }>;
+  responsesTable: Array<{
+    folio: string;
+    personal_folio: string;
+    question_number: number;
+    question_text: string;
+    author_code: string | null;
+    author_label: string | null;
+    frequency_value: number | null;
+    frequency_label: string | null;
+    victim_last_6_months: boolean | null;
+    victim_last_6_months_label: string;
+  }>;
 }>();
 
 const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\WorkCenter;
 use App\Http\Controllers\Controller;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
+use App\Services\WorkCenter\WorkCenterNom035CisnerosStatisticsService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,11 +14,16 @@ class WorkCenterNom035CisnerosDashboardController extends Controller
 {
     use AuthorizesRequests;
 
+    public function __construct(
+        protected WorkCenterNom035CisnerosStatisticsService $statisticsService
+    ) {}
+
     public function show(WorkCenter $workCenter): Response
     {
         $this->authorize('viewWorkCenterDashboard', $workCenter);
 
         $workCenter->load('organization');
+        $cisnerosDashboard = $this->statisticsService->getDashboardData($workCenter);
 
         return Inertia::render('WorkCenters/Nom035CisnerosDashboard', [
             'title' => 'NOM-035-STPS-2018 - Escala Cisneros - '.$workCenter->name,
@@ -27,6 +33,10 @@ class WorkCenterNom035CisnerosDashboardController extends Controller
                 ->where('evaluation_type', 'cisneros')
                 ->where('processing_status', 'completed')
                 ->count(),
+            'cisnerosSummary' => $cisnerosDashboard['summary'],
+            'authorsChart' => $cisnerosDashboard['authors_chart'],
+            'frequencyChart' => $cisnerosDashboard['frequency_chart'],
+            'responsesTable' => $cisnerosDashboard['responses_table'],
         ]);
     }
 

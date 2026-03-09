@@ -328,9 +328,9 @@
                 <li>Tipo de persona involucrada:</li>
             </ol>
             <div class="person-options-grid">
-                <span>A. Jefas/jefes o personas supervisoras</span>
-                <span>B. Personas compañeras de trabajo</span>
-                <span>C. Personas subordinadas</span>
+                <span>A. Jefas</span>
+                <span>B. Compañeros</span>
+                <span>C. Subordinados</span>
             </div>
             <ol start="6">
                 <li>Frecuencia de la situación:</li>

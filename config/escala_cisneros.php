@@ -44,5 +44,5 @@ return [
     41 => 'Utilizan varias formas de hacerme incurrir en errores profesionales de manera malintencionada',
     42 => 'Controlan aspectos de mi trabajo de forma malintencionada para intentar «pillarme en algún renuncio»',
     43 => 'Me lanzan insinuaciones o proposiciones sexuales directas o indirectas',
-    44 => 'En el transcurso de los últimos 6 meses, ¿ha sido Ud víctima de por lo menos alguna de las anteriores formas de maltrato psicológico de manera continuada (con una frecuencia de más de1 vez por semana)?, (ver lista de preguntas 1 a 43)',
+    44 => 'En el transcurso de los últimos 6 meses, ¿ha sido Ud víctima de por lo menos alguna de las anteriores formas de maltrato psicológico de manera continuada (con una frecuencia de más de 1 vez por semana)?, (ver lista de preguntas 1 a 43)',
 ];

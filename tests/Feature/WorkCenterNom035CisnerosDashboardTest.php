@@ -31,7 +31,13 @@ class WorkCenterNom035CisnerosDashboardTest extends TestCase
             ->has('dashboardData.organization')
             ->has('dashboardData.work_center')
             ->has('cisnerosEvaluationsCount')
+            ->has('cisnerosSummary')
+            ->has('authorsChart')
+            ->has('frequencyChart')
+            ->has('responsesTable')
             ->where('cisnerosEvaluationsCount', 0)
+            ->where('cisnerosSummary.total_evaluations', 0)
+            ->where('responsesTable', [])
         );
     }
 
@@ -66,6 +72,55 @@ class WorkCenterNom035CisnerosDashboardTest extends TestCase
 
         $response->assertInertia(fn ($page) => $page
             ->where('cisnerosEvaluationsCount', 2)
+            ->where('cisnerosSummary.total_evaluations', 2)
+        );
+    }
+
+    public function test_cisneros_dashboard_builds_charts_and_response_table(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->cisneros()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+            'folio' => '049990001',
+            'personal_folio' => '0001',
+            'cisneros_answers' => [
+                '1' => ['persona' => 'A', 'frecuencia' => 3],
+                '2' => ['persona' => 'B', 'frecuencia' => 1],
+                '44' => true,
+            ],
+        ]);
+
+        PaperEvaluation::factory()->cisneros()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+            'folio' => '049990002',
+            'personal_folio' => '0002',
+            'cisneros_answers' => [
+                '1' => ['persona' => 'C', 'frecuencia' => 6],
+                '44' => false,
+            ],
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-cisneros', $workCenter));
+
+        $response->assertInertia(fn ($page) => $page
+            ->where('cisnerosSummary.total_evaluations', 2)
+            ->where('cisnerosSummary.victim_yes', 1)
+            ->where('cisnerosSummary.victim_no', 1)
+            ->has('authorsChart', 3)
+            ->has('frequencyChart', 7)
+            ->has('responsesTable', 3)
+            ->where('responsesTable.0.folio', '049990001')
+            ->where('responsesTable.0.question_number', 1)
         );
     }
 

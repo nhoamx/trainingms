@@ -268,7 +268,10 @@ class ProcessPaperEvaluation implements ShouldQueue
 
             case 'cisneros':
                 // Cisneros scale - mobbing questions
-                $structuredData['cisneros_answers'] = $rawData['cisneros'] ?? null;
+                $cisnerosRawAnswers = $rawData['cisneros'] ?? $rawData;
+                $structuredData['cisneros_answers'] = is_array($cisnerosRawAnswers)
+                    ? $this->normalizeCisnerosAnswers($cisnerosRawAnswers)
+                    : null;
                 break;
 
             case 'likert':
@@ -299,6 +302,148 @@ class ProcessPaperEvaluation implements ShouldQueue
         }
 
         return $structuredData;
+    }
+
+    /**
+     * Normalize Cisneros answers to canonical JSON format:
+     * 1-43 => ['persona' => 'A|B|C|null', 'frecuencia' => 0..6|null]
+     * 44 => bool
+     */
+    private function normalizeCisnerosAnswers(array $answers): ?array
+    {
+        $normalized = [];
+
+        for ($question = 1; $question <= 43; $question++) {
+            $persona = $this->extractCisnerosPersona($answers, $question);
+            $frecuencia = $this->extractCisnerosFrecuencia($answers, $question);
+
+            if ($persona !== null || $frecuencia !== null) {
+                $normalized[(string) $question] = [
+                    'persona' => $persona,
+                    'frecuencia' => $frecuencia,
+                ];
+            }
+        }
+
+        $question44 = $this->extractCisnerosQuestion44($answers);
+        if ($question44 !== null) {
+            $normalized['44'] = $question44;
+        }
+
+        return ! empty($normalized) ? $normalized : null;
+    }
+
+    private function extractCisnerosPersona(array $answers, int $question): ?string
+    {
+        $questionKey = (string) $question;
+        $questionData = $answers[$questionKey] ?? null;
+
+        if (is_array($questionData) && array_key_exists('persona', $questionData)) {
+            return $this->normalizeCisnerosPersonaValue($questionData['persona']);
+        }
+
+        $flatKey = 'persona'.$question;
+
+        return $this->normalizeCisnerosPersonaValue($answers[$flatKey] ?? null);
+    }
+
+    private function extractCisnerosFrecuencia(array $answers, int $question): ?int
+    {
+        $questionKey = (string) $question;
+        $questionData = $answers[$questionKey] ?? null;
+
+        if (is_array($questionData) && array_key_exists('frecuencia', $questionData)) {
+            return $this->normalizeCisnerosFrecuenciaValue($questionData['frecuencia']);
+        }
+
+        $flatKey = 'frecuencia'.$question;
+
+        return $this->normalizeCisnerosFrecuenciaValue($answers[$flatKey] ?? null);
+    }
+
+    private function extractCisnerosQuestion44(array $answers): ?bool
+    {
+        $candidates = [
+            $answers['44'] ?? null,
+            $answers['q44'] ?? null,
+            $answers['question44'] ?? null,
+            $answers['pregunta44'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $normalized = $this->normalizeYesNoValue($candidate);
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeCisnerosPersonaValue(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $normalized = strtoupper(trim($value));
+
+        return in_array($normalized, ['A', 'B', 'C'], true) ? $normalized : null;
+    }
+
+    private function normalizeCisnerosFrecuenciaValue(mixed $value): ?int
+    {
+        if (is_int($value)) {
+            return ($value >= 0 && $value <= 6) ? $value : null;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            $parsed = (int) $value;
+
+            return ($parsed >= 0 && $parsed <= 6) ? $parsed : null;
+        }
+
+        return null;
+    }
+
+    private function normalizeYesNoValue(mixed $value): ?bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            return $value === 1 ? true : ($value === 0 ? false : null);
+        }
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $normalized = trim($value);
+        $normalized = strtr($normalized, [
+            'á' => 'a',
+            'é' => 'e',
+            'í' => 'i',
+            'ó' => 'o',
+            'ú' => 'u',
+            'Á' => 'A',
+            'É' => 'E',
+            'Í' => 'I',
+            'Ó' => 'O',
+            'Ú' => 'U',
+        ]);
+        $normalized = strtoupper($normalized);
+
+        if (in_array($normalized, ['SI', 'S', 'YES', 'Y', 'TRUE', '1'], true)) {
+            return true;
+        }
+
+        if (in_array($normalized, ['NO', 'N', 'FALSE', '0'], true)) {
+            return false;
+        }
+
+        return null;
     }
 
     /**

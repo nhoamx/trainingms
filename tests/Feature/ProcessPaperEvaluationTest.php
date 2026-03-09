@@ -266,4 +266,56 @@ class ProcessPaperEvaluationTest extends TestCase
 
         @unlink($tmpFile);
     }
+
+    public function test_job_normalizes_cisneros_answers_to_canonical_json_structure(): void
+    {
+        Organization::factory()->create([
+            'folio_organization' => '953',
+        ]);
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test_').'.pdf';
+        file_put_contents($tmpFile, '%PDF-1.4 fake content');
+
+        \Illuminate\Support\Facades\Http::fake([
+            config('services.ocr.url').'/process' => \Illuminate\Support\Facades\Http::response([
+                'results' => [
+                    [
+                        'folio' => '049530001',
+                        'answers' => [
+                            'cisneros' => [
+                                'persona1' => 'b',
+                                'frecuencia1' => '5',
+                                'frecuencia3' => '0',
+                                'pregunta44' => 'sí',
+                            ],
+                        ],
+                        'marked_image_base64' => null,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        \Illuminate\Support\Facades\Event::fake();
+
+        $job = new \App\Jobs\ProcessPaperEvaluation(
+            $tmpFile,
+            null,
+            null,
+            1,
+            1,
+            'test-cisneros.pdf'
+        );
+
+        $job->handle();
+
+        $evaluation = PaperEvaluation::where('folio', '049530001')->first();
+        $this->assertNotNull($evaluation);
+        $this->assertEquals([
+            '1' => ['persona' => 'B', 'frecuencia' => 5],
+            '3' => ['persona' => null, 'frecuencia' => 0],
+            '44' => true,
+        ], $evaluation->cisneros_answers);
+
+        @unlink($tmpFile);
+    }
 }

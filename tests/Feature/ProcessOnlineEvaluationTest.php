@@ -294,4 +294,38 @@ class ProcessOnlineEvaluationTest extends TestCase
         $this->assertEquals('online', $rawData['source']);
         $this->assertArrayHasKey('source_metadata', $rawData);
     }
+
+    public function test_extracts_cisneros_answers_with_canonical_json_structure(): void
+    {
+        $submissionStatus = SubmissionStatus::create([
+            'folio' => '040010016',
+            'personal_id' => '0016',
+            'organization_id' => $this->organization->id,
+            'quiz_id' => $this->quiz->id,
+            'status' => SubmissionStatus::STATUS_PENDING,
+            'data_snapshot' => [
+                'evaluation_type' => 'referencia_v',
+                'referencia_v' => ['sexo' => 'Femenino', 'edad' => '31'],
+                'escala_cisneros' => [
+                    'persona1' => 'a',
+                    'frecuencia1' => '3',
+                    'persona2' => 'C',
+                    'frecuencia2' => 0,
+                    '44' => 'Sí',
+                ],
+            ],
+        ]);
+
+        ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
+
+        $paperEvaluation = PaperEvaluation::where('folio', '040010016')->first();
+        $this->assertNotNull($paperEvaluation);
+        $this->assertNotNull($paperEvaluation->cisneros_answers);
+
+        $this->assertEquals([
+            '1' => ['persona' => 'A', 'frecuencia' => 3],
+            '2' => ['persona' => 'C', 'frecuencia' => 0],
+            '44' => true,
+        ], $paperEvaluation->cisneros_answers);
+    }
 }
