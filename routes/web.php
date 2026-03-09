@@ -101,6 +101,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035/ref-i', [\App\Http\Controllers\WorkCenter\WorkCenterNom035RefIDashboardController::class, 'show'])
         ->name('work-centers.dashboard.nom-035-ref-i');
 
+    Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035/cisneros', [\App\Http\Controllers\WorkCenter\WorkCenterNom035CisnerosDashboardController::class, 'show'])
+        ->name('work-centers.dashboard.nom-035-cisneros');
+
     Route::post('/centro-trabajo/{workCenter}/comite/miembros', [\App\Http\Controllers\WorkCenter\WorkCenterCommitteeMemberController::class, 'store'])
         ->name('work-centers.committee-members.store')
         ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);

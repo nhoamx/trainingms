@@ -93,7 +93,7 @@ class WorkCenterNom035IndexController extends Controller
         return PaperEvaluation::query()
             ->where('work_center_id', $workCenter->id)
             ->where('processing_status', 'completed')
-            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii'])
+            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros'])
             ->get(['id', 'personal_folio'])
             ->map(function (PaperEvaluation $evaluation): string {
                 $folio = trim((string) ($evaluation->personal_folio ?? ''));
@@ -204,6 +204,15 @@ class WorkCenterNom035IndexController extends Controller
                 'color' => 'red',
                 'icon' => 'document-text',
                 'route' => 'work-centers.dashboard.nom-035-ref-i',
+            ],
+            [
+                'key' => 'cisneros',
+                'label' => 'Escala Cisneros',
+                'subtitle' => 'Violencia Laboral',
+                'description' => 'Detección de conductas de acoso psicológico y violencia laboral para identificar patrones, áreas de mayor incidencia y casos prioritarios.',
+                'color' => 'orange',
+                'icon' => 'shield-check',
+                'route' => 'work-centers.dashboard.nom-035-cisneros',
             ],
         ];
 

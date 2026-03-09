@@ -121,12 +121,20 @@
         </div>
 
         <!-- Instrument Cards Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="mb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+          <div>
+            <h3 class="text-lg sm:text-xl font-bold text-gray-900">Instrumentos NOM-035</h3>
+            <p class="text-sm text-gray-600 mt-1">Selecciona un instrumento para ver su análisis especializado</p>
+          </div>
+          <p class="text-xs text-gray-500">Los instrumentos sin datos aparecen bloqueados</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           <Link
             v-for="instrument in instruments"
             :key="instrument.key"
             :href="route(instrument.route, workCenter.id)"
-            class="group block bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+            class="group block h-full bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
             :class="{ 'opacity-60 pointer-events-none': instrument.count === 0 }"
           >
             <!-- Color Accent Bar -->
@@ -135,7 +143,7 @@
               :class="colorAccent(instrument.color)"
             />
 
-            <div class="p-6">
+            <div class="p-6 h-full flex flex-col">
               <!-- Icon + Title -->
               <div class="flex items-start gap-4 mb-4">
                 <div
@@ -149,6 +157,10 @@
                   <!-- document-text icon (Ref I) -->
                   <svg v-else-if="instrument.icon === 'document-text'" class="w-6 h-6" :class="iconColor(instrument.color)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <!-- shield-check icon (Cisneros) -->
+                  <svg v-else-if="instrument.icon === 'shield-check'" class="w-6 h-6" :class="iconColor(instrument.color)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 3.944a11.955 11.955 0 01-8.618 2.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622C17.176 19.29 21 14.59 21 9c0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 </div>
 
@@ -170,13 +182,14 @@
                 </div>
               </div>
 
+
               <!-- Description -->
               <p class="text-sm text-gray-600 leading-relaxed mb-4">
                 {{ instrument.description }}
               </p>
 
               <!-- Footer -->
-              <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+              <div class="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
                 <span
                   v-if="instrument.count > 0"
                   class="inline-flex items-center text-sm font-medium"
@@ -561,6 +574,7 @@ const colorAccent = (color: string): string => {
     blue: 'bg-blue-600',
     red: 'bg-red-600',
     amber: 'bg-amber-500',
+    orange: 'bg-orange-500',
     green: 'bg-green-600',
   };
   return map[color] ?? 'bg-gray-400';
@@ -571,6 +585,7 @@ const iconBg = (color: string): string => {
     blue: 'bg-blue-100',
     red: 'bg-red-100',
     amber: 'bg-amber-100',
+    orange: 'bg-orange-100',
     green: 'bg-green-100',
   };
   return map[color] ?? 'bg-gray-100';
@@ -581,6 +596,7 @@ const iconColor = (color: string): string => {
     blue: 'text-blue-600',
     red: 'text-red-600',
     amber: 'text-amber-600',
+    orange: 'text-orange-600',
     green: 'text-green-600',
   };
   return map[color] ?? 'text-gray-600';
@@ -591,6 +607,7 @@ const subtitleColor = (color: string): string => {
     blue: 'text-blue-600',
     red: 'text-red-600',
     amber: 'text-amber-600',
+    orange: 'text-orange-600',
     green: 'text-green-600',
   };
   return map[color] ?? 'text-gray-600';
@@ -601,6 +618,7 @@ const badgeClasses = (color: string): string => {
     blue: 'bg-blue-100 text-blue-800',
     red: 'bg-red-100 text-red-800',
     amber: 'bg-amber-100 text-amber-800',
+    orange: 'bg-orange-100 text-orange-800',
     green: 'bg-green-100 text-green-800',
   };
   return map[color] ?? 'bg-gray-100 text-gray-800';
@@ -611,6 +629,7 @@ const pingColor = (color: string): string => {
     blue: 'bg-blue-400',
     red: 'bg-red-400',
     amber: 'bg-amber-400',
+    orange: 'bg-orange-400',
     green: 'bg-green-400',
   };
   return map[color] ?? 'bg-gray-400';
@@ -621,6 +640,7 @@ const dotColor = (color: string): string => {
     blue: 'bg-blue-500',
     red: 'bg-red-500',
     amber: 'bg-amber-500',
+    orange: 'bg-orange-500',
     green: 'bg-green-500',
   };
   return map[color] ?? 'bg-gray-500';

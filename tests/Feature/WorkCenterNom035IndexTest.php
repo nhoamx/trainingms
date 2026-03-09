@@ -113,12 +113,13 @@ class WorkCenterNom035IndexTest extends TestCase
             ->where('workCenter.name', 'Centro Norte')
             ->where('workCenter.code', '0001')
             ->where('organization.name', 'Test Org')
-            ->has('instruments', 2)
+            ->has('instruments', 3)
             ->has('instruments.0.key')
             ->has('instruments.0.label')
             ->has('instruments.0.count')
             ->has('instruments.0.route')
             ->has('instruments.1.key')
+            ->has('instruments.2.key')
             ->has('evaluations')
             ->has('availableEvaluationTypes')
             ->has('committeeMembers')
@@ -174,6 +175,7 @@ class WorkCenterNom035IndexTest extends TestCase
             ->where('totalEvaluations', 0)
             ->where('instruments.0.count', 0)
             ->where('instruments.1.count', 0)
+            ->where('instruments.2.count', 0)
         );
     }
 
