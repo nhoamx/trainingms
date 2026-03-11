@@ -49,6 +49,9 @@ class WorkCenterIndexMetricsTest extends TestCase
             'evaluation_type_code' => '01',
             'evaluation_type' => 'referencia_i',
             'personal_folio' => '00001',
+            'demographic_data' => [
+                'sexo' => 'masculino',
+            ],
             'referencia_i_answers' => [
                 '1' => true,
                 '2' => false,
@@ -111,6 +114,9 @@ class WorkCenterIndexMetricsTest extends TestCase
             'evaluation_type_code' => '01',
             'evaluation_type' => 'referencia_i',
             'personal_folio' => '00003',
+            'demographic_data' => [
+                'sexo' => 'femenino',
+            ],
             'referencia_i_answers' => [
                 'pregunta_1' => false,
                 'pregunta_2' => false,
@@ -159,9 +165,13 @@ class WorkCenterIndexMetricsTest extends TestCase
             ->where('workCenters.0.id', $centerA->id)
             ->where('workCenters.0.evaluated_people_count', 2)
             ->where('workCenters.0.requires_clinical_attention_count', 1)
+            ->where('workCenters.0.clinical_attention_men_count', 1)
+            ->where('workCenters.0.clinical_attention_women_count', 0)
             ->where('workCenters.1.id', $centerB->id)
             ->where('workCenters.1.evaluated_people_count', 2)
             ->where('workCenters.1.requires_clinical_attention_count', 1)
+            ->where('workCenters.1.clinical_attention_men_count', 0)
+            ->where('workCenters.1.clinical_attention_women_count', 1)
         );
     }
 }
