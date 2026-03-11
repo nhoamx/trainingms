@@ -89,11 +89,7 @@ const getEvaluatedPeopleBadgeClass = (count) => {
     return 'bg-slate-100 text-slate-600';
   }
 
-  if (safeCount < 10) {
-    return 'bg-amber-100 text-amber-800';
-  }
-
-  return 'bg-emerald-100 text-emerald-800';
+  return 'bg-blue-100 text-blue-800';
 };
 
 const getClinicalBadgeClass = (count) => {
@@ -103,7 +99,7 @@ const getClinicalBadgeClass = (count) => {
     return 'bg-slate-100 text-slate-600';
   }
 
-  return 'bg-rose-100 text-rose-800';
+  return 'bg-red-100 text-red-800';
 };
 
 const getFilterChipClass = (isActive) => {
@@ -231,10 +227,10 @@ const getFilterChipClass = (isActive) => {
             <thead class="bg-slate-50">
               <tr>
                 <th class="w-[40%] px-5 py-3 text-left font-semibold text-slate-700">Centro de trabajo</th>
-                <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-700">Personas evaluadas</th>
+                <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-700">Presentaron</th>
+                <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-700">Hombres</th>
+                <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-700">Mujeres</th>
                 <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-700">Atención clínica</th>
-                <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-700">Atención clínica hombres</th>
-                <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-700">Atención clínica mujeres</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 bg-white">
@@ -269,18 +265,18 @@ const getFilterChipClass = (isActive) => {
                   </span>
                 </td>
                 <td class="px-4 py-4 text-center align-middle">
+                  <span :class="getEvaluatedPeopleBadgeClass(workCenter.men_count)" class="inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold">
+                    {{ workCenter.men_count ?? 0 }}
+                  </span>
+                </td>
+                <td class="px-4 py-4 text-center align-middle">
+                  <span :class="getEvaluatedPeopleBadgeClass(workCenter.women_count)" class="inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold">
+                    {{ workCenter.women_count ?? 0 }}
+                  </span>
+                </td>
+                <td class="px-4 py-4 text-center align-middle">
                   <span :class="getClinicalBadgeClass(workCenter.requires_clinical_attention_count)" class="inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold">
                     {{ workCenter.requires_clinical_attention_count ?? 0 }}
-                  </span>
-                </td>
-                <td class="px-4 py-4 text-center align-middle">
-                  <span :class="getClinicalBadgeClass(workCenter.clinical_attention_men_count)" class="inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold">
-                    {{ workCenter.clinical_attention_men_count ?? 0 }}
-                  </span>
-                </td>
-                <td class="px-4 py-4 text-center align-middle">
-                  <span :class="getClinicalBadgeClass(workCenter.clinical_attention_women_count)" class="inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold">
-                    {{ workCenter.clinical_attention_women_count ?? 0 }}
                   </span>
                 </td>
               </tr>

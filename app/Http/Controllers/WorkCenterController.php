@@ -34,15 +34,15 @@ class WorkCenterController extends Controller
             ->each(function (WorkCenter $workCenter) use ($workCenterMetrics): void {
                 $metrics = $workCenterMetrics[$workCenter->id] ?? [
                     'evaluated_people_count' => 0,
+                    'men_count' => 0,
+                    'women_count' => 0,
                     'requires_clinical_attention_count' => 0,
-                    'clinical_attention_men_count' => 0,
-                    'clinical_attention_women_count' => 0,
                 ];
 
                 $workCenter->setAttribute('evaluated_people_count', $metrics['evaluated_people_count']);
+                $workCenter->setAttribute('men_count', $metrics['men_count']);
+                $workCenter->setAttribute('women_count', $metrics['women_count']);
                 $workCenter->setAttribute('requires_clinical_attention_count', $metrics['requires_clinical_attention_count']);
-                $workCenter->setAttribute('clinical_attention_men_count', $metrics['clinical_attention_men_count']);
-                $workCenter->setAttribute('clinical_attention_women_count', $metrics['clinical_attention_women_count']);
             });
 
         return Inertia::render('WorkCenters/Index', [
@@ -55,7 +55,7 @@ class WorkCenterController extends Controller
     /**
      * Build participant and clinical-attention counters per work center.
      *
-     * @return array<string, array{evaluated_people_count: int, requires_clinical_attention_count: int, clinical_attention_men_count: int, clinical_attention_women_count: int}>
+     * @return array<string, array{evaluated_people_count: int, men_count: int, women_count: int, requires_clinical_attention_count: int}>
      */
     private function buildWorkCenterMetrics(Organization $organization): array
     {
@@ -67,7 +67,7 @@ class WorkCenterController extends Controller
             ->select(['id', 'work_center_id', 'personal_folio', 'folio', 'evaluation_type', 'referencia_i_answers', 'demographic_data'])
             ->get();
 
-        /** @var array<string, array{participants: array<string, true>, clinical: array<string, true>, clinical_gender: array<string, string>}> $raw */
+        /** @var array<string, array{participants: array<string, true>, participant_gender: array<string, string>, clinical: array<string, true>}> $raw */
         $raw = [];
 
         foreach ($evaluations as $evaluation) {
@@ -80,45 +80,45 @@ class WorkCenterController extends Controller
             $gender = $this->resolveNormalizedGender($evaluation->demographicData?->gender, $evaluation->demographic_data);
 
             if (! isset($raw[$workCenterId])) {
-                $raw[$workCenterId] = ['participants' => [], 'clinical' => [], 'clinical_gender' => []];
+                $raw[$workCenterId] = ['participants' => [], 'participant_gender' => [], 'clinical' => []];
             }
 
             $raw[$workCenterId]['participants'][$participantKey] = true;
 
+            if ($gender !== null && ! isset($raw[$workCenterId]['participant_gender'][$participantKey])) {
+                $raw[$workCenterId]['participant_gender'][$participantKey] = $gender;
+            }
+
             $answers = is_array($evaluation->referencia_i_answers) ? $evaluation->referencia_i_answers : [];
             if ($evaluation->evaluation_type === 'referencia_i' && $this->requiresClinicalAttention($answers)) {
                 $raw[$workCenterId]['clinical'][$participantKey] = true;
-
-                if ($gender !== null && ! isset($raw[$workCenterId]['clinical_gender'][$participantKey])) {
-                    $raw[$workCenterId]['clinical_gender'][$participantKey] = $gender;
-                }
             }
         }
 
-        /** @var array<string, array{evaluated_people_count: int, requires_clinical_attention_count: int, clinical_attention_men_count: int, clinical_attention_women_count: int}> $metrics */
+        /** @var array<string, array{evaluated_people_count: int, men_count: int, women_count: int, requires_clinical_attention_count: int}> $metrics */
         $metrics = [];
 
         foreach ($raw as $workCenterId => $values) {
-            $clinicalMenCount = 0;
-            $clinicalWomenCount = 0;
+            $menCount = 0;
+            $womenCount = 0;
 
-            foreach (array_keys($values['clinical']) as $participantKey) {
-                $gender = $values['clinical_gender'][$participantKey] ?? null;
+            foreach (array_keys($values['participants']) as $participantKey) {
+                $gender = $values['participant_gender'][$participantKey] ?? null;
 
                 if ($gender === 'male') {
-                    $clinicalMenCount++;
+                    $menCount++;
                 }
 
                 if ($gender === 'female') {
-                    $clinicalWomenCount++;
+                    $womenCount++;
                 }
             }
 
             $metrics[$workCenterId] = [
                 'evaluated_people_count' => count($values['participants']),
+                'men_count' => $menCount,
+                'women_count' => $womenCount,
                 'requires_clinical_attention_count' => count($values['clinical']),
-                'clinical_attention_men_count' => $clinicalMenCount,
-                'clinical_attention_women_count' => $clinicalWomenCount,
             ];
         }
 
