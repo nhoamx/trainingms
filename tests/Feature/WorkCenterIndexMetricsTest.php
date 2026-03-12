@@ -16,6 +16,47 @@ class WorkCenterIndexMetricsTest extends TestCase
 {
     use DatabaseTransactions;
 
+    public function test_metrics_export_downloads_excel_file(): void
+    {
+        $adminRole = Role::firstOrCreate([
+            'name' => 'admin',
+            'guard_name' => 'web',
+        ]);
+
+        $user = User::factory()->create();
+        $user->assignRole($adminRole);
+
+        $organization = Organization::factory()->create();
+
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+            'is_primary' => true,
+            'name' => 'Centro Exportable',
+            'type' => WorkCenterType::Headquarters->value,
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'evaluation_type_code' => '01',
+            'evaluation_type' => 'referencia_i',
+            'personal_folio' => '01001',
+            'demographic_data' => [
+                'sexo' => 'masculino',
+            ],
+            'referencia_i_answers' => [
+                '1' => true,
+                '2' => false,
+            ],
+            'processing_status' => 'completed',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('organizations.work-centers.export-metrics', $organization));
+
+        $response->assertOk();
+        $response->assertDownload();
+    }
+
     public function test_index_includes_people_and_clinical_attention_metrics_per_work_center(): void
     {
         $adminRole = Role::firstOrCreate([

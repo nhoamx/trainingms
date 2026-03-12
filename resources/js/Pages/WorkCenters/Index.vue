@@ -21,6 +21,7 @@ const props = defineProps({
 const searchQuery = ref('');
 const sortBy = ref('default');
 const clinicalFilter = ref('all');
+const isDownloadingMetrics = ref(false);
 
 const sortChips = [
   { key: 'default', label: 'Predeterminado' },
@@ -109,6 +110,62 @@ const getFilterChipClass = (isActive) => {
 
   return 'inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50';
 };
+
+const getDownloadFilename = (contentDisposition) => {
+  if (!contentDisposition) {
+    return 'reporte_centros.xlsx';
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match && utf8Match[1]) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  const asciiMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  if (asciiMatch && asciiMatch[1]) {
+    return asciiMatch[1];
+  }
+
+  return 'reporte_centros.xlsx';
+};
+
+const downloadMetricsExcel = async () => {
+  if (isDownloadingMetrics.value) {
+    return;
+  }
+
+  isDownloadingMetrics.value = true;
+
+  try {
+    const response = await fetch(route('organizations.work-centers.export-metrics', { organization: props.organization.id }), {
+      method: 'GET',
+      headers: {
+        Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('No se pudo generar el archivo.');
+    }
+
+    const blob = await response.blob();
+    const filename = getDownloadFilename(response.headers.get('content-disposition'));
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isDownloadingMetrics.value = false;
+  }
+};
 </script>
 
 <template>
@@ -133,6 +190,22 @@ const getFilterChipClass = (isActive) => {
             >
               Nuevo centro
             </Link>
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-70"
+              :disabled="isDownloadingMetrics"
+              @click="downloadMetricsExcel"
+            >
+              <svg v-if="isDownloadingMetrics" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              <svg v-else class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M10 2a.75.75 0 01.75.75v7.19l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V2.75A.75.75 0 0110 2z" />
+                <path d="M3.5 13.5a.75.75 0 01.75.75v1a1 1 0 001 1h8.5a1 1 0 001-1v-1a.75.75 0 011.5 0v1a2.5 2.5 0 01-2.5 2.5h-8.5a2.5 2.5 0 01-2.5-2.5v-1a.75.75 0 01.75-.75z" />
+              </svg>
+              {{ isDownloadingMetrics ? 'Generando Excel...' : 'Descargar Excel' }}
+            </button>
           </div>
         </div>
       </div>

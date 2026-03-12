@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\WorkCenterType;
+use App\Exports\WorkCenterMetricsExport;
 use App\Exports\WorkCentersExport;
 use App\Imports\WorkCentersImport;
 use App\Models\Organization;
@@ -10,6 +11,7 @@ use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -402,6 +404,23 @@ class WorkCenterController extends Controller
         $filename = 'centros_trabajo_'.$organization->folio_organization.'_'.now()->format('Y-m-d').'.xlsx';
 
         return Excel::download(new WorkCentersExport($organization), $filename);
+    }
+
+    /**
+     * Descargar métricas de centros de trabajo en Excel
+     */
+    public function downloadMetrics(Organization $organization)
+    {
+        $workCenterMetrics = $this->buildWorkCenterMetrics($organization);
+        $workCenters = $organization->workCenters()
+            ->orderByDesc('is_primary')
+            ->orderBy('name')
+            ->get();
+
+        $organizationSlug = Str::slug($organization->name);
+        $filename = 'reporte-'.$organizationSlug.'-'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(new WorkCenterMetricsExport($workCenters, $workCenterMetrics), $filename);
     }
 
     /**
