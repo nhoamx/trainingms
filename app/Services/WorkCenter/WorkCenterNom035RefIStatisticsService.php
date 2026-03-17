@@ -306,7 +306,7 @@ class WorkCenterNom035RefIStatisticsService
             ->with([
                 'demographicData:id,paper_evaluation_id,gender,age,marital_status,education_level,position,department,position_type,contract_type,personnel_type,work_schedule,shift_rotation,time_in_current_position,work_experience',
             ])
-            ->select(['id', 'personal_folio', 'evaluee_name', 'citsats_s1'])
+            ->select(['id', 'personal_folio', 'evaluee_name', 'citsats_s1', 'created_at'])
             ->get();
 
         $participants = $evaluations->map(function (PaperEvaluation $evaluation) {
@@ -332,6 +332,7 @@ class WorkCenterNom035RefIStatisticsService
                 'id' => $evaluation->id,
                 'personal_folio' => $evaluation->personal_folio,
                 'name' => $evaluation->evaluee_name ?? 'No especificado',
+                'created_at' => $evaluation->created_at?->toIso8601String(),
                 'has_any_event' => $hasAnyEvent,
                 'events' => $events,
                 'demographics' => [

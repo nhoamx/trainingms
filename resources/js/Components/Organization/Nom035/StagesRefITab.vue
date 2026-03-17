@@ -187,10 +187,11 @@
           </div>
 
           <div class="overflow-auto rounded-lg border border-slate-200">
-            <table class="min-w-[960px] w-full text-sm">
+            <table class="min-w-[1100px] w-full text-sm">
               <thead class="bg-slate-50 text-slate-700">
                 <tr>
                   <th class="px-3 py-2 text-left font-semibold">Folio</th>
+                  <th class="px-3 py-2 text-left font-semibold">Fecha y hora de presentación</th>
                   <th class="px-3 py-2 text-left font-semibold">Género</th>
                   <th class="px-3 py-2 text-left font-semibold">Edad</th>
                   <th class="px-3 py-2 text-left font-semibold">Puesto</th>
@@ -201,7 +202,7 @@
               </thead>
               <tbody class="divide-y divide-slate-100 bg-white">
                 <tr v-if="paginatedPanoramaParticipants.length === 0">
-                  <td colspan="7" class="px-4 py-8 text-center text-slate-500">
+                  <td colspan="8" class="px-4 py-8 text-center text-slate-500">
                     No hay personas para los filtros seleccionados.
                   </td>
                 </tr>
@@ -211,6 +212,7 @@
                   class="hover:bg-slate-50"
                 >
                   <td class="px-3 py-2 font-semibold text-slate-900">{{ person.personal_folio }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ formatPresentationDate(person.created_at) }}</td>
                   <td class="px-3 py-2 text-slate-700">{{ person.demographics.genero }}</td>
                   <td class="px-3 py-2 text-slate-700">{{ person.demographics.edad }}</td>
                   <td class="px-3 py-2 text-slate-700">{{ person.demographics.puesto }}</td>
@@ -948,6 +950,7 @@ interface Props {
       id: string;
       personal_folio: string;
       name: string;
+      created_at: string | null;
       has_any_event: boolean;
       events: Record<string, boolean>;
       demographics: {
@@ -1454,6 +1457,27 @@ const isAffirmativeAnswer = (answer: unknown): boolean => {
   }
 
   return answer === true || answer === 1;
+};
+
+const formatPresentationDate = (dateString: string | null): string => {
+  if (!dateString) {
+    return 'N/A';
+  }
+
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'N/A';
+  }
+
+  return date.toLocaleString('es-MX', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 };
 
 const atsColorHex = [

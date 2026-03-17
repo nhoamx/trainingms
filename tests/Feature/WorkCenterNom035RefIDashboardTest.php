@@ -244,4 +244,36 @@ class WorkCenterNom035RefIDashboardTest extends TestCase
             ->has('participants', 1)
         );
     }
+
+    public function test_ref_i_dashboard_includes_presentation_date_in_acontecimiento_participants(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+            'citsats_s1' => [
+                '1' => 'SI',
+                '2' => 'NO',
+                '3' => 'NO',
+                '4' => 'NO',
+                '5' => 'NO',
+                '6' => 'NO',
+            ],
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', $workCenter));
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIDashboard')
+            ->has('acontecimientoParticipants.participants', 1)
+            ->has('acontecimientoParticipants.participants.0.created_at')
+        );
+    }
 }
