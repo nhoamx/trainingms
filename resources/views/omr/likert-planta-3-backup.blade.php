@@ -326,10 +326,6 @@
     }
 </style>
 
-@php
-    $showPrefilledFolio = $showPrefilledFolio ?? true;
-@endphp
-
 <!-- Bottom-right format code label -->
 <div class="watermark">ECL-002</div>
 
@@ -341,9 +337,9 @@
             <!-- Header con espacios para escribir los dígitos -->
             <div class="folio-header">
                 <div class="folio-digit-column"></div>
-                @for($i = 0; $i < 11; $i++)
+                @for($i = 0; $i < 9; $i++)
                     <div class="folio-position-header">
-                        {{ $showPrefilledFolio && isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
+                        {{ isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
                     </div>
                 @endfor
             </div>
@@ -352,9 +348,9 @@
                 <div class="folio-row">
                     <div class="folio-digit-number">{{ $digit }}</div>
                     <div class="folio-bubbles-row">
-                        @for($i = 0; $i < 11; $i++)
+                        @for($i = 0; $i < 9; $i++)
                             @php
-                                $folioDigit = $showPrefilledFolio && isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
+                                $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
                                 $isSelected = $folioDigit == $digit;
                             @endphp
                             <div class="bubble-small {{ $isSelected ? 'bubble-filled' : '' }}"></div>
