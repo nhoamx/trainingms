@@ -222,6 +222,7 @@ class OMRPdfGenerationTest extends TestCase
             'omr.download.blank.referencia-iii',
             'omr.download.blank.referencia-v',
             'omr.download.blank.escala-cisneros',
+            'omr.download.blank.likert-planta-3',
         ];
 
         foreach ($routes as $routeName) {
@@ -231,5 +232,37 @@ class OMRPdfGenerationTest extends TestCase
             $response->assertHeader('content-type', 'application/pdf');
             $response->assertDownload();
         }
+    }
+
+    public function test_generate_pdf_accepts_likert_planta_3_guide_type(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->postJson(route('omr.generate-pdf'), [
+                'organization_id' => $this->organization->id,
+                'folio_batch_id' => $this->batch->id,
+                'guide_type' => 'likert-planta-3',
+                'generate_all' => false,
+                'folios' => ['0001'],
+            ]);
+
+        // Should NOT return a 422 validation error for guide_type
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_generate_pdf_for_likert_planta_3_produces_download(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->post(route('omr.generate-pdf'), [
+                'organization_id' => $this->organization->id,
+                'folio_batch_id' => $this->batch->id,
+                'guide_type' => 'likert-planta-3',
+                'generate_all' => false,
+                'folios' => ['0001', '0002'],
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'application/pdf');
+        $response->assertDownload();
     }
 }
