@@ -142,11 +142,23 @@ class OMRController extends Controller
             }
 
             // Add positions and areas for likert templates
-            if ($guideType === 'likert' || $guideType === 'likert-planta-3') {
+            if ($guideType === 'likert') {
                 $positions = $organization->occupationPositions()->get(['name']);
                 $areas = $organization->departmentAreas()->get(['name']);
                 $viewData['positions'] = $positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions;
                 $viewData['areas'] = $areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas;
+            } elseif ($guideType === 'likert-planta-3') {
+                // Planta 3 uses dedicated hardcoded catalogs from config
+                $p3Positions = collect(array_map(
+                    fn ($name) => ['name' => $name],
+                    config('likert-value.puestos_planta_3', [])
+                ));
+                $p3Areas = collect(array_map(
+                    fn ($name) => ['name' => $name],
+                    config('likert-value.areas_planta_3', [])
+                ));
+                $viewData['positions'] = $p3Positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $p3Positions;
+                $viewData['areas'] = $p3Areas->isEmpty() ? collect([['name' => 'Área 1']]) : $p3Areas;
             }
 
             // Dispatch multiple jobs, one per chunk
@@ -192,13 +204,25 @@ class OMRController extends Controller
         }
 
         // Add positions and areas for likert templates
-        if ($guideType === 'likert' || $guideType === 'likert-planta-3') {
+        if ($guideType === 'likert') {
             $positions = $organization->occupationPositions()->get(['name']);
             $areas = $organization->departmentAreas()->get(['name']);
 
             // Use defaults if empty
             $viewData['positions'] = $positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions;
             $viewData['areas'] = $areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas;
+        } elseif ($guideType === 'likert-planta-3') {
+            // Planta 3 uses dedicated hardcoded catalogs from config
+            $p3Positions = collect(array_map(
+                fn ($name) => ['name' => $name],
+                config('likert-value.puestos_planta_3', [])
+            ));
+            $p3Areas = collect(array_map(
+                fn ($name) => ['name' => $name],
+                config('likert-value.areas_planta_3', [])
+            ));
+            $viewData['positions'] = $p3Positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $p3Positions;
+            $viewData['areas'] = $p3Areas->isEmpty() ? collect([['name' => 'Área 1']]) : $p3Areas;
         }
 
         // Generate extended folios and HTML content
@@ -410,25 +434,23 @@ class OMRController extends Controller
      */
     public function likertPlanta3(Request $request)
     {
-        // Get organization if provided to load positions and areas
-        $organizationId = $request->input('organization_id');
-        $positions = collect([['name' => 'Puesto 1']]);
-        $areas = collect([['name' => 'Área 1']]);
+        // Planta 3 uses dedicated hardcoded catalogs from config (puestos_planta_3 / areas_planta_3)
+        $positions = collect(array_map(
+            fn ($name) => ['name' => $name],
+            config('likert-value.puestos_planta_3', [])
+        ));
 
-        if ($organizationId) {
-            $organization = Organization::find($organizationId);
-            if ($organization) {
-                $positions = $organization->occupationPositions()->get(['name']);
-                $areas = $organization->departmentAreas()->get(['name']);
+        $areas = collect(array_map(
+            fn ($name) => ['name' => $name],
+            config('likert-value.areas_planta_3', [])
+        ));
 
-                // Use defaults if empty
-                if ($positions->isEmpty()) {
-                    $positions = collect([['name' => 'Puesto 1']]);
-                }
-                if ($areas->isEmpty()) {
-                    $areas = collect([['name' => 'Área 1']]);
-                }
-            }
+        // Safety fallback if config is missing
+        if ($positions->isEmpty()) {
+            $positions = collect([['name' => 'Puesto 1']]);
+        }
+        if ($areas->isEmpty()) {
+            $areas = collect([['name' => 'Área 1']]);
         }
 
         return view('omr.likert-planta-3', [
