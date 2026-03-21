@@ -1,7 +1,11 @@
 from pdf_to_image_converter import PDFToImageConverter
 from bubble_detector import BubbleDetector
+from alinear_con_marcadores import detectar_marcadores_4_esquinas, alinear_imagen, IDEAL_POSITIONS, LABELS, markers_logger
 import os
 import shutil
+import base64
+import logging
+import tempfile
 import config_legacy as config
 import json
 import cv2
@@ -56,8 +60,10 @@ def get_main_answers(image_file, detector, evaluation_config, folio):
         with open(json_output_path, 'w') as json_file:
             json.dump(answers, json_file, indent=4)
         print(f"Resultados guardados en: {json_output_path}")
+        return answers
     except Exception as e:
         print(f"Error procesando {image_file}: {e}")
+        return {}
 
 def get_referencia_iii_complete_answers(image_file, detector, folio):
     """
@@ -129,11 +135,13 @@ def get_referencia_iii_complete_answers(image_file, detector, folio):
         
         logging.info(f"Resultados completos de Referencia III guardados en: {json_output_path}")
         logging.info(f"Secciones detectadas: {list(complete_answers.keys())}")
-        
+        return complete_answers
+
     except Exception as e:
         logging.error(f"Error procesando Referencia III completa en {image_file}: {e}")
         import traceback
         logging.error(traceback.format_exc())
+        return {}
 
 def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=400):
     """
@@ -308,15 +316,17 @@ def get_likert_complete_answers(image_file, detector, folio, min_fill_threshold=
             json.dump(complete_answers, json_file, indent=4)
         
         markers_logger.info(f"  JSON guardado: {json_filename}")
-        markers_logger.info(f"  === get_likert_complete_answers FIN ===" )
-        
+        markers_logger.info(f"  === get_likert_complete_answers FIN ===")
+
         logging.info(f"✓ Resultados de {config_prefix} guardados en: {json_output_path}")
         logging.info(f"  Secciones detectadas: {list(complete_answers.keys())}")
-        
+        return complete_answers
+
     except Exception as e:
         logging.error(f"Error procesando Likert en {image_file}: {e}")
         import traceback
         logging.error(traceback.format_exc())
+        return {}
 
 def get_referencia_v_complete_answers(image_file, detector, folio, min_fill_threshold=800):
     """
@@ -437,11 +447,13 @@ def get_referencia_v_complete_answers(image_file, detector, folio, min_fill_thre
         
         logging.info(f"Resultados completos de Referencia V guardados en: {json_output_path}")
         logging.info(f"Subsecciones detectadas: {list(complete_answers.keys())}")
-        
+        return complete_answers
+
     except Exception as e:
         logging.error(f"Error procesando Referencia V completa en {image_file}: {e}")
         import traceback
         logging.error(traceback.format_exc())
+        return {}
 
 def get_main_answers_legacy(image_file, detector, evaluation_config, folio):
     """
@@ -455,10 +467,12 @@ def get_main_answers_legacy(image_file, detector, evaluation_config, folio):
         with open(json_output_path, 'w') as json_file:
             json.dump(answers, json_file, indent=4)
         print(f"Resultados guardados en: {json_output_path}")
+        return answers
     except Exception as e:
         print(f"Error procesando {image_file}: {e}")
+        return {}
 
-def save_image_with_markers(image_path, folio, marker_positions=None, bubble_configs=None, template_type=None):
+def save_image_with_markers(image_path, folio, marker_positions=None, bubble_configs=None, template_type=None, output_dir=None):
     """
     Genera y guarda una imagen con burbujas detectadas en colores diferentes según la sección.
     
@@ -707,14 +721,18 @@ def save_image_with_markers(image_path, folio, marker_positions=None, bubble_con
                                 cv2.putText(img_marked, letter, (letter_x, letter_y), font, font_scale, color, font_thickness)
         
     # Guardar la imagen con marcadores
-        output_path = os.path.join(output_with_markers_folder, f"{folio}.png")
+        effective_output_dir = output_dir if output_dir is not None else output_with_markers_folder
+        os.makedirs(effective_output_dir, exist_ok=True)
+        output_path = os.path.join(effective_output_dir, f"{folio}.png")
         cv2.imwrite(output_path, img_marked)
         logging.info(f"Imagen con burbujas detectadas guardada: {output_path}")
-        
+        return output_path
+
     except Exception as e:
         logging.error(f"Error guardando imagen con marcadores para folio {folio}: {e}")
         import traceback
         logging.error(traceback.format_exc())
+        return None
 
 # Limpieza de las carpetas de salida (output, outputs_aligned, output_original)
 def limpiar_carpeta(path):

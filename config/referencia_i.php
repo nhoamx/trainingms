@@ -19,5 +19,6 @@ return [
         '¿Se ha estado particularmente irritable o le han dado arranques de coraje?',
         '¿Ha tenido dificultad para concentrarse?',
         '¿Ha estado usted demasiado alerta o constantemente en alerta?',
+        '¿Se ha sobresaltado fácilmente por cualquier cosa?',
     ],
 ];

@@ -21,6 +21,7 @@ interface Props {
   colors: Record<string, string>;
   labels: Record<string, string>;
   title: string;
+  variant?: 'pie' | 'doughnut';
 }
 
 const props = defineProps<Props>();
@@ -40,9 +41,18 @@ const createChart = () => {
   const backgroundColors = orderedLevels.map(level => props.colors[level]);
 
   const total = chartData.reduce((sum, value) => sum + value, 0);
+  const getPercentage = (value: number): string => {
+    if (total === 0) {
+      return '0.0';
+    }
 
-  const config: ChartConfiguration<'pie'> = {
-    type: 'pie',
+    return ((value / total) * 100).toFixed(1);
+  };
+
+  const chartVariant = props.variant ?? 'pie';
+
+  const config: ChartConfiguration<'pie' | 'doughnut'> = {
+    type: chartVariant,
     data: {
       labels: chartLabels,
       datasets: [{
@@ -68,7 +78,7 @@ const createChart = () => {
               if (data.labels && data.datasets.length) {
                 return data.labels.map((label, i) => {
                   const value = data.datasets[0].data[i] as number;
-                  const percentage = ((value / total) * 100).toFixed(1);
+                  const percentage = getPercentage(value);
                   return {
                     text: `${label}: ${value} (${percentage}%)`,
                     fillStyle: backgroundColors[i],
@@ -86,7 +96,7 @@ const createChart = () => {
             label: function(context) {
               const label = context.label || '';
               const value = context.parsed as number;
-              const percentage = ((value / total) * 100).toFixed(1);
+              const percentage = getPercentage(value);
               return `${label}: ${value} personas (${percentage}%)`;
             },
           },
@@ -115,4 +125,16 @@ watch(() => props.distribution, () => {
     createChart();
   });
 }, { deep: true });
+
+watch(() => props.title, () => {
+  nextTick(() => {
+    createChart();
+  });
+});
+
+watch(() => props.variant, () => {
+  nextTick(() => {
+    createChart();
+  });
+});
 </script>

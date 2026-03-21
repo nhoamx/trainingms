@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\WorkCenter;
 
 use App\Http\Controllers\Controller;
+use App\Models\OrganizationAnalysisBlock;
 use App\Models\WorkCenter;
 use App\Services\OrganizationReportCacheService;
 use App\Services\WorkCenter\WorkCenterNom035RefIStatisticsService;
@@ -46,6 +47,25 @@ class WorkCenterNom035RefIDashboardController extends Controller
         $analysisData = $this->statisticsService->getStagesAnalysisData($workCenter);
         $questionStatistics = $this->statisticsService->getQuestionStatistics($workCenter);
         $blockStatistics = $this->statisticsService->getBlockStatistics($workCenter);
+        $atsPanoramaStatistics = $this->statisticsService->getAtsPanoramaStatistics($workCenter);
+        $acontecimientoParticipants = $this->statisticsService->getAcontecimientoParticipants($workCenter);
+        $clinicalAssessmentParticipants = $this->statisticsService->getClinicalAssessmentParticipants($workCenter);
+
+        $analysisBlocks = OrganizationAnalysisBlock::query()
+            ->where('organization_id', $workCenter->organization_id)
+            ->orderBy('instrument_type')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('instrument_type')
+            ->map(fn ($blocks) => $blocks->map(fn (OrganizationAnalysisBlock $block) => [
+                'id' => $block->id,
+                'instrument_type' => $block->instrument_type,
+                'title' => $block->title,
+                'content_html' => $block->content_html,
+                'sort_order' => $block->sort_order,
+            ])->values())
+            ->all();
 
         return Inertia::render('WorkCenters/Nom035RefIDashboard', [
             'title' => 'NOM-035 Referencia I (ATS) - '.$workCenter->name,
@@ -56,6 +76,32 @@ class WorkCenterNom035RefIDashboardController extends Controller
             'analysisData' => $analysisData,
             'questionStatistics' => $questionStatistics,
             'blockStatistics' => $blockStatistics,
+            'atsPanoramaStatistics' => $atsPanoramaStatistics,
+            'acontecimientoParticipants' => $acontecimientoParticipants,
+            'clinicalAssessmentParticipants' => $clinicalAssessmentParticipants,
+            'analysisBlocks' => [
+                'referencia_i' => $analysisBlocks['referencia_i'] ?? [],
+                'referencia_iii' => $analysisBlocks['referencia_iii'] ?? [],
+            ],
+            'canManageAnalysisBlocks' => request()->user()?->hasRole(['admin', 'super-admin']) ?? false,
+            'preventionActions' => $workCenter->preventionActions()
+                ->where('instrument_type', 'referencia_i')
+                ->orderBy('sort_order')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn ($action) => [
+                    'id' => $action->id,
+                    'instrument_type' => $action->instrument_type,
+                    'title' => $action->title,
+                    'description' => $action->description,
+                    'responsible' => $action->responsible,
+                    'status' => $action->status,
+                    'due_date' => $action->due_date?->format('Y-m-d'),
+                    'sort_order' => $action->sort_order,
+                    'updated_at' => $action->updated_at?->format('Y-m-d H:i'),
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 

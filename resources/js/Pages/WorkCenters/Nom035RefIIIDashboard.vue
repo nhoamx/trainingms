@@ -1,7 +1,7 @@
 <template>
   <Dashboard>
     <div class="py-8">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="mb-8">
           <div class="flex flex-col sm:flex-row sm:items-center gap-6 mb-4">
@@ -60,7 +60,14 @@
               :block-statistics="props.blockStatistics"
               :global-statistics="props.globalStatistics"
               :analysis-data="props.analysisData"
+              :general-report="props.generalReport"
+              :violence-labor-statistics="props.violenceLaborStatistics"
               :organization-id="props.dashboardData.organization.id"
+              :analysis-blocks="props.analysisBlocks"
+              :can-manage-analysis-blocks="props.canManageAnalysisBlocks"
+              :prevention-actions="preventionActions"
+              :can-manage-prevention-actions="isAdmin"
+              :work-center-id="props.dashboardData.work_center.id"
             />
           </div>
         </div>
@@ -70,7 +77,8 @@
 </template>
 
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
 import Dashboard from '../../Layouts/Dashboard.vue';
 import StagesTab from '@/Components/Organization/Nom035/StagesTab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
@@ -202,6 +210,27 @@ interface AnalysisData {
   labels: Record<string, string>;
 }
 
+interface GeneralReport {
+  total_evaluations: number;
+  average_total_score: number;
+  rows: Array<{
+    categoria: {
+      nombre: string;
+      puntaje: number;
+      nivel_riesgo: string;
+    };
+    dominio: {
+      nombre: string;
+      puntaje: number;
+      nivel_riesgo: string;
+    };
+    dimension: string;
+    item: string;
+    item_numero: number;
+    puntaje: number;
+  }>;
+}
+
 interface Evaluation {
   id: string;
   evaluation_type?: string;
@@ -227,8 +256,50 @@ interface Props {
   blockStatistics?: { blocks: Record<string, unknown>; total_evaluations: number };
   globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
+  generalReport?: GeneralReport;
+  violenceLaborStatistics?: {
+    question_numbers: number[];
+    labels: Record<string, string>;
+    colors: Record<string, string>;
+    domain_levels: Record<string, { min: number; max: number }>;
+    total_evaluated: number;
+    total_by_level: Record<string, number>;
+    high_risk_total: number;
+    questions: Array<{
+      number: number;
+      text: string;
+      distribution: Record<string, number>;
+      total_responses: number;
+      high_risk_total: number;
+    }>;
+    participants: Array<{
+      personal_folio: string;
+      demographics: {
+        genero: string;
+        puesto: string;
+        area: string;
+        turno: string;
+      };
+      violence_score: number;
+      risk_level: string;
+      question_levels: Record<string, string>;
+    }>;
+  };
+  analysisBlocks?: {
+    referencia_i: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+    referencia_iii: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+  };
+  canManageAnalysisBlocks?: boolean;
   evaluations?: Evaluation[];
   availableEvaluationTypes?: EvaluationType[];
+  preventionActions?: Array<{
+    id: number;
+    title: string;
+    description: string | null;
+    responsible: string | null;
+    status: string;
+    due_date: string | null;
+  }>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -237,9 +308,33 @@ const props = withDefaults(defineProps<Props>(), {
   dimensionStatistics: () => ({ dimensions: {}, total_evaluations: 0, colors: {}, labels: {} }),
   globalStatistics: () => ({ global: {}, total_evaluations: 0, colors: {}, labels: {} }),
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
+  violenceLaborStatistics: () => ({
+    question_numbers: [],
+    labels: {},
+    colors: {},
+    domain_levels: {},
+    total_evaluated: 0,
+    total_by_level: {},
+    high_risk_total: 0,
+    questions: [],
+    participants: [],
+  }),
+  analysisBlocks: () => ({ referencia_i: [], referencia_iii: [] }),
+  canManageAnalysisBlocks: false,
   evaluations: () => [],
   availableEvaluationTypes: () => [],
+  preventionActions: () => [],
 });
+
+const page = usePage();
+
+const isAdmin = computed(() => {
+  const roles = (page.props.auth as { user?: { roles?: Array<{ name: string }> } })?.user?.roles ?? [];
+
+  return roles.some((role) => role.name === 'admin' || role.name === 'super-admin');
+});
+
+const preventionActions = computed(() => props.preventionActions ?? []);
 </script>
 
 <style scoped>

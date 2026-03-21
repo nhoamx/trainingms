@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Enums\WorkCenterType;
+use App\Exports\WorkCenterMetricsExport;
 use App\Exports\WorkCentersExport;
 use App\Imports\WorkCentersImport;
 use App\Models\Organization;
+use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,17 +24,230 @@ class WorkCenterController extends Controller
      */
     public function index(Organization $organization): Response
     {
+        $workCenterMetrics = $this->buildWorkCenterMetrics($organization);
+
         $workCenters = $organization->workCenters()
-            ->withCount(['quizzes', 'paperEvaluations'])
+            ->withCount(['quizzes', 'paperEvaluations' => function ($query) {
+                $query->where('processing_status', 'completed');
+            }])
             ->orderByDesc('is_primary')
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->each(function (WorkCenter $workCenter) use ($workCenterMetrics): void {
+                $metrics = $workCenterMetrics[$workCenter->id] ?? [
+                    'evaluated_people_count' => 0,
+                    'men_count' => 0,
+                    'women_count' => 0,
+                    'requires_clinical_attention_count' => 0,
+                ];
+
+                $workCenter->setAttribute('evaluated_people_count', $metrics['evaluated_people_count']);
+                $workCenter->setAttribute('men_count', $metrics['men_count']);
+                $workCenter->setAttribute('women_count', $metrics['women_count']);
+                $workCenter->setAttribute('requires_clinical_attention_count', $metrics['requires_clinical_attention_count']);
+            });
 
         return Inertia::render('WorkCenters/Index', [
             'title' => 'Centros de Trabajo - '.$organization->name,
             'organization' => $organization,
             'workCenters' => $workCenters,
         ]);
+    }
+
+    /**
+     * Build participant and clinical-attention counters per work center.
+     *
+     * @return array<string, array{evaluated_people_count: int, men_count: int, women_count: int, requires_clinical_attention_count: int}>
+     */
+    private function buildWorkCenterMetrics(Organization $organization): array
+    {
+        $evaluations = PaperEvaluation::query()
+            ->where('organization_id', $organization->id)
+            ->where('processing_status', 'completed')
+            ->whereNotNull('work_center_id')
+            ->with(['demographicData:id,paper_evaluation_id,gender'])
+            ->select(['id', 'work_center_id', 'personal_folio', 'folio', 'evaluation_type', 'referencia_i_answers', 'demographic_data'])
+            ->get();
+
+        /** @var array<string, array{participants: array<string, true>, participant_gender: array<string, string>, clinical: array<string, true>}> $raw */
+        $raw = [];
+
+        foreach ($evaluations as $evaluation) {
+            if (! $evaluation->work_center_id) {
+                continue;
+            }
+
+            $workCenterId = $evaluation->work_center_id;
+            $participantKey = $this->resolveParticipantKey($evaluation->personal_folio, $evaluation->folio);
+            $gender = $this->resolveNormalizedGender($evaluation->demographicData?->gender, $evaluation->demographic_data);
+
+            if (! isset($raw[$workCenterId])) {
+                $raw[$workCenterId] = ['participants' => [], 'participant_gender' => [], 'clinical' => []];
+            }
+
+            $raw[$workCenterId]['participants'][$participantKey] = true;
+
+            if ($gender !== null && ! isset($raw[$workCenterId]['participant_gender'][$participantKey])) {
+                $raw[$workCenterId]['participant_gender'][$participantKey] = $gender;
+            }
+
+            $answers = is_array($evaluation->referencia_i_answers) ? $evaluation->referencia_i_answers : [];
+            if ($evaluation->evaluation_type === 'referencia_i' && $this->requiresClinicalAttention($answers)) {
+                $raw[$workCenterId]['clinical'][$participantKey] = true;
+            }
+        }
+
+        /** @var array<string, array{evaluated_people_count: int, men_count: int, women_count: int, requires_clinical_attention_count: int}> $metrics */
+        $metrics = [];
+
+        foreach ($raw as $workCenterId => $values) {
+            $menCount = 0;
+            $womenCount = 0;
+
+            foreach (array_keys($values['participants']) as $participantKey) {
+                $gender = $values['participant_gender'][$participantKey] ?? null;
+
+                if ($gender === 'male') {
+                    $menCount++;
+                }
+
+                if ($gender === 'female') {
+                    $womenCount++;
+                }
+            }
+
+            $metrics[$workCenterId] = [
+                'evaluated_people_count' => count($values['participants']),
+                'men_count' => $menCount,
+                'women_count' => $womenCount,
+                'requires_clinical_attention_count' => count($values['clinical']),
+            ];
+        }
+
+        return $metrics;
+    }
+
+    private function resolveParticipantKey(?string $personalFolio, ?string $folio): string
+    {
+        $normalizedPersonalFolio = trim((string) $personalFolio);
+        if ($normalizedPersonalFolio !== '') {
+            return 'personal:'.$normalizedPersonalFolio;
+        }
+
+        return 'folio:'.trim((string) $folio);
+    }
+
+    private function resolveNormalizedGender(?string $modelGender, mixed $demographicData): ?string
+    {
+        if (is_string($modelGender) && trim($modelGender) !== '') {
+            $normalizedFromModel = $this->mapGenderToCanonical($modelGender);
+
+            if ($normalizedFromModel !== null) {
+                return $normalizedFromModel;
+            }
+        }
+
+        if (! is_array($demographicData)) {
+            return null;
+        }
+
+        $rawGender = $demographicData['sexo']
+            ?? $demographicData['genero']
+            ?? $demographicData['gender']
+            ?? null;
+
+        if (! is_string($rawGender)) {
+            return null;
+        }
+
+        return $this->mapGenderToCanonical($rawGender);
+    }
+
+    private function mapGenderToCanonical(string $rawGender): ?string
+    {
+        $normalized = mb_strtolower(trim($rawGender));
+
+        if (in_array($normalized, ['masculino', 'hombre', 'male', 'm'], true)) {
+            return 'male';
+        }
+
+        if (in_array($normalized, ['femenino', 'mujer', 'female', 'f'], true)) {
+            return 'female';
+        }
+
+        return null;
+    }
+
+    /**
+     * Clinical attention criteria for Ref I.
+     *
+     * Section II (1-2): >=1 yes
+     * Section III (3-9): >=3 yes
+     * Section IV (10-14): >=2 yes
+     */
+    private function requiresClinicalAttention(array $answers): bool
+    {
+        $normalizedAnswers = $this->normalizeRefIAnswers($answers);
+
+        $sectionIICount = $this->countYesByQuestionRange($normalizedAnswers, 1, 2);
+        $sectionIIICount = $this->countYesByQuestionRange($normalizedAnswers, 3, 9);
+        $sectionIVCount = $this->countYesByQuestionRange($normalizedAnswers, 10, 14);
+
+        return $sectionIICount >= 1 || $sectionIIICount >= 3 || $sectionIVCount >= 2;
+    }
+
+    /**
+     * @param  array<string|int, mixed>  $answers
+     * @return array<string, mixed>
+     */
+    private function normalizeRefIAnswers(array $answers): array
+    {
+        $normalized = [];
+
+        foreach ($answers as $rawKey => $value) {
+            $key = (string) $rawKey;
+
+            if (preg_match('/^pregunta_(\d+)$/', $key, $matches) === 1) {
+                $normalized['pregunta_'.((int) $matches[1])] = $value;
+
+                continue;
+            }
+
+            if (preg_match('/^(\d+)$/', $key, $matches) === 1) {
+                $normalized['pregunta_'.((int) $matches[1])] = $value;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  array<string, mixed>  $answers
+     */
+    private function countYesByQuestionRange(array $answers, int $fromQuestion, int $toQuestion): int
+    {
+        $count = 0;
+
+        for ($question = $fromQuestion; $question <= $toQuestion; $question++) {
+            $value = $answers['pregunta_'.$question] ?? null;
+
+            if ($this->isAffirmativeAnswer($value)) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    private function isAffirmativeAnswer(mixed $answer): bool
+    {
+        if (is_string($answer)) {
+            $normalizedAnswer = mb_strtolower(trim($answer));
+
+            return in_array($normalizedAnswer, ['sí', 'si', 'true', '1'], true);
+        }
+
+        return in_array($answer, [true, 1], true);
     }
 
     /**
@@ -93,7 +309,9 @@ class WorkCenterController extends Controller
             abort(403, 'No autorizado.');
         }
 
-        $workCenter->loadCount(['quizzes', 'paperEvaluations']);
+        $workCenter->loadCount(['quizzes', 'paperEvaluations' => function ($query) {
+            $query->where('processing_status', 'completed');
+        }]);
 
         return Inertia::render('WorkCenters/Edit', [
             'title' => 'Editar Centro de Trabajo',
@@ -189,6 +407,23 @@ class WorkCenterController extends Controller
     }
 
     /**
+     * Descargar métricas de centros de trabajo en Excel
+     */
+    public function downloadMetrics(Organization $organization)
+    {
+        $workCenterMetrics = $this->buildWorkCenterMetrics($organization);
+        $workCenters = $organization->workCenters()
+            ->orderByDesc('is_primary')
+            ->orderBy('name')
+            ->get();
+
+        $organizationSlug = Str::slug($organization->name);
+        $filename = 'reporte-'.$organizationSlug.'-'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(new WorkCenterMetricsExport($workCenters, $workCenterMetrics), $filename);
+    }
+
+    /**
      * Importar centros de trabajo desde archivo Excel
      */
     public function import(Request $request, Organization $organization)
@@ -245,7 +480,9 @@ class WorkCenterController extends Controller
 
         $workCenters = $user->workCenters()
             ->with('organization:id,name')
-            ->withCount('paperEvaluations')
+            ->withCount(['paperEvaluations' => function ($query) {
+                $query->where('processing_status', 'completed');
+            }])
             ->get()
             ->map(function ($workCenter) {
                 return [

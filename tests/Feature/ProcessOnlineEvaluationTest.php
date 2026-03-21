@@ -3,13 +3,11 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessOnlineEvaluation;
-use App\Models\DemographicData;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\Quiz;
 use App\Models\SubmissionStatus;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class ProcessOnlineEvaluationTest extends TestCase
@@ -55,6 +53,7 @@ class ProcessOnlineEvaluationTest extends TestCase
                     '11' => true,
                     '12' => false,
                     '13' => true,
+                    '14' => false,
                 ],
             ],
         ]);
@@ -65,13 +64,14 @@ class ProcessOnlineEvaluationTest extends TestCase
         $this->assertNotNull($paperEvaluation);
         $this->assertNotNull($paperEvaluation->referencia_i_answers);
 
-        // Verify indices 1-13 with correct values
+        // Verify indices 1-14 with correct values
         $this->assertEquals(true, $paperEvaluation->referencia_i_answers['1']);
         $this->assertEquals(false, $paperEvaluation->referencia_i_answers['2']);
         $this->assertEquals(true, $paperEvaluation->referencia_i_answers['13']);
+        $this->assertEquals(false, $paperEvaluation->referencia_i_answers['14']);
 
-        // Verify only indices 1-13 are present
-        $this->assertCount(13, $paperEvaluation->referencia_i_answers);
+        // Verify only indices 1-14 are present
+        $this->assertCount(14, $paperEvaluation->referencia_i_answers);
     }
 
     public function test_extracts_standardized_referencia_iii_with_numeric_indices(): void
@@ -293,5 +293,39 @@ class ProcessOnlineEvaluationTest extends TestCase
         // Verify source metadata
         $this->assertEquals('online', $rawData['source']);
         $this->assertArrayHasKey('source_metadata', $rawData);
+    }
+
+    public function test_extracts_cisneros_answers_with_canonical_json_structure(): void
+    {
+        $submissionStatus = SubmissionStatus::create([
+            'folio' => '040010016',
+            'personal_id' => '0016',
+            'organization_id' => $this->organization->id,
+            'quiz_id' => $this->quiz->id,
+            'status' => SubmissionStatus::STATUS_PENDING,
+            'data_snapshot' => [
+                'evaluation_type' => 'referencia_v',
+                'referencia_v' => ['sexo' => 'Femenino', 'edad' => '31'],
+                'escala_cisneros' => [
+                    'persona1' => 'a',
+                    'frecuencia1' => '3',
+                    'persona2' => 'C',
+                    'frecuencia2' => 0,
+                    '44' => 'Sí',
+                ],
+            ],
+        ]);
+
+        ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
+
+        $paperEvaluation = PaperEvaluation::where('folio', '040010016')->first();
+        $this->assertNotNull($paperEvaluation);
+        $this->assertNotNull($paperEvaluation->cisneros_answers);
+
+        $this->assertEquals([
+            '1' => ['persona' => 'A', 'frecuencia' => 3],
+            '2' => ['persona' => 'C', 'frecuencia' => 0],
+            '44' => true,
+        ], $paperEvaluation->cisneros_answers);
     }
 }

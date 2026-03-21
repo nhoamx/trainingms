@@ -4,6 +4,7 @@ namespace App\Imports;
 
 use App\Models\Organization;
 use App\Services\OccupationPositionService;
+use App\Support\OmrIdentifierSequence;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -39,6 +40,7 @@ class OccupationPositionsImport implements ToCollection, WithHeadingRow, WithVal
                 });
 
                 $identifier = $row['identificador'] ?? null;
+                $normalizedIdentifier = $identifier ? OmrIdentifierSequence::normalize($identifier) : null;
                 $name = $row['nombre_del_puesto'] ?? null;
 
                 // Validar que tengamos el nombre
@@ -50,9 +52,9 @@ class OccupationPositionsImport implements ToCollection, WithHeadingRow, WithVal
                 }
 
                 // Si tiene identificador, buscar el puesto existente
-                if (! empty($identifier)) {
+                if (! empty($normalizedIdentifier)) {
                     $existingPosition = $this->organization->occupationPositions()
-                        ->where('identifier', $identifier)
+                        ->where('identifier', $normalizedIdentifier)
                         ->first();
 
                     if ($existingPosition) {
@@ -70,7 +72,7 @@ class OccupationPositionsImport implements ToCollection, WithHeadingRow, WithVal
                 }
 
                 // Si no existe o no tiene identificador, crear nuevo puesto
-                $this->occupationService->createPosition($this->organization, $name);
+                $this->occupationService->createPosition($this->organization, $name, $normalizedIdentifier);
                 $this->createdCount++;
             } catch (\Exception $e) {
                 $this->errors[] = "Fila {$rowNumber}: {$e->getMessage()}";
@@ -86,7 +88,20 @@ class OccupationPositionsImport implements ToCollection, WithHeadingRow, WithVal
     {
         return [
             'nombre_del_puesto' => 'required|string|max:255',
-            'identificador' => 'nullable|string|max:10',
+            'identificador' => [
+                'nullable',
+                'string',
+                'max:12',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+
+                    if (! OmrIdentifierSequence::isValid((string) $value)) {
+                        $fail(OmrIdentifierSequence::validationMessage());
+                    }
+                },
+            ],
         ];
     }
 
@@ -99,6 +114,7 @@ class OccupationPositionsImport implements ToCollection, WithHeadingRow, WithVal
             'nombre_del_puesto.required' => 'El nombre del puesto es requerido',
             'nombre_del_puesto.string' => 'El nombre del puesto debe ser texto',
             'nombre_del_puesto.max' => 'El nombre del puesto no debe exceder 255 caracteres',
+            'identificador.max' => 'El identificador no debe exceder 12 caracteres',
         ];
     }
 

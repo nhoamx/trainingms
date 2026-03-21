@@ -61,6 +61,36 @@
           </div>
         </form>
       </div>
+
+      <div v-if="isAdminUser" class="mt-6 rounded-lg border border-indigo-200 bg-indigo-50/40 p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-semibold text-indigo-900">Plantillas en blanco para impresión</h3>
+            <p class="mt-1 text-xs text-indigo-800">
+              Descarga las guías sin folio prellenado para impresión manual.
+            </p>
+          </div>
+          <span class="inline-flex items-center rounded-full bg-white px-2 py-1 text-[11px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200">
+            Admin
+          </span>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div v-for="template in blankTemplateOptions" :key="template.route" class="rounded-md border border-indigo-100 bg-white p-3">
+            <p class="text-sm font-medium text-gray-900">{{ template.label }}</p>
+            <p class="mt-1 text-xs text-gray-500">{{ template.description }}</p>
+            <button
+              type="button"
+              class="mt-3 inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              @click="downloadBlankTemplate(template.route)"
+            >
+              <DocumentArrowDownIcon class="mr-1.5 h-4 w-4" />
+              Descargar PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Listado de lotes de folios -->
       <div class="mt-6">
         <h3 class="text-sm font-medium text-gray-700 mb-3">Lotes de folios registrados</h3>
@@ -254,8 +284,8 @@
 
 <script setup>
 
-import { ref, onUnmounted } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { computed, onUnmounted, ref } from 'vue';
+import { useForm, usePage } from '@inertiajs/vue3';
 import { PlusIcon, EyeIcon, TrashIcon, ArchiveBoxIcon, LinkIcon, DocumentArrowDownIcon } from '@heroicons/vue/24/solid';
 import axios from 'axios';
 
@@ -263,6 +293,41 @@ import axios from 'axios';
 const props = defineProps({
   organization: { type: Object, required: true }
 });
+
+const page = usePage();
+
+const isAdminUser = computed(() => {
+  const roles = page.props.auth?.user?.roles || [];
+
+  return roles.some((role) => ['admin', 'super-admin'].includes(role.name));
+});
+
+const blankTemplateOptions = [
+  {
+    route: 'omr.download.blank.referencia-i',
+    label: 'Guia de Referencia I',
+    description: 'Acontecimientos traumaticos severos',
+  },
+  {
+    route: 'omr.download.blank.referencia-iii',
+    label: 'Guia de Referencia III',
+    description: 'Factores de riesgo psicosocial',
+  },
+  {
+    route: 'omr.download.blank.referencia-v',
+    label: 'Guia de Referencia V',
+    description: 'Datos del trabajador',
+  },
+  {
+    route: 'omr.download.blank.escala-cisneros',
+    label: 'Escala Cisneros',
+    description: 'Violencia psicologica en el trabajo',
+  },
+];
+
+const downloadBlankTemplate = (routeName) => {
+  window.open(route(routeName), '_blank');
+};
 
 const folioBatchForm = useForm({
   organization_id: props.organization.id,

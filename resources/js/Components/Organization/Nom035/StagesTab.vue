@@ -184,7 +184,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow">
             <div class="flex items-center gap-3 mb-4">
               <ClipboardDocumentListIcon class="w-6 h-6 text-blue-600" />
@@ -198,6 +198,21 @@
               <h4 class="font-bold text-slate-900">Entrevistas</h4>
             </div>
             <p class="text-sm text-slate-600">Conversaciones con trabajadores para detectar situaciones de riesgo</p>
+          </div>
+
+          <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow">
+            <div class="flex items-center gap-3 mb-4">
+              <ExclamationTriangleIcon class="w-6 h-6 text-red-600" />
+              <h4 class="font-bold text-slate-900">Violencia Laboral</h4>
+            </div>
+            <p class="text-sm text-slate-600 mb-4">Monitorea el dominio de violencia laboral (preguntas 57 a 64) y conecta hallazgos con acciones preventivas.</p>
+            <button
+              type="button"
+              @click="openViolenceAnalysisView"
+              class="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-red-500"
+            >
+              Ver analisis de violencia laboral
+            </button>
           </div>
         </div>
       </div>
@@ -227,6 +242,17 @@
                   <span class="text-sm font-medium text-slate-700">Vista:</span>
                   <div class="flex gap-2">
                     <button
+                      @click="analysisViewMode = 'general_report'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        analysisViewMode === 'general_report'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Reporte General
+                    </button>
+                    <button
                       @click="analysisViewMode = 'domains'"
                       :class="[
                         'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
@@ -248,9 +274,21 @@
                     >
                       Categorías
                     </button>
+                    <button
+                      @click="analysisViewMode = 'violencia'"
+                      :class="[
+                        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                        analysisViewMode === 'violencia'
+                          ? 'bg-red-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ]"
+                    >
+                      Violencia Laboral
+                    </button>
                   </div>
                   <div class="ml-auto text-sm text-slate-600">
-                    <span class="font-semibold">{{ filteredEvaluations.length }}</span> evaluaciones filtradas
+                    <span class="font-semibold">{{ analysisViewMode === 'violencia' ? filteredViolenceParticipants.length : (analysisViewMode === 'general_report' ? (props.generalReport?.total_evaluations ?? 0) : filteredEvaluations.length) }}</span>
+                    {{ analysisViewMode === 'general_report' ? 'evaluaciones incluidas' : 'evaluaciones filtradas' }}
                   </div>
                 </div>
 
@@ -291,7 +329,7 @@
                 </div>
 
                 <!-- Chart Type Toggle -->
-                <div class="flex items-center gap-4">
+                <div v-if="analysisViewMode !== 'general_report'" class="flex items-center gap-4">
                   <span class="text-sm font-medium text-slate-700">Tipo de Gráfica:</span>
                   <div class="flex gap-2">
                     <button
@@ -307,7 +345,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
                       </svg>
-                      Pastel
+                      {{ analysisViewMode === 'violencia' ? 'Dona' : 'Pastel' }}
                     </button>
                     <button
                       @click="chartType = 'bar'"
@@ -328,8 +366,77 @@
               </div>
             </div>
 
+            <div v-if="analysisViewMode === 'general_report'" class="bg-white rounded-lg p-6 border border-slate-200 space-y-4">
+              <div class="flex flex-col gap-1">
+                <h4 class="text-lg font-semibold text-slate-900">Detalle por Categoría, Dominio y Dimensión</h4>
+                <p class="text-sm text-slate-600">Promedio de puntajes por ítem considerando a todas las evaluaciones del centro de trabajo.</p>
+              </div>
+
+              <div v-if="props.generalReport && props.generalReport.rows.length > 0" class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead class="bg-slate-50">
+                    <tr>
+                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Categoría</th>
+                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Dominio</th>
+                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Dimensión</th>
+                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Ítem</th>
+                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Puntaje Promedio</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-slate-200">
+                    <template v-for="(cat, catIdx) in groupedGeneralReport" :key="`cat_${catIdx}`">
+                      <template v-for="(dom, domIdx) in cat.dominios" :key="`dom_${catIdx}_${domIdx}`">
+                        <template v-for="(dim, dimIdx) in dom.dimensiones" :key="`dim_${catIdx}_${domIdx}_${dimIdx}`">
+                          <template v-for="(item, itemIdx) in dim.items" :key="`item_${catIdx}_${domIdx}_${dimIdx}_${itemIdx}`">
+                            <tr>
+                              <td v-if="domIdx === 0 && dimIdx === 0 && itemIdx === 0" :rowspan="cat.rowspan" class="px-4 py-3 border border-slate-200 text-center align-middle bg-slate-50">
+                                <div class="font-medium text-slate-900">{{ cat.nombre }}</div>
+                                <div class="mt-1">
+                                  <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskBadgeClass(cat.nivel_riesgo)]">
+                                    {{ cat.nivel_riesgo }}: {{ formatScore(cat.puntaje) }}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td v-if="dimIdx === 0 && itemIdx === 0" :rowspan="dom.rowspan" class="px-4 py-3 border border-slate-200 text-center align-middle">
+                                <div class="font-medium text-slate-900">{{ dom.nombre }}</div>
+                                <div class="mt-1">
+                                  <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskBadgeClass(dom.nivel_riesgo)]">
+                                    {{ dom.nivel_riesgo }}: {{ formatScore(dom.puntaje) }}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td v-if="itemIdx === 0" :rowspan="dim.rowspan" class="px-4 py-3 border border-slate-200 text-center align-middle text-slate-700">
+                                {{ dim.nombre }}
+                              </td>
+
+                              <td class="px-4 py-3 border border-slate-200 text-slate-800">
+                                <span class="font-semibold text-indigo-600">{{ item.item_numero }}.</span>
+                                {{ item.nombre }}
+                              </td>
+
+                              <td class="px-4 py-3 border border-slate-200 text-center">
+                                <span class="inline-flex rounded px-2 py-1 font-semibold" :class="getAverageItemScoreClass(item.puntaje)">
+                                  {{ formatScore(item.puntaje) }}
+                                </span>
+                              </td>
+                            </tr>
+                          </template>
+                        </template>
+                      </template>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+
+              <div v-else class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                <p class="text-slate-600">No hay datos suficientes para generar el reporte general.</p>
+              </div>
+            </div>
+
             <!-- Distribución y Gráfica -->
-            <div class="bg-white rounded-lg p-6 border border-slate-200">
+            <div v-if="analysisViewMode !== 'violencia' && analysisViewMode !== 'general_report'" class="bg-white rounded-lg p-6 border border-slate-200">
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- Cards de distribución -->
                 <div>
@@ -360,6 +467,93 @@
                 </div>
               </div>
             </div>
+
+            <div v-if="analysisViewMode === 'violencia'" class="space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-red-700">Total evaluados (dominio)</p>
+                  <p class="mt-1 text-2xl font-bold text-red-900">{{ filteredViolenceParticipants.length }}</p>
+                </div>
+                <div class="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-orange-700">Personas con violencia laboral muy alta</p>
+                  <p class="mt-1 text-2xl font-bold text-orange-900">{{ filteredViolenceVeryHighCount }}</p>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-lg p-6 border border-slate-200">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div>
+                    <RiskDistributionCards
+                      :distribution="filteredViolenceDistribution"
+                      :colors="violenceColors"
+                      :labels="violenceLabels"
+                      @showDetails="showViolenceRiskDetailsModal"
+                    />
+                  </div>
+
+                  <div>
+                    <RiskPieChart
+                      v-if="chartType === 'pie'"
+                      :distribution="filteredViolenceDistribution"
+                      :colors="violenceColors"
+                      :labels="violenceLabels"
+                      :title="'Violencia Laboral (57-64)'"
+                      variant="doughnut"
+                    />
+                    <RiskBarChart
+                      v-else
+                      :distribution="filteredViolenceDistribution"
+                      :colors="violenceColors"
+                      :labels="violenceLabels"
+                      :title="'Violencia Laboral (57-64)'"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                  <h4 class="text-sm font-semibold text-slate-900">Tabla por pregunta (57-64)</h4>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50">
+                      <tr>
+                        <th class="px-4 py-3 text-left font-semibold text-slate-700">Pregunta</th>
+                        <th class="px-4 py-3 text-center font-semibold text-slate-700">Nulo</th>
+                        <th class="px-4 py-3 text-center font-semibold text-slate-700">Bajo</th>
+                        <th class="px-4 py-3 text-center font-semibold text-slate-700">Medio</th>
+                        <th class="px-4 py-3 text-center font-semibold text-slate-700">Alto</th>
+                        <th class="px-4 py-3 text-center font-semibold text-slate-700">Muy Alto</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      <tr v-for="question in filteredViolenceQuestions" :key="question.number">
+                        <td class="px-4 py-3 text-slate-800">
+                          <p class="font-semibold">{{ question.number }}. {{ question.text }}</p>
+                        </td>
+                        <td class="px-4 py-3 text-center">{{ question.distribution.nulo }}</td>
+                        <td class="px-4 py-3 text-center">{{ question.distribution.bajo }}</td>
+                        <td class="px-4 py-3 text-center">{{ question.distribution.medio }}</td>
+                        <td class="px-4 py-3 text-center">{{ question.distribution.alto }}</td>
+                        <td class="px-4 py-3 text-center">{{ question.distribution.muy_alto }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="flex justify-end pb-6">
+                <button
+                  type="button"
+                  @click="openParticipantsWithViolenceRisk"
+                  class="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500"
+                >
+                  Ver participantes que han sufrido violencia laboral muy alta
+                </button>
+              </div>
+            </div>
+
           </div>
 
           <!-- Sin datos -->
@@ -372,6 +566,14 @@
               </div>
             </div>
           </div>
+
+          <AnalysisWysiwygBlocks
+            v-if="organizationId && (canManageAnalysisBlocks || analysisBlocks.referencia_iii.length > 0)"
+            :organization-id="organizationId"
+            instrument-type="referencia_iii"
+            :blocks="analysisBlocks.referencia_iii"
+            :can-manage="canManageAnalysisBlocks"
+          />
         </div>
       </div>
 
@@ -481,19 +683,70 @@
             <div class="bg-white rounded-lg p-4 border border-slate-200">
               <div class="text-sm text-slate-700">
                 <span class="font-medium">Total de participantes:</span>
-                <span class="font-bold text-teal-600 ml-2">{{ participantsWithScores.length }}</span>
+                <span class="font-bold text-teal-600 ml-2">{{ filteredParticipants.length }}</span>
+              </div>
+            </div>
+
+            <!-- Filtros de participantes -->
+            <div class="bg-white rounded-lg p-4 border border-slate-200">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label for="participants_sort" class="block text-sm font-medium text-slate-700 mb-1">
+                    Ordenar por
+                  </label>
+                  <select
+                    id="participants_sort"
+                    v-model="participantsSortBy"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="folio">Por folio</option>
+                    <option value="risk">Por nivel de riesgo</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="participants_risk" class="block text-sm font-medium text-slate-700 mb-1">
+                    Filtrar nivel de riesgo
+                  </label>
+                  <select
+                    id="participants_risk"
+                    v-model="participantsRiskFilter"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="">Todos</option>
+                    <option value="nulo">Nulo</option>
+                    <option value="bajo">Bajo</option>
+                    <option value="medio">Medio</option>
+                    <option value="alto">Alto</option>
+                    <option value="muy_alto">Muy Alto</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="participants_violence" class="block text-sm font-medium text-slate-700 mb-1">
+                    Filtro violencia laboral
+                  </label>
+                  <select
+                    id="participants_violence"
+                    v-model="participantsViolenceFilter"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="">Todos</option>
+                    <option value="muy_alto">Solo violencia laboral muy alta</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             <!-- Lista de participantes -->
             <div class="bg-white rounded-lg shadow-md overflow-hidden">
-              <div v-if="participantsWithScores.length === 0" class="p-6 text-center text-slate-500">
+              <div v-if="filteredParticipants.length === 0" class="p-6 text-center text-slate-500">
                 No se encontraron datos de participantes
               </div>
 
               <ul v-else class="divide-y divide-slate-200">
                 <li
-                  v-for="(participant, index) in participantsWithScores"
+                  v-for="(participant, index) in filteredParticipants"
                   :key="participant.personal_folio"
                   class="hover:bg-slate-50 transition-colors duration-150 p-0"
                 >
@@ -512,6 +765,12 @@
                       <span class="font-medium text-slate-900">Folio {{ participant.personal_folio }}</span>
                     </div>
                     <div class="flex items-center gap-4">
+                      <span
+                        :class="getRiskLevelPillClass(participant.risk_level)"
+                        class="px-2 py-1 rounded-full text-xs font-semibold uppercase tracking-wide"
+                      >
+                        {{ getRiskLevelLabel(participant.risk_level) }}
+                      </span>
                       <div class="hidden sm:block w-32 border-b border-dotted border-slate-300"></div>
                       <div :class="getScoreClass(participant.score)" class="px-3 py-1 rounded-full text-white font-medium min-w-[80px] text-center">
                         {{ participant.score }} pts
@@ -573,13 +832,138 @@
             </div>
             <h3 class="text-2xl font-bold text-emerald-900">Prevenir y Controlar Riesgos</h3>
           </div>
-          <div class="bg-white rounded-lg p-6">
-            <div class="flex items-center justify-center p-8 border-2 border-dashed border-emerald-300 rounded-lg">
+          <div class="bg-white rounded-lg p-6 space-y-4">
+            <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-red-700">Conexión Violencia Laboral</p>
+                  <p class="text-sm text-red-900 mt-1">
+                    Casos detectados con violencia laboral muy alta: <span class="font-bold">{{ props.violenceLaborStatistics.total_by_level.muy_alto ?? 0 }}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  @click="openViolenceAnalysisView"
+                  class="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-red-500"
+                >
+                  Revisar en Analizar
+                </button>
+              </div>
+            </div>
+
+            <form
+              v-if="canManagePreventionActions && workCenterId"
+              @submit.prevent="submitPreventionAction"
+              class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-4"
+            >
+              <h4 class="text-sm font-semibold text-emerald-900">Agregar acción preventiva</h4>
+
+              <div>
+                <label for="ref3_prevent_title" class="block text-sm font-medium text-slate-700">Título</label>
+                <input
+                  id="ref3_prevent_title"
+                  v-model="preventionForm.title"
+                  type="text"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                />
+                <p v-if="preventionForm.errors.title" class="mt-1 text-xs text-red-500">{{ preventionForm.errors.title }}</p>
+              </div>
+
+              <div>
+                <label for="ref3_prevent_desc" class="block text-sm font-medium text-slate-700">Descripción</label>
+                <textarea
+                  id="ref3_prevent_desc"
+                  v-model="preventionForm.description"
+                  rows="4"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                />
+                <p v-if="preventionForm.errors.description" class="mt-1 text-xs text-red-500">{{ preventionForm.errors.description }}</p>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label for="ref3_prevent_responsible" class="block text-sm font-medium text-slate-700">Responsable</label>
+                  <input
+                    id="ref3_prevent_responsible"
+                    v-model="preventionForm.responsible"
+                    type="text"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label for="ref3_prevent_due" class="block text-sm font-medium text-slate-700">Fecha objetivo</label>
+                  <input
+                    id="ref3_prevent_due"
+                    v-model="preventionForm.due_date"
+                    type="date"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label for="ref3_prevent_status" class="block text-sm font-medium text-slate-700">Estatus</label>
+                  <select
+                    id="ref3_prevent_status"
+                    v-model="preventionForm.status"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                  >
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_proceso">En proceso</option>
+                    <option value="completada">Completada</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="flex justify-end">
+                <button
+                  type="submit"
+                  :disabled="preventionForm.processing"
+                  class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  {{ preventionForm.processing ? 'Guardando...' : 'Guardar acción' }}
+                </button>
+              </div>
+            </form>
+
+            <div v-if="preventionActions.length === 0" class="flex items-center justify-center p-8 border-2 border-dashed border-emerald-300 rounded-lg">
               <div class="text-center">
                 <Cog6ToothIcon class="w-12 h-12 text-emerald-400 mx-auto mb-3 animate-spin" />
-                <p class="text-emerald-700 font-medium">En desarrollo</p>
+                <p class="text-emerald-700 font-medium">Sin acciones registradas</p>
                 <p class="text-sm text-emerald-600 mt-1">Acciones preventivas y planes de mejora continua</p>
               </div>
+            </div>
+
+            <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <article
+                v-for="action in preventionActions"
+                :key="action.id"
+                class="rounded-lg border border-slate-200 p-4 space-y-2"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <h4 class="font-semibold text-slate-900">{{ action.title }}</h4>
+                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" :class="statusClasses[action.status]">
+                    {{ statusLabels[action.status] ?? action.status }}
+                  </span>
+                </div>
+
+                <p v-if="action.description" class="text-sm text-slate-600">{{ action.description }}</p>
+
+                <div class="text-xs text-slate-500 flex flex-wrap gap-4">
+                  <span v-if="action.responsible">Responsable: {{ action.responsible }}</span>
+                  <span v-if="action.due_date">Fecha: {{ action.due_date }}</span>
+                </div>
+
+                <div v-if="canManagePreventionActions && workCenterId" class="flex justify-end">
+                  <button
+                    type="button"
+                    @click="deletePreventionAction(action.id)"
+                    class="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-red-500"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </article>
             </div>
           </div>
         </div>
@@ -607,7 +991,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router, useForm } from '@inertiajs/vue3';
 import DomainCharts from './Charts/DomainCharts.vue';
 import CategoryCharts from './Charts/CategoryCharts.vue';
 import DimensionCharts from './Charts/DimensionCharts.vue';
@@ -618,6 +1002,7 @@ import AnalysisFilters from './Charts/AnalysisFilters.vue';
 import RiskDistributionCards from './Charts/RiskDistributionCards.vue';
 import RiskPieChart from './Charts/RiskPieChart.vue';
 import RiskBarChart from './Charts/RiskBarChart.vue';
+import AnalysisWysiwygBlocks from './AnalysisWysiwygBlocks.vue';
 import {
   ChartBarIcon,
   MagnifyingGlassIcon,
@@ -629,6 +1014,7 @@ import {
   LightBulbIcon,
   ArrowPathIcon,
   Cog6ToothIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/vue/24/outline';
 
 interface DomainStatistics {
@@ -696,6 +1082,62 @@ interface AnalysisData {
   labels: Record<string, string>;
 }
 
+interface GeneralReportRow {
+  categoria: {
+    nombre: string;
+    puntaje: number;
+    nivel_riesgo: string;
+  };
+  dominio: {
+    nombre: string;
+    puntaje: number;
+    nivel_riesgo: string;
+  };
+  dimension: string;
+  item: string;
+  item_numero: number;
+  puntaje: number;
+}
+
+interface GeneralReport {
+  total_evaluations: number;
+  average_total_score: number;
+  rows: GeneralReportRow[];
+}
+
+interface ViolenceLaborQuestion {
+  number: number;
+  text: string;
+  distribution: Record<string, number>;
+  total_responses: number;
+  high_risk_total: number;
+}
+
+interface ViolenceLaborParticipant {
+  personal_folio: string;
+  demographics: {
+    genero: string;
+    puesto: string;
+    area: string;
+    turno: string;
+  };
+  violence_score: number;
+  risk_level: string;
+  question_levels: Record<string, string>;
+}
+
+interface ViolenceLaborStatistics {
+  question_numbers: number[];
+  labels: Record<string, string>;
+  colors: Record<string, string>;
+  domain_levels: Record<string, { min: number; max: number }>;
+  total_evaluated: number;
+  total_by_level: Record<string, number>;
+  high_risk_total: number;
+  questions: ViolenceLaborQuestion[];
+  participants: ViolenceLaborParticipant[];
+}
+
 interface Props {
   domainStatistics?: DomainStatistics;
   categoryStatistics?: CategoryStatistics;
@@ -704,7 +1146,24 @@ interface Props {
   blockStatistics?: BlockStatistics;
   globalStatistics?: GlobalStatistics;
   analysisData?: AnalysisData;
+  generalReport?: GeneralReport;
+  violenceLaborStatistics?: ViolenceLaborStatistics;
   organizationId?: string | number;
+  preventionActions?: Array<{
+    id: number;
+    title: string;
+    description: string | null;
+    responsible: string | null;
+    status: string;
+    due_date: string | null;
+  }>;
+  canManagePreventionActions?: boolean;
+  workCenterId?: string;
+  analysisBlocks?: {
+    referencia_i: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+    referencia_iii: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+  };
+  canManageAnalysisBlocks?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -713,8 +1172,81 @@ const props = withDefaults(defineProps<Props>(), {
   dimensionStatistics: () => ({ dimensions: {}, total_evaluations: 0, colors: {}, labels: {} }),
   globalStatistics: () => ({ global: {}, total_evaluations: 0, colors: {}, labels: {} }),
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
+  generalReport: () => ({ total_evaluations: 0, average_total_score: 0, rows: [] }),
+  violenceLaborStatistics: () => ({
+    question_numbers: [],
+    labels: {},
+    colors: {},
+    domain_levels: {},
+    total_evaluated: 0,
+    total_by_level: {
+      nulo: 0,
+      bajo: 0,
+      medio: 0,
+      alto: 0,
+      muy_alto: 0,
+    },
+    high_risk_total: 0,
+    questions: [],
+    participants: [],
+  }),
   organizationId: () => '',
+  preventionActions: () => [],
+  canManagePreventionActions: false,
+  workCenterId: undefined,
+  analysisBlocks: () => ({ referencia_i: [], referencia_iii: [] }),
+  canManageAnalysisBlocks: false,
 });
+
+const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);
+
+const preventionForm = useForm({
+  instrument_type: 'referencia_iii',
+  title: '',
+  description: '',
+  responsible: '',
+  status: 'pendiente',
+  due_date: '',
+  sort_order: 0,
+});
+
+const statusLabels: Record<string, string> = {
+  pendiente: 'Pendiente',
+  en_proceso: 'En proceso',
+  completada: 'Completada',
+};
+
+const statusClasses: Record<string, string> = {
+  pendiente: 'bg-yellow-100 text-yellow-800',
+  en_proceso: 'bg-blue-100 text-blue-800',
+  completada: 'bg-emerald-100 text-emerald-800',
+};
+
+const submitPreventionAction = (): void => {
+  if (!props.workCenterId) {
+    return;
+  }
+
+  preventionForm.post(route('work-centers.prevention-actions.store', props.workCenterId), {
+    preserveScroll: true,
+    onSuccess: () => {
+      preventionForm.reset();
+      preventionForm.instrument_type = 'referencia_iii';
+      preventionForm.status = 'pendiente';
+      preventionForm.sort_order = 0;
+    },
+  });
+};
+
+const deletePreventionAction = (actionId: number): void => {
+  if (!props.workCenterId) {
+    return;
+  }
+
+  router.delete(route('work-centers.prevention-actions.destroy', [props.workCenterId, actionId]), {
+    preserveScroll: true,
+  });
+};
 
 const activeSubTab = ref('identificar');
 
@@ -722,7 +1254,7 @@ const activeSubTab = ref('identificar');
 const identificarViewMode = ref<'global' | 'domains' | 'categories' | 'dimensions' | 'questions' | 'blocks'>('global');
 
 // Analysis state
-const analysisViewMode = ref<'domains' | 'categories'>('domains');
+const analysisViewMode = ref<'general_report' | 'domains' | 'categories' | 'violencia'>('general_report');
 const selectedDomain = ref<string>(''); // Empty string means "Global" (all domains)
 const selectedCategory = ref<string>(''); // Empty string means "Global" (all categories)
 const chartType = ref<'pie' | 'bar'>('pie'); // Chart type toggle
@@ -737,6 +1269,157 @@ const analysisFilters = ref({
 const showRiskModal = ref(false);
 const selectedRiskLevel = ref<string>('');
 const filteredRiskPersonal = ref<any[]>([]);
+const participantsSortBy = ref<'folio' | 'risk'>('folio');
+const participantsRiskFilter = ref<string>('');
+const participantsViolenceFilter = ref<string>('');
+
+const violenceLabels = computed(() => {
+  return Object.keys(props.violenceLaborStatistics.labels || {}).length > 0
+    ? props.violenceLaborStatistics.labels
+    : props.analysisData.labels;
+});
+
+const violenceColors = computed(() => {
+  return Object.keys(props.violenceLaborStatistics.colors || {}).length > 0
+    ? props.violenceLaborStatistics.colors
+    : props.analysisData.colors;
+});
+
+const filteredViolenceParticipants = computed(() => {
+  const participants = props.violenceLaborStatistics.participants ?? [];
+
+  return participants.filter((participant) => {
+    if (analysisFilters.value.genero && participant.demographics.genero !== analysisFilters.value.genero) {
+      return false;
+    }
+    if (analysisFilters.value.puesto && participant.demographics.puesto !== analysisFilters.value.puesto) {
+      return false;
+    }
+    if (analysisFilters.value.area && participant.demographics.area !== analysisFilters.value.area) {
+      return false;
+    }
+    if (analysisFilters.value.turno && participant.demographics.turno !== analysisFilters.value.turno) {
+      return false;
+    }
+
+    return true;
+  });
+});
+
+const filteredViolenceDistribution = computed(() => {
+  const distribution: Record<string, number> = {
+    nulo: 0,
+    bajo: 0,
+    medio: 0,
+    alto: 0,
+    muy_alto: 0,
+  };
+
+  filteredViolenceParticipants.value.forEach((participant) => {
+    if (Object.prototype.hasOwnProperty.call(distribution, participant.risk_level)) {
+      distribution[participant.risk_level]++;
+    }
+  });
+
+  return distribution;
+});
+
+const filteredViolenceVeryHighCount = computed(() => {
+  return filteredViolenceDistribution.value.muy_alto ?? 0;
+});
+
+const filteredViolenceQuestions = computed(() => {
+  const baseQuestions = props.violenceLaborStatistics.questions ?? [];
+
+  return baseQuestions.map((question) => {
+    const distribution: Record<string, number> = {
+      nulo: 0,
+      bajo: 0,
+      medio: 0,
+      alto: 0,
+      muy_alto: 0,
+    };
+
+    filteredViolenceParticipants.value.forEach((participant) => {
+      const level = participant.question_levels?.[String(question.number)];
+      if (level && Object.prototype.hasOwnProperty.call(distribution, level)) {
+        distribution[level]++;
+      }
+    });
+
+    return {
+      ...question,
+      distribution,
+      total_responses: Object.values(distribution).reduce((sum, current) => sum + current, 0),
+      high_risk_total: (distribution.alto ?? 0) + (distribution.muy_alto ?? 0),
+    };
+  });
+});
+
+const groupedGeneralReport = computed(() => {
+  type GroupedDimension = { nombre: string; rowspan: number; items: Array<{ nombre: string; item_numero: number; puntaje: number }> };
+  type GroupedDomain = { nombre: string; puntaje: number; nivel_riesgo: string; rowspan: number; dimensiones: GroupedDimension[] };
+  type GroupedCategory = { nombre: string; puntaje: number; nivel_riesgo: string; rowspan: number; dominios: GroupedDomain[] };
+
+  const grouped: GroupedCategory[] = [];
+  const rows = props.generalReport?.rows ?? [];
+
+  rows.forEach((row) => {
+    let category = grouped.find((item) => item.nombre === row.categoria.nombre);
+    if (!category) {
+      category = {
+        nombre: row.categoria.nombre,
+        puntaje: row.categoria.puntaje,
+        nivel_riesgo: row.categoria.nivel_riesgo,
+        rowspan: 0,
+        dominios: [],
+      };
+      grouped.push(category);
+    }
+
+    let domain = category.dominios.find((item) => item.nombre === row.dominio.nombre);
+    if (!domain) {
+      domain = {
+        nombre: row.dominio.nombre,
+        puntaje: row.dominio.puntaje,
+        nivel_riesgo: row.dominio.nivel_riesgo,
+        rowspan: 0,
+        dimensiones: [],
+      };
+      category.dominios.push(domain);
+    }
+
+    let dimension = domain.dimensiones.find((item) => item.nombre === row.dimension);
+    if (!dimension) {
+      dimension = {
+        nombre: row.dimension,
+        rowspan: 0,
+        items: [],
+      };
+      domain.dimensiones.push(dimension);
+    }
+
+    dimension.items.push({
+      nombre: row.item,
+      item_numero: row.item_numero,
+      puntaje: row.puntaje,
+    });
+  });
+
+  grouped.forEach((category) => {
+    category.rowspan = 0;
+    category.dominios.forEach((domain) => {
+      domain.rowspan = 0;
+      domain.dimensiones.forEach((dimension) => {
+        dimension.rowspan = dimension.items.length;
+        domain.rowspan += dimension.rowspan;
+      });
+      category.rowspan += domain.rowspan;
+    });
+  });
+
+  return grouped;
+});
 
 // Filtered evaluations based on demographic filters
 const filteredEvaluations = computed(() => {
@@ -970,6 +1653,32 @@ const showRiskDetailsModal = (level: string) => {
   showRiskModal.value = true;
 };
 
+const showViolenceRiskDetailsModal = (level: string): void => {
+  selectedRiskLevel.value = level;
+
+  filteredRiskPersonal.value = filteredViolenceParticipants.value
+    .filter((participant) => participant.risk_level === level)
+    .map((participant) => ({
+      personal_folio: participant.personal_folio,
+      score: participant.violence_score,
+    }));
+
+  showRiskModal.value = true;
+};
+
+const openViolenceAnalysisView = (): void => {
+  activeSubTab.value = 'analizar';
+  analysisViewMode.value = 'violencia';
+  chartType.value = 'pie';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const openParticipantsWithViolenceRisk = (): void => {
+  activeSubTab.value = 'participantes';
+  participantsViolenceFilter.value = 'muy_alto';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 // Function to close risk details modal
 const closeRiskModal = () => {
   showRiskModal.value = false;
@@ -983,23 +1692,71 @@ const participantsWithScores = computed(() => {
     return [];
   }
 
+  const violenceByFolio = new Map(
+    (props.violenceLaborStatistics.participants ?? []).map((participant) => [participant.personal_folio, participant.risk_level])
+  );
+
   const participants = props.analysisData.evaluations.map((evaluation: any) => {
     // Use the total_score from backend calculation
     const score = evaluation.total_score ?? 0;
-    
-    // Get highest risk level across all domains
-    const riskLevels = Object.values(evaluation.domain_scores).map((s: any) => s.risk_level);
-    const riskLevel = getHighestRiskLevel(riskLevels);
+
+    // Keep risk level consistent with displayed total score in participants tab
+    const riskLevel = getTotalScoreRiskLevel(score);
 
     return {
       personal_folio: evaluation.personal_folio,
       score: score,
       risk_level: riskLevel,
+      violence_risk_level: violenceByFolio.get(evaluation.personal_folio) ?? 'nulo',
     };
   });
 
-  // Sort by score in descending order (highest to lowest)
-  return participants.sort((a, b) => b.score - a.score);
+  return participants;
+});
+
+const filteredParticipants = computed(() => {
+  const riskWeight: Record<string, number> = {
+    nulo: 0,
+    bajo: 1,
+    medio: 2,
+    alto: 3,
+    muy_alto: 4,
+  };
+
+  let participants = [...participantsWithScores.value];
+
+  if (participantsViolenceFilter.value) {
+    participants = participants.filter((participant: any) => {
+      if (participantsViolenceFilter.value === 'muy_alto') {
+        return participant.violence_risk_level === 'muy_alto';
+      }
+
+      return true;
+    });
+  }
+
+  if (participantsRiskFilter.value) {
+    participants = participants.filter((participant) => participant.risk_level === participantsRiskFilter.value);
+  }
+
+  if (participantsSortBy.value === 'risk') {
+    participants.sort((a, b) => {
+      const left = riskWeight[a.risk_level] ?? -1;
+      const right = riskWeight[b.risk_level] ?? -1;
+
+      if (right !== left) {
+        return right - left;
+      }
+
+      return b.score - a.score;
+    });
+
+    return participants;
+  }
+
+  participants.sort((a, b) => Number(a.personal_folio) - Number(b.personal_folio));
+
+  return participants;
 });
 
 // Function to get score color class - aligned with nom035_risk_levels.php config
@@ -1009,6 +1766,14 @@ const getScoreClass = (score: number): string => {
   if (score <= 98) return 'bg-amber-500';       // Medio
   if (score <= 139) return 'bg-orange-500';     // Alto
   return 'bg-red-500';                          // Muy Alto
+};
+
+const getTotalScoreRiskLevel = (score: number): string => {
+  if (score <= 49) return 'nulo';
+  if (score <= 74) return 'bajo';
+  if (score <= 98) return 'medio';
+  if (score <= 139) return 'alto';
+  return 'muy_alto';
 };
 
 // Map risk level to appropriate color class
@@ -1021,6 +1786,68 @@ const getRiskLevelColorClass = (level: string): string => {
     'muy_alto': 'text-red-700 font-semibold',
   };
   return classMap[level.toLowerCase()] || 'font-semibold';
+};
+
+const getRiskLevelLabel = (level: string): string => {
+  const labels: Record<string, string> = {
+    nulo: 'Nulo',
+    bajo: 'Bajo',
+    medio: 'Medio',
+    alto: 'Alto',
+    muy_alto: 'Muy Alto',
+  };
+
+  return labels[level] ?? level;
+};
+
+const getRiskLevelPillClass = (level: string): string => {
+  const classes: Record<string, string> = {
+    nulo: 'bg-blue-100 text-blue-700',
+    bajo: 'bg-green-100 text-green-700',
+    medio: 'bg-amber-100 text-amber-700',
+    alto: 'bg-orange-100 text-orange-700',
+    muy_alto: 'bg-red-100 text-red-700',
+  };
+
+  return classes[level] ?? 'bg-slate-100 text-slate-700';
+};
+
+const formatScore = (score: number): string => {
+  return Number(score).toFixed(2);
+};
+
+const normalizeRiskLevel = (riskLevel: string): string => {
+  return riskLevel.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/\s+/g, '_');
+};
+
+const getRiskBadgeClass = (riskLevel: string): string => {
+  const normalizedRiskLevel = normalizeRiskLevel(riskLevel);
+
+  const classes: Record<string, string> = {
+    nulo: 'bg-blue-100 text-blue-700',
+    bajo: 'bg-green-100 text-green-700',
+    medio: 'bg-amber-100 text-amber-700',
+    alto: 'bg-orange-100 text-orange-700',
+    muy_alto: 'bg-red-100 text-red-700',
+  };
+
+  return classes[normalizedRiskLevel] ?? 'bg-slate-100 text-slate-700';
+};
+
+const getAverageItemScoreClass = (score: number): string => {
+  if (score <= 1) {
+    return 'bg-emerald-50 text-emerald-700';
+  }
+
+  if (score <= 2) {
+    return 'bg-lime-100 text-lime-800';
+  }
+
+  if (score <= 3) {
+    return 'bg-amber-100 text-amber-800';
+  }
+
+  return 'bg-rose-100 text-rose-800';
 };
 
 const subTabs = [

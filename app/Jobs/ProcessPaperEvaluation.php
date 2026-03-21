@@ -12,6 +12,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ProcessPaperEvaluation implements ShouldQueue
@@ -19,8 +20,6 @@ class ProcessPaperEvaluation implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected string $fullPath;
-
-    protected string $containerName;
 
     protected ?string $initiatorUserId;
 
@@ -32,14 +31,13 @@ class ProcessPaperEvaluation implements ShouldQueue
 
     protected string $fileName;
 
-    public int $timeout = 3600; // 1 hora para PDFs grandes
+    public int $timeout = 300;
 
     /**
      * Create a new job instance.
      */
     public function __construct(
         string $fullPath,
-        string $containerName,
         ?string $initiatorUserId = null,
         ?string $batchId = null,
         int $currentIndex = 0,
@@ -47,7 +45,6 @@ class ProcessPaperEvaluation implements ShouldQueue
         string $fileName = ''
     ) {
         $this->fullPath = $fullPath;
-        $this->containerName = $containerName;
         $this->initiatorUserId = $initiatorUserId;
         $this->batchId = $batchId;
         $this->currentIndex = $currentIndex;
@@ -60,25 +57,21 @@ class ProcessPaperEvaluation implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->broadcastStatus('running', 'Copiando PDF al contenedor...');
+        $this->broadcastStatus('running', 'Enviando PDF al servicio OCR...');
 
         try {
-            // 1. Copy PDF to Docker container
-            $this->copyPdfToContainer();
-
+            // 1. Call OCR HTTP service
             $this->broadcastStatus('running', 'Ejecutando análisis OCR...');
-
-            // 2. Execute OCR processing
-            $this->executeOcrProcessing();
-
-            $this->broadcastStatus('running', 'Esperando resultados del análisis...');
-
-            // 3. Process JSON results and store in new structure
-            $this->processJsonResults();
+            $results = $this->callOcrService();
 
             $this->broadcastStatus('running', 'Guardando resultados en la base de datos...');
 
-            // 4. Cleanup uploaded files
+            // 2. Process each result returned by the service
+            foreach ($results as $result) {
+                $this->processOcrResult($result);
+            }
+
+            // 3. Cleanup uploaded file
             $this->cleanupFiles();
 
             $this->broadcastStatus('finished', 'El procesamiento ha finalizado exitosamente', true);
@@ -96,196 +89,74 @@ class ProcessPaperEvaluation implements ShouldQueue
     }
 
     /**
-     * Broadcast status update with batch information
+     * Broadcast status update with batch information.
+     * Wrapped in try/catch to isolate Reverb failures from job processing.
      */
     protected function broadcastStatus(string $status, string $message, bool $finished = false): void
     {
-        broadcast(new EvaluationProcessingStatusChanged(
-            $status,
-            $message,
-            $finished,
-            $this->initiatorUserId,
-            $this->batchId,
-            $this->currentIndex,
-            $this->totalFiles,
-            $this->fileName
-        ));
+        try {
+            broadcast(new EvaluationProcessingStatusChanged(
+                $status,
+                $message,
+                $finished,
+                $this->initiatorUserId,
+                $this->batchId,
+                $this->currentIndex,
+                $this->totalFiles,
+                $this->fileName
+            ));
+        } catch (\Exception $e) {
+            Log::warning('Failed to broadcast evaluation status: '.$e->getMessage());
+        }
     }
 
     /**
-     * Copy PDF file to Docker container
+     * Send PDF to OCR HTTP service and return parsed results.
+     *
+     * @return array<int, array<string, mixed>>
      */
-    protected function copyPdfToContainer(): void
+    protected function callOcrService(): array
     {
-        $destinationPath = '/app/input/evaluation.pdf';
-        $copyCommand = 'docker cp '.escapeshellarg($this->fullPath)." {$this->containerName}:".escapeshellarg($destinationPath);
+        $serviceUrl = config('services.ocr.url');
+        $timeout = (int) config('services.ocr.timeout', 300);
 
-        exec($copyCommand, $copyOutput, $copyReturn);
+        Log::info('Sending PDF to OCR service', ['file' => $this->fileName, 'url' => $serviceUrl]);
 
-        if ($copyReturn !== 0) {
-            throw new \RuntimeException('Error al copiar el archivo al contenedor. Código: '.$copyReturn);
+        $response = Http::timeout($timeout)
+            ->attach('file', file_get_contents($this->fullPath), basename($this->fullPath))
+            ->post($serviceUrl.'/process');
+
+        if ($response->failed()) {
+            $error = $response->json('error', 'Unknown error');
+            $detail = $response->json('detail', '');
+            throw new \RuntimeException("OCR service returned error ({$response->status()}): {$error}. {$detail}");
         }
 
-        Log::info('PDF copied to container successfully');
+        $results = $response->json('results');
+
+        if (empty($results)) {
+            throw new \RuntimeException('OCR service returned no results for file: '.$this->fileName);
+        }
+
+        Log::info('OCR service processed successfully', ['results' => count($results), 'file' => $this->fileName]);
+
+        return $results;
     }
 
     /**
-     * Execute OCR processing in Docker container
+     * Process a single OCR result from the HTTP service response.
+     *
+     * @param  array<string, mixed>  $result
      */
-    protected function executeOcrProcessing(): void
+    protected function processOcrResult(array $result): void
     {
-        $execCommand = "docker exec {$this->containerName} python /app/main.py 2>&1";
-
-        Log::info('Starting OCR processing in container');
-
-        exec($execCommand, $execOutput, $execReturn);
-
-        // Log the output for debugging
-        if (! empty($execOutput)) {
-            Log::info('Python script output:', ['output' => implode("\n", $execOutput)]);
-        }
-
-        if ($execReturn !== 0) {
-            Log::error('Docker exec failed', [
-                'return_code' => $execReturn,
-                'output' => $execOutput,
-            ]);
-            throw new \RuntimeException("Error al ejecutar el comando en el contenedor. Código: {$execReturn}");
-        }
-
-        Log::info('OCR processing command completed successfully');
-    }
-
-    /**
-     * Process JSON results from OCR and store in structured format
-     * Implements polling mechanism to wait for JSON files and process them incrementally
-     */
-    protected function processJsonResults(): void
-    {
-        $outputFolder = base_path('docker/output');
-        $maxAttempts = 30; // Wait up to 5 minutes (30 attempts * 10 seconds)
-        $attemptDelay = 10; // Wait 10 seconds between attempts
-        $attempt = 0;
-        $processedFiles = []; // Track already processed files
-        $noNewFilesCount = 0; // Track attempts with no new files
-        $maxNoNewFilesAttempts = 12; // Exit if no new files for 2 minutes (12 * 10s)
-
-        Log::info('Waiting for JSON files to be created...', [
-            'output_folder' => $outputFolder,
-            'max_wait_time' => ($maxAttempts * $attemptDelay).' seconds',
-        ]);
-
-        // Polling loop to wait for and process JSON files incrementally
-        while ($attempt < $maxAttempts) {
-            $jsonFiles = glob($outputFolder.'/*.json');
-
-            // Filter out already processed files
-            $newFiles = array_diff($jsonFiles ?: [], $processedFiles);
-
-            if (! empty($newFiles)) {
-                Log::info('New JSON files found', [
-                    'new_count' => count($newFiles),
-                    'total_processed' => count($processedFiles),
-                    'attempt' => $attempt + 1,
-                    'wait_time' => ($attempt * $attemptDelay).' seconds',
-                ]);
-
-                // Process new files immediately
-                foreach ($newFiles as $jsonFile) {
-                    $this->processJsonFile($jsonFile);
-                    $processedFiles[] = $jsonFile;
-
-                    Log::info('Processed file', [
-                        'file' => basename($jsonFile),
-                        'total_processed' => count($processedFiles),
-                    ]);
-                }
-
-                // Reset no-new-files counter since we found new files
-                $noNewFilesCount = 0;
-
-                // Broadcast progress
-                broadcast(new EvaluationProcessingStatusChanged(
-                    'running',
-                    'Procesados '.count($processedFiles).' formularios...',
-                    false,
-                    $this->initiatorUserId
-                ));
-            } else {
-                $noNewFilesCount++;
-
-                // If we've processed at least one file and no new files for 2 minutes, consider done
-                if (count($processedFiles) > 0 && $noNewFilesCount >= $maxNoNewFilesAttempts) {
-                    Log::info('No new files detected for 2 minutes. Assuming processing complete.', [
-                        'total_processed' => count($processedFiles),
-                        'idle_time' => ($noNewFilesCount * $attemptDelay).' seconds',
-                    ]);
-                    break;
-                }
-            }
-
-            $attempt++;
-
-            if ($attempt < $maxAttempts) {
-                if (count($processedFiles) === 0) {
-                    Log::info("No JSON files found yet. Waiting... (Attempt {$attempt}/{$maxAttempts})");
-                } else {
-                    Log::info('Waiting for more files... (Processed: '.count($processedFiles).", No new files: {$noNewFilesCount}/{$maxNoNewFilesAttempts})");
-                }
-
-                // Send progress update every 3 attempts (30 seconds)
-                if ($attempt % 3 === 0) {
-                    $waitedTime = $attempt * $attemptDelay;
-                    $message = count($processedFiles) > 0
-                        ? 'Analizando documento... ('.count($processedFiles)." procesados, {$waitedTime}s transcurridos)"
-                        : "Analizando documento... ({$waitedTime}s transcurridos)";
-
-                    broadcast(new EvaluationProcessingStatusChanged(
-                        'running',
-                        $message,
-                        false,
-                        $this->initiatorUserId
-                    ));
-                }
-
-                sleep($attemptDelay);
-            }
-        }
-
-        // Final validation
-        if (count($processedFiles) === 0) {
-            Log::error('No JSON files found after polling', [
-                'output_folder' => $outputFolder,
-                'total_wait_time' => ($attempt * $attemptDelay).' seconds',
-                'attempts' => $attempt,
-            ]);
-            throw new \RuntimeException('No se encontraron archivos JSON para procesar después de esperar '.($attempt * $attemptDelay).' segundos');
-        }
-
-        Log::info('JSON processing completed', [
-            'total_processed' => count($processedFiles),
-            'total_wait_time' => ($attempt * $attemptDelay).' seconds',
-        ]);
-    }
-
-    /**
-     * Process individual JSON file
-     */
-    protected function processJsonFile(string $jsonFile): void
-    {
-        $folio = basename($jsonFile, '.json');
+        $folio = $result['folio'];
+        $rawData = $result['answers'];
+        $markedImageBase64 = $result['marked_image_base64'] ?? null;
 
         try {
             // Parse folio
             $folioData = PaperEvaluation::parseFolio($folio);
-
-            // Read JSON content
-            $jsonContent = file_get_contents($jsonFile);
-            $rawData = json_decode($jsonContent, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new \RuntimeException('Error al decodificar JSON: '.json_last_error_msg());
-            }
 
             // Find or create organization
             $organization = $this->findOrCreateOrganization($folioData['organization_code']);
@@ -310,7 +181,7 @@ class ProcessPaperEvaluation implements ShouldQueue
                     'processing_status' => 'completed',
                     'processed_at' => now(),
                     'pdf_file_path' => $this->fullPath,
-                    'evaluee_name' => $preservedName, // Preserve existing name if re-processing
+                    'evaluee_name' => $preservedName,
                     'demographic_data' => $structuredData['demographic_data'] ?? null,
                     'referencia_i_answers' => $structuredData['referencia_i_answers'] ?? null,
                     'referencia_iii_answers' => $structuredData['referencia_iii_answers'] ?? null,
@@ -331,11 +202,13 @@ class ProcessPaperEvaluation implements ShouldQueue
 
             Log::info("Paper evaluation processed successfully: {$folio}");
 
-            // Copy marked image to public storage
-            $this->copyMarkedImageToStorage($folio);
+            // Save marked image if provided by the service
+            if ($markedImageBase64) {
+                $this->saveMarkedImageFromBase64($folio, $markedImageBase64);
+            }
 
         } catch (\Exception $e) {
-            Log::error("Error processing JSON file {$jsonFile}: ".$e->getMessage());
+            Log::error("Error processing OCR result for folio {$folio}: ".$e->getMessage());
 
             // Create failed record
             try {
@@ -395,7 +268,10 @@ class ProcessPaperEvaluation implements ShouldQueue
 
             case 'cisneros':
                 // Cisneros scale - mobbing questions
-                $structuredData['cisneros_answers'] = $rawData['cisneros'] ?? null;
+                $cisnerosRawAnswers = $rawData['cisneros'] ?? $rawData;
+                $structuredData['cisneros_answers'] = is_array($cisnerosRawAnswers)
+                    ? $this->normalizeCisnerosAnswers($cisnerosRawAnswers)
+                    : null;
                 break;
 
             case 'likert':
@@ -429,6 +305,148 @@ class ProcessPaperEvaluation implements ShouldQueue
     }
 
     /**
+     * Normalize Cisneros answers to canonical JSON format:
+     * 1-43 => ['persona' => 'A|B|C|null', 'frecuencia' => 0..6|null]
+     * 44 => bool
+     */
+    private function normalizeCisnerosAnswers(array $answers): ?array
+    {
+        $normalized = [];
+
+        for ($question = 1; $question <= 43; $question++) {
+            $persona = $this->extractCisnerosPersona($answers, $question);
+            $frecuencia = $this->extractCisnerosFrecuencia($answers, $question);
+
+            if ($persona !== null || $frecuencia !== null) {
+                $normalized[(string) $question] = [
+                    'persona' => $persona,
+                    'frecuencia' => $frecuencia,
+                ];
+            }
+        }
+
+        $question44 = $this->extractCisnerosQuestion44($answers);
+        if ($question44 !== null) {
+            $normalized['44'] = $question44;
+        }
+
+        return ! empty($normalized) ? $normalized : null;
+    }
+
+    private function extractCisnerosPersona(array $answers, int $question): ?string
+    {
+        $questionKey = (string) $question;
+        $questionData = $answers[$questionKey] ?? null;
+
+        if (is_array($questionData) && array_key_exists('persona', $questionData)) {
+            return $this->normalizeCisnerosPersonaValue($questionData['persona']);
+        }
+
+        $flatKey = 'persona'.$question;
+
+        return $this->normalizeCisnerosPersonaValue($answers[$flatKey] ?? null);
+    }
+
+    private function extractCisnerosFrecuencia(array $answers, int $question): ?int
+    {
+        $questionKey = (string) $question;
+        $questionData = $answers[$questionKey] ?? null;
+
+        if (is_array($questionData) && array_key_exists('frecuencia', $questionData)) {
+            return $this->normalizeCisnerosFrecuenciaValue($questionData['frecuencia']);
+        }
+
+        $flatKey = 'frecuencia'.$question;
+
+        return $this->normalizeCisnerosFrecuenciaValue($answers[$flatKey] ?? null);
+    }
+
+    private function extractCisnerosQuestion44(array $answers): ?bool
+    {
+        $candidates = [
+            $answers['44'] ?? null,
+            $answers['q44'] ?? null,
+            $answers['question44'] ?? null,
+            $answers['pregunta44'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $normalized = $this->normalizeYesNoValue($candidate);
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeCisnerosPersonaValue(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $normalized = strtoupper(trim($value));
+
+        return in_array($normalized, ['A', 'B', 'C'], true) ? $normalized : null;
+    }
+
+    private function normalizeCisnerosFrecuenciaValue(mixed $value): ?int
+    {
+        if (is_int($value)) {
+            return ($value >= 0 && $value <= 6) ? $value : null;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            $parsed = (int) $value;
+
+            return ($parsed >= 0 && $parsed <= 6) ? $parsed : null;
+        }
+
+        return null;
+    }
+
+    private function normalizeYesNoValue(mixed $value): ?bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            return $value === 1 ? true : ($value === 0 ? false : null);
+        }
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $normalized = trim($value);
+        $normalized = strtr($normalized, [
+            'á' => 'a',
+            'é' => 'e',
+            'í' => 'i',
+            'ó' => 'o',
+            'ú' => 'u',
+            'Á' => 'A',
+            'É' => 'E',
+            'Í' => 'I',
+            'Ó' => 'O',
+            'Ú' => 'U',
+        ]);
+        $normalized = strtoupper($normalized);
+
+        if (in_array($normalized, ['SI', 'S', 'YES', 'Y', 'TRUE', '1'], true)) {
+            return true;
+        }
+
+        if (in_array($normalized, ['NO', 'N', 'FALSE', '0'], true)) {
+            return false;
+        }
+
+        return null;
+    }
+
+    /**
      * Find or create organization by code
      */
     protected function findOrCreateOrganization(string $organizationCode): ?Organization
@@ -454,29 +472,23 @@ class ProcessPaperEvaluation implements ShouldQueue
     }
 
     /**
-     * Copy marked image from Docker to public storage
+     * Save the base64-encoded marked image returned by the OCR service to public storage.
      */
-    protected function copyMarkedImageToStorage(string $folio): void
+    protected function saveMarkedImageFromBase64(string $folio, string $base64Image): void
     {
         try {
-            $containerOutputPath = base_path("docker/output_with_markers/{$folio}.png");
+            $imageData = base64_decode($base64Image);
             $publicFoliosPath = storage_path("app/public/folios/{$folio}.png");
-
-            // Ensure the folios directory exists
             $foliosDir = dirname($publicFoliosPath);
+
             if (! File::exists($foliosDir)) {
                 File::makeDirectory($foliosDir, 0755, true);
             }
 
-            // Copy file from Docker volume to public storage
-            if (File::exists($containerOutputPath)) {
-                File::copy($containerOutputPath, $publicFoliosPath);
-                Log::info("Marked image copied for folio: {$folio}");
-            } else {
-                Log::warning("Marked image not found in Docker output: {$containerOutputPath}");
-            }
+            File::put($publicFoliosPath, $imageData);
+            Log::info("Marked image saved for folio: {$folio}");
         } catch (\Exception $e) {
-            Log::error("Error copying marked image for folio {$folio}: ".$e->getMessage());
+            Log::error("Error saving marked image for folio {$folio}: ".$e->getMessage());
         }
     }
 

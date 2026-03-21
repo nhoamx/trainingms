@@ -217,6 +217,273 @@ class WorkCenterNom035RefIStatisticsService
     }
 
     /**
+     * Build ATS panorama stats based on citsats_s1 answers (questions 1-6).
+     */
+    public function getAtsPanoramaStatistics(WorkCenter $workCenter): array
+    {
+        $evaluations = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('evaluation_type', 'referencia_i')
+            ->where('processing_status', 'completed')
+            ->whereNotNull('citsats_s1')
+            ->get(['citsats_s1']);
+
+        $questions = config('referencia_iii.acontecimientos_traumaticos.questions', []);
+        $items = [];
+        $withTraumaticEventCount = 0;
+        $withoutTraumaticEventCount = 0;
+
+        foreach ($evaluations as $evaluation) {
+            $answers = is_array($evaluation->citsats_s1) ? $evaluation->citsats_s1 : [];
+            $hasAnyYes = false;
+
+            for ($index = 1; $index <= 6; $index++) {
+                $answer = $answers[(string) $index] ?? $answers[$index] ?? null;
+
+                if ($answer === null) {
+                    continue;
+                }
+
+                if ($this->isAffirmativeAnswer($answer)) {
+                    $hasAnyYes = true;
+                    break;
+                }
+            }
+
+            if ($hasAnyYes) {
+                $withTraumaticEventCount++;
+            } else {
+                $withoutTraumaticEventCount++;
+            }
+        }
+
+        for ($index = 1; $index <= 6; $index++) {
+            $yesCount = 0;
+            $noCount = 0;
+
+            foreach ($evaluations as $evaluation) {
+                $answers = is_array($evaluation->citsats_s1) ? $evaluation->citsats_s1 : [];
+                $answer = $answers[(string) $index] ?? $answers[$index] ?? null;
+
+                if ($answer === null) {
+                    continue;
+                }
+
+                if ($this->isAffirmativeAnswer($answer)) {
+                    $yesCount++;
+                } else {
+                    $noCount++;
+                }
+            }
+
+            $items[] = [
+                'index' => $index,
+                'label' => $questions[$index - 1] ?? 'ATS '.$index,
+                'yes_count' => $yesCount,
+                'no_count' => $noCount,
+                'total_responses' => $yesCount + $noCount,
+            ];
+        }
+
+        return [
+            'items' => $items,
+            'total_evaluations' => $evaluations->count(),
+            'with_traumatic_event_count' => $withTraumaticEventCount,
+            'without_traumatic_event_count' => $withoutTraumaticEventCount,
+        ];
+    }
+
+    /**
+     * Build participant-level data for traumatic events table in panorama.
+     */
+    public function getAcontecimientoParticipants(WorkCenter $workCenter): array
+    {
+        $evaluations = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('evaluation_type', 'referencia_i')
+            ->where('processing_status', 'completed')
+            ->whereNotNull('citsats_s1')
+            ->with([
+                'demographicData:id,paper_evaluation_id,gender,age,marital_status,education_level,position,department,position_type,contract_type,personnel_type,work_schedule,shift_rotation,time_in_current_position,work_experience',
+            ])
+            ->select(['id', 'personal_folio', 'evaluee_name', 'citsats_s1', 'created_at'])
+            ->get();
+
+        $participants = $evaluations->map(function (PaperEvaluation $evaluation) {
+            $citsats = is_array($evaluation->citsats_s1) ? $evaluation->citsats_s1 : [];
+
+            $events = [];
+            $hasAnyEvent = false;
+
+            for ($index = 1; $index <= 6; $index++) {
+                $answer = $citsats[(string) $index] ?? $citsats[$index] ?? null;
+                $isSelected = $answer !== null && $this->isAffirmativeAnswer($answer);
+
+                $events[(string) $index] = $isSelected;
+
+                if ($isSelected) {
+                    $hasAnyEvent = true;
+                }
+            }
+
+            $demographics = $evaluation->demographicData;
+
+            return [
+                'id' => $evaluation->id,
+                'personal_folio' => $evaluation->personal_folio,
+                'name' => $evaluation->evaluee_name ?? 'No especificado',
+                'created_at' => $evaluation->created_at?->toIso8601String(),
+                'has_any_event' => $hasAnyEvent,
+                'events' => $events,
+                'demographics' => [
+                    'genero' => $demographics->gender ?? 'No especificado',
+                    'edad' => $demographics->age ?? 'No especificado',
+                    'estado_civil' => $demographics->marital_status ?? 'No especificado',
+                    'estudios' => $demographics->education_level ?? 'No especificado',
+                    'puesto' => $demographics->position ?? 'No especificado',
+                    'area' => $demographics->department ?? 'No especificado',
+                    'tipo_puesto' => $demographics->position_type ?? 'No especificado',
+                    'tipo_contratacion' => $demographics->contract_type ?? 'No especificado',
+                    'tipo_personal' => $demographics->personnel_type ?? 'No especificado',
+                    'turno' => $demographics->work_schedule ?? 'No especificado',
+                    'rotacion_turnos' => $demographics->shift_rotation ?? 'No especificado',
+                    'tiempo_puesto_actual' => $demographics->time_in_current_position ?? 'No especificado',
+                    'tiempo_experiencia_laboral_total' => $demographics->work_experience ?? 'No especificado',
+                ],
+            ];
+        })->values()->all();
+
+        return [
+            'participants' => $participants,
+            'total' => count($participants),
+        ];
+    }
+
+    /**
+     * Build participant-level data for sections II, III and IV with clinical assessment criteria.
+     */
+    public function getClinicalAssessmentParticipants(WorkCenter $workCenter): array
+    {
+        $evaluations = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('evaluation_type', 'referencia_i')
+            ->where('processing_status', 'completed')
+            ->whereNotNull('referencia_i_answers')
+            ->with([
+                'demographicData:id,paper_evaluation_id,gender,age,marital_status,education_level,position,department,position_type,contract_type,personnel_type,work_schedule,shift_rotation,time_in_current_position,work_experience',
+            ])
+            ->select(['id', 'personal_folio', 'evaluee_name', 'referencia_i_answers'])
+            ->get();
+
+        $questionTexts = config('guide_i_questions', []);
+
+        $sections = [
+            'ii' => [
+                'label' => 'Sección II - Recuerdos persistentes sobre acontecimiento',
+                'question_numbers' => [1, 2],
+                'min_yes_for_clinical' => 1,
+            ],
+            'iii' => [
+                'label' => 'Sección III - Esfuerzo por evitar circunstancias parecidas o asociadas al acontecimiento',
+                'question_numbers' => [3, 4, 5, 6, 7, 8, 9],
+                'min_yes_for_clinical' => 3,
+            ],
+            'iv' => [
+                'label' => 'Sección IV - Afectación',
+                'question_numbers' => [10, 11, 12, 13, 14],
+                'min_yes_for_clinical' => 2,
+            ],
+        ];
+
+        $participants = $evaluations->map(function (PaperEvaluation $evaluation) use ($questionTexts, $sections) {
+            $normalizedAnswers = $this->normalizeRefIAnswers($evaluation->referencia_i_answers ?? []);
+            $demographics = $evaluation->demographicData;
+
+            $sectionPayload = [];
+            $criteriaMet = [];
+            $answeredInSections = 0;
+
+            foreach ($sections as $sectionKey => $definition) {
+                $responses = [];
+                $yesCount = 0;
+                $answeredCount = 0;
+
+                foreach ($definition['question_numbers'] as $questionNumber) {
+                    $questionKey = 'pregunta_'.$questionNumber;
+                    $answer = $normalizedAnswers[$questionKey] ?? null;
+                    $isYes = $answer !== null && $this->isAffirmativeAnswer($answer);
+
+                    if ($answer !== null) {
+                        $answeredCount++;
+                    }
+
+                    if ($isYes) {
+                        $yesCount++;
+                    }
+
+                    $responses[] = [
+                        'key' => $questionKey,
+                        'number' => $questionNumber,
+                        'text' => $questionTexts[$questionKey] ?? $questionKey,
+                        'answer' => $answer,
+                        'is_yes' => $isYes,
+                    ];
+                }
+
+                $answeredInSections += $answeredCount;
+                $meetsClinicalRule = $yesCount >= $definition['min_yes_for_clinical'];
+
+                if ($meetsClinicalRule) {
+                    $criteriaMet[] = $sectionKey;
+                }
+
+                $sectionPayload[$sectionKey] = [
+                    'label' => $definition['label'],
+                    'yes_count' => $yesCount,
+                    'answered_count' => $answeredCount,
+                    'threshold' => $definition['min_yes_for_clinical'],
+                    'meets_rule' => $meetsClinicalRule,
+                    'responses' => $responses,
+                ];
+            }
+
+            return [
+                'id' => $evaluation->id,
+                'personal_folio' => $evaluation->personal_folio,
+                'name' => $evaluation->evaluee_name ?? 'No especificado',
+                'has_sections_ii_iii_iv_answers' => $answeredInSections > 0,
+                'requires_clinical_assessment' => count($criteriaMet) > 0,
+                'criteria_met' => $criteriaMet,
+                'sections' => $sectionPayload,
+                'demographics' => [
+                    'genero' => $demographics->gender ?? 'No especificado',
+                    'edad' => $demographics->age ?? 'No especificado',
+                    'estado_civil' => $demographics->marital_status ?? 'No especificado',
+                    'estudios' => $demographics->education_level ?? 'No especificado',
+                    'puesto' => $demographics->position ?? 'No especificado',
+                    'area' => $demographics->department ?? 'No especificado',
+                    'tipo_puesto' => $demographics->position_type ?? 'No especificado',
+                    'tipo_contratacion' => $demographics->contract_type ?? 'No especificado',
+                    'tipo_personal' => $demographics->personnel_type ?? 'No especificado',
+                    'turno' => $demographics->work_schedule ?? 'No especificado',
+                    'rotacion_turnos' => $demographics->shift_rotation ?? 'No especificado',
+                    'tiempo_puesto_actual' => $demographics->time_in_current_position ?? 'No especificado',
+                    'tiempo_experiencia_laboral_total' => $demographics->work_experience ?? 'No especificado',
+                ],
+            ];
+        })->filter(fn (array $participant) => $participant['has_sections_ii_iii_iv_answers'])
+            ->values();
+
+        $requiresClinicalCount = $participants->where('requires_clinical_assessment', true)->count();
+
+        return [
+            'participants' => $participants->all(),
+            'total' => $participants->count(),
+            'requires_clinical_count' => $requiresClinicalCount,
+        ];
+    }
+
+    /**
      * Obtener lista de participantes que contestaron Referencia I
      */
     public function getParticipantsList(WorkCenter $workCenter): Collection

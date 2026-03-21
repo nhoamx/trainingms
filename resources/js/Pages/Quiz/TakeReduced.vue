@@ -83,22 +83,22 @@ const checkTraumaticEvents = () => {
 const isReferenciaVComplete = computed(() => {
     const rv = answers.value.referencia_v;
     const dl = rv.datos_laborales;
-    const org = answers.value.organization_info;
+    const requiresWorkSchedule = props.quiz?.demographic_data?.work_schedule?.active === true;
     
     //return org.nombre_comercial && org.estado && org.ciudad &&
     return rv.sexo && rv.edad && rv.estado_civil && rv.nivel_estudios &&
            dl.ocupacion_puesto && dl.departamento_seccion_area && dl.tipo_puesto && dl.tipo_contratacion &&
-           dl.tipo_personal && dl.rotacion_turnos &&
+            dl.tipo_personal && (!requiresWorkSchedule || dl.tipo_jornada) && dl.rotacion_turnos &&
            dl.experiencia.tiempo_puesto_actual && dl.experiencia.tiempo_experiencia_laboral;
 });
 
 const isAcontecimientosComplete = computed(() => {
     const traumaticQuestions = props.quiz?.questions?.acontecimientos_traumaticos?.questions || [];
     const traumaticAnswers = answers.value.acontecimientos_traumaticos || {};
-    
+
     if (!Array.isArray(traumaticQuestions) || traumaticQuestions.length === 0) return true;
-    
-    return traumaticQuestions.every((_, idx) => traumaticAnswers[idx + 1] !== undefined);
+
+    return traumaticQuestions.every((_, idx) => traumaticAnswers[idx + 1] != null);
 });
 
 const isReferenciaIComplete = computed(() => {
@@ -374,6 +374,7 @@ const submitEvaluation = () => {
                             v-model="answers.referencia_v.datos_laborales"
                             :laboral-data="quiz.reference_v.datos_laborales"
                             :organization="quiz.organization"
+                            :work-schedule-config="quiz.demographic_data?.work_schedule"
                         />
                     </div>
 

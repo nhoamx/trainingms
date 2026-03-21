@@ -59,9 +59,7 @@
 
             <!-- Main content -->
             <main class="p-4 sm:p-6 lg:p-8">
-                <div class="mx-auto max-w-7xl">
                     <slot />
-                </div>
             </main>
         </div>
     </div>

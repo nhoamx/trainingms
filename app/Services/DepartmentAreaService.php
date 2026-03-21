@@ -4,6 +4,9 @@ namespace App\Services;
 
 use App\Models\DepartmentArea;
 use App\Models\Organization;
+use App\Support\OmrIdentifierSequence;
+use InvalidArgumentException;
+use RuntimeException;
 
 class DepartmentAreaService
 {
@@ -16,17 +19,21 @@ class DepartmentAreaService
      */
     public function createArea(Organization $organization, string $name, ?string $customIdentifier = null): DepartmentArea
     {
-        // Si se proporciona un identificador personalizado, lo usamos
+        $identifier = $customIdentifier;
+
         if ($customIdentifier) {
-            return DepartmentArea::create([
-                'organization_id' => $organization->id,
-                'name' => $name,
-                'identifier' => $customIdentifier,
-            ]);
+            try {
+                $identifier = OmrIdentifierSequence::ensureValid($customIdentifier);
+            } catch (RuntimeException $exception) {
+                throw new InvalidArgumentException($exception->getMessage());
+            }
         }
 
-        // Generamos un identificador automático
-        $identifier = $this->generateNextIdentifier($organization);
+        if (! $identifier) {
+            $identifier = $this->generateNextIdentifier($organization);
+        }
+
+        $this->ensureIdentifierIsAvailable($organization, $identifier);
 
         return DepartmentArea::create([
             'organization_id' => $organization->id,
@@ -42,27 +49,11 @@ class DepartmentAreaService
      */
     protected function generateNextIdentifier(Organization $organization): string
     {
-        // Obtenemos la última área creada para esta organización
-        $lastArea = $organization->departmentAreas()
-            ->orderByRaw('CAST(SUBSTRING_INDEX(identifier, "_", 1) AS UNSIGNED) DESC')
-            ->orderByRaw('SUBSTRING(identifier, LOCATE("_", identifier) + 1) DESC')
-            ->first();
+        $usedIdentifiers = $organization->departmentAreas()
+            ->pluck('identifier')
+            ->all();
 
-        if (! $lastArea) {
-            // Si no hay áreas previas, empezamos en 1_a
-            return '1_a';
-        }
-
-        // Parseamos el último identificador
-        [$number, $letter] = explode('_', $lastArea->identifier);
-
-        // Si la letra es 'z', incrementamos el número y volvemos a 'a'
-        if ($letter === 'z') {
-            return (intval($number) + 1).'_a';
-        }
-
-        // Si no, incrementamos la letra
-        return $number.'_'.chr(ord($letter) + 1);
+        return OmrIdentifierSequence::nextAvailable($usedIdentifiers);
     }
 
     /**
@@ -73,9 +64,11 @@ class DepartmentAreaService
      */
     public function importFromJson(Organization $organization, string $jsonIdentifier, ?string $name = null): DepartmentArea
     {
+        $normalizedIdentifier = OmrIdentifierSequence::normalize($jsonIdentifier);
+
         // Verificar si ya existe este identificador
         $existingArea = $organization->departmentAreas()
-            ->where('identifier', $jsonIdentifier)
+            ->where('identifier', $normalizedIdentifier)
             ->first();
 
         if ($existingArea) {
@@ -84,10 +77,21 @@ class DepartmentAreaService
 
         // Si no existe nombre, generamos uno basado en el identificador
         if (! $name) {
-            $name = 'Área '.strtoupper($jsonIdentifier);
+            $name = 'Área '.strtoupper($normalizedIdentifier);
         }
 
         // Creamos la nueva área con el identificador extraído del JSON
-        return $this->createArea($organization, $name, $jsonIdentifier);
+        return $this->createArea($organization, $name, $normalizedIdentifier);
+    }
+
+    private function ensureIdentifierIsAvailable(Organization $organization, string $identifier): void
+    {
+        $identifierExists = $organization->departmentAreas()
+            ->where('identifier', $identifier)
+            ->exists();
+
+        if ($identifierExists) {
+            throw new InvalidArgumentException('El identificador del departamento ya existe en esta organización.');
+        }
     }
 }

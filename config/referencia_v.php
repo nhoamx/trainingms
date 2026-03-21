@@ -83,6 +83,7 @@ return [
                 'Entre 5 a 9 años',
                 'Entre 10 a 14 años',
                 'Entre 15 a 19 años',
+                '20 años o más',
             ],
         ],
     ],

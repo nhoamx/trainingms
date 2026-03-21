@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -370,14 +371,7 @@ class PaperEvaluation extends Model
      */
     public function updateName(string $name): bool
     {
-        // Get current organization_id and personal_folio to find all related evaluations
-        $currentOrganizationId = $this->organization_id;
-        $currentPersonalFolio = $this->personal_folio;
-
-        // Find all evaluations with the same organization_id and personal_folio
-        $relatedEvaluations = self::where('organization_id', $currentOrganizationId)
-            ->where('personal_folio', $currentPersonalFolio)
-            ->get();
+        $relatedEvaluations = $this->relatedEvaluationsQuery()->get();
 
         // Update ALL related evaluations
         $updated = 0;
@@ -398,43 +392,41 @@ class PaperEvaluation extends Model
      */
     public function updatePersonalFolio(string $personalFolio): bool
     {
-        // Validate format (exactly 4 digits)
-        if (! preg_match('/^\d{4}$/', $personalFolio)) {
-            throw new \InvalidArgumentException('Personal folio must be exactly 4 digits');
+        $expectedLength = $this->isElevenDigitFolio() ? 5 : 4;
+
+        if (! preg_match('/^\d{'.$expectedLength.'}$/', $personalFolio)) {
+            throw new \InvalidArgumentException("Personal folio must be exactly {$expectedLength} digits");
         }
 
-        // Get current organization_id and personal_folio to find all related evaluations
-        $currentOrganizationId = $this->organization_id;
-        $currentPersonalFolio = $this->personal_folio;
-
-        // Find all evaluations with the same organization_id and personal_folio
-        // These are all the guides (I, III, V) for the same person
-        $relatedEvaluations = self::where('organization_id', $currentOrganizationId)
-            ->where('personal_folio', $currentPersonalFolio)
-            ->get();
+        $relatedEvaluations = $this->relatedEvaluationsQuery()->get();
 
         // Check if any of the new folios would conflict with existing records
         foreach ($relatedEvaluations as $evaluation) {
-            $newFolio = $evaluation->evaluation_type_code.$evaluation->organization_code.$personalFolio;
+            $newFolio = self::generateFolio(
+                $evaluation->evaluation_type_code,
+                $evaluation->organization_code,
+                $personalFolio,
+                $evaluation->isElevenDigitFolio() ? $evaluation->work_center_code : null
+            );
 
-            // Check if folio exists for records outside this group
             $conflict = self::where('folio', $newFolio)
-                ->where('organization_id', '!=', $currentOrganizationId)
-                ->orWhere(function ($query) use ($newFolio, $currentPersonalFolio) {
-                    $query->where('folio', $newFolio)
-                        ->where('personal_folio', '!=', $currentPersonalFolio);
-                })
+                ->where('id', '!=', $evaluation->id)
                 ->exists();
 
             if ($conflict) {
-                throw new \InvalidArgumentException("Folio {$newFolio} already exists for another person or organization");
+                throw new \InvalidArgumentException("Folio {$newFolio} already exists");
             }
         }
 
         // Update ALL related evaluations
         $updated = 0;
         foreach ($relatedEvaluations as $evaluation) {
-            $newFolio = $evaluation->evaluation_type_code.$evaluation->organization_code.$personalFolio;
+            $newFolio = self::generateFolio(
+                $evaluation->evaluation_type_code,
+                $evaluation->organization_code,
+                $personalFolio,
+                $evaluation->isElevenDigitFolio() ? $evaluation->work_center_code : null
+            );
 
             $evaluation->update([
                 'personal_folio' => $personalFolio,
@@ -467,9 +459,38 @@ class PaperEvaluation extends Model
     /**
      * Generate complete folio from components
      */
-    public static function generateFolio(string $evaluationTypeCode, string $organizationCode, string $personalFolio): string
-    {
+    public static function generateFolio(
+        string $evaluationTypeCode,
+        string $organizationCode,
+        string $personalFolio,
+        ?string $workCenterCode = null
+    ): string {
+        if ($workCenterCode !== null) {
+            return $evaluationTypeCode
+                .str_pad(substr($organizationCode, -2), 2, '0', STR_PAD_LEFT)
+                .str_pad(substr($workCenterCode, -2), 2, '0', STR_PAD_LEFT)
+                .str_pad($personalFolio, 5, '0', STR_PAD_LEFT);
+        }
+
         return $evaluationTypeCode.$organizationCode.$personalFolio;
+    }
+
+    protected function relatedEvaluationsQuery(): Builder
+    {
+        $query = self::query()
+            ->where('organization_id', $this->organization_id)
+            ->where('personal_folio', $this->personal_folio);
+
+        if ($this->work_center_id) {
+            return $query->where('work_center_id', $this->work_center_id);
+        }
+
+        return $query->whereNull('work_center_id');
+    }
+
+    protected function isElevenDigitFolio(): bool
+    {
+        return strlen((string) $this->folio) === 11 || ! empty($this->work_center_code);
     }
 
     /**

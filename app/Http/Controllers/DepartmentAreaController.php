@@ -7,6 +7,7 @@ use App\Imports\DepartmentAreasImport;
 use App\Models\DepartmentArea;
 use App\Models\Organization;
 use App\Services\DepartmentAreaService;
+use App\Support\OmrIdentifierSequence;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -30,6 +31,20 @@ class DepartmentAreaController extends Controller
         $validated = $request->validate([
             'organization_id' => 'required|uuid|exists:organizations,id',
             'name' => 'required|string|max:255',
+            'identifier' => [
+                'nullable',
+                'string',
+                'max:12',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+
+                    if (! OmrIdentifierSequence::isValid((string) $value)) {
+                        $fail(OmrIdentifierSequence::validationMessage());
+                    }
+                },
+            ],
         ]);
 
         // Buscar la organización
@@ -38,7 +53,8 @@ class DepartmentAreaController extends Controller
         // Crear el departamento usando nuestro servicio
         $area = $this->departmentService->createArea(
             $organization,
-            $validated['name']
+            $validated['name'],
+            $validated['identifier'] ?? null
         );
 
         // Redireccionar con un mensaje flash de éxito y devolver el área creada

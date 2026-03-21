@@ -314,6 +314,10 @@
     </div>
 @endsection
 
+@php
+    $showPrefilledFolio = $showPrefilledFolio ?? true;
+@endphp
+
 <div class="folio-instructions-row">
         <div class="folio-section">
             <div class="folio-title">Folio</div>
@@ -322,7 +326,7 @@
                 <div class="folio-digit-column"></div>
                 @for($i = 0; $i < 11; $i++)
                     <div class="folio-position-header">
-                        {{ isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
+                        {{ $showPrefilledFolio && isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
                     </div>
                 @endfor
             </div>
@@ -333,7 +337,7 @@
                     <div class="folio-bubbles-row">
                         @for($i = 0; $i < 11; $i++)
                             @php
-                                $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
+                                $folioDigit = $showPrefilledFolio && isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
                                 $isSelected = $folioDigit == $digit;
                             @endphp
                             <div class="bubble-folio {{ $isSelected ? 'bubble-filled' : '' }}"></div>

@@ -36,3 +36,4 @@ yarn-error.log
 /docker/__pycache__/
 public/.user.ini
 .DS_Store
+*.sql

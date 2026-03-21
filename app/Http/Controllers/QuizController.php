@@ -306,6 +306,7 @@ class QuizController extends Controller
                     ],
                     'reference_i' => config('referencia_i'),
                     'reference_v' => config('referencia_v'),
+                    'demographic_data' => config('demographic-data'),
                     'custom_fields' => $quiz->customFields->map(function ($field) {
                         return [
                             'id' => $field->id,
@@ -329,6 +330,7 @@ class QuizController extends Controller
                     ],
                     'reference_i' => config('referencia_i'),
                     'reference_v' => config('referencia_v'),
+                    'demographic_data' => config('demographic-data'),
                     'custom_fields' => $quiz->customFields->map(function ($field) {
                         return [
                             'id' => $field->id,
@@ -355,6 +357,7 @@ class QuizController extends Controller
                     ],
                     'reference_i' => config('referencia_i'),
                     'reference_v' => config('referencia_v'),
+                    'demographic_data' => config('demographic-data'),
                     'custom_fields' => $quiz->customFields->map(function ($field) {
                         return [
                             'id' => $field->id,
@@ -419,6 +422,7 @@ class QuizController extends Controller
                         ],
                         'reference_i' => config('referencia_i'),
                         'reference_v' => config('referencia_v'),
+                        'demographic_data' => config('demographic-data'),
                         'custom_fields' => $quiz->customFields->map(function ($field) {
                             return [
                                 'id' => $field->id,
@@ -441,6 +445,7 @@ class QuizController extends Controller
                         ],
                         'reference_i' => config('referencia_i'),
                         'reference_v' => config('referencia_v'),
+                        'demographic_data' => config('demographic-data'),
                         'custom_fields' => $quiz->customFields->map(function ($field) {
                             return [
                                 'id' => $field->id,
@@ -466,6 +471,7 @@ class QuizController extends Controller
                         ],
                         'reference_i' => config('referencia_i'),
                         'reference_v' => config('referencia_v'),
+                        'demographic_data' => config('demographic-data'),
                         'custom_fields' => $quiz->customFields->map(function ($field) {
                             return [
                                 'id' => $field->id,
@@ -597,7 +603,7 @@ class QuizController extends Controller
 
         try {
             // Generate unique folio for this evaluation
-            $personalFolioCounter = $this->getNextPersonalFolioNumber($quiz->organization_id);
+            $personalFolioCounter = $this->getNextPersonalFolioNumber($quiz->organization_id, $quiz->work_center_id);
             $folio = $this->generatePaperEvaluationFolio($quiz, $personalFolioCounter);
 
             // Determine evaluation type based on quiz type
@@ -1180,12 +1186,20 @@ class QuizController extends Controller
     /**
      * Get the next personal folio number for the organization
      */
-    private function getNextPersonalFolioNumber($organizationId): string
+    private function getNextPersonalFolioNumber(string $organizationId, ?string $workCenterId): string
     {
         try {
-            // Get the last personal folio from paper evaluations for this organization
-            $lastEvaluation = \App\Models\PaperEvaluation::where('organization_id', $organizationId)
+            $query = \App\Models\PaperEvaluation::where('organization_id', $organizationId)
                 ->whereNotNull('personal_folio')
+                ->where('source', 'online');
+
+            if ($workCenterId) {
+                $query->where('work_center_id', $workCenterId);
+            } else {
+                $query->whereNull('work_center_id');
+            }
+
+            $lastEvaluation = $query
                 ->orderByRaw('CAST(personal_folio AS UNSIGNED) DESC')
                 ->first();
 
@@ -1199,6 +1213,7 @@ class QuizController extends Controller
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error al generar personal folio', [
                 'organization_id' => $organizationId,
+                'work_center_id' => $workCenterId,
                 'error_message' => $e->getMessage(),
             ]);
 

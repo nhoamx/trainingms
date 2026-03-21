@@ -319,6 +319,7 @@ class OMRController extends Controller
             'questions' => $questions,
             'totalQuestions' => count($questions),
             'folio' => $request->input('folio', '000000000'), // Default 9-digit folio
+            'showPrefilledFolio' => false,
         ]);
     }
 
@@ -398,6 +399,78 @@ class OMRController extends Controller
             'positions' => $positions,
             'areas' => $areas,
         ]);
+    }
+
+    /**
+     * Download blank template for Referencia I (admin only route).
+     */
+    public function downloadBlankReferenciaI()
+    {
+        return $this->downloadBlankTemplate('referencia-i');
+    }
+
+    /**
+     * Download blank template for Referencia III (admin only route).
+     */
+    public function downloadBlankReferenciaIII()
+    {
+        return $this->downloadBlankTemplate('referencia-iii');
+    }
+
+    /**
+     * Download blank template for Referencia V (admin only route).
+     */
+    public function downloadBlankReferenciaV()
+    {
+        return $this->downloadBlankTemplate('referencia-v');
+    }
+
+    /**
+     * Download blank template for Escala Cisneros (admin only route).
+     */
+    public function downloadBlankEscalaCisneros()
+    {
+        return $this->downloadBlankTemplate('escala-cisneros');
+    }
+
+    /**
+     * Generate a single blank OMR template PDF without folio prefill.
+     */
+    private function downloadBlankTemplate(string $guideType)
+    {
+        $viewData = $this->getGuideData($guideType);
+
+        $pageData = array_merge($viewData, [
+            'folio' => null,
+            'showPrefilledFolio' => false,
+        ]);
+
+        $htmlContent = view("omr.{$guideType}", $pageData)->render();
+
+        $filename = str_replace('-', '_', $guideType).'_blank_'.date('Y-m-d_H-i-s').'.pdf';
+        $tempPath = storage_path('app/temp/'.$filename);
+
+        if (! file_exists(dirname($tempPath))) {
+            mkdir(dirname($tempPath), 0755, true);
+        }
+
+        $browsershot = Browsershot::html($htmlContent)
+            ->noSandbox()
+            ->format('Letter')
+            ->margins(0, 0, 0, 0)
+            ->scale(0.96)
+            ->showBackground()
+            ->timeout(180)
+            ->waitUntilNetworkIdle();
+
+        if (PHP_OS_FAMILY === 'Linux' && file_exists('/mnt/c/Program Files/nodejs/node.exe')) {
+            $browsershot->setNodeBinary('/mnt/c/Program Files/nodejs/node.exe');
+            $browsershot->setNpmBinary('/mnt/c/Program Files/nodejs/npm');
+        }
+
+        $browsershot->save($tempPath);
+
+        return response()->download($tempPath)->deleteFileAfterSend(true);
     }
 
     /**

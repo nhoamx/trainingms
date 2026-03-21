@@ -7,7 +7,7 @@
         </div>
         <h2 class="text-3xl font-bold text-slate-900">Etapas - Referencia I (ATS)</h2>
       </div>
-      <p class="text-slate-600 mt-2 ml-11">Identificar, analizar, revisar participantes y prevenir por instrumento</p>
+      <p class="text-slate-600 mt-2 ml-11">Panorama general y análisis de acontecimientos traumáticos severos</p>
     </div>
 
     <div class="border-b border-slate-200">
@@ -31,126 +31,392 @@
       </nav>
     </div>
 
-    <div v-if="activeSubTab === 'identificar'" class="space-y-6">
-      <div class="bg-white rounded-lg p-4 border border-slate-200">
-        <div class="flex items-center gap-4">
-          <span class="text-sm font-medium text-slate-700">Vista:</span>
-          <div class="flex gap-2">
-            <button
-              @click="identifyViewMode = 'blocks'"
-              :class="[
-                'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                identifyViewMode === 'blocks' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              ]"
+    <div v-if="activeSubTab === 'panorama'" class="space-y-6">
+      <div class="bg-white rounded-lg p-6 border border-slate-200">
+        <h3 class="text-lg font-bold text-slate-900 mb-2">Panorama general de Acontecimientos</h3>
+        <p class="text-sm text-slate-600 mb-1">
+          Esta gráfica muestra el panorama general de las personas que respondieron sí a alguna de las 6 preguntas de los acontecimientos traumáticos severos..
+        </p>
+        <p class="text-xs text-slate-500">Participantes considerados: {{ atsPanoramaStatistics.total_evaluations }} ({{ atsPanoramaStatistics.without_traumatic_event_count }} sin acontecimientos traumáticos)</p>
+
+        <div class="mt-6 overflow-x-auto">
+          <div class="min-w-[720px] px-2">
+            <div class="h-72 flex items-end gap-4 border-b border-slate-200 pb-3">
+              <div
+                v-for="item in atsPanoramaItems"
+                :key="item.index"
+                class="flex-1 min-w-[100px] flex flex-col items-center gap-2"
+              >
+                <span class="text-xs font-semibold text-slate-700">{{ item.yes_count }}</span>
+                <div class="w-full max-w-16 rounded-t-md transition-all duration-300" :class="item.colorClass" :style="{ height: item.barHeight }"></div>
+                <span class="text-[11px] font-medium text-slate-600">{{ item.shortLabel }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+          <h4 class="text-xl font-semibold text-indigo-900 mb-2">Resumen por acontecimiento</h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div
+              v-for="item in atsPanoramaItems"
+              :key="`legend_${item.index}`"
+              class="rounded-md border border-indigo-100 bg-white px-3 py-2"
             >
-              Bloques
-            </button>
-            <button
-              @click="identifyViewMode = 'questions'"
-              :class="[
-                'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                identifyViewMode === 'questions' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              ]"
-            >
-              Preguntas
-            </button>
+              <div class="flex items-center gap-2">
+                <span class="inline-block h-3 w-3 rounded-full" :class="item.colorClass"></span>
+                <p class="text font-semibold text-slate-900">{{ item.shortLabel }}</p>
+              </div>
+              <p class="mt-1 text-xs text-slate-700"><span class="font-semibold">{{ item.yes_count }}</span> persona(s) han seleccionado sí para {{ item.shortLabel.toLowerCase() }}.</p>
+            </div>
+          </div>
+
+          <p class="mt-4 text-xs text-indigo-900">
+            <span class="font-semibold">{{ atsPanoramaStatistics.without_traumatic_event_count }}</span>
+            persona(s) indicaron que no han sufrido un acontecimiento traumático.
+          </p>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+          <div class="flex flex-col gap-3">
+            <h4 class="text-base font-semibold text-slate-900">Personas evaluadas en acontecimientos</h4>
+
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                @click="panoramaResponseFilter = 'all'"
+                :class="[
+                  'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                  panoramaResponseFilter === 'all'
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ]"
+              >
+                Todos
+              </button>
+              <button
+                type="button"
+                @click="panoramaResponseFilter = 'yes'"
+                :class="[
+                  'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                  panoramaResponseFilter === 'yes'
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ]"
+              >
+                Respondieron sí
+              </button>
+              <button
+                type="button"
+                @click="panoramaResponseFilter = 'no'"
+                :class="[
+                  'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                  panoramaResponseFilter === 'no'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ]"
+              >
+                Respondieron no
+              </button>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                @click="selectedAcontecimientoFilter = 'all'"
+                :class="[
+                  'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                  selectedAcontecimientoFilter === 'all'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ]"
+              >
+                Todos
+              </button>
+
+              <button
+                v-for="item in atsPanoramaItems"
+                :key="`chip_${item.index}`"
+                type="button"
+                @click="selectedAcontecimientoFilter = String(item.index)"
+                :class="[
+                  'rounded-full px-4 py-2 text-sm font-medium transition-colors border',
+                  selectedAcontecimientoFilter === String(item.index)
+                    ? 'text-white border-transparent'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                ]"
+                :style="selectedAcontecimientoFilter === String(item.index) ? { backgroundColor: item.hexColor } : undefined"
+              >
+                {{ item.shortLabel }}
+              </button>
+            </div>
+
+            <div class="flex flex-col lg:flex-row lg:items-center gap-3 lg:justify-between">
+              <div class="w-full lg:max-w-sm">
+                <label for="panorama-folio-search" class="sr-only">Buscar por folio</label>
+                <input
+                  id="panorama-folio-search"
+                  v-model="panoramaSearch"
+                  type="text"
+                  placeholder="Buscar por folio..."
+                  class="w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+              </div>
+
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-slate-600">Mostrar</span>
+                <div class="flex items-center gap-2">
+                  <button
+                    v-for="size in pageSizeOptions"
+                    :key="`size_${size}`"
+                    type="button"
+                    @click="panoramaPageSize = size"
+                    :class="[
+                      'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                      panoramaPageSize === size
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ]"
+                  >
+                    {{ size }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-auto rounded-lg border border-slate-200">
+            <table class="min-w-[1100px] w-full text-sm">
+              <thead class="bg-slate-50 text-slate-700">
+                <tr>
+                  <th class="px-3 py-2 text-left font-semibold">Folio</th>
+                  <th class="px-3 py-2 text-left font-semibold">Fecha y hora de presentación</th>
+                  <th class="px-3 py-2 text-left font-semibold">Género</th>
+                  <th class="px-3 py-2 text-left font-semibold">Edad</th>
+                  <th class="px-3 py-2 text-left font-semibold">Puesto</th>
+                  <th class="px-3 py-2 text-left font-semibold">Área</th>
+                  <th class="px-3 py-2 text-left font-semibold">Tiempo en el puesto actual</th>
+                  <th class="px-3 py-2 text-right font-semibold">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 bg-white">
+                <tr v-if="paginatedPanoramaParticipants.length === 0">
+                  <td colspan="8" class="px-4 py-8 text-center text-slate-500">
+                    No hay personas para los filtros seleccionados.
+                  </td>
+                </tr>
+                <tr
+                  v-for="person in paginatedPanoramaParticipants"
+                  :key="person.id"
+                  class="hover:bg-slate-50"
+                >
+                  <td class="px-3 py-2 font-semibold text-slate-900">{{ person.personal_folio }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ formatPresentationDate(person.created_at) }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ person.demographics.genero }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ person.demographics.edad }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ person.demographics.puesto }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ person.demographics.area }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ person.demographics.tiempo_puesto_actual }}</td>
+                  <td class="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      @click="openPanoramaDetails(person.id)"
+                      class="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                    >
+                      Ver detalles
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <p class="text-sm text-slate-600">
+              Mostrando {{ paginationSummary.from }}-{{ paginationSummary.to }} de {{ paginationSummary.total }} personas
+            </p>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                @click="panoramaPage = Math.max(1, panoramaPage - 1)"
+                :disabled="panoramaPage === 1"
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <span class="text-sm text-slate-700">Página {{ panoramaPage }} de {{ totalPanoramaPages }}</span>
+              <button
+                type="button"
+                @click="panoramaPage = Math.min(totalPanoramaPages, panoramaPage + 1)"
+                :disabled="panoramaPage >= totalPanoramaPages"
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 pt-2">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <h5 class="text-sm font-semibold text-slate-900 mb-2">Resumen</h5>
+              <div class="rounded-md border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-600">
+                Sin datos de la Guía de referencia III.
+              </div>
+            </div>
+
+            <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+              <h5 class="text-sm font-semibold text-slate-900">Distribución por</h5>
+              <p class="text-xs text-slate-600">
+                Objetivo: identificar en qué {{ distributionMode === 'area' ? 'áreas' : 'puestos' }} se concentra la mayor cantidad de respuestas <span class="font-semibold text-rose-700">Sí</span>.
+              </p>
+
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  @click="distributionMode = 'area'"
+                  :class="[
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    distributionMode === 'area'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ]"
+                >
+                  Área
+                </button>
+                <button
+                  type="button"
+                  @click="distributionMode = 'puesto'"
+                  :class="[
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    distributionMode === 'puesto'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ]"
+                >
+                  Puesto
+                </button>
+              </div>
+
+              <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="min-w-full text-sm">
+                  <thead class="bg-slate-50">
+                    <tr>
+                      <th class="px-3 py-2 text-left font-semibold text-slate-700">{{ distributionMode === 'area' ? 'Área' : 'Puesto' }}</th>
+                      <th class="px-3 py-2 text-right font-semibold text-slate-700">Personas con Sí</th>
+                      <th class="px-3 py-2 text-right font-semibold text-slate-700">Total personas</th>
+                      <th class="px-3 py-2 text-right font-semibold text-slate-700">% con Sí</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 bg-white">
+                    <tr v-if="distributionByGroupRows.length === 0">
+                      <td colspan="4" class="px-3 py-4 text-center text-slate-500">Sin datos para los filtros seleccionados.</td>
+                    </tr>
+                    <tr
+                      v-for="row in distributionByGroupRows"
+                      :key="`dist_row_${distributionMode}_${row.group}`"
+                    >
+                      <td class="px-3 py-2 text-slate-700">{{ row.group }}</td>
+                      <td class="px-3 py-2 text-right font-semibold text-rose-700">{{ row.yesCount }}</td>
+                      <td class="px-3 py-2 text-right font-semibold text-slate-900">{{ row.total }}</td>
+                      <td class="px-3 py-2 text-right font-semibold text-indigo-700">{{ row.yesPercentage }}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <div v-if="identifyViewMode === 'blocks'" class="bg-white rounded-lg p-6">
-        <BlocksCharts
-          :blocks-data="refIBlocksForCharts"
-          :total-evaluations="blockStatistics.total_evaluations"
-          :binaryMode="true"
-        />
-      </div>
-
-      <div v-else class="bg-white rounded-lg p-6">
-        <QuestionsCharts
-          :questions-data="refIQuestionsForCharts"
-          :total-evaluations="questionStatistics.total_evaluations"
-          :binaryMode="true"
-        />
-      </div>
     </div>
 
-    <div v-if="activeSubTab === 'analizar'" class="space-y-6">
+    <div v-if="activeSubTab === 'analisis'" class="space-y-6">
       <AnalysisFilters :demographics="analysisData.demographics" v-model="analysisFilters" />
 
       <div class="bg-white rounded-xl border border-slate-200 p-6">
-        <div class="flex flex-col gap-4">
-          <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex flex-col gap-5">
+          <div class="flex items-start justify-between flex-wrap gap-4">
             <div>
-              <h3 class="text-lg font-bold text-slate-900">Análisis de respuestas (Ref I)</h3>
-              <p class="text-sm text-slate-600 mt-1">Visualización basada en filtros demográficos, sin niveles de riesgo</p>
+              <h3 class="text-lg font-bold text-slate-900">Análisis de acontecimientos</h3>
+              <p class="text-sm text-slate-600 mt-1">Explora resultados por perfil demográfico y por pregunta para identificar focos de atención.</p>
             </div>
-            <p class="text-sm text-slate-600">
-              <span class="font-semibold">{{ filteredEvaluations.length }}</span> evaluaciones filtradas
-            </p>
-          </div>
-
-          <div class="flex items-center gap-4">
-            <span class="text-sm font-medium text-slate-700">Tipo de gráfica:</span>
-            <div class="flex gap-2">
-              <button
-                @click="chartType = 'pie'"
-                :class="[
-                  'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
-                  chartType === 'pie' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                ]"
-              >
-                Pastel
-              </button>
-              <button
-                @click="chartType = 'bar'"
-                :class="[
-                  'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
-                  chartType === 'bar' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                ]"
-              >
-                Barras
-              </button>
+            <div class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">
+              <span class="font-semibold text-slate-900">{{ analysisParticipantSummary.atsEntrants }}</span>
+              <span class="ml-1">personas entraron a ATS (filtro demográfico activo)</span>
             </div>
           </div>
 
-          <div class="flex items-center gap-4">
-            <label for="question-filter" class="text-sm font-medium text-slate-700">Pregunta:</label>
-            <select
-              id="question-filter"
-              v-model="selectedQuestionKey"
-              class="flex-1 max-w-3xl rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-            >
-              <option value="">Todas</option>
-              <option
-                v-for="question in questionStatistics.questions"
-                :key="question.key"
-                :value="question.key"
-              >
-                {{ `Pregunta ${question.number} - ${question.text}` }}
-              </option>
-            </select>
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs uppercase tracking-wide text-slate-500">Entraron a ATS</p>
+              <p class="mt-1 text-xl font-bold text-slate-900">{{ analysisParticipantSummary.atsEntrants }}</p>
+            </div>
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <p class="text-xs uppercase tracking-wide text-emerald-700">Con al menos 1 Sí (bloques II, III y IV)</p>
+              <p class="mt-1 text-xl font-bold text-emerald-800">{{ analysisParticipantSummary.withYesInBlocks }}</p>
+            </div>
+            <div class="rounded-lg border border-rose-200 bg-rose-50 p-3">
+              <p class="text-xs uppercase tracking-wide text-rose-700">Requieren atención clínica</p>
+              <p class="mt-1 text-xl font-bold text-rose-800">{{ analysisParticipantSummary.requiresClinical }}</p>
+            </div>
+            <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+              <p class="text-xs uppercase tracking-wide text-indigo-700">No requieren atención clínica</p>
+              <p class="mt-1 text-xl font-bold text-indigo-800">{{ analysisParticipantSummary.noClinical }}</p>
+            </div>
           </div>
 
-          <div v-if="filteredEvaluations.length > 0" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-1 space-y-3">
-              <div class="rounded-lg border border-slate-200 p-4">
-                <p class="text-xs uppercase tracking-wide text-slate-500">Total respuestas</p>
-                <p class="mt-1 text-2xl font-bold text-slate-900">{{ responseSummary.totalResponses }}</p>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+              <div class="xl:col-span-2">
+                <label for="question-filter" class="block text-sm font-medium text-slate-700 mb-1">Pregunta a analizar</label>
+                <select
+                  id="question-filter"
+                  v-model="selectedQuestionKey"
+                  class="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                >
+                  <option value="">Todos (personas ATS: con o sin Sí en bloques II, III y IV)</option>
+                  <option
+                    v-for="question in questionStatistics.questions"
+                    :key="question.key"
+                    :value="question.key"
+                  >
+                    {{ `ATS ${question.number} - ${question.text}` }}
+                  </option>
+                </select>
               </div>
-              <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-                <p class="text-xs uppercase tracking-wide text-emerald-700">Respuestas Sí</p>
-                <p class="mt-1 text-2xl font-bold text-emerald-800">{{ responseSummary.yesCount }}</p>
-                <p class="mt-1 text-xs text-emerald-700">{{ responseSummary.yesPercentage }}%</p>
-              </div>
-              <div class="rounded-lg border border-rose-200 bg-rose-50 p-4">
-                <p class="text-xs uppercase tracking-wide text-rose-700">Respuestas No</p>
-                <p class="mt-1 text-2xl font-bold text-rose-800">{{ responseSummary.noCount }}</p>
-                <p class="mt-1 text-xs text-rose-700">{{ responseSummary.noPercentage }}%</p>
+
+              <div>
+                <p class="block text-sm font-medium text-slate-700 mb-1">Tipo de gráfica</p>
+                <div class="grid grid-cols-2 gap-2">
+                  <button
+                    @click="chartType = 'pie'"
+                    :class="[
+                      'px-3 py-2 text-sm font-medium rounded-lg transition-colors',
+                      chartType === 'pie' ? 'bg-purple-600 text-white' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                    ]"
+                  >
+                    Pastel
+                  </button>
+                  <button
+                    @click="chartType = 'bar'"
+                    :class="[
+                      'px-3 py-2 text-sm font-medium rounded-lg transition-colors',
+                      chartType === 'bar' ? 'bg-purple-600 text-white' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                    ]"
+                  >
+                    Barras
+                  </button>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div class="lg:col-span-2 rounded-lg border border-slate-200 p-4">
+          <div v-if="filteredEvaluations.length > 0" class="rounded-xl border border-slate-200 p-4 sm:p-5 bg-white">
+            <div class="mb-3 flex items-center justify-between gap-2">
+              <h4 class="text-sm font-semibold text-slate-900">Visualización de participantes</h4>
+              <p class="text-xs text-slate-500">Participantes considerados: {{ participantResponseSummary.totalParticipants }}</p>
+            </div>
+            <div class="h-[340px]">
               <canvas ref="analysisChartRef" class="w-full" style="height: 320px"></canvas>
             </div>
           </div>
@@ -159,127 +425,451 @@
             <p class="text-sm font-medium text-slate-700">Sin datos para los filtros seleccionados</p>
             <p class="text-xs text-slate-500 mt-1">Ajusta los filtros para visualizar resultados de análisis</p>
           </div>
+
+          <AnalysisWysiwygBlocks
+            v-if="organizationId && (canManageAnalysisBlocks || analysisBlocks.referencia_i.length > 0)"
+            :organization-id="organizationId"
+            instrument-type="referencia_i"
+            :blocks="analysisBlocks.referencia_i"
+            :can-manage="canManageAnalysisBlocks"
+          />
         </div>
       </div>
     </div>
 
-    <div v-if="activeSubTab === 'participantes'" class="space-y-6">
-      <div class="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-8 border border-teal-200 hover:shadow-lg transition-shadow">
-        <div class="flex items-center gap-3 mb-6">
-          <div class="p-2 bg-teal-100 rounded-lg">
-            <UserGroupIcon class="w-6 h-6 text-teal-600" />
+    <div v-if="activeSubTab === 'acontecimientos_traumaticos'" class="space-y-6">
+      <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Acontecimientos traumáticos</h3>
+            <p class="text-sm text-slate-600 mt-1">
+              Se muestran personas con respuestas en Sección II, III y IV, con opción para filtrar quienes requieren valoración clínica.
+            </p>
           </div>
-          <h3 class="text-2xl font-bold text-teal-900">Informe de Participantes</h3>
+          <div class="inline-flex items-center rounded-full bg-rose-100 px-3 py-1 text-sm text-rose-800 font-semibold">
+            Requieren valoración clínica: {{ clinicalAssessmentParticipants.requires_clinical_count }}
+          </div>
         </div>
 
-        <div v-if="filteredEvaluations.length > 0" class="space-y-6">
-          <div class="bg-white rounded-lg p-4 border border-slate-200">
-            <div class="text-sm text-slate-700">
-              <span class="font-medium">Total de participantes:</span>
-              <span class="font-bold text-teal-600 ml-2">{{ filteredEvaluations.length }}</span>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p class="text-xs uppercase tracking-wide text-slate-500">Participantes evaluados</p>
+            <p class="mt-1 text-xl font-bold text-slate-900">{{ clinicalAssessmentParticipants.total }}</p>
           </div>
+          <div class="rounded-lg border border-rose-200 bg-rose-50 p-3">
+            <p class="text-xs uppercase tracking-wide text-rose-700">Requieren valoración clínica</p>
+            <p class="mt-1 text-xl font-bold text-rose-800">{{ clinicalAssessmentParticipants.requires_clinical_count }}</p>
+          </div>
+          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+            <p class="text-xs uppercase tracking-wide text-emerald-700">No requieren valoración clínica</p>
+            <p class="mt-1 text-xl font-bold text-emerald-800">{{ Math.max(clinicalAssessmentParticipants.total - clinicalAssessmentParticipants.requires_clinical_count, 0) }}</p>
+          </div>
+        </div>
 
-          <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <ul class="divide-y divide-slate-200">
-              <li
-                v-for="(evaluation, index) in filteredEvaluations"
-                :key="evaluation.id"
-                class="hover:bg-slate-50 transition-colors duration-150 p-4"
+        <div class="flex flex-col lg:flex-row lg:items-center gap-3 lg:justify-between">
+          <div class="w-full lg:max-w-2xl space-y-2">
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                @click="clinicalRequirementFilter = 'all'"
+                :class="[
+                  'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  clinicalRequirementFilter === 'all'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ]"
               >
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div class="flex items-center gap-3">
-                    <div class="bg-teal-100 text-teal-800 font-bold rounded-full h-8 w-8 flex items-center justify-center">
-                      {{ index + 1 }}
-                    </div>
-                    <div>
-                      <p class="font-medium text-slate-900">Folio {{ evaluation.personal_folio }}</p>
-                      <p class="text-xs text-slate-500 mt-1">
-                        {{ evaluation.demographics.genero }} · {{ evaluation.demographics.puesto }} · {{ evaluation.demographics.area }} · {{ evaluation.demographics.turno }}
-                      </p>
-                    </div>
-                  </div>
+                Todos
+              </button>
+              <button
+                type="button"
+                @click="clinicalRequirementFilter = 'requires'"
+                :class="[
+                  'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  clinicalRequirementFilter === 'requires'
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ]"
+              >
+                Requiere valoración clínica
+              </button>
+            </div>
 
-                  <div class="flex items-center gap-3">
-                    <div class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold min-w-[94px] text-center">
-                      Sí: {{ evaluation.yes_count }} / 14
-                    </div>
-                    <span
-                      class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
-                      :style="{
-                        color: '#111827',
-                        backgroundColor: `${analysisData.colors[evaluation.risk_level] ?? '#94A3B8'}33`
-                      }"
-                    >
-                      ATS: {{ analysisData.labels[evaluation.risk_level] ?? evaluation.risk_level }}
-                    </span>
-                  </div>
-                </div>
-              </li>
-            </ul>
+            <div>
+              <label for="clinical-folio-search" class="sr-only">Buscar por folio</label>
+              <input
+                id="clinical-folio-search"
+                v-model="clinicalSearch"
+                type="text"
+                placeholder="Buscar por folio..."
+                class="w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              >
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-slate-600">Mostrar</span>
+            <div class="flex items-center gap-2">
+              <button
+                v-for="size in pageSizeOptions"
+                :key="`clinical_size_${size}`"
+                type="button"
+                @click="clinicalPageSize = size"
+                :class="[
+                  'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                  clinicalPageSize === size
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ]"
+              >
+                {{ size }}
+              </button>
+            </div>
           </div>
         </div>
 
-        <div v-else class="bg-white rounded-lg p-6">
-          <div class="flex items-center justify-center p-8 border-2 border-dashed border-teal-300 rounded-lg">
-            <div class="text-center">
-              <UserGroupIcon class="w-12 h-12 text-teal-400 mx-auto mb-3" />
-              <p class="text-teal-700 font-medium">Sin datos disponibles</p>
-              <p class="text-sm text-teal-600 mt-1">No se han encontrado evaluaciones de participantes para mostrar</p>
+        <div class="overflow-auto rounded-lg border border-slate-200">
+          <table class="min-w-[1100px] w-full text-sm">
+            <thead class="bg-slate-50 text-slate-700">
+              <tr>
+                <th class="px-3 py-2 text-left font-semibold">Folio</th>
+                <th class="px-3 py-2 text-left font-semibold">Género</th>
+                <th class="px-3 py-2 text-left font-semibold">Edad</th>
+                <th class="px-3 py-2 text-left font-semibold">Puesto</th>
+                <th class="px-3 py-2 text-left font-semibold">Área</th>
+                <th class="px-3 py-2 text-left font-semibold">Valoración clínica</th>
+                <th class="px-3 py-2 text-right font-semibold">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 bg-white">
+              <tr v-if="paginatedClinicalParticipants.length === 0">
+                <td colspan="10" class="px-4 py-8 text-center text-slate-500">
+                  No hay personas para los filtros seleccionados.
+                </td>
+              </tr>
+              <tr
+                v-for="person in paginatedClinicalParticipants"
+                :key="person.id"
+                class="hover:bg-slate-50"
+              >
+                <td class="px-3 py-2 font-semibold text-slate-900">{{ person.personal_folio }}</td>
+                <td class="px-3 py-2 text-slate-700">{{ person.demographics.genero }}</td>
+                <td class="px-3 py-2 text-slate-700">{{ person.demographics.edad }}</td>
+                <td class="px-3 py-2 text-slate-700">{{ person.demographics.puesto }}</td>
+                <td class="px-3 py-2 text-slate-700">{{ person.demographics.area }}</td>
+                <td class="px-3 py-2 text-center">
+                  <span
+                    v-if="person.requires_clinical_assessment"
+                    class="rounded-full px-2.5 py-1 text-xs font-semibold bg-rose-100 text-rose-800"
+                  >
+                    Requiere valoración clínica
+                  </span>
+                  <span v-else class="text-sm font-semibold text-slate-400">--</span>
+                </td>
+                <td class="px-3 py-2 text-right">
+                  <button
+                    type="button"
+                    @click="openClinicalDetails(person.id)"
+                    class="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                  >
+                    Ver detalles
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <p class="text-sm text-slate-600">
+            Mostrando {{ clinicalPaginationSummary.from }}-{{ clinicalPaginationSummary.to }} de {{ clinicalPaginationSummary.total }} personas
+          </p>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              @click="clinicalPage = Math.max(1, clinicalPage - 1)"
+              :disabled="clinicalPage === 1"
+              class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Anterior
+            </button>
+            <span class="text-sm text-slate-700">Página {{ clinicalPage }} de {{ totalClinicalPages }}</span>
+            <button
+              type="button"
+              @click="clinicalPage = Math.min(totalClinicalPages, clinicalPage + 1)"
+              :disabled="clinicalPage >= totalClinicalPages"
+              class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="activeSubTab === 'seguimiento'" class="space-y-6">
+      <div class="bg-gradient-to-r from-sky-50 to-indigo-50 rounded-xl p-8 border border-sky-200 hover:shadow-lg transition-shadow">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="p-2 bg-sky-100 rounded-lg">
+            <ClipboardDocumentListIcon class="w-6 h-6 text-sky-600" />
+          </div>
+          <h3 class="text-2xl font-bold text-slate-900">Seguimiento</h3>
+        </div>
+        <div class="bg-white rounded-lg p-8">
+          <div class="flex items-center justify-center border-2 border-dashed border-sky-300 rounded-lg p-8">
+            <div class="text-center max-w-2xl space-y-2">
+              <p class="text-sky-800 font-semibold">Próximamente: expediente de seguimiento clínico por persona.</p>
+              <p class="text-sm text-slate-600">
+                Esta sección concentrará el expediente de las personas que pasaron a valoración clínica,
+                incluyendo responsable del equipo, estatus y campos de seguimiento definidos por el cliente.
+              </p>
+              <p class="text-xs text-slate-500">En la siguiente fase se incorporarán los campos y acciones del flujo operativo.</p>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-if="activeSubTab === 'prevenir'" class="space-y-6">
+    <div v-if="activeSubTab === 'prevencion'" class="space-y-6">
       <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-8 border border-emerald-200 hover:shadow-lg transition-shadow">
         <div class="flex items-center gap-3 mb-6">
           <div class="p-2 bg-emerald-100 rounded-lg">
             <ShieldCheckIcon class="w-6 h-6 text-emerald-600" />
           </div>
-          <h3 class="text-2xl font-bold text-emerald-900">Prevenir y Controlar ATS</h3>
+          <h3 class="text-2xl font-bold text-emerald-900">Prevención y recomendaciones</h3>
         </div>
-        <div class="bg-white rounded-lg p-6">
-          <div class="flex items-center justify-center p-8 border-2 border-dashed border-emerald-300 rounded-lg">
-            <div class="text-center">
+        <div class="bg-white rounded-lg p-8">
+          <div class="flex items-center justify-center border-2 border-dashed border-emerald-300 rounded-lg p-8">
+            <div class="text-center max-w-xl">
               <PencilSquareIcon class="w-12 h-12 text-emerald-400 mx-auto mb-3" />
-              <p class="text-emerald-700 font-medium">Gestión operativa T&amp;MS</p>
-              <p class="text-sm text-emerald-600 mt-1">El equipo de T&amp;MS documenta, actualiza y da seguimiento al plan de prevención</p>
+              <p class="text-emerald-700 font-semibold">Aún no se han subido los análisis o resultados para esta sección.</p>
+              <p class="text-sm text-emerald-600 mt-1">Próxima fase: definición e integración de recomendaciones con el cliente.</p>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-3 mb-4">
-            <LightBulbIcon class="w-6 h-6 text-emerald-600" />
-            <h4 class="font-bold text-slate-900">Medidas Preventivas</h4>
+    <div v-if="activeSubTab === 'conclusiones'" class="space-y-6">
+      <div class="bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl p-8 border border-slate-200 hover:shadow-lg transition-shadow">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="p-2 bg-indigo-100 rounded-lg">
+            <LightBulbIcon class="w-6 h-6 text-indigo-600" />
           </div>
-          <p class="text-sm text-slate-600">Definición de acciones para atención de ATS identificados en respuestas Sí/No.</p>
+          <h3 class="text-2xl font-bold text-slate-900">Conclusiones</h3>
         </div>
-        <div class="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-3 mb-4">
-            <ArrowPathIcon class="w-6 h-6 text-emerald-600" />
-            <h4 class="font-bold text-slate-900">Seguimiento</h4>
+        <div class="bg-white rounded-lg p-8">
+          <div class="flex items-center justify-center border-2 border-dashed border-slate-300 rounded-lg p-8">
+            <div class="text-center max-w-xl">
+              <ArrowPathIcon class="w-12 h-12 text-slate-400 mx-auto mb-3" />
+              <p class="text-slate-700 font-semibold">Aún no se han subido los análisis o resultados para esta sección.</p>
+              <p class="text-sm text-slate-500 mt-1">Aquí se mostrará el cierre ejecutivo de hallazgos y acuerdos.</p>
+            </div>
           </div>
-          <p class="text-sm text-slate-600">Control periódico del avance de acciones registradas por el equipo de T&amp;MS.</p>
         </div>
       </div>
     </div>
   </div>
+
+  <div
+      v-if="isPanoramaDetailsOpen"
+      class="fixed inset-0 z-50 "
+      aria-labelledby="panorama-details-title"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="absolute inset-0 bg-slate-900/50" @click="closePanoramaDetails"></div>
+
+      <div class="absolute inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl border-l border-slate-200 overflow-y-auto">
+        <div class="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+          <h3 id="panorama-details-title" class="text-lg font-bold text-slate-900">Detalle de persona</h3>
+          <button
+            type="button"
+            @click="closePanoramaDetails"
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div v-if="selectedPanoramaParticipant" class="p-6 space-y-6">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="text-sm font-semibold text-slate-800 mb-3">Identificación</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div>
+                <p class="text-slate-500">Folio</p>
+                <p class="font-semibold text-slate-900">{{ selectedPanoramaParticipant.personal_folio }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Nombre</p>
+                <p class="font-semibold text-slate-900">{{ selectedPanoramaParticipant.name }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="text-sm font-semibold text-slate-800 mb-3">Datos demográficos</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div><p class="text-slate-500">Género</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.genero }}</p></div>
+              <div><p class="text-slate-500">Edad</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.edad }}</p></div>
+              <div><p class="text-slate-500">Estado civil</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.estado_civil }}</p></div>
+              <div><p class="text-slate-500">Estudios</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.estudios }}</p></div>
+              <div><p class="text-slate-500">Puesto</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.puesto }}</p></div>
+              <div><p class="text-slate-500">Área</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.area }}</p></div>
+              <div><p class="text-slate-500">Tipo de puesto</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.tipo_puesto }}</p></div>
+              <div><p class="text-slate-500">Tipo de contratación</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.tipo_contratacion }}</p></div>
+              <div><p class="text-slate-500">Tipo de personal</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.tipo_personal }}</p></div>
+              <div><p class="text-slate-500">Turno</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.turno }}</p></div>
+              <div><p class="text-slate-500">Rotación de turnos</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.rotacion_turnos }}</p></div>
+              <div><p class="text-slate-500">Tiempo en el puesto actual</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.tiempo_puesto_actual }}</p></div>
+              <div class="md:col-span-2"><p class="text-slate-500">Tiempo de experiencia laboral total</p><p class="font-medium text-slate-900">{{ selectedPanoramaParticipant.demographics.tiempo_experiencia_laboral_total }}</p></div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="text-sm font-semibold text-slate-800 mb-3">Respuestas de Acontecimientos</h4>
+            <div class="space-y-2">
+              <div
+                v-for="item in atsPanoramaItems"
+                :key="`detail_event_${item.index}`"
+                class="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2"
+              >
+                <p class="text-sm text-slate-700">{{ item.shortLabel }}</p>
+                <span
+                  :class="selectedPanoramaParticipant.events[String(item.index)] ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'"
+                  class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                >
+                  {{ selectedPanoramaParticipant.events[String(item.index)] ? 'Sí' : 'No' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <div
+      v-if="isClinicalDetailsOpen"
+      class="fixed inset-0 z-50"
+      aria-labelledby="clinical-details-title"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="absolute inset-0 bg-slate-900/50" @click="closeClinicalDetails"></div>
+
+      <div class="absolute inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl border-l border-slate-200 overflow-y-auto">
+        <div class="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+          <h3 id="clinical-details-title" class="text-lg font-bold text-slate-900">Detalle clínico de persona</h3>
+          <button
+            type="button"
+            @click="closeClinicalDetails"
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div v-if="selectedClinicalParticipant" class="p-6 space-y-6">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="text-sm font-semibold text-slate-800 mb-3">Identificación</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div>
+                <p class="text-slate-500">Folio</p>
+                <p class="font-semibold text-slate-900">{{ selectedClinicalParticipant.personal_folio }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Nombre</p>
+                <p class="font-semibold text-slate-900">{{ selectedClinicalParticipant.name }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="text-sm font-semibold text-slate-800 mb-3">Datos demográficos</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div><p class="text-slate-500">Género</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.genero }}</p></div>
+              <div><p class="text-slate-500">Edad</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.edad }}</p></div>
+              <div><p class="text-slate-500">Estado civil</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.estado_civil }}</p></div>
+              <div><p class="text-slate-500">Estudios</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.estudios }}</p></div>
+              <div><p class="text-slate-500">Puesto</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.puesto }}</p></div>
+              <div><p class="text-slate-500">Área</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.area }}</p></div>
+              <div><p class="text-slate-500">Tipo de puesto</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.tipo_puesto }}</p></div>
+              <div><p class="text-slate-500">Tipo de contratación</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.tipo_contratacion }}</p></div>
+              <div><p class="text-slate-500">Tipo de personal</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.tipo_personal }}</p></div>
+              <div><p class="text-slate-500">Turno</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.turno }}</p></div>
+              <div><p class="text-slate-500">Rotación de turnos</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.rotacion_turnos }}</p></div>
+              <div><p class="text-slate-500">Tiempo en el puesto actual</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.tiempo_puesto_actual }}</p></div>
+              <div class="md:col-span-2"><p class="text-slate-500">Tiempo de experiencia laboral total</p><p class="font-medium text-slate-900">{{ selectedClinicalParticipant.demographics.tiempo_experiencia_laboral_total }}</p></div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="text-sm font-semibold text-slate-800 mb-3">Resultado clínico</h4>
+            <div class="flex flex-wrap gap-2">
+              <span
+                :class="selectedClinicalParticipant.requires_clinical_assessment ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'"
+                class="rounded-full px-2.5 py-1 text-xs font-semibold"
+              >
+                {{ selectedClinicalParticipant.requires_clinical_assessment ? 'Requiere valoración clínica' : 'Sin criterio clínico' }}
+              </span>
+              <span
+                v-for="criteria in selectedClinicalParticipant.criteria_met"
+                :key="`criteria_${criteria}`"
+                class="rounded-full bg-indigo-100 text-indigo-800 px-2.5 py-1 text-xs font-semibold uppercase"
+              >
+                Sección {{ criteria }}
+              </span>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 p-4 space-y-4">
+            <h4 class="text-sm font-semibold text-slate-800">Respuestas Sección II, III y IV</h4>
+
+            <div
+              v-for="section in clinicalSectionsForDetail"
+              :key="section.key"
+              class="rounded-lg border border-slate-100 p-3"
+            >
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <p class="text-sm font-semibold text-slate-900">{{ section.label }}</p>
+                <span class="text-xs text-slate-600">Sí: {{ section.yesCount }} / {{ section.total }}</span>
+              </div>
+
+              <div class="space-y-2">
+                <div
+                  v-for="response in section.responses"
+                  :key="response.key"
+                  class="flex items-start justify-between gap-3 rounded-md border border-slate-100 px-3 py-2"
+                >
+                  <div>
+                    <p class="text-xs text-slate-500">ATS {{ response.number }}</p>
+                    <p class="text-sm text-slate-700">{{ response.text }}</p>
+                  </div>
+                  <span
+                    :class="response.is_yes ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'"
+                    class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                  >
+                    {{ response.is_yes ? 'Sí' : 'No' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { router, useForm } from '@inertiajs/vue3';
 import AnalysisFilters from './Charts/AnalysisFilters.vue';
-import QuestionsCharts from './Charts/QuestionsCharts.vue';
-import BlocksCharts from './Charts/BlocksCharts.vue';
+import AnalysisWysiwygBlocks from './AnalysisWysiwygBlocks.vue';
 import { Chart, registerables } from 'chart.js';
 import {
   ArrowPathIcon,
   ChartBarIcon,
+  ClipboardDocumentListIcon,
   LightBulbIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
@@ -299,23 +889,6 @@ interface RefIQuestionStatistic {
   yes_percentage: number;
 }
 
-interface QuestionChartData {
-  number: number;
-  text: string;
-  category: string;
-  domain: string;
-  dimension: string;
-  responses: {
-    siempre: number;
-    casi_siempre: number;
-    algunas_veces: number;
-    casi_nunca: number;
-    nunca: number;
-  };
-  averageScore: number;
-  criticality: 'low' | 'medium' | 'high' | 'critical';
-}
-
 interface RefIBlockStatistic {
   name: string;
   question_numbers: number[];
@@ -324,24 +897,6 @@ interface RefIBlockStatistic {
   no_count: number;
   total_responses: number;
   yes_percentage: number;
-}
-
-interface BlockChartData {
-  block_number: number;
-  instructions: string;
-  question_count: number;
-  questions: number[];
-  responses: {
-    siempre: number;
-    casi_siempre: number;
-    algunas_veces: number;
-    casi_nunca: number;
-    nunca: number;
-  };
-  total_responses: number;
-  average_score: number;
-  negative_percentage: number;
-  criticality: 'low' | 'medium' | 'high' | 'critical';
 }
 
 interface RefIEvaluation {
@@ -378,14 +933,195 @@ interface Props {
     blocks: RefIBlockStatistic[];
     total_evaluations: number;
   };
+  atsPanoramaStatistics: {
+    items: Array<{
+      index: number;
+      label: string;
+      yes_count: number;
+      no_count: number;
+      total_responses: number;
+    }>;
+    total_evaluations: number;
+    with_traumatic_event_count: number;
+    without_traumatic_event_count: number;
+  };
+  acontecimientoParticipants: {
+    participants: Array<{
+      id: string;
+      personal_folio: string;
+      name: string;
+      created_at: string | null;
+      has_any_event: boolean;
+      events: Record<string, boolean>;
+      demographics: {
+        genero: string;
+        edad: string;
+        estado_civil: string;
+        estudios: string;
+        puesto: string;
+        area: string;
+        tipo_puesto: string;
+        tipo_contratacion: string;
+        tipo_personal: string;
+        turno: string;
+        rotacion_turnos: string;
+        tiempo_puesto_actual: string;
+        tiempo_experiencia_laboral_total: string;
+      };
+    }>;
+    total: number;
+  };
+  clinicalAssessmentParticipants: {
+    participants: Array<{
+      id: string;
+      personal_folio: string;
+      name: string;
+      has_sections_ii_iii_iv_answers: boolean;
+      requires_clinical_assessment: boolean;
+      criteria_met: string[];
+      sections: {
+        ii: {
+          label: string;
+          yes_count: number;
+          answered_count: number;
+          threshold: number;
+          meets_rule: boolean;
+          responses: Array<{ key: string; number: number; text: string; answer: unknown; is_yes: boolean }>;
+        };
+        iii: {
+          label: string;
+          yes_count: number;
+          answered_count: number;
+          threshold: number;
+          meets_rule: boolean;
+          responses: Array<{ key: string; number: number; text: string; answer: unknown; is_yes: boolean }>;
+        };
+        iv: {
+          label: string;
+          yes_count: number;
+          answered_count: number;
+          threshold: number;
+          meets_rule: boolean;
+          responses: Array<{ key: string; number: number; text: string; answer: unknown; is_yes: boolean }>;
+        };
+      };
+      demographics: {
+        genero: string;
+        edad: string;
+        estado_civil: string;
+        estudios: string;
+        puesto: string;
+        area: string;
+        tipo_puesto: string;
+        tipo_contratacion: string;
+        tipo_personal: string;
+        turno: string;
+        rotacion_turnos: string;
+        tiempo_puesto_actual: string;
+        tiempo_experiencia_laboral_total: string;
+      };
+    }>;
+    total: number;
+    requires_clinical_count: number;
+  };
+  preventionActions?: Array<{
+    id: number;
+    title: string;
+    description: string | null;
+    responsible: string | null;
+    status: string;
+    due_date: string | null;
+  }>;
+  canManagePreventionActions?: boolean;
+  workCenterId?: string;
+  organizationId?: string | number;
+  analysisBlocks?: {
+    referencia_i: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+    referencia_iii: Array<{ id: number; title: string | null; content_html: string; sort_order: number }>;
+  };
+  canManageAnalysisBlocks?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  preventionActions: () => [],
+  canManagePreventionActions: false,
+  workCenterId: undefined,
+  organizationId: undefined,
+  analysisBlocks: () => ({ referencia_i: [], referencia_iii: [] }),
+  canManageAnalysisBlocks: false,
+  atsPanoramaStatistics: () => ({ items: [], total_evaluations: 0, with_traumatic_event_count: 0, without_traumatic_event_count: 0 }),
+  acontecimientoParticipants: () => ({ participants: [], total: 0 }),
+  clinicalAssessmentParticipants: () => ({ participants: [], total: 0, requires_clinical_count: 0 }),
+});
 
-const activeSubTab = ref<'identificar' | 'analizar' | 'participantes' | 'prevenir'>('identificar');
-const identifyViewMode = ref<'blocks' | 'questions'>('blocks');
+const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);
+
+const preventionForm = useForm({
+  instrument_type: 'referencia_i',
+  title: '',
+  description: '',
+  responsible: '',
+  status: 'pendiente',
+  due_date: '',
+  sort_order: 0,
+});
+
+const statusLabels: Record<string, string> = {
+  pendiente: 'Pendiente',
+  en_proceso: 'En proceso',
+  completada: 'Completada',
+};
+
+const statusClasses: Record<string, string> = {
+  pendiente: 'bg-yellow-100 text-yellow-800',
+  en_proceso: 'bg-blue-100 text-blue-800',
+  completada: 'bg-emerald-100 text-emerald-800',
+};
+
+const submitPreventionAction = (): void => {
+  if (!props.workCenterId) {
+    return;
+  }
+
+  preventionForm.post(route('work-centers.prevention-actions.store', props.workCenterId), {
+    preserveScroll: true,
+    onSuccess: () => {
+      preventionForm.reset();
+      preventionForm.instrument_type = 'referencia_i';
+      preventionForm.status = 'pendiente';
+      preventionForm.sort_order = 0;
+    },
+  });
+};
+
+const deletePreventionAction = (actionId: number): void => {
+  if (!props.workCenterId) {
+    return;
+  }
+
+  router.delete(route('work-centers.prevention-actions.destroy', [props.workCenterId, actionId]), {
+    preserveScroll: true,
+  });
+};
+
+const activeSubTab = ref<'panorama' | 'analisis' | 'acontecimientos_traumaticos' | 'seguimiento' | 'prevencion' | 'conclusiones'>('panorama');
 const chartType = ref<'pie' | 'bar'>('pie');
 const selectedQuestionKey = ref('');
+const selectedAcontecimientoFilter = ref<'all' | string>('all');
+const panoramaResponseFilter = ref<'all' | 'yes' | 'no'>('all');
+const panoramaSearch = ref('');
+const panoramaPage = ref(1);
+const panoramaPageSize = ref(10);
+const distributionMode = ref<'area' | 'puesto'>('area');
+const isPanoramaDetailsOpen = ref(false);
+const selectedPanoramaParticipantId = ref<string | null>(null);
+const isClinicalDetailsOpen = ref(false);
+const selectedClinicalParticipantId = ref<string | null>(null);
+const clinicalSearch = ref('');
+const clinicalRequirementFilter = ref<'all' | 'requires'>('all');
+const clinicalPage = ref(1);
+const clinicalPageSize = ref(10);
+const pageSizeOptions = [10, 25, 50];
 const analysisFilters = ref({
   genero: '',
   puesto: '',
@@ -394,6 +1130,262 @@ const analysisFilters = ref({
 });
 const analysisChartRef = ref<HTMLCanvasElement | null>(null);
 const analysisChartInstance = ref<Chart | null>(null);
+
+const atsColorClasses = [
+  'bg-rose-500',
+  'bg-amber-500',
+  'bg-emerald-500',
+  'bg-sky-500',
+  'bg-violet-500',
+  'bg-fuchsia-500',
+];
+
+const maxAtsYesCount = computed(() => {
+  const values = props.atsPanoramaStatistics.items.map((item) => item.yes_count);
+  return Math.max(...values, 1);
+});
+
+const acontecimientoLabels = [
+  'Accidente',
+  'Asaltos',
+  'Actos violentos',
+  'Secuestro',
+  'Amenazas',
+  'Situación de riesgo',
+];
+
+const atsPanoramaItems = computed(() => {
+  return props.atsPanoramaStatistics.items.map((item, idx) => {
+    const ratio = item.yes_count / maxAtsYesCount.value;
+    const barPixels = Math.max(12, Math.round(ratio * 220));
+
+    return {
+      ...item,
+      shortLabel: acontecimientoLabels[idx] ?? `Acontecimiento ${item.index}`,
+      colorClass: atsColorClasses[idx % atsColorClasses.length],
+      hexColor: atsColorHex[idx % atsColorHex.length],
+      barHeight: `${barPixels}px`,
+    };
+  });
+});
+
+const panoramaParticipantsFiltered = computed(() => {
+  const query = panoramaSearch.value.trim().toLowerCase();
+
+  return props.acontecimientoParticipants.participants.filter((person) => {
+    if (panoramaResponseFilter.value === 'yes' && !person.has_any_event) {
+      return false;
+    }
+
+    if (panoramaResponseFilter.value === 'no' && person.has_any_event) {
+      return false;
+    }
+
+    if (selectedAcontecimientoFilter.value !== 'all' && person.events[selectedAcontecimientoFilter.value] !== true) {
+      return false;
+    }
+
+    if (query.length > 0) {
+      return String(person.personal_folio ?? '').toLowerCase().includes(query);
+    }
+
+    return true;
+  });
+});
+
+const totalPanoramaPages = computed(() => {
+  const total = panoramaParticipantsFiltered.value.length;
+  const pages = Math.ceil(total / panoramaPageSize.value);
+  return Math.max(pages, 1);
+});
+
+const paginatedPanoramaParticipants = computed(() => {
+  const start = (panoramaPage.value - 1) * panoramaPageSize.value;
+  const end = start + panoramaPageSize.value;
+
+  return panoramaParticipantsFiltered.value.slice(start, end);
+});
+
+const paginationSummary = computed(() => {
+  const total = panoramaParticipantsFiltered.value.length;
+
+  if (total === 0) {
+    return {
+      from: 0,
+      to: 0,
+      total,
+    };
+  }
+
+  const from = (panoramaPage.value - 1) * panoramaPageSize.value + 1;
+  const to = Math.min(total, panoramaPage.value * panoramaPageSize.value);
+
+  return {
+    from,
+    to,
+    total,
+  };
+});
+
+const distributionByGroupRows = computed(() => {
+  const grouped = new Map<string, { total: number; yesCount: number }>();
+  const selectedEventKey = selectedAcontecimientoFilter.value === 'all' ? null : selectedAcontecimientoFilter.value;
+
+  panoramaParticipantsFiltered.value.forEach((person) => {
+    const rawGroupValue = distributionMode.value === 'area'
+      ? person.demographics.area
+      : person.demographics.puesto;
+
+    const groupValue = String(rawGroupValue ?? '').trim() || 'Sin especificar';
+
+    if (!grouped.has(groupValue)) {
+      grouped.set(groupValue, { total: 0, yesCount: 0 });
+    }
+
+    const entry = grouped.get(groupValue);
+    if (!entry) {
+      return;
+    }
+
+    entry.total += 1;
+
+    const hasYes = selectedEventKey
+      ? person.events[selectedEventKey] === true
+      : person.has_any_event;
+
+    if (hasYes) {
+      entry.yesCount += 1;
+    }
+  });
+
+  return [...grouped.entries()]
+    .map(([group, values]) => {
+      const yesPercentage = values.total > 0
+        ? Math.round((values.yesCount / values.total) * 100)
+        : 0;
+
+      return {
+        group,
+        total: values.total,
+        yesCount: values.yesCount,
+        yesPercentage,
+      };
+    })
+    .sort((left, right) => right.yesCount - left.yesCount || right.total - left.total || left.group.localeCompare(right.group, 'es'));
+});
+
+const selectedPanoramaParticipant = computed(() => {
+  if (!selectedPanoramaParticipantId.value) {
+    return null;
+  }
+
+  return props.acontecimientoParticipants.participants.find((person) => person.id === selectedPanoramaParticipantId.value) ?? null;
+});
+
+const openPanoramaDetails = (participantId: string): void => {
+  selectedPanoramaParticipantId.value = participantId;
+  isPanoramaDetailsOpen.value = true;
+};
+
+const closePanoramaDetails = (): void => {
+  isPanoramaDetailsOpen.value = false;
+};
+
+const clinicalParticipantsFiltered = computed(() => {
+  const query = clinicalSearch.value.trim().toLowerCase();
+
+  return props.clinicalAssessmentParticipants.participants.filter((person) => {
+    if (clinicalRequirementFilter.value === 'requires' && !person.requires_clinical_assessment) {
+      return false;
+    }
+
+    if (query.length > 0) {
+      return String(person.personal_folio ?? '').toLowerCase().includes(query);
+    }
+
+    return true;
+  });
+});
+
+const totalClinicalPages = computed(() => {
+  const pages = Math.ceil(clinicalParticipantsFiltered.value.length / clinicalPageSize.value);
+  return Math.max(pages, 1);
+});
+
+const paginatedClinicalParticipants = computed(() => {
+  const start = (clinicalPage.value - 1) * clinicalPageSize.value;
+  const end = start + clinicalPageSize.value;
+
+  return clinicalParticipantsFiltered.value.slice(start, end);
+});
+
+const clinicalPaginationSummary = computed(() => {
+  const total = clinicalParticipantsFiltered.value.length;
+
+  if (total === 0) {
+    return {
+      from: 0,
+      to: 0,
+      total,
+    };
+  }
+
+  const from = (clinicalPage.value - 1) * clinicalPageSize.value + 1;
+  const to = Math.min(total, clinicalPage.value * clinicalPageSize.value);
+
+  return {
+    from,
+    to,
+    total,
+  };
+});
+
+const selectedClinicalParticipant = computed(() => {
+  if (!selectedClinicalParticipantId.value) {
+    return null;
+  }
+
+  return props.clinicalAssessmentParticipants.participants.find((person) => person.id === selectedClinicalParticipantId.value) ?? null;
+});
+
+const clinicalSectionsForDetail = computed(() => {
+  if (!selectedClinicalParticipant.value) {
+    return [];
+  }
+
+  return [
+    {
+      key: 'ii',
+      label: selectedClinicalParticipant.value.sections.ii.label,
+      responses: selectedClinicalParticipant.value.sections.ii.responses,
+      yesCount: selectedClinicalParticipant.value.sections.ii.yes_count,
+      total: selectedClinicalParticipant.value.sections.ii.responses.length,
+    },
+    {
+      key: 'iii',
+      label: selectedClinicalParticipant.value.sections.iii.label,
+      responses: selectedClinicalParticipant.value.sections.iii.responses,
+      yesCount: selectedClinicalParticipant.value.sections.iii.yes_count,
+      total: selectedClinicalParticipant.value.sections.iii.responses.length,
+    },
+    {
+      key: 'iv',
+      label: selectedClinicalParticipant.value.sections.iv.label,
+      responses: selectedClinicalParticipant.value.sections.iv.responses,
+      yesCount: selectedClinicalParticipant.value.sections.iv.yes_count,
+      total: selectedClinicalParticipant.value.sections.iv.responses.length,
+    },
+  ];
+});
+
+const openClinicalDetails = (participantId: string): void => {
+  selectedClinicalParticipantId.value = participantId;
+  isClinicalDetailsOpen.value = true;
+};
+
+const closeClinicalDetails = (): void => {
+  isClinicalDetailsOpen.value = false;
+};
 
 const filteredEvaluations = computed(() => {
   return props.analysisData.evaluations.filter((evaluation) => {
@@ -414,127 +1406,48 @@ const filteredEvaluations = computed(() => {
   });
 });
 
-const responseSummary = computed(() => {
-  const participants = filteredEvaluations.value.length;
-
-  if (selectedQuestionKey.value) {
-    let totalResponses = 0;
-    let yesCount = 0;
-
-    filteredEvaluations.value.forEach((evaluation) => {
-      const answer = evaluation.answers?.[selectedQuestionKey.value];
-
-      if (answer === null || answer === undefined) {
-        return;
-      }
-
-      totalResponses++;
-      if (isAffirmativeAnswer(answer)) {
-        yesCount++;
-      }
-    });
-
-    const noCount = Math.max(totalResponses - yesCount, 0);
-
-    return {
-      totalResponses,
-      yesCount,
-      noCount,
-      yesPercentage: totalResponses > 0 ? Number(((yesCount / totalResponses) * 100).toFixed(2)) : 0,
-      noPercentage: totalResponses > 0 ? Number(((noCount / totalResponses) * 100).toFixed(2)) : 0,
-    };
+const eventFilteredEvaluations = computed(() => {
+  if (!selectedQuestionKey.value) {
+    return filteredEvaluations.value.filter((evaluation) => (evaluation.yes_count ?? 0) > 0);
   }
 
-  const totalResponses = participants * 14;
-  const yesCount = filteredEvaluations.value.reduce((total, evaluation) => total + (evaluation.yes_count ?? 0), 0);
-  const noCount = Math.max(totalResponses - yesCount, 0);
+  return filteredEvaluations.value.filter((evaluation) => isAffirmativeAnswer(evaluation.answers?.[selectedQuestionKey.value]));
+});
+
+const analysisParticipantSummary = computed(() => {
+  const atsEntrants = filteredEvaluations.value.length;
+  const withYesInBlocks = filteredEvaluations.value.filter((evaluation) => (evaluation.yes_count ?? 0) > 0).length;
+  const requiresClinical = props.clinicalAssessmentParticipants.requires_clinical_count;
+  const noClinical = Math.max(props.clinicalAssessmentParticipants.total - requiresClinical, 0);
 
   return {
-    totalResponses,
-    yesCount,
-    noCount,
-    yesPercentage: totalResponses > 0 ? Number(((yesCount / totalResponses) * 100).toFixed(2)) : 0,
-    noPercentage: totalResponses > 0 ? Number(((noCount / totalResponses) * 100).toFixed(2)) : 0,
+    atsEntrants,
+    withYesInBlocks,
+    requiresClinical,
+    noClinical,
   };
 });
 
-const refIQuestionsForCharts = computed(() => {
-  const mappedQuestions = props.questionStatistics.questions.map<QuestionChartData>((question) => {
-    const negativePercentage = question.total_responses > 0
-      ? Number(((question.no_count / question.total_responses) * 100).toFixed(2))
-      : 0;
+const participantResponseSummary = computed(() => {
+  const totalParticipants = filteredEvaluations.value.length;
 
-    let criticality: 'low' | 'medium' | 'high' | 'critical' = 'low';
-    if (negativePercentage >= 50) {
-      criticality = 'critical';
-    } else if (negativePercentage >= 30) {
-      criticality = 'high';
-    } else if (negativePercentage >= 15) {
-      criticality = 'medium';
+  const yesParticipants = filteredEvaluations.value.filter((evaluation) => {
+    if (!selectedQuestionKey.value) {
+      return (evaluation.yes_count ?? 0) > 0;
     }
 
-    return {
-      number: question.number,
-      text: question.text,
-      category: 'Referencia I',
-      domain: 'ATS',
-      dimension: 'Acontecimientos Traumáticos Severos',
-      responses: {
-        siempre: question.yes_count,
-        casi_siempre: 0,
-        algunas_veces: 0,
-        casi_nunca: 0,
-        nunca: question.no_count,
-      },
-      averageScore: Number((question.yes_percentage / 25).toFixed(2)),
-      criticality,
-    };
-  });
+    return isAffirmativeAnswer(evaluation.answers?.[selectedQuestionKey.value]);
+  }).length;
 
-  return mappedQuestions.reduce<Record<string, QuestionChartData>>((accumulator, question) => {
-    accumulator[String(question.number)] = question;
-    return accumulator;
-  }, {});
-});
+  const noParticipants = Math.max(totalParticipants - yesParticipants, 0);
 
-const refIBlocksForCharts = computed(() => {
-  const mappedBlocks = props.blockStatistics.blocks.map<BlockChartData>((block, index) => {
-    const negativePercentage = block.total_responses > 0
-      ? Number(((block.no_count / block.total_responses) * 100).toFixed(2))
-      : 0;
-
-    let criticality: 'low' | 'medium' | 'high' | 'critical' = 'low';
-    if (negativePercentage >= 50) {
-      criticality = 'critical';
-    } else if (negativePercentage >= 30) {
-      criticality = 'high';
-    } else if (negativePercentage >= 15) {
-      criticality = 'medium';
-    }
-
-    return {
-      block_number: index + 1,
-      instructions: block.name,
-      question_count: block.question_count,
-      questions: block.question_numbers,
-      responses: {
-        siempre: block.yes_count,
-        casi_siempre: 0,
-        algunas_veces: 0,
-        casi_nunca: 0,
-        nunca: block.no_count,
-      },
-      total_responses: block.total_responses,
-      average_score: Number((block.yes_percentage / 25).toFixed(2)),
-      negative_percentage: negativePercentage,
-      criticality,
-    };
-  });
-
-  return mappedBlocks.reduce<Record<string, BlockChartData>>((accumulator, block) => {
-    accumulator[String(block.block_number)] = block;
-    return accumulator;
-  }, {});
+  return {
+    totalParticipants,
+    yesParticipants,
+    noParticipants,
+    yesPercentage: totalParticipants > 0 ? Number(((yesParticipants / totalParticipants) * 100).toFixed(2)) : 0,
+    noPercentage: totalParticipants > 0 ? Number(((noParticipants / totalParticipants) * 100).toFixed(2)) : 0,
+  };
 });
 
 const isAffirmativeAnswer = (answer: unknown): boolean => {
@@ -546,6 +1459,36 @@ const isAffirmativeAnswer = (answer: unknown): boolean => {
   return answer === true || answer === 1;
 };
 
+const formatPresentationDate = (dateString: string | null): string => {
+  if (!dateString) {
+    return 'N/A';
+  }
+
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'N/A';
+  }
+
+  return date.toLocaleString('es-MX', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+};
+
+const atsColorHex = [
+  '#F43F5E',
+  '#F59E0B',
+  '#10B981',
+  '#0EA5E9',
+  '#8B5CF6',
+  '#D946EF',
+];
+
 const destroyAnalysisChart = (): void => {
   if (analysisChartInstance.value) {
     analysisChartInstance.value.destroy();
@@ -556,7 +1499,7 @@ const destroyAnalysisChart = (): void => {
 const renderAnalysisChart = async (): Promise<void> => {
   await nextTick();
 
-  if (activeSubTab.value !== 'analizar' || filteredEvaluations.value.length === 0 || !analysisChartRef.value) {
+  if (activeSubTab.value !== 'analisis' || filteredEvaluations.value.length === 0 || !analysisChartRef.value) {
     destroyAnalysisChart();
     return;
   }
@@ -574,8 +1517,8 @@ const renderAnalysisChart = async (): Promise<void> => {
       labels: ['Sí', 'No'],
       datasets: [
         {
-          label: 'Respuestas',
-          data: [responseSummary.value.yesCount, responseSummary.value.noCount],
+          label: 'Participantes',
+          data: [participantResponseSummary.value.yesParticipants, participantResponseSummary.value.noParticipants],
           backgroundColor: ['#10B981', '#EF4444'],
           borderColor: ['#059669', '#DC2626'],
           borderWidth: 1,
@@ -594,12 +1537,15 @@ const renderAnalysisChart = async (): Promise<void> => {
         tooltip: {
           callbacks: {
             label: (tooltipItem) => {
-              const value = tooltipItem.parsed as number;
-              const percentage = responseSummary.value.totalResponses > 0
-                ? ((value / responseSummary.value.totalResponses) * 100).toFixed(2)
+              const parsedValue = tooltipItem.parsed;
+              const value = typeof parsedValue === 'number'
+                ? parsedValue
+                : Number(tooltipItem.raw ?? parsedValue?.y ?? parsedValue?.x ?? 0);
+              const percentage = participantResponseSummary.value.totalParticipants > 0
+                ? ((value / participantResponseSummary.value.totalParticipants) * 100).toFixed(2)
                 : '0.00';
 
-              return `${value} (${percentage}%)`;
+              return `${Number.isFinite(value) ? value : 0} (${percentage}%)`;
             },
           },
         },
@@ -624,13 +1570,41 @@ const renderAnalysisChart = async (): Promise<void> => {
 };
 
 const subTabs = [
-  { key: 'identificar', label: 'Identificar', icon: MagnifyingGlassIcon },
-  { key: 'analizar', label: 'Analizar', icon: ChartBarIcon },
-  { key: 'participantes', label: 'Participantes', icon: UserGroupIcon },
-  { key: 'prevenir', label: 'Prevenir', icon: ShieldCheckIcon },
+  { key: 'panorama', label: 'Panorama general', icon: ChartBarIcon },
+  { key: 'acontecimientos_traumaticos', label: 'Acontecimientos traumáticos', icon: UserGroupIcon },
+  { key: 'seguimiento', label: 'Seguimiento', icon: ClipboardDocumentListIcon },
+  { key: 'analisis', label: 'Análisis', icon: MagnifyingGlassIcon },
+  { key: 'prevencion', label: 'Prevención y recomendaciones', icon: ShieldCheckIcon },
+  { key: 'conclusiones', label: 'Conclusiones', icon: UserGroupIcon },
 ] as const;
 
-watch([activeSubTab, chartType, filteredEvaluations, selectedQuestionKey], () => {
+watch([selectedAcontecimientoFilter, panoramaResponseFilter, panoramaSearch, panoramaPageSize], () => {
+  panoramaPage.value = 1;
+}, { deep: true });
+
+watch(panoramaResponseFilter, (value) => {
+  if (value === 'no' && selectedAcontecimientoFilter.value !== 'all') {
+    selectedAcontecimientoFilter.value = 'all';
+  }
+});
+
+watch([clinicalSearch, clinicalPageSize, clinicalRequirementFilter], () => {
+  clinicalPage.value = 1;
+}, { deep: true });
+
+watch(totalPanoramaPages, (pages) => {
+  if (panoramaPage.value > pages) {
+    panoramaPage.value = pages;
+  }
+});
+
+watch(totalClinicalPages, (pages) => {
+  if (clinicalPage.value > pages) {
+    clinicalPage.value = pages;
+  }
+});
+
+watch([activeSubTab, chartType, eventFilteredEvaluations, selectedQuestionKey], () => {
   renderAnalysisChart();
 }, { deep: true });
 

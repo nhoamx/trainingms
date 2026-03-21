@@ -46,7 +46,7 @@ class WorkCenterNom035IndexController extends Controller
                     : null,
             ],
             'instruments' => $instruments,
-            'totalEvaluations' => array_sum(array_column($instruments, 'count')),
+            'totalEvaluations' => $this->countTotalParticipants($workCenter),
             'evaluations' => $this->getGeneralEvaluations($workCenter),
             'availableEvaluationTypes' => $this->getAvailableEvaluationTypes($workCenter),
             'committeeMembers' => $workCenter->committeeMembers
@@ -65,7 +65,43 @@ class WorkCenterNom035IndexController extends Controller
                 'admin_path' => $workCenter->constitutive_act_admin_path,
                 'admin_at' => $workCenter->constitutive_act_admin_at,
             ],
+            'sensitizationVideos' => $workCenter->sensitizationVideos()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn ($video) => [
+                    'id' => $video->id,
+                    'title' => $video->title,
+                    'description' => $video->description,
+                    'audience' => $video->audience,
+                    'video_url' => asset('storage/'.$video->storage_path),
+                    'original_filename' => $video->original_filename,
+                    'file_size_human' => $video->file_size_human,
+                    'created_at' => $video->created_at?->format('Y-m-d H:i'),
+                ])
+                ->values()
+                ->all(),
         ]);
+    }
+
+    /**
+     * Count unique participants for NOM-035 instruments (Ref I + Ref III).
+     */
+    private function countTotalParticipants(WorkCenter $workCenter): int
+    {
+        return PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('processing_status', 'completed')
+            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros'])
+            ->get(['id', 'personal_folio'])
+            ->map(function (PaperEvaluation $evaluation): string {
+                $folio = trim((string) ($evaluation->personal_folio ?? ''));
+
+                return $folio !== '' ? "folio:{$folio}" : "evaluation:{$evaluation->id}";
+            })
+            ->unique()
+            ->count();
     }
 
     /**
@@ -168,6 +204,15 @@ class WorkCenterNom035IndexController extends Controller
                 'color' => 'red',
                 'icon' => 'document-text',
                 'route' => 'work-centers.dashboard.nom-035-ref-i',
+            ],
+            [
+                'key' => 'cisneros',
+                'label' => 'Escala Cisneros',
+                'subtitle' => 'Violencia Laboral',
+                'description' => 'Detección de conductas de acoso psicológico y violencia laboral para identificar patrones, áreas de mayor incidencia y casos prioritarios.',
+                'color' => 'orange',
+                'icon' => 'shield-check',
+                'route' => 'work-centers.dashboard.nom-035-cisneros',
             ],
         ];
 

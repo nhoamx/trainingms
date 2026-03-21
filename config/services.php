@@ -35,8 +35,9 @@ return [
         ],
     ],
 
-    'docker' => [
-        'omr_container' => env('DOCKER_OMR_CONTAINER', 'training-and-ms'),
+    'ocr' => [
+        'url' => env('OCR_SERVICE_URL', 'http://localhost:5000'),
+        'timeout' => env('OCR_SERVICE_TIMEOUT', 300),
     ],
 
 ];

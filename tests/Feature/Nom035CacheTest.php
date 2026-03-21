@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\WarmOrganizationReportCache;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
+use App\Models\WorkCenter;
 use App\Services\OrganizationReportCacheService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Cache;
@@ -85,6 +86,30 @@ class Nom035CacheTest extends TestCase
         $this->assertFalse(Cache::has($this->cacheService->getNom035QuestionsCacheKey($organization->id)));
         $this->assertFalse(Cache::has($this->cacheService->getNom035BlocksCacheKey($organization->id)));
         $this->assertFalse(Cache::has($this->cacheService->getNom035GlobalCacheKey($organization->id)));
+    }
+
+    public function test_work_center_nom035_cache_is_invalidated_when_evaluation_created(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
+        Cache::forever($this->cacheService->getWcNom035GlobalCacheKey($workCenter->id), ['cached' => true]);
+        Cache::forever($this->cacheService->getWcNom035DomainsCacheKey($workCenter->id), ['cached' => true]);
+
+        $this->assertTrue(Cache::has($this->cacheService->getWcNom035GlobalCacheKey($workCenter->id)));
+        $this->assertTrue(Cache::has($this->cacheService->getWcNom035DomainsCacheKey($workCenter->id)));
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'evaluation_type' => 'referencia_iii',
+            'processing_status' => 'completed',
+        ]);
+
+        $this->assertFalse(Cache::has($this->cacheService->getWcNom035GlobalCacheKey($workCenter->id)));
+        $this->assertFalse(Cache::has($this->cacheService->getWcNom035DomainsCacheKey($workCenter->id)));
     }
 
     public function test_warming_job_warms_nom035_cache(): void

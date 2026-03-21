@@ -536,6 +536,117 @@ class WorkCenterNom035CalculationService
     }
 
     /**
+     * Calculate violence labor statistics for questions 57-64.
+     */
+    public function calculateViolenceLaborStatistics(WorkCenter $workCenter): array
+    {
+        $violenceQuestions = [57, 58, 59, 60, 61, 62, 63, 64];
+        $evaluations = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('processing_status', 'completed')
+            ->whereNotNull('referencia_iii_answers')
+            ->with(['demographicData:id,paper_evaluation_id,gender,position,department,work_schedule'])
+            ->select(['id', 'personal_folio', 'referencia_iii_answers'])
+            ->get();
+
+        $riskLevels = config('nom035_risk_levels');
+        $answerValues = config('answer_values');
+        $questionsConfig = config('referencia_iii.general', []);
+
+        $totalByLevel = [
+            'nulo' => 0,
+            'bajo' => 0,
+            'medio' => 0,
+            'alto' => 0,
+            'muy_alto' => 0,
+        ];
+
+        $questionDistributions = [];
+        foreach ($violenceQuestions as $questionNumber) {
+            $questionDistributions[$questionNumber] = [
+                'nulo' => 0,
+                'bajo' => 0,
+                'medio' => 0,
+                'alto' => 0,
+                'muy_alto' => 0,
+            ];
+        }
+
+        $participants = [];
+
+        foreach ($evaluations as $evaluation) {
+            $answers = $evaluation->referencia_iii_answers ?? [];
+            $violenceScore = 0;
+            $answeredQuestions = 0;
+            $questionLevels = [];
+
+            foreach ($violenceQuestions as $questionNumber) {
+                $answer = $answers[$questionNumber] ?? null;
+                if ($answer === null || is_array($answer)) {
+                    continue;
+                }
+
+                $questionKey = str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT);
+                $group = in_array($questionKey, $answerValues['group1']['questions'])
+                    ? 'group1'
+                    : 'group2';
+
+                $score = (int) ($answerValues[$group]['values'][$answer] ?? 0);
+                $level = $this->mapScoreToRiskLevel($score);
+
+                $violenceScore += $score;
+                $answeredQuestions++;
+                $questionLevels[$questionNumber] = $level;
+                $questionDistributions[$questionNumber][$level]++;
+            }
+
+            if ($answeredQuestions === 0) {
+                continue;
+            }
+
+            $overallLevel = $this->getRiskLevel($violenceScore, 'Violencia', $riskLevels);
+            $totalByLevel[$overallLevel]++;
+
+            $participants[] = [
+                'personal_folio' => (string) ($evaluation->personal_folio ?? ''),
+                'demographics' => [
+                    'genero' => $evaluation->demographicData->gender ?? 'No especificado',
+                    'puesto' => $evaluation->demographicData->position ?? 'No especificado',
+                    'area' => $evaluation->demographicData->department ?? 'No especificado',
+                    'turno' => $evaluation->demographicData->work_schedule ?? 'No especificado',
+                ],
+                'violence_score' => $violenceScore,
+                'risk_level' => $overallLevel,
+                'question_levels' => $questionLevels,
+            ];
+        }
+
+        $questions = [];
+        foreach ($violenceQuestions as $questionNumber) {
+            $distribution = $questionDistributions[$questionNumber];
+            $questions[] = [
+                'number' => $questionNumber,
+                'text' => $questionsConfig[$questionNumber] ?? "Pregunta {$questionNumber}",
+                'distribution' => $distribution,
+                'total_responses' => array_sum($distribution),
+                'high_risk_total' => ($distribution['alto'] ?? 0) + ($distribution['muy_alto'] ?? 0),
+            ];
+        }
+
+        return [
+            'question_numbers' => $violenceQuestions,
+            'labels' => $riskLevels['labels'],
+            'colors' => $riskLevels['colors'],
+            'domain_levels' => $riskLevels['domains']['Violencia']['levels'] ?? [],
+            'total_evaluated' => count($participants),
+            'total_by_level' => $totalByLevel,
+            'high_risk_total' => ($totalByLevel['alto'] ?? 0) + ($totalByLevel['muy_alto'] ?? 0),
+            'questions' => $questions,
+            'participants' => $participants,
+        ];
+    }
+
+    /**
      * Get evaluations with demographics and scores for analysis
      */
     public function getEvaluationsWithDemographicsAndScores(WorkCenter $workCenter): array
@@ -642,6 +753,131 @@ class WorkCenterNom035CalculationService
             'colors' => $riskLevels['colors'],
             'labels' => $riskLevels['labels'],
         ];
+    }
+
+    /**
+     * Build aggregated report rows for category/domain/dimension/item detail table.
+     *
+     * The structure mirrors the single-participant detail table but averages scores
+     * across all completed Ref III evaluations in the work center.
+     *
+     * @return array{total_evaluations:int, average_total_score:float, rows:array<int, array{categoria:array{nombre:string,puntaje:float,nivel_riesgo:string}, dominio:array{nombre:string,puntaje:float,nivel_riesgo:string}, dimension:string, item:string, item_numero:int, puntaje:float}>}
+     */
+    public function getGeneralDetailedReport(WorkCenter $workCenter): array
+    {
+        $evaluations = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('processing_status', 'completed')
+            ->whereNotNull('referencia_iii_answers')
+            ->select(['id', 'referencia_iii_answers', 'referencia_iii_conditional'])
+            ->get();
+
+        if ($evaluations->isEmpty()) {
+            return [
+                'total_evaluations' => 0,
+                'average_total_score' => 0.0,
+                'rows' => [],
+            ];
+        }
+
+        $domainConfig = config('question_dimensions');
+        $riskLevels = config('nom035_risk_levels');
+        $questionsConfig = config('referencia_iii.general', []);
+
+        $categoryTotals = [];
+        $domainTotals = [];
+        $dimensionTotals = [];
+        $itemTotals = [];
+        $totalScore = 0;
+
+        foreach ($evaluations as $evaluation) {
+            $answers = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
+            $totalScore += $this->calculateTotalScore($evaluation);
+
+            foreach ($domainConfig as $categoryName => $domains) {
+                if (! isset($categoryTotals[$categoryName])) {
+                    $categoryTotals[$categoryName] = 0;
+                }
+
+                $categoryScore = 0;
+
+                foreach ($domains as $domainName => $dimensions) {
+                    $domainScore = $this->calculateDomainScore($answers, [$domainName => $dimensions]);
+                    $domainTotals[$domainName] = ($domainTotals[$domainName] ?? 0) + $domainScore;
+                    $categoryScore += $domainScore;
+
+                    foreach ($dimensions as $dimensionName => $questions) {
+                        $dimensionScore = $this->calculateDimensionScore($answers, $questions);
+                        $dimensionTotals[$dimensionName] = ($dimensionTotals[$dimensionName] ?? 0) + $dimensionScore;
+
+                        foreach ($questions as $questionNumber) {
+                            $itemScore = $this->getQuestionScoreFromAnswer($answers, $questionNumber);
+
+                            $itemTotals[$questionNumber] = ($itemTotals[$questionNumber] ?? 0) + $itemScore;
+                        }
+                    }
+                }
+
+                $categoryTotals[$categoryName] += $categoryScore;
+            }
+        }
+
+        $totalEvaluations = $evaluations->count();
+        $rows = [];
+
+        foreach ($domainConfig as $categoryName => $domains) {
+            $categoryAverage = round(($categoryTotals[$categoryName] ?? 0) / $totalEvaluations, 2);
+            $categoryRiskLevel = $this->getCategoryRiskLevel($categoryAverage, $categoryName, $riskLevels);
+
+            foreach ($domains as $domainName => $dimensions) {
+                $domainAverage = round(($domainTotals[$domainName] ?? 0) / $totalEvaluations, 2);
+                $domainRiskLevel = $this->getRiskLevel($domainAverage, $domainName, $riskLevels);
+
+                foreach ($dimensions as $dimensionName => $questions) {
+                    foreach ($questions as $questionNumber) {
+                        $rows[] = [
+                            'categoria' => [
+                                'nombre' => $categoryName,
+                                'puntaje' => $categoryAverage,
+                                'nivel_riesgo' => $categoryRiskLevel,
+                            ],
+                            'dominio' => [
+                                'nombre' => $domainName,
+                                'puntaje' => $domainAverage,
+                                'nivel_riesgo' => $domainRiskLevel,
+                            ],
+                            'dimension' => $dimensionName,
+                            'item' => $questionsConfig[$questionNumber] ?? "Pregunta {$questionNumber}",
+                            'item_numero' => (int) $questionNumber,
+                            'puntaje' => round(($itemTotals[$questionNumber] ?? 0) / $totalEvaluations, 2),
+                        ];
+                    }
+                }
+            }
+        }
+
+        return [
+            'total_evaluations' => $totalEvaluations,
+            'average_total_score' => round($totalScore / $totalEvaluations, 2),
+            'rows' => $rows,
+        ];
+    }
+
+    private function getQuestionScoreFromAnswer(array $answers, int|string $questionNumber): int
+    {
+        $answer = $answers[$questionNumber] ?? null;
+
+        if ($answer === null || is_array($answer)) {
+            return 0;
+        }
+
+        $answerValues = config('answer_values');
+        $questionKey = str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT);
+        $group = in_array($questionKey, $answerValues['group1']['questions'], true)
+            ? 'group1'
+            : 'group2';
+
+        return $answerValues[$group]['values'][$answer] ?? 0;
     }
 
     /**
@@ -776,6 +1012,17 @@ class WorkCenterNom035CalculationService
         }
 
         return $totalScore;
+    }
+
+    private function mapScoreToRiskLevel(int $score): string
+    {
+        return match ($score) {
+            0 => 'nulo',
+            1 => 'bajo',
+            2 => 'medio',
+            3 => 'alto',
+            default => 'muy_alto',
+        };
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\WorkCenter;
 
 use App\Http\Controllers\Controller;
+use App\Models\OrganizationAnalysisBlock;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
 use App\Services\OrganizationReportCacheService;
@@ -72,6 +73,16 @@ class WorkCenterNom035DashboardController extends Controller
 
         $analysisData = $this->calculationService->getEvaluationsWithDemographicsAndScores($workCenter);
 
+        $generalReport = Cache::rememberForever(
+            $this->cacheService->getWcNom035GeneralReportCacheKey($workCenter->id),
+            fn () => $this->calculationService->getGeneralDetailedReport($workCenter)
+        );
+
+        $violenceLaborStatistics = Cache::rememberForever(
+            $this->cacheService->getWcNom035ViolenceCacheKey($workCenter->id),
+            fn () => $this->calculationService->calculateViolenceLaborStatistics($workCenter)
+        );
+
         $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
             ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])
             ->where('processing_status', 'completed')
@@ -94,6 +105,22 @@ class WorkCenterNom035DashboardController extends Controller
 
         $availableEvaluationTypes = $this->getAvailableEvaluationTypes($workCenter);
 
+        $analysisBlocks = OrganizationAnalysisBlock::query()
+            ->where('organization_id', $workCenter->organization_id)
+            ->orderBy('instrument_type')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('instrument_type')
+            ->map(fn ($blocks) => $blocks->map(fn (OrganizationAnalysisBlock $block) => [
+                'id' => $block->id,
+                'instrument_type' => $block->instrument_type,
+                'title' => $block->title,
+                'content_html' => $block->content_html,
+                'sort_order' => $block->sort_order,
+            ])->values())
+            ->all();
+
         return Inertia::render('WorkCenters/Nom035RefIIIDashboard', [
             'title' => 'NOM-035-STPS-2018 - '.$workCenter->name,
             'dashboardData' => $dashboardData,
@@ -104,8 +131,33 @@ class WorkCenterNom035DashboardController extends Controller
             'blockStatistics' => $blockStatistics,
             'globalStatistics' => $globalStatistics,
             'analysisData' => $analysisData,
+            'generalReport' => $generalReport,
+            'violenceLaborStatistics' => $violenceLaborStatistics,
             'evaluations' => $evaluations,
             'availableEvaluationTypes' => $availableEvaluationTypes,
+            'analysisBlocks' => [
+                'referencia_i' => $analysisBlocks['referencia_i'] ?? [],
+                'referencia_iii' => $analysisBlocks['referencia_iii'] ?? [],
+            ],
+            'canManageAnalysisBlocks' => request()->user()?->hasRole(['admin', 'super-admin']) ?? false,
+            'preventionActions' => $workCenter->preventionActions()
+                ->where('instrument_type', 'referencia_iii')
+                ->orderBy('sort_order')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn ($action) => [
+                    'id' => $action->id,
+                    'instrument_type' => $action->instrument_type,
+                    'title' => $action->title,
+                    'description' => $action->description,
+                    'responsible' => $action->responsible,
+                    'status' => $action->status,
+                    'due_date' => $action->due_date?->format('Y-m-d'),
+                    'sort_order' => $action->sort_order,
+                    'updated_at' => $action->updated_at?->format('Y-m-d H:i'),
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 

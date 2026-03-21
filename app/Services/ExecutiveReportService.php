@@ -399,7 +399,10 @@ class ExecutiveReportService
                 $hasViolence = false;
                 $violenceEvents = [];
                 foreach ($cisneros as $questionId => $answer) {
-                    if (is_string($answer) && strtoupper($answer) === 'SI') {
+                    $isLegacyYes = is_string($answer) && strtoupper($answer) === 'SI';
+                    $isBooleanYesForQuestion44 = (string) $questionId === '44' && $answer === true;
+
+                    if ($isLegacyYes || $isBooleanYesForQuestion44) {
                         $hasViolence = true;
                         $violenceEvents[$questionId] = $answer;
                     }

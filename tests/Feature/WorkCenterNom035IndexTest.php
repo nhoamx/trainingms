@@ -40,6 +40,7 @@ class WorkCenterNom035IndexTest extends TestCase
             ->has('availableEvaluationTypes')
             ->has('committeeMembers')
             ->has('constitutiveAct')
+            ->has('sensitizationVideos')
         );
     }
 
@@ -112,16 +113,18 @@ class WorkCenterNom035IndexTest extends TestCase
             ->where('workCenter.name', 'Centro Norte')
             ->where('workCenter.code', '0001')
             ->where('organization.name', 'Test Org')
-            ->has('instruments', 2)
+            ->has('instruments', 3)
             ->has('instruments.0.key')
             ->has('instruments.0.label')
             ->has('instruments.0.count')
             ->has('instruments.0.route')
             ->has('instruments.1.key')
+            ->has('instruments.2.key')
             ->has('evaluations')
             ->has('availableEvaluationTypes')
             ->has('committeeMembers')
             ->has('constitutiveAct')
+            ->has('sensitizationVideos')
         );
     }
 
@@ -172,6 +175,7 @@ class WorkCenterNom035IndexTest extends TestCase
             ->where('totalEvaluations', 0)
             ->where('instruments.0.count', 0)
             ->where('instruments.1.count', 0)
+            ->where('instruments.2.count', 0)
         );
     }
 
@@ -228,6 +232,45 @@ class WorkCenterNom035IndexTest extends TestCase
 
         $response->assertInertia(fn ($page) => $page
             ->where('totalEvaluations', 2)
+        );
+    }
+
+    public function test_index_page_counts_unique_participants_across_ref_i_and_ref_iii(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => '0099',
+            'processing_status' => 'completed',
+        ]);
+
+        PaperEvaluation::factory()->referenciaIII()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => '0099',
+            'processing_status' => 'completed',
+        ]);
+
+        PaperEvaluation::factory()->referenciaIII()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => '0100',
+            'processing_status' => 'completed',
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-index', $workCenter));
+
+        $response->assertInertia(fn ($page) => $page
+            ->where('totalEvaluations', 2)
+            ->where('instruments.0.count', 2)
+            ->where('instruments.1.count', 1)
         );
     }
 }

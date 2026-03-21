@@ -96,6 +96,26 @@
                         </select>
                     </div>
                 </template>
+                <!-- Turno (configurable) -->
+                <div v-else-if="field === 'tipo_jornada' && isWorkScheduleActive" class="space-y-2">
+                    <label class="block text-sm font-medium text-blue-900 mb-1.5">
+                        Turno
+                    </label>
+                    <select
+                        :value="modelValue.tipo_jornada"
+                        @change="updateNestedField('tipo_jornada', $event.target.value)"
+                        class="block w-full px-3 py-2.5 bg-white border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors"
+                    >
+                        <option value="">Seleccione una opción</option>
+                        <option
+                            v-for="(optionLabel, optionValue) in workScheduleOptions"
+                            :key="String(optionValue)"
+                            :value="String(optionValue)"
+                        >
+                            {{ optionLabel }}
+                        </option>
+                    </select>
+                </div>
                 <!-- Campos normales -->
                 <div v-else-if="field !== 'ocupacion_puesto' && field !== 'departamento_seccion_area' && field !== 'tipo_jornada'" class="space-y-2">
                     <label class="block text-sm font-medium text-blue-900 mb-1.5">
@@ -134,10 +154,20 @@ const props = defineProps({
     organization: {
         type: Object,
         required: true
+    },
+    workScheduleConfig: {
+        type: Object,
+        default: () => ({
+            active: false,
+            options: {}
+        })
     }
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+const isWorkScheduleActive = props.workScheduleConfig?.active === true;
+const workScheduleOptions = props.workScheduleConfig?.options || {};
 
 const updateNestedField = (field, value) => {
     emit('update:modelValue', {

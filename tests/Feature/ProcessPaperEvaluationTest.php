@@ -192,4 +192,130 @@ class ProcessPaperEvaluationTest extends TestCase
         $this->assertEquals(1, $evaluation->fresh()->likert_answers['areas']);
         $this->assertEquals(1, $evaluation->fresh()->likert_answers['puestos']);
     }
+
+    public function test_job_calls_ocr_service_and_persists_evaluation(): void
+    {
+        $organization = Organization::factory()->create([
+            'folio_organization' => '953',
+        ]);
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test_').'.pdf';
+        file_put_contents($tmpFile, '%PDF-1.4 fake content');
+
+        \Illuminate\Support\Facades\Http::fake([
+            config('services.ocr.url').'/process' => \Illuminate\Support\Facades\Http::response([
+                'results' => [
+                    [
+                        'folio' => '019530001',
+                        'answers' => ['1' => 'SI', '2' => 'NO'],
+                        'marked_image_base64' => null,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        \Illuminate\Support\Facades\Event::fake();
+
+        $job = new \App\Jobs\ProcessPaperEvaluation(
+            $tmpFile,
+            null,
+            null,
+            1,
+            1,
+            'test.pdf'
+        );
+
+        $job->handle();
+
+        $this->assertDatabaseHas('paper_evaluations', [
+            'folio' => '019530001',
+            'evaluation_type' => 'referencia_i',
+            'processing_status' => 'completed',
+        ]);
+
+        @unlink($tmpFile);
+    }
+
+    public function test_job_throws_exception_when_ocr_service_fails(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test_').'.pdf';
+        file_put_contents($tmpFile, '%PDF-1.4 fake content');
+
+        \Illuminate\Support\Facades\Http::fake([
+            config('services.ocr.url').'/process' => \Illuminate\Support\Facades\Http::response([
+                'error' => 'Error interno del servidor',
+                'detail' => 'Fallo al procesar el PDF',
+            ], 500),
+        ]);
+
+        \Illuminate\Support\Facades\Event::fake();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/OCR service returned error/');
+
+        $job = new \App\Jobs\ProcessPaperEvaluation(
+            $tmpFile,
+            null,
+            null,
+            1,
+            1,
+            'test.pdf'
+        );
+
+        $job->handle();
+
+        @unlink($tmpFile);
+    }
+
+    public function test_job_normalizes_cisneros_answers_to_canonical_json_structure(): void
+    {
+        Organization::factory()->create([
+            'folio_organization' => '953',
+        ]);
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test_').'.pdf';
+        file_put_contents($tmpFile, '%PDF-1.4 fake content');
+
+        \Illuminate\Support\Facades\Http::fake([
+            config('services.ocr.url').'/process' => \Illuminate\Support\Facades\Http::response([
+                'results' => [
+                    [
+                        'folio' => '049530001',
+                        'answers' => [
+                            'cisneros' => [
+                                'persona1' => 'b',
+                                'frecuencia1' => '5',
+                                'frecuencia3' => '0',
+                                'pregunta44' => 'sí',
+                            ],
+                        ],
+                        'marked_image_base64' => null,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        \Illuminate\Support\Facades\Event::fake();
+
+        $job = new \App\Jobs\ProcessPaperEvaluation(
+            $tmpFile,
+            null,
+            null,
+            1,
+            1,
+            'test-cisneros.pdf'
+        );
+
+        $job->handle();
+
+        $evaluation = PaperEvaluation::where('folio', '049530001')->first();
+        $this->assertNotNull($evaluation);
+        $this->assertEquals([
+            '1' => ['persona' => 'B', 'frecuencia' => 5],
+            '3' => ['persona' => null, 'frecuencia' => 0],
+            '44' => true,
+        ], $evaluation->cisneros_answers);
+
+        @unlink($tmpFile);
+    }
 }

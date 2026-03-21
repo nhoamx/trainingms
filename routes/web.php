@@ -101,12 +101,35 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035/ref-i', [\App\Http\Controllers\WorkCenter\WorkCenterNom035RefIDashboardController::class, 'show'])
         ->name('work-centers.dashboard.nom-035-ref-i');
 
+    Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035/cisneros', [\App\Http\Controllers\WorkCenter\WorkCenterNom035CisnerosDashboardController::class, 'show'])
+        ->name('work-centers.dashboard.nom-035-cisneros');
+
     Route::post('/centro-trabajo/{workCenter}/comite/miembros', [\App\Http\Controllers\WorkCenter\WorkCenterCommitteeMemberController::class, 'store'])
         ->name('work-centers.committee-members.store')
         ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
 
     Route::delete('/centro-trabajo/{workCenter}/comite/miembros/{committeeMember}', [\App\Http\Controllers\WorkCenter\WorkCenterCommitteeMemberController::class, 'destroy'])
         ->name('work-centers.committee-members.destroy')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::post('/centro-trabajo/{workCenter}/prevenir/acciones', [\App\Http\Controllers\WorkCenter\WorkCenterPreventionActionController::class, 'store'])
+        ->name('work-centers.prevention-actions.store')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::put('/centro-trabajo/{workCenter}/prevenir/acciones/{preventionAction}', [\App\Http\Controllers\WorkCenter\WorkCenterPreventionActionController::class, 'update'])
+        ->name('work-centers.prevention-actions.update')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::delete('/centro-trabajo/{workCenter}/prevenir/acciones/{preventionAction}', [\App\Http\Controllers\WorkCenter\WorkCenterPreventionActionController::class, 'destroy'])
+        ->name('work-centers.prevention-actions.destroy')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::post('/centro-trabajo/{workCenter}/sensibilizacion/videos', [\App\Http\Controllers\WorkCenter\WorkCenterSensitizationVideoController::class, 'store'])
+        ->name('work-centers.sensitization-videos.store')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::delete('/centro-trabajo/{workCenter}/sensibilizacion/videos/{video}', [\App\Http\Controllers\WorkCenter\WorkCenterSensitizationVideoController::class, 'destroy'])
+        ->name('work-centers.sensitization-videos.destroy')
         ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
 
     Route::post('/centro-trabajo/{workCenter}/acta-constitutiva/carga-centro', [\App\Http\Controllers\WorkCenter\WorkCenterConstitutiveActController::class, 'uploadSubmitted'])
@@ -289,6 +312,18 @@ Route::middleware(['auth'])->group(function () {
         ->name('committee-members.destroy')
         ->middleware('can:view-organization-results,organization');
 
+    Route::post('/organizacion/{organization}/analizar/bloques', [\App\Http\Controllers\Organization\OrganizationAnalysisBlockController::class, 'store'])
+        ->name('organization.analysis-blocks.store')
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
+
+    Route::put('/organizacion/{organization}/analizar/bloques/{analysisBlock}', [\App\Http\Controllers\Organization\OrganizationAnalysisBlockController::class, 'update'])
+        ->name('organization.analysis-blocks.update')
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
+
+    Route::delete('/organizacion/{organization}/analizar/bloques/{analysisBlock}', [\App\Http\Controllers\Organization\OrganizationAnalysisBlockController::class, 'destroy'])
+        ->name('organization.analysis-blocks.destroy')
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
+
     // Rutas accesibles para usuarios de organización y administradores
     Route::get('/organizacion/{organization}/resultados', [ResultsController::class, 'listResults'])
         ->name('organization.results.list')
@@ -453,6 +488,7 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('/organizaciones/{organization}/centros')->name('organizations.work-centers.')->group(function () {
             Route::get('/', [\App\Http\Controllers\WorkCenterController::class, 'index'])->name('index');
             Route::get('/create', [\App\Http\Controllers\WorkCenterController::class, 'create'])->name('create');
+            Route::get('/export-metrics', [\App\Http\Controllers\WorkCenterController::class, 'downloadMetrics'])->name('export-metrics');
             Route::post('/', [\App\Http\Controllers\WorkCenterController::class, 'store'])->name('store');
             Route::get('/{workCenter}/edit', [\App\Http\Controllers\WorkCenterController::class, 'edit'])->name('edit');
             Route::put('/{workCenter}', [\App\Http\Controllers\WorkCenterController::class, 'update'])->name('update');
@@ -592,6 +628,20 @@ Route::prefix('omr')->name('omr.')->group(function () {
     Route::get('/referencia-v', [OMRController::class, 'referenciaV'])->name('referencia-v');
     Route::get('/escala-cisneros', [OMRController::class, 'escalaCisneros'])->name('escala-cisneros');
     Route::get('/likert', [OMRController::class, 'likert'])->name('likert');
+
+    // Admin-only blank templates (without folio prefill)
+    Route::get('/download/blank/referencia-i', [OMRController::class, 'downloadBlankReferenciaI'])
+        ->middleware(['auth', 'role:admin|super-admin'])
+        ->name('download.blank.referencia-i');
+    Route::get('/download/blank/referencia-iii', [OMRController::class, 'downloadBlankReferenciaIII'])
+        ->middleware(['auth', 'role:admin|super-admin'])
+        ->name('download.blank.referencia-iii');
+    Route::get('/download/blank/referencia-v', [OMRController::class, 'downloadBlankReferenciaV'])
+        ->middleware(['auth', 'role:admin|super-admin'])
+        ->name('download.blank.referencia-v');
+    Route::get('/download/blank/escala-cisneros', [OMRController::class, 'downloadBlankEscalaCisneros'])
+        ->middleware(['auth', 'role:admin|super-admin'])
+        ->name('download.blank.escala-cisneros');
 
     // POST route for PDF generation (authenticated)
     Route::post('/generate-pdf', [OMRController::class, 'generatePdf'])

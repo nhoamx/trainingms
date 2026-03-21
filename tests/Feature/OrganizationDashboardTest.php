@@ -186,6 +186,10 @@ class OrganizationDashboardTest extends TestCase
             ->component('Organizations/CalizaDashboard')
             ->has('dashboardData')
             ->has('evaluations')
+            ->has('analysisBlocks')
+            ->has('analysisBlocks.referencia_i')
+            ->has('analysisBlocks.referencia_iii')
+            ->where('canManageAnalysisBlocks', false)
             ->where('title', 'NOM-035-STPS-2018')
         );
     }

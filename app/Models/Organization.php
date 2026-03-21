@@ -137,6 +137,11 @@ class Organization extends Model
         return $this->hasMany(CommitteeMember::class);
     }
 
+    public function analysisBlocks()
+    {
+        return $this->hasMany(OrganizationAnalysisBlock::class);
+    }
+
     public function instruments()
     {
         return $this->belongsToMany(Instrument::class, 'organization_instrument')->withTimestamps();

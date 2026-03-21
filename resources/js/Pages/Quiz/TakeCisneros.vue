@@ -55,7 +55,9 @@
 
                         <!-- Datos Laborales -->
                         <LaborDataSection v-model="answers.referencia_v.datos_laborales"
-                            :laboral-data="quiz.reference_v.datos_laborales" :organization="quiz.organization" />
+                            :laboral-data="quiz.reference_v.datos_laborales"
+                            :organization="quiz.organization"
+                            :work-schedule-config="quiz.demographic_data?.work_schedule" />
                     </div>
 
                     <!-- Sección Escala Cisneros -->
