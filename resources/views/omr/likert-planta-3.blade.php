@@ -34,19 +34,27 @@
     }
     .folio-section { 
         border: 2px solid black; 
-        padding: 2mm; 
+        padding: 2mm 3mm; 
         position: relative; 
-        width: 65mm;
+        width: 68mm;
         flex-shrink: 0;
+    }
+    .folio-title {
+        font-weight: bold;
+        font-size: 9px;
+        text-align: center;
+        margin-bottom: 1.5mm;
+        letter-spacing: 2px;
+        text-transform: uppercase;
     }
     .folio-header { 
         display: flex; 
-        gap: 1mm; 
+        gap: 0.8mm; 
         margin-bottom: 1.5mm; 
         align-items: center; 
     }
     .folio-digit-column { 
-        width: 6mm; 
+        width: 5mm; 
         text-align: center; 
         font-weight: bold; 
         font-size: 6px; 
@@ -54,10 +62,10 @@
     .folio-position-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 10px; 
+        font-size: 9px; 
         font-weight: bold; 
         border: 1px solid black; 
-        height: 3.5mm; 
+        height: 4mm; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
@@ -66,28 +74,27 @@
     .folio-row { 
         display: flex; 
         align-items: center; 
-        gap: 1mm; 
-        margin-bottom: 1mm; 
-        font-size: 5px; 
+        gap: 0.8mm; 
+        margin-bottom: 0.8mm; 
         min-height: 3mm; 
     }
     .folio-digit-number { 
         font-weight: bold; 
-        width: 6mm; 
+        width: 5mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 10px; 
+        font-size: 9px; 
     }
     .folio-bubbles-row { 
         display: flex; 
-        gap: 1mm; 
+        gap: 0.8mm; 
         align-items: center; 
         flex: 1; 
         justify-content: space-between; 
     }
     .bubble-small { 
-        width: 4.5mm; 
-        height: 4.5mm; 
+        width: 4mm; 
+        height: 4mm; 
         border: 1.5px solid black; 
         border-radius: 50%; 
         flex-shrink: 0; 
@@ -338,6 +345,7 @@
     <div style="display: flex; flex-direction: column; gap: 3mm;">
         <!-- Folio Section -->
         <div class="folio-section">
+            <div class="folio-title">Folio</div>
             <!-- Header con espacios para escribir los dígitos -->
             <div class="folio-header">
                 <div class="folio-digit-column"></div>
