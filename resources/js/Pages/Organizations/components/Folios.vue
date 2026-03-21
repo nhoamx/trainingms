@@ -323,6 +323,11 @@ const blankTemplateOptions = [
     label: 'Escala Cisneros',
     description: 'Violencia psicologica en el trabajo',
   },
+  {
+    route: 'omr.download.blank.likert-planta-3',
+    label: 'Clima laboral (Planta 3)',
+    description: 'Encuesta de clima laboral ECL-002',
+  },
 ];
 
 const downloadBlankTemplate = (routeName) => {
@@ -425,6 +430,7 @@ const guideTypes = [
   { value: 'referencia-v', label: 'Guía de Referencia V' },
   { value: 'escala-cisneros', label: 'Escala Cisneros' },
   { value: 'likert', label: 'Clima laboral' },
+  { value: 'likert-planta-3', label: 'Clima laboral (Planta 3)' },
 ];
 
 const generatePdfForBatch = (batch) => {
