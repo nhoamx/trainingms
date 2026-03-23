@@ -148,13 +148,13 @@ class PaperEvaluation extends Model
      *
      * Supports two formats:
      * - New 11-digit format: [TT][OO][CC][PPPPP]
-     *   - TT = Evaluation type (2 digits): 02, 03, 04
+     *   - TT = Evaluation type (2 digits): 01, 02, 03, 04
      *   - OO = Organization (2 digits): 01-99
      *   - CC = Work center (2 digits): 01-99
      *   - PPPPP = Personal (5 digits): 00001-99999
      *
      * - Legacy 9-digit format: [TT][OOO][PPPP]
-     *   - TT = Evaluation type (2 digits): 02, 03, 04
+     *   - TT = Evaluation type (2 digits): 01, 02, 03, 04
      *   - OOO = Organization (3 digits): 001-999
      *   - PPPP = Personal (4 digits): 0001-9999
      *

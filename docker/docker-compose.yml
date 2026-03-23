@@ -1,8 +1,7 @@
-
 services:
   training-and-ms:
     build:
-      context:    .
+      context: .
       dockerfile: Dockerfile
     image: training-and-ms
     stdin_open: true

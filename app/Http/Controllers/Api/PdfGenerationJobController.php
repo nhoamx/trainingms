@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\PdfGenerationJob;
 use Illuminate\Http\JsonResponse;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use ZipArchive;
 
 class PdfGenerationJobController extends Controller
@@ -31,7 +32,7 @@ class PdfGenerationJobController extends Controller
     /**
      * Download the generated PDF files
      */
-    public function download(PdfGenerationJob $pdfJob): StreamedResponse
+    public function download(PdfGenerationJob $pdfJob): BinaryFileResponse
     {
         if ($pdfJob->status !== 'completed') {
             abort(400, 'La generación de PDF aún no ha terminado');
@@ -54,15 +55,15 @@ class PdfGenerationJobController extends Controller
             abort(404, 'El archivo no existe');
         }
 
-        return response()->download($fullPath);
+        return response()->download($fullPath, $this->buildBatchDownloadFilename($pdfJob));
     }
 
     /**
      * Download multiple files as a ZIP archive
      */
-    private function downloadAsZip(PdfGenerationJob $pdfJob): StreamedResponse
+    private function downloadAsZip(PdfGenerationJob $pdfJob): BinaryFileResponse
     {
-        $zipName = 'pdfs-'.$pdfJob->organization->name.'-'.now()->format('Y-m-d').'.zip';
+        $zipName = str_replace('.pdf', '.zip', $this->buildBatchDownloadFilename($pdfJob));
         $zipPath = storage_path('app/temp/'.$zipName);
 
         // Crear directorio temporal si no existe
@@ -89,5 +90,30 @@ class PdfGenerationJobController extends Controller
         $zip->close();
 
         return response()->download($zipPath)->deleteFileAfterSend(true);
+    }
+
+    private function buildBatchDownloadFilename(PdfGenerationJob $pdfJob): string
+    {
+        $pdfJob->loadMissing(['organization', 'folioBatch.workCenter']);
+
+        $organizationSegment = $this->toAsciiSlug($pdfJob->organization?->name ?? 'organizacion', 'organizacion');
+        $workCenterSegment = $this->toAsciiSlug(
+            $pdfJob->folioBatch?->workCenter?->name
+            ?? $pdfJob->folioBatch?->workCenter?->code
+            ?? 'centro-trabajo',
+            'centro-trabajo'
+        );
+
+        $start = (string) ($pdfJob->folioBatch?->start_number ?? 1);
+        $end = (string) ($pdfJob->folioBatch?->end_number ?? $start);
+
+        return $organizationSegment.'-'.$workCenterSegment.'-'.$start.'-'.$end.'.pdf';
+    }
+
+    private function toAsciiSlug(string $value, string $fallback): string
+    {
+        $slug = Str::slug($value);
+
+        return $slug !== '' ? $slug : $fallback;
     }
 }

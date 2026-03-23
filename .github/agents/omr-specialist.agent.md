@@ -144,4 +144,4 @@ Construir un sistema OMR que:
 - Sea mantenible por años.
 
 ## Nota:
-- La maquina no tiene python instalado, por lo que deberas validar que la imagen docker exista y este activa, todos los comandos los correras con docker exec en caso de que quieras testear algo. 
+- usamos pyenv para administrar la aplicación en desarrollo, producción usa Docker con Python 3.13.1-slim.

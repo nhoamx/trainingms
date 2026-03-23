@@ -227,4 +227,61 @@ class FolioBatchWorkCenterTest extends TestCase
             ->has('organization.work_centers')
         );
     }
+
+    public function test_can_delete_unused_folio_batch(): void
+    {
+        $batch = FolioBatch::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $this->workCenter->id,
+        ]);
+
+        $batch->folios()->create([
+            'folio_number' => '0001',
+            'numeric_value' => 1,
+            'used' => false,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->delete(route('folio-batches.destroy', $batch->id));
+
+        $response->assertOk()
+            ->assertJson([
+                'message' => 'Lote de folios eliminado correctamente',
+            ]);
+
+        $this->assertDatabaseMissing('folio_batches', [
+            'id' => $batch->id,
+        ]);
+
+        $this->assertDatabaseMissing('folios', [
+            'folio_batch_id' => $batch->id,
+        ]);
+    }
+
+    public function test_cannot_delete_folio_batch_with_used_folios(): void
+    {
+        $batch = FolioBatch::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $this->workCenter->id,
+        ]);
+
+        $batch->folios()->create([
+            'folio_number' => '0001',
+            'numeric_value' => 1,
+            'used' => true,
+            'used_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->delete(route('folio-batches.destroy', $batch->id));
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'message' => 'No se puede eliminar el lote porque tiene folios que ya han sido utilizados.',
+            ]);
+
+        $this->assertDatabaseHas('folio_batches', [
+            'id' => $batch->id,
+        ]);
+    }
 }

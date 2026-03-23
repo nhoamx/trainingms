@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\FolioBatch;
 use App\Models\Organization;
 use App\Models\User;
+use App\Models\WorkCenter;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -28,10 +29,11 @@ class OMRPdfGenerationTest extends TestCase
         Role::firstOrCreate(['name' => 'organization', 'guard_name' => 'web']);
 
         // Create test user
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->createOne();
 
         // Create test organization with folio_organization
         $this->organization = Organization::factory()->create([
+            'name' => 'Organizacion Demo',
             'folio_organization' => 123,
         ]);
 
@@ -203,7 +205,8 @@ class OMRPdfGenerationTest extends TestCase
 
     public function test_blank_template_download_requires_admin_role(): void
     {
-        $organizationUser = User::factory()->create();
+        /** @var User $organizationUser */
+        $organizationUser = User::factory()->createOne();
         $organizationUser->assignRole('organization');
 
         $response = $this->actingAs($organizationUser)
@@ -214,7 +217,8 @@ class OMRPdfGenerationTest extends TestCase
 
     public function test_admin_can_download_all_blank_omr_templates(): void
     {
-        $admin = User::factory()->create();
+        /** @var User $admin */
+        $admin = User::factory()->createOne();
         $admin->assignRole('admin');
 
         $routes = [
@@ -264,5 +268,33 @@ class OMRPdfGenerationTest extends TestCase
         $response->assertStatus(200);
         $response->assertHeader('content-type', 'application/pdf');
         $response->assertDownload();
+    }
+
+    public function test_generate_pdf_uses_required_download_filename_format(): void
+    {
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $this->organization->id,
+            'name' => 'Centro Norte',
+            'code' => '0001',
+        ]);
+
+        $this->batch->update([
+            'work_center_id' => $workCenter->id,
+            'start_number' => 1,
+            'end_number' => 100,
+            'quantity' => 100,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->post(route('omr.generate-pdf'), [
+                'organization_id' => $this->organization->id,
+                'folio_batch_id' => $this->batch->id,
+                'guide_type' => 'likert-planta-3',
+                'generate_all' => false,
+                'folios' => ['0001'],
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertDownload('organizacion-demo-centro-norte-1-100.pdf');
     }
 }
