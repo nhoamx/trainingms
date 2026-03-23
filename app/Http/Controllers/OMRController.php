@@ -23,6 +23,7 @@ class OMRController extends Controller
         'referencia-v' => '03',
         'escala-cisneros' => '04',
         'likert' => '05',
+        'likert-planta-3' => '06',
     ];
 
     /**
@@ -140,12 +141,24 @@ class OMRController extends Controller
                 }
             }
 
-            // Add positions and areas for likert template
+            // Add positions and areas for likert templates
             if ($guideType === 'likert') {
                 $positions = $organization->occupationPositions()->get(['name']);
                 $areas = $organization->departmentAreas()->get(['name']);
                 $viewData['positions'] = $positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions;
                 $viewData['areas'] = $areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas;
+            } elseif ($guideType === 'likert-planta-3') {
+                // Planta 3 uses dedicated hardcoded catalogs from config
+                $p3Positions = collect(array_map(
+                    fn ($name) => ['name' => $name],
+                    config('likert-value.puestos_planta_3', [])
+                ));
+                $p3Areas = collect(array_map(
+                    fn ($name) => ['name' => $name],
+                    config('likert-value.areas_planta_3', [])
+                ));
+                $viewData['positions'] = $p3Positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $p3Positions;
+                $viewData['areas'] = $p3Areas->isEmpty() ? collect([['name' => 'Área 1']]) : $p3Areas;
             }
 
             // Dispatch multiple jobs, one per chunk
@@ -190,7 +203,7 @@ class OMRController extends Controller
             }
         }
 
-        // Add positions and areas for likert template
+        // Add positions and areas for likert templates
         if ($guideType === 'likert') {
             $positions = $organization->occupationPositions()->get(['name']);
             $areas = $organization->departmentAreas()->get(['name']);
@@ -198,6 +211,18 @@ class OMRController extends Controller
             // Use defaults if empty
             $viewData['positions'] = $positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions;
             $viewData['areas'] = $areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas;
+        } elseif ($guideType === 'likert-planta-3') {
+            // Planta 3 uses dedicated hardcoded catalogs from config
+            $p3Positions = collect(array_map(
+                fn ($name) => ['name' => $name],
+                config('likert-value.puestos_planta_3', [])
+            ));
+            $p3Areas = collect(array_map(
+                fn ($name) => ['name' => $name],
+                config('likert-value.areas_planta_3', [])
+            ));
+            $viewData['positions'] = $p3Positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $p3Positions;
+            $viewData['areas'] = $p3Areas->isEmpty() ? collect([['name' => 'Área 1']]) : $p3Areas;
         }
 
         // Generate extended folios and HTML content
@@ -289,6 +314,9 @@ class OMRController extends Controller
                 'totalQuestions' => count(config('escala_cisneros')),
             ],
             'likert' => [
+                'totalQuestions' => 23,
+            ],
+            'likert-planta-3' => [
                 'totalQuestions' => 23,
             ],
             default => [],
@@ -402,8 +430,47 @@ class OMRController extends Controller
     }
 
     /**
-     * Download blank template for Referencia I (admin only route).
+     * Mostrar hoja OMR para Escala Likert (Planta 3)
      */
+    public function likertPlanta3(Request $request)
+    {
+        // Planta 3 uses dedicated hardcoded catalogs from config (puestos_planta_3 / areas_planta_3)
+        $positions = collect(array_map(
+            fn ($name) => ['name' => $name],
+            config('likert-value.puestos_planta_3', [])
+        ));
+
+        $areas = collect(array_map(
+            fn ($name) => ['name' => $name],
+            config('likert-value.areas_planta_3', [])
+        ));
+
+        // Safety fallback if config is missing
+        if ($positions->isEmpty()) {
+            $positions = collect([['name' => 'Puesto 1']]);
+        }
+        if ($areas->isEmpty()) {
+            $areas = collect([['name' => 'Área 1']]);
+        }
+
+        return view('omr.likert-planta-3', [
+            'totalQuestions' => 23,
+            'folio' => $request->input('folio', '00000000000'),
+            'logo' => $request->input('logo'),
+            'positions' => $positions,
+            'areas' => $areas,
+            'showPrefilledFolio' => false,
+        ]);
+    }
+
+    /**
+     * Download blank template for Likert Planta 3 (admin only route).
+     */
+    public function downloadBlankLikertPlanta3()
+    {
+        return $this->downloadBlankTemplate('likert-planta-3');
+    }
+
     public function downloadBlankReferenciaI()
     {
         return $this->downloadBlankTemplate('referencia-i');
@@ -439,6 +506,12 @@ class OMRController extends Controller
     private function downloadBlankTemplate(string $guideType)
     {
         $viewData = $this->getGuideData($guideType);
+
+        // Add default positions and areas for likert templates
+        if ($guideType === 'likert' || $guideType === 'likert-planta-3') {
+            $viewData['positions'] = collect([['name' => 'Puesto 1']]);
+            $viewData['areas'] = collect([['name' => 'Área 1']]);
+        }
 
         $pageData = array_merge($viewData, [
             'folio' => null,

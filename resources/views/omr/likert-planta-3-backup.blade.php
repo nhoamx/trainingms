@@ -34,27 +34,19 @@
     }
     .folio-section { 
         border: 2px solid black; 
-        padding: 2mm 3mm; 
+        padding: 2mm; 
         position: relative; 
-        width: 68mm;
+        width: 65mm;
         flex-shrink: 0;
-    }
-    .folio-title {
-        font-weight: bold;
-        font-size: 9px;
-        text-align: center;
-        margin-bottom: 1.5mm;
-        letter-spacing: 2px;
-        text-transform: uppercase;
     }
     .folio-header { 
         display: flex; 
-        gap: 0.8mm; 
+        gap: 1mm; 
         margin-bottom: 1.5mm; 
         align-items: center; 
     }
     .folio-digit-column { 
-        width: 5mm; 
+        width: 6mm; 
         text-align: center; 
         font-weight: bold; 
         font-size: 6px; 
@@ -62,10 +54,10 @@
     .folio-position-header { 
         flex: 1; 
         text-align: center; 
-        font-size: 9px; 
+        font-size: 10px; 
         font-weight: bold; 
         border: 1px solid black; 
-        height: 4mm; 
+        height: 3.5mm; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
@@ -74,27 +66,28 @@
     .folio-row { 
         display: flex; 
         align-items: center; 
-        gap: 0.8mm; 
-        margin-bottom: 0.8mm; 
+        gap: 1mm; 
+        margin-bottom: 1mm; 
+        font-size: 5px; 
         min-height: 3mm; 
     }
     .folio-digit-number { 
         font-weight: bold; 
-        width: 5mm; 
+        width: 6mm; 
         text-align: center; 
         flex-shrink: 0; 
-        font-size: 9px; 
+        font-size: 10px; 
     }
     .folio-bubbles-row { 
         display: flex; 
-        gap: 0.8mm; 
+        gap: 1mm; 
         align-items: center; 
         flex: 1; 
         justify-content: space-between; 
     }
     .bubble-small { 
-        width: 4mm; 
-        height: 4mm; 
+        width: 4.5mm; 
+        height: 4.5mm; 
         border: 1.5px solid black; 
         border-radius: 50%; 
         flex-shrink: 0; 
@@ -333,10 +326,6 @@
     }
 </style>
 
-@php
-    $showPrefilledFolio = $showPrefilledFolio ?? true;
-@endphp
-
 <!-- Bottom-right format code label -->
 <div class="watermark">ECL-002</div>
 
@@ -345,13 +334,12 @@
     <div style="display: flex; flex-direction: column; gap: 3mm;">
         <!-- Folio Section -->
         <div class="folio-section">
-            <div class="folio-title">Folio</div>
             <!-- Header con espacios para escribir los dígitos -->
             <div class="folio-header">
                 <div class="folio-digit-column"></div>
-                @for($i = 0; $i < 11; $i++)
+                @for($i = 0; $i < 9; $i++)
                     <div class="folio-position-header">
-                        {{ $showPrefilledFolio && isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
+                        {{ isset($folio) && strlen($folio) > $i ? $folio[$i] : '' }}
                     </div>
                 @endfor
             </div>
@@ -360,9 +348,9 @@
                 <div class="folio-row">
                     <div class="folio-digit-number">{{ $digit }}</div>
                     <div class="folio-bubbles-row">
-                        @for($i = 0; $i < 11; $i++)
+                        @for($i = 0; $i < 9; $i++)
                             @php
-                                $folioDigit = $showPrefilledFolio && isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
+                                $folioDigit = isset($folio) && strlen($folio) > $i ? $folio[$i] : null;
                                 $isSelected = $folioDigit == $digit;
                             @endphp
                             <div class="bubble-small {{ $isSelected ? 'bubble-filled' : '' }}"></div>
