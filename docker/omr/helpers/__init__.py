@@ -2,10 +2,14 @@ from .image import load_image, normalize_size
 from .markers import classify_markers, detect_markers, draw_markers, warp_from_markers
 from .omr import (
     crop_folio_region,
+    debug_answers_rois,
     debug_folio_roi,
     get_fill_ratio,
     get_grid,
+    load_answers_annotation,
+    load_answers_mapping,
     load_folio_annotation,
+    read_answers,
     read_folio,
 )
 from .pdf import pdf_to_images
@@ -29,11 +33,15 @@ __all__ = [
     "warp_from_markers",
     "draw_markers",
     "load_folio_annotation",
+    "load_answers_annotation",
+    "load_answers_mapping",
     "get_grid",
     "get_fill_ratio",
     "crop_folio_region",
+    "debug_answers_rois",
     "debug_folio_roi",
     "read_folio",
+    "read_answers",
     "save_processing_stage",
     "save_comparison_images",
     "get_current_document_path",

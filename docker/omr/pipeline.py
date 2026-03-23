@@ -1,5 +1,6 @@
 
 import cv2
+import json
 from pathlib import Path
 
 from omr.helpers import load_image
@@ -9,22 +10,32 @@ from omr.helpers import classify_markers
 from omr.helpers import draw_markers
 from omr.helpers import warp_from_markers
 from omr.helpers import normalize_size
+from omr.helpers import load_answers_annotation
+from omr.helpers import load_answers_mapping
 from omr.helpers import load_folio_annotation
+from omr.helpers import debug_answers_rois
 from omr.helpers import debug_folio_roi
+from omr.helpers import read_answers
 from omr.helpers import read_folio
 from omr.helpers import get_storage
 
 SCRIPT_DIR = Path(__file__).parent
 IMAGE = "ref1.png"
-PDF = str(SCRIPT_DIR / "file-tests/nom-035-all.pdf")
+PDF = str(SCRIPT_DIR / "file-tests/nom-035-demographic.pdf")
 ANNOTATIONS_DIR = SCRIPT_DIR.parent / "annotator" / "annotations"
-ANNOTATION = str(ANNOTATIONS_DIR / "gri-folio-annotator.json")
+ANNOTATION = str(ANNOTATIONS_DIR / "grv-folio-annotator.json")
+ANSWERS_ANNOTATION = str(ANNOTATIONS_DIR / "grv-answers-annotator.json")
+ANSWERS_MAPPING = str(ANNOTATIONS_DIR / "answers-mapping.json")
+OUTPUT_DIR = SCRIPT_DIR.parent / "output"
 
 
 
 def main():
     images = pdf_to_images(PDF)
-    annotation = load_folio_annotation(ANNOTATION)
+    folio_annotation = load_folio_annotation(ANNOTATION)
+    answers_annotation = load_answers_annotation(ANSWERS_ANNOTATION)
+    answers_mapping = load_answers_mapping(ANSWERS_MAPPING)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     storage = get_storage(base_path=SCRIPT_DIR / "output_tracking")
     storage.initialize_document(Path(PDF).stem)
 
@@ -54,8 +65,15 @@ def main():
 
         normalized = normalize_size(warped, page_number=i, save=True, storage=storage)
 
-        debug_folio_roi(normalized, annotation, i, storage=storage)
+        debug_folio_roi(normalized, folio_annotation, i, storage=storage)
+        debug_answers_rois(normalized, answers_annotation, i, storage=storage)
 
-        folio = read_folio(normalized, annotation)
+        folio = read_folio(normalized, folio_annotation)
+        answers = read_answers(normalized, answers_annotation, mapping_config=answers_mapping)
 
         print(f"📌 Página {i} folio: {folio}")
+
+        if folio and "?" not in folio:
+            output_file = OUTPUT_DIR / f"{folio}.json"
+            with output_file.open("w", encoding="utf-8") as file:
+                json.dump(answers, file, ensure_ascii=False, indent=2)
