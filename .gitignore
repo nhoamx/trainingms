@@ -22,11 +22,8 @@ yarn-error.log
 /.vscode
 /.zed
 /docker/output/*
-/docker/output_images/*
-/docker/output_original/*
-/docker/outputs_aligned/*
 /docker/input/*
-/docker/output_with_markers/*
+/docker/output_tracking/*
 /docker/reprocess_input/*
 /docker/reprocess_output/*
 /docker/.idea
@@ -34,6 +31,13 @@ yarn-error.log
 /docker/reprocessing.log
 /docker/markers.log
 /docker/__pycache__/
+/docker/omr_next/__pycache__/
+/docker/omr_next/tests/__pycache__/
+/docker/.pytest_cache/
+/docker/.venv/
+/docker/deprecated/
+/.venv/
+/docker/*/__pycache__/
 public/.user.ini
 .DS_Store
 *.sql
