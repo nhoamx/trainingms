@@ -7,4 +7,7 @@ PyPDF2
 flask
 pdf2docx
 python-slugify
+redis
+rq
+gunicorn
     
