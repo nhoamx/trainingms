@@ -1,14 +1,74 @@
 services:
-  training-and-ms:
+  ocr-api:
     build:
       context: .
       dockerfile: Dockerfile
-    image: training-and-ms
-    stdin_open: true
-    tty: true
+    image: training-and-ms-ocr
+    container_name: trainingms-ocr-api
+    command: >
+      gunicorn
+      --bind 0.0.0.0:5000
+      --workers 2
+      --timeout 120
+      app:app
+    environment:
+      OCR_API_HOST: 0.0.0.0
+      OCR_API_PORT: 5000
+      OCR_REDIS_URL: redis://redis:6379/0
+      OCR_QUEUE_NAME: omr
+      OCR_MAX_UPLOAD_MB: 30
+      OCR_JOB_TIMEOUT_SEC: 900
+      OCR_MAX_RETRIES: 3
+      OCR_RETRY_BACKOFF_SEC: 10,30,90
+      OCR_IDEMPOTENCY_TTL_SEC: 86400
+      OCR_UPLOAD_DIR: /app/input/api
+      OCR_JOBS_DIR: /app/jobs
     volumes:
       - .:/app
-    working_dir: /
-    container_name: training-and-ms
     ports:
       - "5000:5000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=5)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  ocr-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: training-and-ms-ocr
+    container_name: trainingms-ocr-worker
+    command: python worker.py
+    environment:
+      OCR_REDIS_URL: redis://redis:6379/0
+      OCR_QUEUE_NAME: omr
+      OCR_WORKER_NAME: ocr-worker-1
+      OCR_WORKER_WITH_SCHEDULER: "true"
+      OCR_JOBS_DIR: /app/jobs
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: trainingms-ocr-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis_data:

@@ -1,0 +1,239 @@
+{
+  "gri": {
+    "block_order": [
+      "answers_block_1",
+      "answers_block_2",
+      "answers_block_3"
+    ],
+    "column_mappings": {
+      "2": {
+        "C1": "SI",
+        "C2": "NO"
+      }
+    },
+    "rules": [
+      {
+        "range": "1-999",
+        "section": "gri_binary",
+        "map": {
+          "C1": "SI",
+          "C2": "NO"
+        }
+      }
+    ]
+  },
+  "griii": {
+    "block_order": [
+      "answers_block_1",
+      "answers_block_2",
+      "answers_block_3",
+      "answers_conditional_1",
+      "answers_condicional_1_answers",
+      "answers_conditional_2",
+      "answers_conditional_2_answers",
+      "ATS_1_1",
+      "ATS_2_2"
+    ],
+    "column_mappings": {
+      "2": {
+        "C1": "SI",
+        "C2": "NO"
+      },
+      "5": {
+        "C1": "A",
+        "C2": "B",
+        "C3": "C",
+        "C4": "D",
+        "C5": "E"
+      }
+    },
+    "rules": [
+      {
+        "range": "1-64",
+        "section": "general_1_64",
+        "map": {
+          "C1": "A",
+          "C2": "B",
+          "C3": "C",
+          "C4": "D",
+          "C5": "E"
+        }
+      },
+      {
+        "range": "65",
+        "section": "conditional_1",
+        "map": {
+          "C1": "SI",
+          "C2": "NO"
+        }
+      },
+      {
+        "range": "66-69",
+        "section": "conditional_1_followup",
+        "map": {
+          "C1": "A",
+          "C2": "B",
+          "C3": "C",
+          "C4": "D",
+          "C5": "E"
+        }
+      },
+      {
+        "range": "70",
+        "section": "conditional_2",
+        "map": {
+          "C1": "SI",
+          "C2": "NO"
+        }
+      },
+      {
+        "range": "71-74",
+        "section": "conditional_2_followup",
+        "map": {
+          "C1": "A",
+          "C2": "B",
+          "C3": "C",
+          "C4": "D",
+          "C5": "E"
+        }
+      },
+      {
+        "range": "75-80",
+        "section": "ats",
+        "map": {
+          "C1": "SI",
+          "C2": "NO"
+        }
+      }
+    ]
+  },
+  "grv": {
+    "mode": "field_based",
+    "block_order": [
+      "gender",
+      "age",
+      "marital_status",
+      "personnel_type",
+      "education_level",
+      "incomplete_education_level",
+      "position_type",
+      "contract_type",
+      "work_schedule",
+      "shift_rotation",
+      "time_in_current_position",
+      "work_experience"
+    ],
+    "fields": {
+      "gender": {
+        "type": "single_column",
+        "options": [
+          "Masculino",
+          "Femenino"
+        ]
+      },
+      "age": {
+        "type": "two_digit_columns",
+        "tens_column": 1,
+        "units_column": 2
+      },
+      "marital_status": {
+        "type": "single_column",
+        "options": [
+          "Casado",
+          "Soltero",
+          "Union Libre",
+          "Divorciado",
+          "Viudo"
+        ]
+      },
+      "personnel_type": {
+        "type": "single_column",
+        "options": [
+          "Sindicalizado",
+          "Confianza",
+          "Ninguno"
+        ]
+      },
+      "education_level": {
+        "type": "single_column",
+        "options": [
+          "Sin formacion",
+          "Primaria",
+          "Secundaria",
+          "Preparatoria o Bachillerato",
+          "Licenciatura",
+          "Maestria",
+          "Doctorado"
+        ]
+      },
+      "incomplete_education_level": {
+        "type": "single_column",
+        "options": [
+          "Primaria",
+          "Secundaria",
+          "Preparatoria o Bachillerato",
+          "Licenciatura",
+          "Maestria",
+          "Doctorado"
+        ]
+      },
+      "position_type": {
+        "type": "single_column",
+        "options": [
+          "Operativo",
+          "Profesional o tecnico",
+          "Supervisor",
+          "Gerente"
+        ]
+      },
+      "contract_type": {
+        "type": "single_column",
+        "options": [
+          "Por obra o proyecto",
+          "Por tiempo determinado (temporal)",
+          "Tiempo indeterminado",
+          "Honorarios"
+        ]
+      },
+      "work_schedule": {
+        "type": "single_column",
+        "options": [
+          "Fijo nocturno",
+          "Fijo diurno",
+          "Fijo mixto"
+        ]
+      },
+      "shift_rotation": {
+        "type": "single_column",
+        "options": [
+          "SI",
+          "NO"
+        ]
+      },
+      "time_in_current_position": {
+        "type": "single_column",
+        "options": [
+          "Menos de 6 meses",
+          "Entre 6 meses y 1 ano",
+          "Entre 1 a 4 anos",
+          "Entre 5 a 9 anos",
+          "Entre 10 a 14 anos",
+          "Entre 15 a 19 anos",
+          "Entre 20 a 24 anos",
+          "25 anos o mas"
+        ]
+      },
+      "work_experience": {
+        "type": "single_column",
+        "options": [
+          "Menos de 6 meses",
+          "Entre 6 meses y 1 ano",
+          "Entre 1 a 4 anos",
+          "Entre 5 a 9 anos",
+          "Entre 10 a 14 anos",
+          "Entre 15 a 19 anos"
+        ]
+      }
+    }
+  }
+}
