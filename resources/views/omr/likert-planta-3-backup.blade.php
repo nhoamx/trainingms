@@ -468,23 +468,11 @@
                 <div class="demographic-section">
                     <div class="demographic-title">TURNO</div>
                     <div class="demographic-item">
-                        <span class="demographic-label">TURNO A: 7:00 a.m. a 4:36 p.m.</span>
+                        <span class="demographic-label">PRIMERO</span>
                         <div class="demographic-bubble"></div>
                     </div>
                     <div class="demographic-item">
-                        <span class="demographic-label">TURNO B: 7:15 p.m. a 3:39 a.m.</span>
-                        <div class="demographic-bubble"></div>
-                    </div>
-                    <div class="demographic-item">
-                        <span class="demographic-label">TURNO A CORTE 7:00 a.m. a 3:00 p.m.</span>
-                        <div class="demographic-bubble"></div>
-                    </div>
-                    <div class="demographic-item">
-                        <span class="demographic-label">TURNO B CORTE 3:00 p.m. a 10:30 p.m.</span>
-                        <div class="demographic-bubble"></div>
-                    </div>
-                    <div class="demographic-item">
-                        <span class="demographic-label">TURNO C CORTE 10:30 p.m. a 6:24 a.m.</span>
+                        <span class="demographic-label">SEGUNDO</span>
                         <div class="demographic-bubble"></div>
                     </div>
                 </div>

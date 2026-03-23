@@ -297,4 +297,19 @@ class OMRPdfGenerationTest extends TestCase
         $response->assertStatus(200);
         $response->assertDownload('organizacion-demo-centro-norte-1-100.pdf');
     }
+
+    public function test_likert_planta_3_preview_starts_positions_and_areas_at_one(): void
+    {
+        $response = $this->get(route('omr.likert-planta-3'));
+
+        $response->assertOk();
+
+        $positions = $response->viewData('positions');
+        $areas = $response->viewData('areas');
+
+        $this->assertSame([0, 1, 2], array_slice($positions->keys()->all(), 0, 3));
+        $this->assertSame([0, 1, 2], array_slice($areas->keys()->all(), 0, 3));
+        $this->assertSame('OPERADOR COSTURA', strtoupper($positions->first()['name']));
+        $this->assertSame('PRODUCCIÓN', strtoupper($areas->first()['name']));
+    }
 }

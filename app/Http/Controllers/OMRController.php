@@ -130,8 +130,8 @@ class OMRController extends Controller
             if ($guideType === 'likert') {
                 $positions = $organization->occupationPositions()->get(['name']);
                 $areas = $organization->departmentAreas()->get(['name']);
-                $viewData['positions'] = $positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions;
-                $viewData['areas'] = $areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas;
+                $viewData['positions'] = ($positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions)->values();
+                $viewData['areas'] = ($areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas)->values();
             } elseif ($guideType === 'likert-planta-3') {
                 $p3Positions = collect(array_map(
                     fn ($name) => ['name' => $name],
@@ -141,8 +141,8 @@ class OMRController extends Controller
                     fn ($name) => ['name' => $name],
                     config('likert-value.areas_planta_3', [])
                 ));
-                $viewData['positions'] = $p3Positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $p3Positions;
-                $viewData['areas'] = $p3Areas->isEmpty() ? collect([['name' => 'Área 1']]) : $p3Areas;
+                $viewData['positions'] = ($p3Positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $p3Positions)->values();
+                $viewData['areas'] = ($p3Areas->isEmpty() ? collect([['name' => 'Área 1']]) : $p3Areas)->values();
             }
 
             foreach ($chunks as $chunkIndex => $chunk) {
@@ -184,8 +184,8 @@ class OMRController extends Controller
         if ($guideType === 'likert') {
             $positions = $organization->occupationPositions()->get(['name']);
             $areas = $organization->departmentAreas()->get(['name']);
-            $viewData['positions'] = $positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions;
-            $viewData['areas'] = $areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas;
+            $viewData['positions'] = ($positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions)->values();
+            $viewData['areas'] = ($areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas)->values();
         } elseif ($guideType === 'likert-planta-3') {
             $p3Positions = collect(array_map(
                 fn ($name) => ['name' => $name],
@@ -195,8 +195,8 @@ class OMRController extends Controller
                 fn ($name) => ['name' => $name],
                 config('likert-value.areas_planta_3', [])
             ));
-            $viewData['positions'] = $p3Positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $p3Positions;
-            $viewData['areas'] = $p3Areas->isEmpty() ? collect([['name' => 'Área 1']]) : $p3Areas;
+            $viewData['positions'] = ($p3Positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $p3Positions)->values();
+            $viewData['areas'] = ($p3Areas->isEmpty() ? collect([['name' => 'Área 1']]) : $p3Areas)->values();
         }
 
         $htmlContent = '';
@@ -401,6 +401,9 @@ class OMRController extends Controller
                 if ($areas->isEmpty()) {
                     $areas = collect([['name' => 'Área 1']]);
                 }
+
+                $positions = $positions->values();
+                $areas = $areas->values();
             }
         }
 
@@ -436,6 +439,9 @@ class OMRController extends Controller
         if ($areas->isEmpty()) {
             $areas = collect([['name' => 'Área 1']]);
         }
+
+        $positions = $positions->values();
+        $areas = $areas->values();
 
         return view('omr.likert-planta-3', [
             'totalQuestions' => 23,
