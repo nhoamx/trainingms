@@ -10,6 +10,7 @@ use App\Models\PaperEvaluation;
 use App\Models\PdfGenerationJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\Browsershot\Browsershot;
 
 class OMRController extends Controller
@@ -67,39 +68,32 @@ class OMRController extends Controller
      */
     public function generatePdf(StoreOMRPdfRequest $request)
     {
-        // Get configuration values
         $memoryLimit = config('omr.pdf_generation.memory_limit', 512).'M';
         $executionTime = config('omr.pdf_generation.execution_time', 1800);
 
-        // Increase memory limit and execution time for large batch generation
         ini_set('memory_limit', $memoryLimit);
         ini_set('max_execution_time', (string) $executionTime);
 
         $validated = $request->validated();
+        $guideType = $validated['guide_type'] === 'likert' ? 'likert-planta-3' : $validated['guide_type'];
 
-        // Get organization and batch
         $organization = Organization::findOrFail($validated['organization_id']);
         $batch = FolioBatch::where('id', $validated['folio_batch_id'])
             ->where('organization_id', $organization->id)
             ->with('workCenter')
             ->firstOrFail();
 
-        // Resolve work center code for folio generation
         $workCenterCode = $batch->workCenter?->code;
-
-        // Determine folio padding based on work center presence
         $folioPadLength = $workCenterCode !== null ? 5 : 4;
 
-        // Determine which folios to generate
         $foliosToGenerate = [];
         if ($validated['generate_all'] ?? false) {
-            // Generate all folios in the batch range
             for ($i = $batch->start_number; $i <= $batch->end_number; $i++) {
                 $foliosToGenerate[] = str_pad((string) $i, $folioPadLength, '0', STR_PAD_LEFT);
             }
         } else {
             $foliosToGenerate = array_map(
-                fn ($f) => str_pad($f, $folioPadLength, '0', STR_PAD_LEFT),
+                fn ($folio) => str_pad($folio, $folioPadLength, '0', STR_PAD_LEFT),
                 $validated['folios'] ?? []
             );
         }
@@ -108,29 +102,21 @@ class OMRController extends Controller
             return back()->with('error', 'No se proporcionaron folios para generar el PDF.');
         }
 
-        // Get configuration values
         $jobThreshold = config('omr.pdf_generation.job_threshold', 100);
         $chunkSize = config('omr.pdf_generation.chunk_size', 100);
 
-        // For large batches, split into multiple PDFs and use tracking
         if (count($foliosToGenerate) > $jobThreshold) {
-            // Create tracking record
             $pdfJob = PdfGenerationJob::create([
                 'organization_id' => $organization->id,
                 'folio_batch_id' => $batch->id,
-                'guide_type' => $validated['guide_type'],
+                'guide_type' => $guideType,
                 'total_folios' => count($foliosToGenerate),
                 'status' => 'pending',
             ]);
 
-            // Split into configurable chunks
             $chunks = array_chunk($foliosToGenerate, $chunkSize);
-
-            // Get guide configuration
-            $guideType = $validated['guide_type'];
             $viewData = $this->getGuideData($guideType);
 
-            // Add organization logo if available
             if ($organization->logo) {
                 $logoPath = Storage::disk('public')->path($organization->logo);
                 if (file_exists($logoPath)) {
@@ -141,14 +127,12 @@ class OMRController extends Controller
                 }
             }
 
-            // Add positions and areas for likert templates
             if ($guideType === 'likert') {
                 $positions = $organization->occupationPositions()->get(['name']);
                 $areas = $organization->departmentAreas()->get(['name']);
                 $viewData['positions'] = $positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions;
                 $viewData['areas'] = $areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas;
             } elseif ($guideType === 'likert-planta-3') {
-                // Planta 3 uses dedicated hardcoded catalogs from config
                 $p3Positions = collect(array_map(
                     fn ($name) => ['name' => $name],
                     config('likert-value.puestos_planta_3', [])
@@ -161,7 +145,6 @@ class OMRController extends Controller
                 $viewData['areas'] = $p3Areas->isEmpty() ? collect([['name' => 'Área 1']]) : $p3Areas;
             }
 
-            // Dispatch multiple jobs, one per chunk
             foreach ($chunks as $chunkIndex => $chunk) {
                 GenerateOMRPdfJob::dispatch(
                     $validated,
@@ -169,16 +152,15 @@ class OMRController extends Controller
                     $organization,
                     $chunk,
                     $viewData,
-                    $chunkIndex + 1, // Batch number
-                    count($chunks),   // Total batches
-                    $pdfJob->id       // Pass the tracking job ID
+                    $chunkIndex + 1,
+                    count($chunks),
+                    $pdfJob->id
                 );
             }
 
             $totalFolios = count($foliosToGenerate);
-            $estimatedMinutes = ceil($totalFolios / 60); // Estimate ~1 folio/second
+            $estimatedMinutes = ceil($totalFolios / 60);
 
-            // Return JSON for AJAX handling
             return response()->json([
                 'job_id' => $pdfJob->id,
                 'total_folios' => $totalFolios,
@@ -187,15 +169,11 @@ class OMRController extends Controller
             ]);
         }
 
-        // Get guide configuration
-        $guideType = $validated['guide_type'];
         $viewData = $this->getGuideData($guideType);
 
-        // Add organization logo if available (convert to base64 for Browsershot compatibility)
         if ($organization->logo) {
             $logoPath = Storage::disk('public')->path($organization->logo);
             if (file_exists($logoPath)) {
-                // Convert image to base64 to avoid file:// issues with Browsershot
                 $imageData = file_get_contents($logoPath);
                 $base64 = base64_encode($imageData);
                 $mimeType = mime_content_type($logoPath);
@@ -203,16 +181,12 @@ class OMRController extends Controller
             }
         }
 
-        // Add positions and areas for likert templates
         if ($guideType === 'likert') {
             $positions = $organization->occupationPositions()->get(['name']);
             $areas = $organization->departmentAreas()->get(['name']);
-
-            // Use defaults if empty
             $viewData['positions'] = $positions->isEmpty() ? collect([['name' => 'Puesto 1']]) : $positions;
             $viewData['areas'] = $areas->isEmpty() ? collect([['name' => 'Área 1']]) : $areas;
         } elseif ($guideType === 'likert-planta-3') {
-            // Planta 3 uses dedicated hardcoded catalogs from config
             $p3Positions = collect(array_map(
                 fn ($name) => ['name' => $name],
                 config('likert-value.puestos_planta_3', [])
@@ -225,7 +199,6 @@ class OMRController extends Controller
             $viewData['areas'] = $p3Areas->isEmpty() ? collect([['name' => 'Área 1']]) : $p3Areas;
         }
 
-        // Generate extended folios and HTML content
         $htmlContent = '';
         foreach ($foliosToGenerate as $index => $personFolio) {
             $extendedFolio = $this->generateExtendedFolio(
@@ -235,7 +208,6 @@ class OMRController extends Controller
                 $workCenterCode
             );
 
-            // For hybrid batches generating Referencia V, create empty PaperEvaluation records
             if ($batch->isHibrido() && $guideType === 'referencia-v') {
                 $this->createHybridPaperEvaluation($extendedFolio, $organization->id);
             }
@@ -244,42 +216,35 @@ class OMRController extends Controller
                 'folio' => $extendedFolio,
                 'isHybrid' => $batch->isHibrido() && $guideType === 'referencia-v',
             ]);
+
             $htmlContent .= view("omr.{$guideType}", $pageData)->render();
 
-            // Add page break except for the last page
             if ($index < count($foliosToGenerate) - 1) {
                 $htmlContent .= '<div style="page-break-after: always;"></div>';
             }
 
-            // Free memory every 100 pages
             if (($index + 1) % 100 === 0) {
                 gc_collect_cycles();
             }
         }
 
-        // Generate PDF
-        $filename = str_replace('-', '_', $guideType).'_'.$organization->name.'_'.date('Y-m-d_H-i-s').'.pdf';
-        $tempPath = storage_path('app/temp/'.$filename);
+        $downloadFilename = $this->buildBatchDownloadFilename($organization, $batch);
+        $tempFilename = pathinfo($downloadFilename, PATHINFO_FILENAME).'_'.date('Y-m-d_H-i-s').'.pdf';
+        $tempPath = storage_path('app/temp/'.$tempFilename);
 
-        // Create temp directory if it doesn't exist
         if (! file_exists(dirname($tempPath))) {
             mkdir(dirname($tempPath), 0755, true);
         }
 
-        // Configure Browsershot
         $browsershot = Browsershot::html($htmlContent)
             ->noSandbox()
             ->format('Letter')
-            // Force zero PDF margins; internal spacing is handled by the .page container padding
             ->margins(0, 0, 0, 0)
-            // Slightly shrink the entire page to avoid accidental overflow to a second page
-            // This preserves the relative geometry between alignment markers and bubbles
             ->scale(0.96)
             ->showBackground()
-            ->timeout(300) // 5 minutes timeout for large batches
+            ->timeout(300)
             ->waitUntilNetworkIdle();
 
-        // Configure for WSL if needed
         if (PHP_OS_FAMILY === 'Linux' && file_exists('/mnt/c/Program Files/nodejs/node.exe')) {
             $browsershot->setNodeBinary('/mnt/c/Program Files/nodejs/node.exe');
             $browsershot->setNpmBinary('/mnt/c/Program Files/nodejs/npm');
@@ -287,7 +252,26 @@ class OMRController extends Controller
 
         $browsershot->save($tempPath);
 
-        return response()->download($tempPath)->deleteFileAfterSend(true);
+        return response()->download($tempPath, $downloadFilename)->deleteFileAfterSend(true);
+    }
+
+    private function buildBatchDownloadFilename(Organization $organization, FolioBatch $batch): string
+    {
+        $organizationSegment = $this->toAsciiSlug($organization->name, 'organizacion');
+        $workCenterSegment = $this->toAsciiSlug(
+            $batch->workCenter?->name ?? $batch->workCenter?->code ?? 'centro-trabajo',
+            'centro-trabajo'
+        );
+        $rangeSegment = $batch->start_number.'-'.$batch->end_number;
+
+        return $organizationSegment.'-'.$workCenterSegment.'-'.$rangeSegment.'.pdf';
+    }
+
+    private function toAsciiSlug(string $value, string $fallback): string
+    {
+        $slug = Str::slug($value);
+
+        return $slug !== '' ? $slug : $fallback;
     }
 
     /**

@@ -123,9 +123,6 @@
                   <button v-if="batch.type === 'en_linea'" @click="showOnlineLink(batch)" type="button" class="rounded-full bg-white p-1 text-gray-400 hover:text-green-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2" title="Ver enlace de evaluación en línea">
                     <LinkIcon class="h-5 w-5" />
                   </button>
-                  <button @click="viewBatchDetails(batch)" type="button" class="rounded-full bg-white p-1 text-gray-400 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2">
-                    <EyeIcon class="h-5 w-5" />
-                  </button>
                   <button @click="deleteBatch(batch)" type="button" class="rounded-full bg-white p-1 text-gray-400 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2">
                     <TrashIcon class="h-5 w-5" />
                   </button>
@@ -286,7 +283,7 @@
 
 import { computed, onUnmounted, ref } from 'vue';
 import { useForm, usePage } from '@inertiajs/vue3';
-import { PlusIcon, EyeIcon, TrashIcon, ArchiveBoxIcon, LinkIcon, DocumentArrowDownIcon } from '@heroicons/vue/24/solid';
+import { PlusIcon, TrashIcon, ArchiveBoxIcon, LinkIcon, DocumentArrowDownIcon } from '@heroicons/vue/24/solid';
 import axios from 'axios';
 
 
@@ -389,10 +386,6 @@ const calculateUsedPercentage = (batch) => {
   return batch.quantity > 0 ? (usedCount / batch.quantity) * 100 : 0;
 };
 
-const viewBatchDetails = (batch) => {
-  // Aquí puedes implementar el modal de detalles si lo deseas
-};
-
 const showOnlineLink = (batch) => {
   const baseUrl = window.location.origin;
   const evaluationUrl = `${baseUrl}/evaluacion`;
@@ -401,8 +394,25 @@ const showOnlineLink = (batch) => {
   alert(`Enlace para evaluaciones en línea:\n\n${evaluationUrl}\n\nLos participantes deberán usar sus folios del lote "${batch.name}" (${formatFolioNumber(batch.start_number)} - ${formatFolioNumber(batch.end_number)})`);
 };
 
-const deleteBatch = (batch) => {
-  // Aquí puedes implementar el modal de confirmación y lógica de borrado
+const deleteBatch = async (batch) => {
+  const confirmed = window.confirm(`¿Eliminar el lote "${batch.name}"? Esta acción no se puede deshacer.`);
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await axios.delete(route('folio-batches.destroy', batch.id));
+
+    if (Array.isArray(props.organization.folio_batches)) {
+      const index = props.organization.folio_batches.findIndex((item) => item.id === batch.id);
+      if (index !== -1) {
+        props.organization.folio_batches.splice(index, 1);
+      }
+    }
+  } catch (error) {
+    const message = error?.response?.data?.message || 'No se pudo eliminar el lote de folios.';
+    alert(message);
+  }
 };
 
 // PDF Generation state
@@ -429,8 +439,7 @@ const guideTypes = [
   { value: 'referencia-iii', label: 'Guía de Referencia III' }, 
   { value: 'referencia-v', label: 'Guía de Referencia V' },
   { value: 'escala-cisneros', label: 'Escala Cisneros' },
-  { value: 'likert', label: 'Clima laboral' },
-  { value: 'likert-planta-3', label: 'Clima laboral (Planta 3)' },
+  { value: 'likert-planta-3', label: 'Clima laboral' },
 ];
 
 const generatePdfForBatch = (batch) => {

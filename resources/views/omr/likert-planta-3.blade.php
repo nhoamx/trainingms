@@ -454,7 +454,11 @@
                 <div class="demographic-section">
                     <div class="demographic-title">CONTRATACIÓN</div>
                     <div class="demographic-item">
-                        <span class="demographic-label">SINDICALIZADO</span>
+                        <span class="demographic-label">DIRECTO</span>
+                        <div class="demographic-bubble"></div>
+                    </div>
+                    <div class="demographic-item">
+                        <span class="demographic-label">INDIRECTO</span>
                         <div class="demographic-bubble"></div>
                     </div>
                     <div class="demographic-item">
