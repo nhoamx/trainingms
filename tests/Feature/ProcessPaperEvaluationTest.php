@@ -410,4 +410,59 @@ class ProcessPaperEvaluationTest extends TestCase
 
         @unlink($tmpFile);
     }
+
+    public function test_job_extracts_citsats_from_flat_referencia_iii_raw_data(): void
+    {
+        Organization::factory()->create([
+            'folio_organization' => '953',
+        ]);
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test_').'.pdf';
+        file_put_contents($tmpFile, '%PDF-1.4 fake content');
+
+        \Illuminate\Support\Facades\Http::fake([
+            config('services.ocr.url').'/process' => \Illuminate\Support\Facades\Http::response([
+                'results' => [
+                    [
+                        'folio' => '029530001',
+                        'answers' => [
+                            '75' => ['mapping_section' => 'ats', 'value' => 'NO'],
+                            '76' => ['mapping_section' => 'ats', 'value' => 'SI'],
+                            '77' => ['mapping_section' => 'ats', 'value' => 'NO'],
+                            '78' => ['mapping_section' => 'ats', 'value' => 'NO'],
+                            '79' => ['mapping_section' => 'ats', 'value' => 'SI'],
+                            '80' => ['mapping_section' => 'ats', 'value' => 'NO'],
+                        ],
+                        'marked_image_base64' => null,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        \Illuminate\Support\Facades\Event::fake();
+
+        $job = new \App\Jobs\ProcessPaperEvaluation(
+            $tmpFile,
+            null,
+            null,
+            1,
+            1,
+            'test-refiii-flat.pdf'
+        );
+
+        $job->handle();
+
+        $evaluation = PaperEvaluation::where('folio', '029530001')->first();
+        $this->assertNotNull($evaluation);
+        $this->assertEquals([
+            '1' => 'NO',
+            '2' => 'SI',
+            '3' => 'NO',
+            '4' => 'NO',
+            '5' => 'SI',
+            '6' => 'NO',
+        ], $evaluation->citsats_s1);
+
+        @unlink($tmpFile);
+    }
 }

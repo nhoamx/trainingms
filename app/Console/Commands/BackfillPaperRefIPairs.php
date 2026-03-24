@@ -38,7 +38,11 @@ class BackfillPaperRefIPairs extends Command
             ->where('source', 'paper')
             ->where('processing_status', 'completed')
             ->where('evaluation_type', 'referencia_iii')
-            ->whereNotNull('citsats_s1')
+            ->where(function ($builder) {
+                $builder
+                    ->whereNotNull('citsats_s1')
+                    ->orWhereRaw("JSON_SEARCH(raw_data, 'one', 'ats', NULL, '$**.mapping_section') IS NOT NULL");
+            })
             ->where('work_center_id', $workCenterId)
             ->orderBy('id');
 
@@ -190,6 +194,7 @@ class BackfillPaperRefIPairs extends Command
     {
         $rawReferenciaI = data_get($refIII->raw_data, 'referencia_i', []);
         $refIAnswers = [];
+        $citsats = is_array($refIII->citsats_s1) ? $refIII->citsats_s1 : $this->extractCitsatsFromFlatRawData($refIII->raw_data ?? []);
 
         for ($i = 1; $i <= 14; $i++) {
             $key = (string) $i;
@@ -216,7 +221,7 @@ class BackfillPaperRefIPairs extends Command
             'referencia_i_answers' => ! empty($refIAnswers) ? $refIAnswers : null,
             'referencia_iii_answers' => null,
             'referencia_iii_conditional' => null,
-            'citsats_s1' => $refIII->citsats_s1,
+            'citsats_s1' => $citsats,
             'cisneros_answers' => null,
             'raw_data' => $refIII->raw_data,
         ]);
@@ -225,5 +230,50 @@ class BackfillPaperRefIPairs extends Command
         $created->save();
 
         return $created;
+    }
+
+    /**
+     * @param  array<string, mixed>  $rawData
+     * @return array<string, mixed>|null
+     */
+    private function extractCitsatsFromFlatRawData(array $rawData): ?array
+    {
+        $atsEntries = [];
+
+        foreach ($rawData as $rawKey => $rawAnswer) {
+            if (! is_array($rawAnswer)) {
+                continue;
+            }
+
+            if (($rawAnswer['mapping_section'] ?? null) !== 'ats') {
+                continue;
+            }
+
+            if (! is_numeric((string) $rawKey)) {
+                continue;
+            }
+
+            $atsEntries[(int) $rawKey] = $rawAnswer;
+        }
+
+        if ($atsEntries === []) {
+            return null;
+        }
+
+        ksort($atsEntries);
+
+        $citsats = [];
+        $index = 1;
+
+        foreach ($atsEntries as $entry) {
+            if ($index > 6) {
+                break;
+            }
+
+            $citsats[(string) $index] = $entry['value'] ?? null;
+            $index++;
+        }
+
+        return $citsats === [] ? null : $citsats;
     }
 }
