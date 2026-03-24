@@ -7,6 +7,7 @@ use App\Models\DemographicData;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
+use App\Services\DemographicDataNormalizationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -207,8 +208,11 @@ class ProcessPaperEvaluation implements ShouldQueue
             // Save demographic data if present (from Referencia V or Likert)
             if (isset($structuredData['demographic_data']) && ! empty($structuredData['demographic_data'])) {
                 $this->saveDemographicData($paperEvaluation, $structuredData['demographic_data']);
+                $this->propagateDemographicDataToRelatedEvaluations($paperEvaluation, $structuredData['demographic_data']);
             } elseif (isset($structuredData['likert_answers']) && ! empty($structuredData['likert_answers'])) {
                 $this->saveDemographicData($paperEvaluation, $structuredData['likert_answers']);
+            } elseif (in_array($paperEvaluation->evaluation_type, ['referencia_i', 'referencia_iii'], true)) {
+                $this->syncDemographicDataFromRelatedReferenciaV($paperEvaluation);
             }
 
             Log::info("Paper evaluation processed successfully: {$folio}");
@@ -598,7 +602,8 @@ class ProcessPaperEvaluation implements ShouldQueue
     {
         try {
             Log::info('Demographic Data: '.json_encode($demographicData));
-            $extractedData = $this->extractDemographicInfo($demographicData);
+            $normalizationService = app(DemographicDataNormalizationService::class);
+            $extractedData = $normalizationService->extractDemographicInfo($demographicData);
             Log::info('extractedData: '.json_encode($extractedData));
 
             // Delete existing demographic data to avoid duplicates
@@ -628,6 +633,59 @@ class ProcessPaperEvaluation implements ShouldQueue
             Log::error("Error saving demographic data for evaluation {$paperEvaluation->folio}: ".$e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * Propagate demographic data captured in Referencia V to related paper evaluations
+     * for the same person in the same organization/work center.
+     */
+    protected function propagateDemographicDataToRelatedEvaluations(PaperEvaluation $sourceEvaluation, array $demographicData): void
+    {
+        if ($sourceEvaluation->evaluation_type !== 'referencia_v') {
+            return;
+        }
+
+        $relatedEvaluations = PaperEvaluation::query()
+            ->where('source', 'paper')
+            ->where('organization_id', $sourceEvaluation->organization_id)
+            ->where('work_center_id', $sourceEvaluation->work_center_id)
+            ->where('personal_folio', $sourceEvaluation->personal_folio)
+            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii'])
+            ->where('id', '!=', $sourceEvaluation->id)
+            ->get();
+
+        foreach ($relatedEvaluations as $relatedEvaluation) {
+            $relatedEvaluation->update([
+                'demographic_data' => $demographicData,
+            ]);
+
+            $this->saveDemographicData($relatedEvaluation, $demographicData);
+        }
+    }
+
+    /**
+     * Ensure Ref I/III records get demographic data when Ref V already exists.
+     */
+    protected function syncDemographicDataFromRelatedReferenciaV(PaperEvaluation $paperEvaluation): void
+    {
+        $relatedReferenciaV = PaperEvaluation::query()
+            ->where('source', 'paper')
+            ->where('organization_id', $paperEvaluation->organization_id)
+            ->where('work_center_id', $paperEvaluation->work_center_id)
+            ->where('personal_folio', $paperEvaluation->personal_folio)
+            ->where('evaluation_type', 'referencia_v')
+            ->whereNotNull('demographic_data')
+            ->first();
+
+        if (! $relatedReferenciaV || ! is_array($relatedReferenciaV->demographic_data) || empty($relatedReferenciaV->demographic_data)) {
+            return;
+        }
+
+        $paperEvaluation->update([
+            'demographic_data' => $relatedReferenciaV->demographic_data,
+        ]);
+
+        $this->saveDemographicData($paperEvaluation, $relatedReferenciaV->demographic_data);
     }
 
     /**

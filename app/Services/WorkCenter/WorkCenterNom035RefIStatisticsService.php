@@ -610,7 +610,7 @@ class WorkCenterNom035RefIStatisticsService
                 $answer = $answers[$questionKey];
                 $distribution[$questionKey]['total_responses']++;
 
-                if ($answer === true || $answer === 'true' || $answer === 1 || $answer === '1' || strtolower($answer) === 'sí' || strtolower($answer) === 'si') {
+                if ($this->isAffirmativeAnswer($answer)) {
                     $distribution[$questionKey]['yes_count']++;
                 } else {
                     $distribution[$questionKey]['no_count']++;
@@ -660,13 +660,43 @@ class WorkCenterNom035RefIStatisticsService
 
     private function isAffirmativeAnswer(mixed $answer): bool
     {
-        if (is_string($answer)) {
-            $normalizedAnswer = mb_strtolower(trim($answer));
+        $normalizedValue = $this->extractAnswerValue($answer);
+
+        if ($normalizedValue === null) {
+            return false;
+        }
+
+        if (is_string($normalizedValue)) {
+            $normalizedAnswer = mb_strtolower(trim($normalizedValue));
 
             return in_array($normalizedAnswer, ['sí', 'si', 'true', '1'], true);
         }
 
-        return in_array($answer, [true, 1], true);
+        return in_array($normalizedValue, [true, 1], true);
+    }
+
+    private function extractAnswerValue(mixed $answer): mixed
+    {
+        if (! is_array($answer)) {
+            return $answer;
+        }
+
+        if (array_key_exists('value', $answer)) {
+            return $this->extractAnswerValue($answer['value']);
+        }
+
+        return null;
+    }
+
+    private function normalizeAnswerValue(mixed $value): mixed
+    {
+        $normalizedValue = $this->extractAnswerValue($value);
+
+        if (is_string($normalizedValue)) {
+            return trim($normalizedValue);
+        }
+
+        return $normalizedValue;
     }
 
     private function getRiskLevelFromYesCount(int $yesCount): string
@@ -718,13 +748,13 @@ class WorkCenterNom035RefIStatisticsService
             $key = (string) $rawKey;
 
             if (preg_match('/^pregunta_(\d+)$/', $key, $matches) === 1) {
-                $normalized['pregunta_'.((int) $matches[1])] = $value;
+                $normalized['pregunta_'.((int) $matches[1])] = $this->normalizeAnswerValue($value);
 
                 continue;
             }
 
             if (preg_match('/^(\d+)$/', $key, $matches) === 1) {
-                $normalized['pregunta_'.((int) $matches[1])] = $value;
+                $normalized['pregunta_'.((int) $matches[1])] = $this->normalizeAnswerValue($value);
 
                 continue;
             }
