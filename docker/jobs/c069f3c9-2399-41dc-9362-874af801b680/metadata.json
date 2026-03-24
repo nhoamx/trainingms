@@ -3,5 +3,7 @@
   "pdf_path": "/app/input/api/griii-8d40b7a04a09422f98bfb7aa882ec619.pdf",
   "instrument": "griii",
   "started_at": "2026-03-24T16:00:56.312152+00:00",
-  "status": "started"
+  "status": "finished",
+  "finished_at": "2026-03-24T16:01:56.643657+00:00",
+  "result_path": "/app/jobs/c069f3c9-2399-41dc-9362-874af801b680/result.json"
 }
