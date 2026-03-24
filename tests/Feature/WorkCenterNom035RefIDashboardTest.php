@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\User;
 use App\Models\WorkCenter;
+use App\Services\OrganizationReportCacheService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -275,5 +276,63 @@ class WorkCenterNom035RefIDashboardTest extends TestCase
             ->has('acontecimientoParticipants.participants', 1)
             ->has('acontecimientoParticipants.participants.0.created_at')
         );
+    }
+
+    public function test_ref_i_dashboard_filters_by_source_parameter(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'online',
+            'processing_status' => 'completed',
+        ]);
+
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'paper',
+            'processing_status' => 'completed',
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', ['workCenter' => $workCenter, 'source' => 'online']))
+            ->assertInertia(fn ($page) => $page
+                ->where('aggregatedStats.total_participants', 1)
+                ->where('selectedSource', 'online')
+            );
+
+        $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', ['workCenter' => $workCenter, 'source' => 'paper']))
+            ->assertInertia(fn ($page) => $page
+                ->where('aggregatedStats.total_participants', 1)
+                ->where('selectedSource', 'paper')
+            );
+
+        $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', $workCenter))
+            ->assertInertia(fn ($page) => $page
+                ->where('aggregatedStats.total_participants', 2)
+                ->where('selectedSource', null)
+            );
+    }
+
+    public function test_ref_i_cache_key_is_isolated_by_source(): void
+    {
+        /** @var OrganizationReportCacheService $cacheService */
+        $cacheService = app(OrganizationReportCacheService::class);
+
+        $keyAll = $cacheService->getWcNom035RefIStatsCacheKey('wc-1');
+        $keyOnline = $cacheService->getWcNom035RefIStatsCacheKey('wc-1', 'online');
+        $keyPaper = $cacheService->getWcNom035RefIStatsCacheKey('wc-1', 'paper');
+
+        $this->assertNotSame($keyAll, $keyOnline);
+        $this->assertNotSame($keyAll, $keyPaper);
+        $this->assertNotSame($keyOnline, $keyPaper);
     }
 }
