@@ -23,10 +23,17 @@ services:
       OCR_IDEMPOTENCY_TTL_SEC: 86400
       OCR_UPLOAD_DIR: /app/input/api
       OCR_JOBS_DIR: /app/jobs
+      OMP_NUM_THREADS: ${OCR_OMP_NUM_THREADS:-1}
+      OPENBLAS_NUM_THREADS: ${OCR_OPENBLAS_NUM_THREADS:-1}
+      MKL_NUM_THREADS: ${OCR_MKL_NUM_THREADS:-1}
+      NUMEXPR_NUM_THREADS: ${OCR_NUMEXPR_NUM_THREADS:-1}
     volumes:
       - .:/app
     ports:
       - "5000:5000"
+    mem_limit: ${OCR_API_MEM_LIMIT:-1g}
+    mem_reservation: ${OCR_API_MEM_RESERVATION:-512m}
+    cpus: ${OCR_API_CPUS:-1.0}
     depends_on:
       redis:
         condition: service_healthy
@@ -49,9 +56,19 @@ services:
       OCR_QUEUE_NAME: omr
       OCR_WORKER_NAME: ocr-worker-1
       OCR_WORKER_WITH_SCHEDULER: "true"
+      OCR_JOB_TIMEOUT_SEC: ${OCR_JOB_TIMEOUT_SEC:-1200}
+      OCR_MAX_RETRIES: ${OCR_MAX_RETRIES:-3}
+      OCR_RETRY_BACKOFF_SEC: ${OCR_RETRY_BACKOFF_SEC:-10,30,90}
       OCR_JOBS_DIR: /app/jobs
+      OMP_NUM_THREADS: ${OCR_OMP_NUM_THREADS:-1}
+      OPENBLAS_NUM_THREADS: ${OCR_OPENBLAS_NUM_THREADS:-1}
+      MKL_NUM_THREADS: ${OCR_MKL_NUM_THREADS:-1}
+      NUMEXPR_NUM_THREADS: ${OCR_NUMEXPR_NUM_THREADS:-1}
     volumes:
       - .:/app
+    mem_limit: ${OCR_WORKER_MEM_LIMIT:-4g}
+    mem_reservation: ${OCR_WORKER_MEM_RESERVATION:-2g}
+    cpus: ${OCR_WORKER_CPUS:-2.0}
     depends_on:
       redis:
         condition: service_healthy
