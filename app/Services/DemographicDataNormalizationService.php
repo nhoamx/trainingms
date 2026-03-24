@@ -19,6 +19,10 @@ class DemographicDataNormalizationService
             return $this->extractFromLikert($demographicData);
         }
 
+        if ($this->isOmrObjectStructure($demographicData)) {
+            return $this->extractFromOmrObjectStructure($demographicData);
+        }
+
         // Determine which structure we're dealing with for Referencia V
         if ($this->isNewStructure($demographicData)) {
             return $this->extractFromNewStructure($demographicData);
@@ -81,19 +85,81 @@ class DemographicDataNormalizationService
         $experiencia = $laboralData['experiencia'] ?? [];
 
         return [
-            'gender' => $demographicData['sexo'] ?? null,
-            'age' => $demographicData['edad'] ?? null,
-            'marital_status' => $demographicData['estado_civil'] ?? null,
-            'education_level' => $demographicData['nivel_estudios'] ?? null,
-            'position' => $laboralData['ocupacion_puesto'] ?? null,
-            'department' => $laboralData['departamento_seccion_area'] ?? null,
-            'position_type' => $laboralData['tipo_puesto'] ?? null,
-            'contract_type' => $laboralData['tipo_contratacion'] ?? null,
-            'personnel_type' => $laboralData['tipo_personal'] ?? null,
-            'work_schedule' => $laboralData['tipo_jornada'] ?? null,
-            'shift_rotation' => $laboralData['rotacion_turnos'] ?? null,
-            'time_in_current_position' => $experiencia['tiempo_puesto_actual'] ?? null,
-            'work_experience' => $experiencia['tiempo_experiencia_laboral'] ?? null,
+            'gender' => $this->normalizeValue($this->extractValue($demographicData['sexo'] ?? null), [
+                'masculino' => 'Masculino',
+                'femenino' => 'Femenino',
+            ]),
+            'age' => $this->extractAge($demographicData['edad'] ?? null),
+            'marital_status' => $this->normalizeValue($this->extractValue($demographicData['estado_civil'] ?? null), [
+                'soltero' => 'Soltero',
+                'casado' => 'Casado',
+                'union_libre' => 'Unión libre',
+                'divorciado' => 'Divorciado',
+                'viudo' => 'Viudo',
+            ]),
+            'education_level' => $this->extractEducationLevel($demographicData['nivel_estudios'] ?? null),
+            'position' => $this->extractValue($laboralData['ocupacion_puesto'] ?? null),
+            'department' => $this->extractValue($laboralData['departamento_seccion_area'] ?? null),
+            'position_type' => $this->normalizePosicionType($this->extractValue($laboralData['tipo_puesto'] ?? null)),
+            'contract_type' => $this->normalizeContractType($this->extractValue($laboralData['tipo_contratacion'] ?? null)),
+            'personnel_type' => $this->normalizePersonnelType($this->extractValue($laboralData['tipo_personal'] ?? null)),
+            'work_schedule' => $this->normalizeWorkSchedule($this->extractValue($laboralData['tipo_jornada'] ?? null)),
+            'shift_rotation' => $this->normalizeYesNo($this->extractValue($laboralData['rotacion_turnos'] ?? null)),
+            'time_in_current_position' => $this->normalizeExperience($this->extractValue($experiencia['tiempo_puesto_actual'] ?? null)),
+            'work_experience' => $this->normalizeExperience($this->extractValue($experiencia['tiempo_experiencia_laboral'] ?? null)),
+        ];
+    }
+
+    public function isOmrObjectStructure(array $data): bool
+    {
+        return array_key_exists('gender', $data)
+            || array_key_exists('marital_status', $data)
+            || array_key_exists('work_schedule', $data)
+            || array_key_exists('position_type', $data)
+            || array_key_exists('contract_type', $data)
+            || array_key_exists('personnel_type', $data)
+            || array_key_exists('education_level', $data)
+            || array_key_exists('time_in_current_position', $data)
+            || array_key_exists('work_experience', $data)
+            || array_key_exists('age', $data);
+    }
+
+    public function extractFromOmrObjectStructure(array $demographicData): array
+    {
+        $position = $this->extractValue($demographicData['position'] ?? ($demographicData['ocupacion_puesto'] ?? null));
+        $department = $this->extractValue($demographicData['department'] ?? ($demographicData['departamento_seccion_area'] ?? ($demographicData['area'] ?? null)));
+        $positionType = $this->normalizePosicionType($this->extractValue($demographicData['position_type'] ?? ($demographicData['tipo_puesto'] ?? null)));
+
+        if ($position === null) {
+            $position = $positionType;
+        }
+
+        return [
+            'gender' => $this->normalizeValue($this->extractValue($demographicData['gender'] ?? null), [
+                'masculino' => 'Masculino',
+                'femenino' => 'Femenino',
+                'male' => 'Masculino',
+                'female' => 'Femenino',
+            ]),
+            'age' => $this->extractAge($demographicData['age'] ?? null),
+            'marital_status' => $this->normalizeValue($this->extractValue($demographicData['marital_status'] ?? null), [
+                'soltero' => 'Soltero',
+                'casado' => 'Casado',
+                'union libre' => 'Unión libre',
+                'union_libre' => 'Unión libre',
+                'divorciado' => 'Divorciado',
+                'viudo' => 'Viudo',
+            ]),
+            'education_level' => $this->extractEducationLevel($demographicData['education_level'] ?? null),
+            'position' => $position,
+            'department' => $department,
+            'position_type' => $positionType,
+            'contract_type' => $this->normalizeContractType($this->extractValue($demographicData['contract_type'] ?? ($demographicData['tipo_contratacion'] ?? null))),
+            'personnel_type' => $this->normalizePersonnelType($this->extractValue($demographicData['personnel_type'] ?? ($demographicData['tipo_personal'] ?? null))),
+            'work_schedule' => $this->normalizeWorkSchedule($this->extractValue($demographicData['work_schedule'] ?? ($demographicData['tipo_jornada'] ?? null))),
+            'shift_rotation' => $this->normalizeYesNo($this->extractValue($demographicData['shift_rotation'] ?? ($demographicData['rotacion_turnos'] ?? null))),
+            'time_in_current_position' => $this->normalizeExperience($this->extractValue($demographicData['time_in_current_position'] ?? ($demographicData['tiempo_puesto_actual'] ?? null))),
+            'work_experience' => $this->normalizeExperience($this->extractValue($demographicData['work_experience'] ?? ($demographicData['tiempo_experiencia_laboral'] ?? null))),
         ];
     }
 
@@ -107,25 +173,17 @@ class DemographicDataNormalizationService
     {
         // Build age from decenas/unidades if available
         $age = null;
-        if (isset($demographicData['edad']) && is_array($demographicData['edad'])) {
-            $decenas = $demographicData['edad']['decenas'] ?? 0;
-            $unidades = $demographicData['edad']['unidades'] ?? 0;
-            $ageValue = ($decenas * 10) + $unidades;
-            // Convert numeric age to range format
-            $age = $this->convertAgeToRange($ageValue);
-        } elseif (is_string($demographicData['edad'] ?? null)) {
-            $age = $demographicData['edad'];
-        }
+        $age = $this->extractAge($demographicData['edad'] ?? null);
 
         // Extract from fila1 if value is array
-        $position = $this->extractFromObject($demographicData['ocupacion_puesto'] ?? null);
-        $department = $this->extractFromObject($demographicData['departamento_seccion_area'] ?? null);
+        $position = $this->extractFromObject($demographicData['ocupacion_puesto'] ?? ($demographicData['position'] ?? null));
+        $department = $this->extractFromObject($demographicData['departamento_seccion_area'] ?? ($demographicData['department'] ?? null));
 
         // Normalize field values (convert underscores to proper format)
-        $sexo = $demographicData['sexo'] ?? null;
+        $sexo = $this->extractValue($demographicData['sexo'] ?? ($demographicData['gender'] ?? null));
         $sexo = $this->normalizeValue($sexo, ['masculino' => 'Masculino', 'femenino' => 'Femenino']);
 
-        $estadoCivil = $demographicData['estado_civil'] ?? null;
+        $estadoCivil = $this->extractValue($demographicData['estado_civil'] ?? ($demographicData['marital_status'] ?? null));
         $estadoCivil = $this->normalizeValue($estadoCivil, [
             'soltero' => 'Soltero',
             'casado' => 'Casado',
@@ -134,7 +192,7 @@ class DemographicDataNormalizationService
             'viudo' => 'Viudo',
         ]);
 
-        $nivelEstudios = $this->extractEducationLevel($demographicData['nivel_estudios'] ?? null);
+        $nivelEstudios = $this->extractEducationLevel($demographicData['nivel_estudios'] ?? ($demographicData['education_level'] ?? null));
 
         return [
             'gender' => $sexo,
@@ -143,14 +201,41 @@ class DemographicDataNormalizationService
             'education_level' => $nivelEstudios,
             'position' => $position,
             'department' => $department,
-            'position_type' => $this->normalizePosicionType($demographicData['tipo_puesto'] ?? null),
-            'contract_type' => $this->normalizeContractType($demographicData['tipo_contratacion'] ?? null),
-            'personnel_type' => $this->normalizePersonnelType($demographicData['tipo_personal'] ?? null),
-            'work_schedule' => $this->normalizeWorkSchedule($demographicData['tipo_jornada'] ?? null),
-            'shift_rotation' => $this->normalizeYesNo($demographicData['rotacion_turnos'] ?? null),
-            'time_in_current_position' => $this->normalizeExperience($demographicData['tiempo_puesto_actual'] ?? null),
-            'work_experience' => $this->normalizeExperience($demographicData['tiempo_experiencia_laboral'] ?? null),
+            'position_type' => $this->normalizePosicionType($this->extractValue($demographicData['tipo_puesto'] ?? ($demographicData['position_type'] ?? null))),
+            'contract_type' => $this->normalizeContractType($this->extractValue($demographicData['tipo_contratacion'] ?? ($demographicData['contract_type'] ?? null))),
+            'personnel_type' => $this->normalizePersonnelType($this->extractValue($demographicData['tipo_personal'] ?? ($demographicData['personnel_type'] ?? null))),
+            'work_schedule' => $this->normalizeWorkSchedule($this->extractValue($demographicData['tipo_jornada'] ?? ($demographicData['work_schedule'] ?? null))),
+            'shift_rotation' => $this->normalizeYesNo($this->extractValue($demographicData['rotacion_turnos'] ?? ($demographicData['shift_rotation'] ?? null))),
+            'time_in_current_position' => $this->normalizeExperience($this->extractValue($demographicData['tiempo_puesto_actual'] ?? ($demographicData['time_in_current_position'] ?? null))),
+            'work_experience' => $this->normalizeExperience($this->extractValue($demographicData['tiempo_experiencia_laboral'] ?? ($demographicData['work_experience'] ?? null))),
         ];
+    }
+
+    /**
+     * @param  mixed  $value
+     */
+    public function extractAge($value): ?string
+    {
+        if (is_array($value) && array_key_exists('value', $value)) {
+            $numericAge = is_numeric($value['value']) ? (int) $value['value'] : null;
+
+            return $numericAge !== null ? $this->convertAgeToRange($numericAge) : $this->extractValue($value['value']);
+        }
+
+        if (is_array($value)) {
+            $tens = $value['decenas'] ?? $value['tens'] ?? null;
+            $units = $value['unidades'] ?? $value['units'] ?? null;
+
+            if (is_numeric($tens) && is_numeric($units)) {
+                return $this->convertAgeToRange((((int) $tens) * 10) + (int) $units);
+            }
+        }
+
+        if (is_numeric($value)) {
+            return $this->convertAgeToRange((int) $value);
+        }
+
+        return is_string($value) ? $value : null;
     }
 
     /**
@@ -161,11 +246,35 @@ class DemographicDataNormalizationService
      */
     public function extractFromObject($value): ?string
     {
-        if (is_array($value) && isset($value['fila1'])) {
-            return $value['fila1'] ?: null;
+        return $this->extractValue($value);
+    }
+
+    /**
+     * @param  mixed  $value
+     */
+    public function extractValue($value): ?string
+    {
+        if (is_array($value)) {
+            if (array_key_exists('value', $value)) {
+                return $this->extractValue($value['value']);
+            }
+
+            if (array_key_exists('fila1', $value)) {
+                return $this->extractValue($value['fila1']);
+            }
+
+            return null;
         }
 
-        return is_string($value) ? $value : null;
+        if (is_bool($value)) {
+            return $value ? 'Sí' : 'No';
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+
+        return is_string($value) ? trim($value) : null;
     }
 
     /**
@@ -457,8 +566,8 @@ class DemographicDataNormalizationService
         }
 
         return match (strtolower($value)) {
-            'si', 'yes', 'true' => 'Sí',
-            'no', 'false' => 'No',
+            'si', 'sí', 'yes', 'true', '1' => 'Sí',
+            'no', 'false', '0' => 'No',
             default => $value,
         };
     }
@@ -497,6 +606,10 @@ class DemographicDataNormalizationService
      */
     public function extractEducationLevel($value): ?string
     {
+        if (is_array($value) && array_key_exists('value', $value) && is_string($value['value'])) {
+            return $value['value'];
+        }
+
         if (is_array($value)) {
             // Old OCR structure with nested education
             foreach ($value as $key => $item) {

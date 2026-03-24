@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DemographicData;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
@@ -462,6 +463,157 @@ class ProcessPaperEvaluationTest extends TestCase
             '5' => 'SI',
             '6' => 'NO',
         ], $evaluation->citsats_s1);
+
+        @unlink($tmpFile);
+    }
+
+    public function test_job_propagates_referencia_v_demographics_to_related_ref_i_record(): void
+    {
+        $organization = Organization::factory()->create([
+            'folio_organization' => '95',
+        ]);
+
+        WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+            'code' => '0002',
+            'name' => 'Centro 02',
+        ]);
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test_').'.pdf';
+        file_put_contents($tmpFile, '%PDF-1.4 fake content');
+
+        \Illuminate\Support\Facades\Http::fake([
+            config('services.ocr.url').'/process' => \Illuminate\Support\Facades\Http::response([
+                'results' => [
+                    [
+                        'folio' => '01950200001',
+                        'answers' => [
+                            '1' => ['value' => 'SI'],
+                            '2' => ['value' => 'NO'],
+                        ],
+                        'marked_image_base64' => null,
+                    ],
+                    [
+                        'folio' => '03950200001',
+                        'answers' => [
+                            'sexo' => 'masculino',
+                            'edad' => ['decenas' => 3, 'unidades' => 0],
+                            'estado_civil' => 'soltero',
+                            'nivel_estudios' => 'licenciatura',
+                            'ocupacion_puesto' => 'Analista',
+                            'departamento_seccion_area' => 'Operaciones',
+                            'tipo_puesto' => 'operativo',
+                            'tipo_contratacion' => 'tiempo_indeterminado',
+                            'tipo_personal' => 'sindicalizado',
+                            'tipo_jornada' => 'diurno',
+                            'rotacion_turnos' => 'no',
+                            'tiempo_puesto_actual' => 'entre_6_meses_y_1_anio',
+                            'tiempo_experiencia_laboral' => 'entre_1_y_4_anios',
+                        ],
+                        'marked_image_base64' => null,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        \Illuminate\Support\Facades\Event::fake();
+
+        $job = new \App\Jobs\ProcessPaperEvaluation(
+            $tmpFile,
+            null,
+            null,
+            1,
+            1,
+            'test.pdf'
+        );
+
+        $job->handle();
+
+        $refI = PaperEvaluation::query()
+            ->where('folio', '01950200001')
+            ->where('source', 'paper')
+            ->firstOrFail();
+
+        $this->assertNotNull($refI->fresh()->demographic_data);
+        $this->assertNotNull($refI->fresh()->demographicData);
+        $this->assertInstanceOf(DemographicData::class, $refI->fresh()->demographicData);
+        $this->assertEquals('Masculino', $refI->fresh()->demographicData->gender);
+        $this->assertEquals('Operaciones', $refI->fresh()->demographicData->department);
+
+        @unlink($tmpFile);
+    }
+
+    public function test_job_syncs_demographics_for_ref_i_when_referencia_v_already_exists(): void
+    {
+        $organization = Organization::factory()->create([
+            'folio_organization' => '95',
+        ]);
+
+        WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+            'code' => '0002',
+            'name' => 'Centro 02',
+        ]);
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test_').'.pdf';
+        file_put_contents($tmpFile, '%PDF-1.4 fake content');
+
+        \Illuminate\Support\Facades\Http::fake([
+            config('services.ocr.url').'/process' => \Illuminate\Support\Facades\Http::response([
+                'results' => [
+                    [
+                        'folio' => '03950200002',
+                        'answers' => [
+                            'sexo' => 'femenino',
+                            'edad' => ['decenas' => 2, 'unidades' => 8],
+                            'estado_civil' => 'casado',
+                            'nivel_estudios' => 'licenciatura',
+                            'ocupacion_puesto' => 'Coordinador',
+                            'departamento_seccion_area' => 'Administracion',
+                            'tipo_puesto' => 'supervision',
+                            'tipo_contratacion' => 'tiempo_indeterminado',
+                            'tipo_personal' => 'confianza',
+                            'tipo_jornada' => 'diurno',
+                            'rotacion_turnos' => 'no',
+                            'tiempo_puesto_actual' => 'entre_1_y_4_anios',
+                            'tiempo_experiencia_laboral' => 'entre_5_y_10_anios',
+                        ],
+                        'marked_image_base64' => null,
+                    ],
+                    [
+                        'folio' => '01950200002',
+                        'answers' => [
+                            '1' => ['value' => 'NO'],
+                            '2' => ['value' => 'NO'],
+                        ],
+                        'marked_image_base64' => null,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        \Illuminate\Support\Facades\Event::fake();
+
+        $job = new \App\Jobs\ProcessPaperEvaluation(
+            $tmpFile,
+            null,
+            null,
+            1,
+            1,
+            'test.pdf'
+        );
+
+        $job->handle();
+
+        $refI = PaperEvaluation::query()
+            ->where('folio', '01950200002')
+            ->where('source', 'paper')
+            ->firstOrFail();
+
+        $this->assertNotNull($refI->fresh()->demographic_data);
+        $this->assertNotNull($refI->fresh()->demographicData);
+        $this->assertEquals('Femenino', $refI->fresh()->demographicData->gender);
+        $this->assertEquals('Administracion', $refI->fresh()->demographicData->department);
 
         @unlink($tmpFile);
     }

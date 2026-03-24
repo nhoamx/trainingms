@@ -72,6 +72,10 @@ class DemographicDataObserver
             if ($isBatchMode) {
                 Log::debug("DemographicData {$event}: Skipped warming for org {$orgId} (batch mode)");
             }
+
+            if ($paperEvaluation->work_center_id) {
+                $this->cacheService->forgetWorkCenterCaches($paperEvaluation->work_center_id);
+            }
         }
     }
 }
