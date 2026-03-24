@@ -8,6 +8,7 @@ use App\Models\WorkCenter;
 use App\Services\OrganizationReportCacheService;
 use App\Services\WorkCenter\WorkCenterNom035RefIStatisticsService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,32 +25,33 @@ class WorkCenterNom035RefIDashboardController extends Controller
     /**
      * Muestra el dashboard NOM-035 Referencia I (ATS) para un centro de trabajo
      */
-    public function show(WorkCenter $workCenter): Response
+    public function show(Request $request, WorkCenter $workCenter): Response
     {
         $this->authorize('viewWorkCenterDashboard', $workCenter);
 
         $workCenter->load('organization');
+        $source = $this->resolveSourceFilter($request);
 
         $dashboardData = $this->buildDashboardData($workCenter);
 
         // Obtener estadísticas agregadas con cache
         $aggregatedStats = Cache::rememberForever(
-            $this->cacheService->getWcNom035RefIStatsCacheKey($workCenter->id),
-            fn () => $this->statisticsService->getAggregatedStats($workCenter)
+            $this->cacheService->getWcNom035RefIStatsCacheKey($workCenter->id, $source),
+            fn () => $this->statisticsService->getAggregatedStats($workCenter, $source)
         );
 
         // Obtener lista de participantes (no cached, necesita ser fresca)
-        $participants = $this->statisticsService->getParticipantsList($workCenter);
+        $participants = $this->statisticsService->getParticipantsList($workCenter, $source);
 
         // Obtener resumen ejecutivo
-        $executiveSummary = $this->statisticsService->getExecutiveSummary($workCenter);
+        $executiveSummary = $this->statisticsService->getExecutiveSummary($workCenter, $source);
 
-        $analysisData = $this->statisticsService->getStagesAnalysisData($workCenter);
-        $questionStatistics = $this->statisticsService->getQuestionStatistics($workCenter);
-        $blockStatistics = $this->statisticsService->getBlockStatistics($workCenter);
-        $atsPanoramaStatistics = $this->statisticsService->getAtsPanoramaStatistics($workCenter);
-        $acontecimientoParticipants = $this->statisticsService->getAcontecimientoParticipants($workCenter);
-        $clinicalAssessmentParticipants = $this->statisticsService->getClinicalAssessmentParticipants($workCenter);
+        $analysisData = $this->statisticsService->getStagesAnalysisData($workCenter, $source);
+        $questionStatistics = $this->statisticsService->getQuestionStatistics($workCenter, $source);
+        $blockStatistics = $this->statisticsService->getBlockStatistics($workCenter, $source);
+        $atsPanoramaStatistics = $this->statisticsService->getAtsPanoramaStatistics($workCenter, $source);
+        $acontecimientoParticipants = $this->statisticsService->getAcontecimientoParticipants($workCenter, $source);
+        $clinicalAssessmentParticipants = $this->statisticsService->getClinicalAssessmentParticipants($workCenter, $source);
 
         $analysisBlocks = OrganizationAnalysisBlock::query()
             ->where('organization_id', $workCenter->organization_id)
@@ -69,6 +71,7 @@ class WorkCenterNom035RefIDashboardController extends Controller
 
         return Inertia::render('WorkCenters/Nom035RefIDashboard', [
             'title' => 'NOM-035 Referencia I (ATS) - '.$workCenter->name,
+            'selectedSource' => $source,
             'dashboardData' => $dashboardData,
             'aggregatedStats' => $aggregatedStats,
             'participants' => $participants->values()->all(),
@@ -103,6 +106,17 @@ class WorkCenterNom035RefIDashboardController extends Controller
                 ->values()
                 ->all(),
         ]);
+    }
+
+    private function resolveSourceFilter(Request $request): ?string
+    {
+        $source = $request->query('source');
+
+        if (! is_string($source)) {
+            return null;
+        }
+
+        return in_array($source, ['online', 'paper'], true) ? $source : null;
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Services\WorkCenter;
 
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
@@ -18,12 +19,9 @@ class WorkCenterNom035RefIStatisticsService
     /**
      * Build analysis payload for stages (Analizar/Participantes) with demographic filters.
      */
-    public function getStagesAnalysisData(WorkCenter $workCenter): array
+    public function getStagesAnalysisData(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::query()
-            ->where('work_center_id', $workCenter->id)
-            ->where('evaluation_type', 'referencia_i')
-            ->where('processing_status', 'completed')
+        $evaluations = $this->baseRefIQuery($workCenter, $source)
             ->whereNotNull('referencia_i_answers')
             ->with(['demographicData:id,paper_evaluation_id,gender,position,department,work_schedule'])
             ->select(['id', 'folio', 'personal_folio', 'evaluee_name', 'referencia_i_answers'])
@@ -91,12 +89,9 @@ class WorkCenterNom035RefIStatisticsService
     /**
      * Build question-level stats for Identificar > Preguntas (Ref I).
      */
-    public function getQuestionStatistics(WorkCenter $workCenter): array
+    public function getQuestionStatistics(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::query()
-            ->where('work_center_id', $workCenter->id)
-            ->where('evaluation_type', 'referencia_i')
-            ->where('processing_status', 'completed')
+        $evaluations = $this->baseRefIQuery($workCenter, $source)
             ->whereNotNull('referencia_i_answers')
             ->get(['referencia_i_answers']);
 
@@ -146,12 +141,9 @@ class WorkCenterNom035RefIStatisticsService
     /**
      * Build block-level stats for Identificar > Bloques (Ref I).
      */
-    public function getBlockStatistics(WorkCenter $workCenter): array
+    public function getBlockStatistics(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::query()
-            ->where('work_center_id', $workCenter->id)
-            ->where('evaluation_type', 'referencia_i')
-            ->where('processing_status', 'completed')
+        $evaluations = $this->baseRefIQuery($workCenter, $source)
             ->whereNotNull('referencia_i_answers')
             ->get(['referencia_i_answers']);
 
@@ -219,12 +211,9 @@ class WorkCenterNom035RefIStatisticsService
     /**
      * Build ATS panorama stats based on citsats_s1 answers (questions 1-6).
      */
-    public function getAtsPanoramaStatistics(WorkCenter $workCenter): array
+    public function getAtsPanoramaStatistics(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::query()
-            ->where('work_center_id', $workCenter->id)
-            ->where('evaluation_type', 'referencia_i')
-            ->where('processing_status', 'completed')
+        $evaluations = $this->baseRefIQuery($workCenter, $source)
             ->whereNotNull('citsats_s1')
             ->get(['citsats_s1']);
 
@@ -296,12 +285,9 @@ class WorkCenterNom035RefIStatisticsService
     /**
      * Build participant-level data for traumatic events table in panorama.
      */
-    public function getAcontecimientoParticipants(WorkCenter $workCenter): array
+    public function getAcontecimientoParticipants(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::query()
-            ->where('work_center_id', $workCenter->id)
-            ->where('evaluation_type', 'referencia_i')
-            ->where('processing_status', 'completed')
+        $evaluations = $this->baseRefIQuery($workCenter, $source)
             ->whereNotNull('citsats_s1')
             ->with([
                 'demographicData:id,paper_evaluation_id,gender,age,marital_status,education_level,position,department,position_type,contract_type,personnel_type,work_schedule,shift_rotation,time_in_current_position,work_experience',
@@ -362,12 +348,9 @@ class WorkCenterNom035RefIStatisticsService
     /**
      * Build participant-level data for sections II, III and IV with clinical assessment criteria.
      */
-    public function getClinicalAssessmentParticipants(WorkCenter $workCenter): array
+    public function getClinicalAssessmentParticipants(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::query()
-            ->where('work_center_id', $workCenter->id)
-            ->where('evaluation_type', 'referencia_i')
-            ->where('processing_status', 'completed')
+        $evaluations = $this->baseRefIQuery($workCenter, $source)
             ->whereNotNull('referencia_i_answers')
             ->with([
                 'demographicData:id,paper_evaluation_id,gender,age,marital_status,education_level,position,department,position_type,contract_type,personnel_type,work_schedule,shift_rotation,time_in_current_position,work_experience',
@@ -486,11 +469,9 @@ class WorkCenterNom035RefIStatisticsService
     /**
      * Obtener lista de participantes que contestaron Referencia I
      */
-    public function getParticipantsList(WorkCenter $workCenter): Collection
+    public function getParticipantsList(WorkCenter $workCenter, ?string $source = null): Collection
     {
-        return PaperEvaluation::where('work_center_id', $workCenter->id)
-            ->where('evaluation_type', 'referencia_i')
-            ->where('processing_status', 'completed')
+        return $this->baseRefIQuery($workCenter, $source)
             ->whereNotNull('referencia_i_answers')
             ->with(['demographicData', 'comments'])
             ->get()
@@ -523,11 +504,9 @@ class WorkCenterNom035RefIStatisticsService
     /**
      * Obtener estadísticas agregadas de Referencia I
      */
-    public function getAggregatedStats(WorkCenter $workCenter): array
+    public function getAggregatedStats(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
-            ->where('evaluation_type', 'referencia_i')
-            ->where('processing_status', 'completed')
+        $evaluations = $this->baseRefIQuery($workCenter, $source)
             ->whereNotNull('referencia_i_answers')
             ->with('demographicData')
             ->get();
@@ -652,11 +631,9 @@ class WorkCenterNom035RefIStatisticsService
     /**
      * Obtener resumen ejecutivo de Ref I
      */
-    public function getExecutiveSummary(WorkCenter $workCenter): array
+    public function getExecutiveSummary(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
-            ->where('evaluation_type', 'referencia_i')
-            ->where('processing_status', 'completed')
+        $evaluations = $this->baseRefIQuery($workCenter, $source)
             ->whereNotNull('referencia_i_answers')
             ->count();
 
@@ -711,6 +688,20 @@ class WorkCenterNom035RefIStatisticsService
         }
 
         return 'muy_alto';
+    }
+
+    private function baseRefIQuery(WorkCenter $workCenter, ?string $source = null): Builder
+    {
+        $query = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('evaluation_type', 'referencia_i')
+            ->where('processing_status', 'completed');
+
+        if (in_array($source, ['online', 'paper'], true)) {
+            $query->where('source', $source);
+        }
+
+        return $query;
     }
 
     /**

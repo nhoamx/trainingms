@@ -325,9 +325,11 @@ class OrganizationReportCacheService
     /**
      * Get the cache key for WorkCenter NOM-035 Referencia I (ATS) statistics
      */
-    public function getWcNom035RefIStatsCacheKey(int|string $workCenterId): string
+    public function getWcNom035RefIStatsCacheKey(int|string $workCenterId, ?string $source = null): string
     {
-        return self::WC_PREFIX."_nom035_ref_i_stats_{$workCenterId}";
+        $sourceSegment = in_array($source, ['online', 'paper'], true) ? $source : 'all';
+
+        return self::WC_PREFIX."_nom035_ref_i_stats_{$workCenterId}_{$sourceSegment}";
     }
 
     /**
@@ -344,5 +346,7 @@ class OrganizationReportCacheService
         Cache::forget($this->getWcNom035ViolenceCacheKey($workCenterId));
         Cache::forget($this->getWcNom035GeneralReportCacheKey($workCenterId));
         Cache::forget($this->getWcNom035RefIStatsCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035RefIStatsCacheKey($workCenterId, 'online'));
+        Cache::forget($this->getWcNom035RefIStatsCacheKey($workCenterId, 'paper'));
     }
 }
