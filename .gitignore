@@ -26,6 +26,8 @@ yarn-error.log
 /docker/*/output_tracking/*
 /docker/reprocess_input/*
 /docker/reprocess_output/*
+/docker/jobs/*
+!/docker/jobs/.gitkeep
 /docker/.idea
 /docker/log.log
 /docker/reprocessing.log
