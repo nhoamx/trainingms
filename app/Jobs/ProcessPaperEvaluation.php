@@ -275,7 +275,7 @@ class ProcessPaperEvaluation implements ShouldQueue
                         'questions' => $rawData['management_questions'] ?? null,
                     ],
                 ];
-                $structuredData['citsats_s1'] = $rawData['citsats_s1'] ?? null;
+                $structuredData['citsats_s1'] = $rawData['citsats_s1'] ?? $this->extractCitsatsFromFlatRawData($rawData);
                 break;
 
             case 'referencia_v':
@@ -319,6 +319,53 @@ class ProcessPaperEvaluation implements ShouldQueue
         }
 
         return $structuredData;
+    }
+
+    /**
+     * Extract ATS answers (6 items) from flat OMR payloads where answers are keyed numerically.
+     *
+     * @param  array<string, mixed>  $rawData
+     * @return array<string, mixed>|null
+     */
+    private function extractCitsatsFromFlatRawData(array $rawData): ?array
+    {
+        $atsEntries = [];
+
+        foreach ($rawData as $rawKey => $rawAnswer) {
+            if (! is_array($rawAnswer)) {
+                continue;
+            }
+
+            if (($rawAnswer['mapping_section'] ?? null) !== 'ats') {
+                continue;
+            }
+
+            if (! is_numeric((string) $rawKey)) {
+                continue;
+            }
+
+            $atsEntries[(int) $rawKey] = $rawAnswer;
+        }
+
+        if ($atsEntries === []) {
+            return null;
+        }
+
+        ksort($atsEntries);
+
+        $citsats = [];
+        $index = 1;
+
+        foreach ($atsEntries as $entry) {
+            if ($index > 6) {
+                break;
+            }
+
+            $citsats[(string) $index] = $entry['value'] ?? null;
+            $index++;
+        }
+
+        return $citsats === [] ? null : $citsats;
     }
 
     /**

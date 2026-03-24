@@ -122,4 +122,60 @@ class BackfillPaperRefIPairsCommandTest extends TestCase
         $refIII->refresh();
         $this->assertSame('01010900023', $refIII->related_evaluation_folio);
     }
+
+    public function test_command_includes_flat_raw_data_ats_when_citsats_is_null(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
+        PaperEvaluation::factory()->referenciaIII()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'folio' => '02010900024',
+            'evaluation_type' => 'referencia_iii',
+            'evaluation_type_code' => '02',
+            'organization_code' => '01',
+            'work_center_code' => '09',
+            'personal_folio' => '00024',
+            'processing_status' => 'completed',
+            'source' => 'paper',
+            'citsats_s1' => null,
+            'raw_data' => [
+                '75' => ['mapping_section' => 'ats', 'value' => 'NO'],
+                '76' => ['mapping_section' => 'ats', 'value' => 'NO'],
+                '77' => ['mapping_section' => 'ats', 'value' => 'NO'],
+                '78' => ['mapping_section' => 'ats', 'value' => 'NO'],
+                '79' => ['mapping_section' => 'ats', 'value' => 'NO'],
+                '80' => ['mapping_section' => 'ats', 'value' => 'NO'],
+            ],
+        ]);
+
+        $this->artisan('evaluations:backfill-paper-ref-i-pairs', [
+            '--work-center' => $workCenter->id,
+            '--force' => true,
+        ])
+            ->expectsOutput('Found 1 paper Referencia III records to inspect.')
+            ->expectsOutput('Created 1 missing Referencia I records.')
+            ->assertSuccessful();
+
+        $refI = PaperEvaluation::query()
+            ->where('organization_id', $organization->id)
+            ->where('work_center_id', $workCenter->id)
+            ->where('evaluation_type', 'referencia_i')
+            ->where('source', 'paper')
+            ->where('personal_folio', '00024')
+            ->first();
+
+        $this->assertNotNull($refI);
+        $this->assertEquals([
+            '1' => 'NO',
+            '2' => 'NO',
+            '3' => 'NO',
+            '4' => 'NO',
+            '5' => 'NO',
+            '6' => 'NO',
+        ], $refI->citsats_s1);
+    }
 }
