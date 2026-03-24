@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\ProcessPaperEvaluation;
+use App\Jobs\ProcessPaperEvaluationAsync;
 use App\Models\Evaluation;
 use App\Models\Organization;
 use Illuminate\Http\Request;
@@ -33,21 +34,38 @@ class EvaluationController extends Controller
     {
         return Inertia::render('Evaluations/LoadEvaluation', [
             'title' => 'Evaluaciones',
+            'maxBatchFiles' => (int) config('services.ocr.max_batch_files', 5),
+        ]);
+    }
+
+    public function loadOmrCenter()
+    {
+        return Inertia::render('Evaluations/OmrUploadCenter', [
+            'title' => 'Centro OMR',
+            'maxBatchFiles' => (int) config('services.ocr.max_batch_files', 5),
         ]);
     }
 
     public function store(Request $request)
     {
-        // 1. Validar que se envíen archivos PDF (máximo 20 para evitar sobrecarga)
+        $maxBatchFiles = (int) config('services.ocr.max_batch_files', 5);
+
+        // 1. Validar que se envíen archivos PDF (máximo configurable para evitar sobrecarga)
         $validated = $request->validate([
-            'files' => 'required|array|min:1|max:20',
+            'files' => 'required|array|min:1|max:'.$maxBatchFiles,
             'files.*' => 'file|mimes:pdf|max:20480', // 20MB max por archivo
+            'instrument' => 'nullable|string|in:gri,griii,grv',
         ]);
+
+        $instrument = $validated['instrument'] ?? null;
 
         $userId = optional($request->user())->id;
         $batchId = Str::uuid()->toString();
         $uploadedFiles = $request->file('files');
         $totalFiles = count($uploadedFiles);
+        $jobClass = config('services.ocr.async_enabled', false)
+            ? ProcessPaperEvaluationAsync::class
+            : ProcessPaperEvaluation::class;
 
         // 2. Guardar todos los archivos y crear array de jobs
         $jobs = [];
@@ -68,13 +86,14 @@ class EvaluationController extends Controller
             $fullPath = storage_path('app/public/'.$path);
 
             // Crear job con metadata del lote
-            $jobs[] = new ProcessPaperEvaluation(
+            $jobs[] = new $jobClass(
                 $fullPath,
                 $userId,
                 $batchId,
                 $index + 1,
                 $totalFiles,
-                $originalName
+                $originalName,
+                $instrument
             );
         }
 

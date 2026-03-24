@@ -440,6 +440,7 @@ Route::middleware(['auth'])->group(function () {
             ->prefix('/evaluaciones')
             ->group(function () {
                 Route::get('/', 'index')->name('evaluations.index');
+                Route::get('/centro-omr', 'loadOmrCenter')->name('evaluations.omr-center');
                 Route::get('/cargar-evaluacion', 'loadEvaluation')->name('evaluations.load');
                 Route::post('/store', 'store')->name('evaluations.store');
                 Route::get('/{evaluation}', 'show')->name('evaluations.show');

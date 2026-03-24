@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
+use App\Models\WorkCenter;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -111,6 +112,45 @@ class ProcessPaperEvaluationTest extends TestCase
 
         $this->assertCount(1, $paperEvaluations);
         $this->assertCount(1, $onlineEvaluations);
+    }
+
+    public function test_same_folio_can_exist_across_different_sources(): void
+    {
+        PaperEvaluation::factory()->create([
+            'folio' => '02010900012',
+            'source' => 'online',
+            'evaluation_type' => 'referencia_iii',
+            'evaluation_type_code' => '02',
+            'organization_code' => '01',
+            'work_center_code' => '09',
+            'personal_folio' => '00012',
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'folio' => '02010900012',
+            'source' => 'paper',
+            'evaluation_type' => 'referencia_iii',
+            'evaluation_type_code' => '02',
+            'organization_code' => '01',
+            'work_center_code' => '09',
+            'personal_folio' => '00012',
+        ]);
+
+        $this->assertSame(2, PaperEvaluation::query()->where('folio', '02010900012')->count());
+        $this->assertSame(1, PaperEvaluation::query()->where('folio', '02010900012')->where('source', 'online')->count());
+        $this->assertSame(1, PaperEvaluation::query()->where('folio', '02010900012')->where('source', 'paper')->count());
+    }
+
+    public function test_is_folio_available_is_checked_per_source(): void
+    {
+        $evaluation = PaperEvaluation::factory()->create([
+            'folio' => '02010900013',
+            'source' => 'online',
+        ]);
+
+        $this->assertFalse(PaperEvaluation::isFolioAvailable('02010900013', 'online'));
+        $this->assertTrue(PaperEvaluation::isFolioAvailable('02010900013', 'paper'));
+        $this->assertTrue(PaperEvaluation::isFolioAvailable('02010900013', 'online', $evaluation->id));
     }
 
     public function test_can_filter_by_status(): void
@@ -230,6 +270,58 @@ class ProcessPaperEvaluationTest extends TestCase
         $this->assertDatabaseHas('paper_evaluations', [
             'folio' => '019530001',
             'evaluation_type' => 'referencia_i',
+            'processing_status' => 'completed',
+        ]);
+
+        @unlink($tmpFile);
+    }
+
+    public function test_job_assigns_work_center_from_folio_code_when_available(): void
+    {
+        $organization = Organization::factory()->create([
+            'folio_organization' => '95',
+        ]);
+
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+            'code' => '0002',
+            'name' => 'Centro 02',
+        ]);
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test_').'.pdf';
+        file_put_contents($tmpFile, '%PDF-1.4 fake content');
+
+        \Illuminate\Support\Facades\Http::fake([
+            config('services.ocr.url').'/process' => \Illuminate\Support\Facades\Http::response([
+                'results' => [
+                    [
+                        'folio' => '02950200001',
+                        'answers' => ['referencia_iii' => ['pregunta_1' => 'SI']],
+                        'marked_image_base64' => null,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        \Illuminate\Support\Facades\Event::fake();
+
+        $job = new \App\Jobs\ProcessPaperEvaluation(
+            $tmpFile,
+            null,
+            null,
+            1,
+            1,
+            'test.pdf'
+        );
+
+        $job->handle();
+
+        $this->assertDatabaseHas('paper_evaluations', [
+            'folio' => '02950200001',
+            'source' => 'paper',
+            'organization_id' => $organization->id,
+            'work_center_code' => '02',
+            'work_center_id' => $workCenter->id,
             'processing_status' => 'completed',
         ]);
 

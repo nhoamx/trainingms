@@ -41,15 +41,41 @@
             <div>
               <h2 class="text-2xl font-bold">Dashboard NOM-035-STPS-2018</h2>
               <p class="mt-1 text-blue-100">
-                Selecciona el instrumento de evaluación que deseas consultar
+                Selecciona la fuente de evaluación y después el instrumento a consultar
               </p>
             </div>
             <div class="flex items-center gap-3">
               <div class="bg-white/20 backdrop-blur-sm rounded-xl px-5 py-3 text-center">
                 <p class="text-3xl font-bold">{{ totalEvaluations }}</p>
-                <p class="text-xs text-blue-100 mt-0.5">Participantes evaluados</p>
+                <p class="text-xs text-blue-100 mt-0.5">Participantes {{ selectedSourceLabel }}</p>
               </div>
             </div>
+          </div>
+
+          <div class="mt-6 rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-blue-100">Fuente de datos</p>
+            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Link
+                v-for="option in sourceOptions"
+                :key="option.key"
+                :href="sourceHref(option.key)"
+                class="rounded-lg border px-4 py-3 text-left transition-all"
+                :class="selectedSource === option.key
+                  ? 'border-white bg-white text-slate-900 shadow-sm'
+                  : 'border-white/30 bg-transparent text-white hover:bg-white/15'"
+              >
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-semibold">{{ option.label }}</p>
+                    <p class="text-xs" :class="selectedSource === option.key ? 'text-slate-600' : 'text-blue-100'">{{ option.caption }}</p>
+                  </div>
+                  <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="selectedSource === option.key ? option.chipClass : 'bg-white/20 text-white'">
+                    {{ option.key === 'online' ? sourceSummary.online : sourceSummary.paper }}
+                  </span>
+                </div>
+              </Link>
+            </div>
+            <p class="mt-3 text-xs text-blue-100">{{ sourceDescription }}</p>
           </div>
         </div>
 
@@ -133,7 +159,7 @@
           <Link
             v-for="instrument in instruments"
             :key="instrument.key"
-            :href="route(instrument.route, workCenter.id)"
+            :href="instrumentHref(instrument)"
             class="group block h-full bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
             :class="{ 'opacity-60 pointer-events-none': instrument.count === 0 }"
           >
@@ -188,6 +214,15 @@
                 {{ instrument.description }}
               </p>
 
+              <div class="mb-4 flex flex-wrap gap-2 text-xs">
+                <span class="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-1 font-semibold text-sky-700">
+                  Online: {{ instrument.online_count ?? 0 }}
+                </span>
+                <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700">
+                  Presencial: {{ instrument.paper_count ?? 0 }}
+                </span>
+              </div>
+
               <!-- Footer -->
               <div class="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
                 <span
@@ -199,7 +234,7 @@
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" :class="pingColor(instrument.color)"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2" :class="dotColor(instrument.color)"></span>
                   </span>
-                  {{ instrument.count }} {{ instrument.count === 1 ? 'evaluación' : 'evaluaciones' }}
+                  {{ instrument.count }} {{ instrument.count === 1 ? 'evaluación' : 'evaluaciones' }} {{ selectedSourceLabel }}
                 </span>
                 <span v-else class="text-sm text-gray-400">
                   Sin evaluaciones
@@ -336,9 +371,16 @@ interface Instrument {
   subtitle: string;
   description: string;
   count: number;
+  online_count: number;
+  paper_count: number;
   route: string;
   color: string;
   icon: string;
+}
+
+interface SourceSummary {
+  online: number;
+  paper: number;
 }
 
 interface CompanyData {
@@ -446,6 +488,8 @@ const props = withDefaults(defineProps<{
   dashboardData: DashboardData;
   instruments: Instrument[];
   totalEvaluations: number;
+  selectedSource?: 'online' | 'paper';
+  sourceSummary?: SourceSummary;
   evaluations?: Evaluation[];
   availableEvaluationTypes?: EvaluationType[];
   committeeMembers?: CommitteeMember[];
@@ -460,6 +504,11 @@ const props = withDefaults(defineProps<{
     submitted_at: null,
     admin_path: null,
     admin_at: null,
+  }),
+  selectedSource: 'online',
+  sourceSummary: () => ({
+    online: 0,
+    paper: 0,
   }),
   sensitizationVideos: () => [],
 });
@@ -490,6 +539,45 @@ const generalTabs = [
 ];
 
 const activeGeneralTab = ref('empresa');
+
+const sourceOptions: Array<{ key: 'online' | 'paper'; label: string; caption: string; chipClass: string }> = [
+  {
+    key: 'online',
+    label: 'Online',
+    caption: 'Captura digital',
+    chipClass: 'bg-sky-100 text-sky-800',
+  },
+  {
+    key: 'paper',
+    label: 'Presencial',
+    caption: 'Captura OMR en papel',
+    chipClass: 'bg-amber-100 text-amber-800',
+  },
+];
+
+const selectedSourceLabel = computed(() => {
+  return props.selectedSource === 'paper' ? 'Presencial' : 'Online';
+});
+
+const sourceDescription = computed(() => {
+  return props.selectedSource === 'paper'
+    ? 'Mostrando evaluaciones capturadas desde formularios físicos (OMR).'
+    : 'Mostrando evaluaciones capturadas desde formularios en línea.';
+});
+
+const sourceHref = (source: 'online' | 'paper'): string => {
+  return route('work-centers.dashboard.nom-035-index', {
+    workCenter: props.workCenter.id,
+    source,
+  });
+};
+
+const instrumentHref = (instrument: Instrument): string => {
+  return route(instrument.route, {
+    workCenter: props.workCenter.id,
+    source: props.selectedSource,
+  });
+};
 
 const showCommitteeMemberModal = ref(false);
 const showDeleteConfirmModal = ref(false);

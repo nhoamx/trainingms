@@ -79,6 +79,27 @@ class RekeyPaperEvaluationsByWorkCenterCommandTest extends TestCase
         $this->assertSame('03070007', $legacyPaperEvaluation->fresh()->folio);
     }
 
+    public function test_command_apply_does_not_treat_other_source_folio_as_conflict(): void
+    {
+        [$organization, $paperEvaluationA, $paperEvaluationB, $legacyPaperEvaluation, $onlineEvaluation] = $this->seedEvaluations();
+
+        $onlineEvaluation->update([
+            'folio' => '02230700001',
+            'personal_folio' => '00001',
+        ]);
+
+        $this->artisan('paper-evaluations:rekey-by-work-center', [
+            '--organization' => $organization->id,
+            '--source' => 'paper',
+            '--apply' => true,
+        ])->assertSuccessful();
+
+        $this->assertSame('02230700001', $paperEvaluationA->fresh()->folio);
+        $this->assertSame('02230700001', $onlineEvaluation->fresh()->folio);
+        $this->assertSame('03230700002', $paperEvaluationB->fresh()->folio);
+        $this->assertSame('03070007', $legacyPaperEvaluation->fresh()->folio);
+    }
+
     /**
      * @return array{Organization, PaperEvaluation, PaperEvaluation, PaperEvaluation, PaperEvaluation}
      */

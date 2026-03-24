@@ -153,7 +153,7 @@ const navigation = computed(() => {
         },
         { 
             name: 'Evaluaciones', 
-            href: route('evaluations.load'), 
+            href: route('evaluations.omr-center'), 
             current: route().current('evaluations.*'),
             icon: 'document'
         },

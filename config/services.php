@@ -38,6 +38,15 @@ return [
     'ocr' => [
         'url' => env('OCR_SERVICE_URL', 'http://localhost:5000'),
         'timeout' => env('OCR_SERVICE_TIMEOUT', 300),
+        'async_enabled' => env('OCR_ASYNC_ENABLED', false),
+        'instrument' => env('OCR_INSTRUMENT'),
+        'poll_interval_ms' => env('OCR_POLL_INTERVAL_MS', 1500),
+        'poll_max_wait_sec' => env('OCR_POLL_MAX_WAIT_SEC', 300),
+        'max_batch_files' => env('OCR_MAX_BATCH_FILES', 5),
+        'job_backoff_seconds' => array_map(
+            static fn (string $value): int => (int) trim($value),
+            array_filter(explode(',', (string) env('OCR_JOB_BACKOFF_SECONDS', '5,15,30')))
+        ),
     ],
 
 ];
