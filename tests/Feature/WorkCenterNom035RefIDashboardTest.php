@@ -322,6 +322,49 @@ class WorkCenterNom035RefIDashboardTest extends TestCase
             );
     }
 
+    public function test_ref_i_dashboard_supports_paper_ocr_answer_payloads(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'referencia_i_answers' => [
+                '1' => ['value' => 'SI'],
+                '2' => ['value' => 'NO'],
+                '3' => ['value' => 'SI'],
+                '4' => ['value' => 'NO'],
+                '5' => ['value' => 'NO'],
+                '6' => ['value' => 'NO'],
+                '7' => ['value' => 'NO'],
+                '8' => ['value' => 'NO'],
+                '9' => ['value' => 'NO'],
+                '10' => ['value' => 'SI'],
+                '11' => ['value' => 'NO'],
+                '12' => ['value' => 'NO'],
+                '13' => ['value' => 'NO'],
+                '14' => ['value' => 'NO'],
+            ],
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', ['workCenter' => $workCenter, 'source' => 'paper']))
+            ->assertStatus(200)
+            ->assertInertia(fn ($page) => $page
+                ->component('WorkCenters/Nom035RefIDashboard')
+                ->where('aggregatedStats.total_participants', 1)
+                ->where('selectedSource', 'paper')
+                ->where('aggregatedStats.answer_distribution.pregunta_1.yes_count', 1)
+                ->where('aggregatedStats.answer_distribution.pregunta_2.no_count', 1)
+            );
+    }
+
     public function test_ref_i_cache_key_is_isolated_by_source(): void
     {
         /** @var OrganizationReportCacheService $cacheService */
