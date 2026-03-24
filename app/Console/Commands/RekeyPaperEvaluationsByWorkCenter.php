@@ -154,6 +154,7 @@ class RekeyPaperEvaluationsByWorkCenter extends Command
 
                 $conflictExists = PaperEvaluation::query()
                     ->where('folio', $target['folio'])
+                    ->where('source', $evaluation->source)
                     ->where('id', '!=', $evaluation->id)
                     ->exists();
 

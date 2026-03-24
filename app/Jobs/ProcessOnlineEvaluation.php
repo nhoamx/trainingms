@@ -629,7 +629,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
         $rawData = $this->buildRawDataForReferenciaIII($dataSnapshot, $submissionStatus);
 
         return PaperEvaluation::updateOrCreate(
-            ['folio' => $folio],
+            ['folio' => $folio, 'source' => 'online'],
             [
                 'evaluation_type_code' => $folioComponents['evaluation_type_code'],
                 'organization_code' => $folioComponents['organization_code'],
@@ -760,7 +760,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
         $rawData = $this->buildStandardizedRawData($dataSnapshot, $submissionStatus);
 
         return PaperEvaluation::updateOrCreate(
-            ['folio' => $folio],
+            ['folio' => $folio, 'source' => 'online'],
             [
                 'evaluation_type_code' => $folioComponents['evaluation_type_code'],
                 'organization_code' => $folioComponents['organization_code'],

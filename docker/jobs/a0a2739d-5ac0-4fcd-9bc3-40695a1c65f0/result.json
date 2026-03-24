@@ -1,0 +1,155 @@
+{
+  "instrument": "gri",
+  "pdf_path": "/app/input/api/gri-1e20872053b346a98b69f1497af4c359.pdf",
+  "pages": [
+    {
+      "page": 0,
+      "status": "completed",
+      "folio": "01010200054",
+      "answers": {
+        "1": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.7083,
+          "margin": 0.5729,
+          "ambiguous": false,
+          "block": "answers_block_1",
+          "row": 0,
+          "mapping_section": "gri_binary"
+        },
+        "2": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.7431,
+          "margin": 0.6076,
+          "ambiguous": false,
+          "block": "answers_block_1",
+          "row": 1,
+          "mapping_section": "gri_binary"
+        },
+        "3": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.8212,
+          "margin": 0.6372,
+          "ambiguous": false,
+          "block": "answers_block_2",
+          "row": 0,
+          "mapping_section": "gri_binary"
+        },
+        "4": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.8021,
+          "margin": 0.6128,
+          "ambiguous": false,
+          "block": "answers_block_2",
+          "row": 1,
+          "mapping_section": "gri_binary"
+        },
+        "5": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.7309,
+          "margin": 0.5503,
+          "ambiguous": false,
+          "block": "answers_block_2",
+          "row": 2,
+          "mapping_section": "gri_binary"
+        },
+        "6": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.7153,
+          "margin": 0.5295,
+          "ambiguous": false,
+          "block": "answers_block_2",
+          "row": 3,
+          "mapping_section": "gri_binary"
+        },
+        "7": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.7222,
+          "margin": 0.5573,
+          "ambiguous": false,
+          "block": "answers_block_2",
+          "row": 4,
+          "mapping_section": "gri_binary"
+        },
+        "8": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.7431,
+          "margin": 0.5417,
+          "ambiguous": false,
+          "block": "answers_block_2",
+          "row": 5,
+          "mapping_section": "gri_binary"
+        },
+        "9": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.7135,
+          "margin": 0.5365,
+          "ambiguous": false,
+          "block": "answers_block_2",
+          "row": 6,
+          "mapping_section": "gri_binary"
+        },
+        "10": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.8472,
+          "margin": 0.6476,
+          "ambiguous": false,
+          "block": "answers_block_3",
+          "row": 0,
+          "mapping_section": "gri_binary"
+        },
+        "11": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.7934,
+          "margin": 0.6128,
+          "ambiguous": false,
+          "block": "answers_block_3",
+          "row": 1,
+          "mapping_section": "gri_binary"
+        },
+        "12": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.6823,
+          "margin": 0.4948,
+          "ambiguous": false,
+          "block": "answers_block_3",
+          "row": 2,
+          "mapping_section": "gri_binary"
+        },
+        "13": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.7865,
+          "margin": 0.5938,
+          "ambiguous": false,
+          "block": "answers_block_3",
+          "row": 3,
+          "mapping_section": "gri_binary"
+        },
+        "14": {
+          "value": "NO",
+          "selected_column": "C2",
+          "confidence": 0.7986,
+          "margin": 0.6094,
+          "ambiguous": false,
+          "block": "answers_block_3",
+          "row": 4,
+          "mapping_section": "gri_binary"
+        }
+      },
+      "output_json_path": "/app/output/01010200054.json"
+    }
+  ],
+  "processed_pages": 1
+}

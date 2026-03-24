@@ -1,0 +1,9 @@
+{
+  "job_id": "a0a2739d-5ac0-4fcd-9bc3-40695a1c65f0",
+  "pdf_path": "/app/input/api/gri-1e20872053b346a98b69f1497af4c359.pdf",
+  "instrument": "gri",
+  "started_at": "2026-03-24T01:14:31.232018+00:00",
+  "status": "finished",
+  "finished_at": "2026-03-24T01:14:36.182686+00:00",
+  "result_path": "/app/jobs/a0a2739d-5ac0-4fcd-9bc3-40695a1c65f0/result.json"
+}

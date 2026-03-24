@@ -31,6 +31,8 @@ class ProcessPaperEvaluation implements ShouldQueue
 
     protected string $fileName;
 
+    protected ?string $instrument;
+
     public int $timeout = 300;
 
     /**
@@ -42,7 +44,8 @@ class ProcessPaperEvaluation implements ShouldQueue
         ?string $batchId = null,
         int $currentIndex = 0,
         int $totalFiles = 1,
-        string $fileName = ''
+        string $fileName = '',
+        ?string $instrument = null
     ) {
         $this->fullPath = $fullPath;
         $this->initiatorUserId = $initiatorUserId;
@@ -50,6 +53,7 @@ class ProcessPaperEvaluation implements ShouldQueue
         $this->currentIndex = $currentIndex;
         $this->totalFiles = $totalFiles;
         $this->fileName = $fileName;
+        $this->instrument = $instrument;
     }
 
     /**
@@ -165,12 +169,15 @@ class ProcessPaperEvaluation implements ShouldQueue
             $structuredData = $this->extractStructuredData($rawData, $folioData['evaluation_type'], $folioData['evaluation_type_code']);
 
             // Check if evaluation already exists to preserve evaluee_name
-            $existingEvaluation = PaperEvaluation::where('folio', $folio)->first();
+            $existingEvaluation = PaperEvaluation::query()
+                ->where('folio', $folio)
+                ->where('source', 'paper')
+                ->first();
             $preservedName = $existingEvaluation?->evaluee_name;
 
             // Create or update PaperEvaluation
             $paperEvaluation = PaperEvaluation::updateOrCreate(
-                ['folio' => $folio],
+                ['folio' => $folio, 'source' => 'paper'],
                 [
                     'evaluation_type_code' => $folioData['evaluation_type_code'],
                     'organization_code' => $folioData['organization_code'],
@@ -214,7 +221,7 @@ class ProcessPaperEvaluation implements ShouldQueue
             try {
                 $folioData = PaperEvaluation::parseFolio($folio);
                 PaperEvaluation::updateOrCreate(
-                    ['folio' => $folio],
+                    ['folio' => $folio, 'source' => 'paper'],
                     [
                         'evaluation_type_code' => $folioData['evaluation_type_code'],
                         'organization_code' => $folioData['organization_code'],

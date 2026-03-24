@@ -328,4 +328,51 @@ class ProcessOnlineEvaluationTest extends TestCase
             '44' => true,
         ], $paperEvaluation->cisneros_answers);
     }
+
+    public function test_online_processing_keeps_existing_paper_record_with_same_folio(): void
+    {
+        PaperEvaluation::factory()->create([
+            'folio' => '020010099',
+            'source' => 'paper',
+            'evaluation_type_code' => '02',
+            'evaluation_type' => 'referencia_iii',
+            'organization_id' => $this->organization->id,
+            'organization_code' => '01',
+            'work_center_code' => '01',
+            'personal_folio' => '00099',
+            'evaluee_name' => 'Paper Name',
+            'referencia_iii_answers' => ['1' => 'A'],
+        ]);
+
+        $submissionStatus = SubmissionStatus::create([
+            'folio' => '020010099',
+            'personal_id' => '0099',
+            'organization_id' => $this->organization->id,
+            'quiz_id' => $this->quiz->id,
+            'status' => SubmissionStatus::STATUS_PENDING,
+            'data_snapshot' => [
+                'evaluation_type' => 'referencia_v',
+                'referencia_v' => ['sexo' => 'Femenino', 'edad' => '29'],
+                'referencia_iii' => ['1' => 'B', '2' => 'C'],
+            ],
+        ]);
+
+        ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
+
+        $paperRecord = PaperEvaluation::query()
+            ->where('folio', '020010099')
+            ->where('source', 'paper')
+            ->first();
+
+        $onlineRecord = PaperEvaluation::query()
+            ->where('folio', '020010099')
+            ->where('source', 'online')
+            ->first();
+
+        $this->assertNotNull($paperRecord);
+        $this->assertNotNull($onlineRecord);
+        $this->assertSame('Paper Name', $paperRecord->evaluee_name);
+        $this->assertEquals(['1' => 'A'], $paperRecord->referencia_iii_answers);
+        $this->assertEquals('B', $onlineRecord->referencia_iii_answers['1']);
+    }
 }

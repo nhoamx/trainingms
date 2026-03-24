@@ -410,6 +410,7 @@ class PaperEvaluation extends Model
             );
 
             $conflict = self::where('folio', $newFolio)
+                ->where('source', $evaluation->source)
                 ->where('id', '!=', $evaluation->id)
                 ->exists();
 
@@ -445,9 +446,11 @@ class PaperEvaluation extends Model
     /**
      * Check if a folio is available (not used by other records)
      */
-    public static function isFolioAvailable(string $folio, ?string $excludeId = null): bool
+    public static function isFolioAvailable(string $folio, string $source = 'paper', ?string $excludeId = null): bool
     {
-        $query = self::where('folio', $folio);
+        $query = self::query()
+            ->where('folio', $folio)
+            ->where('source', $source);
 
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);

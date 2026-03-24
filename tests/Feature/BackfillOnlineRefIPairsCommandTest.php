@@ -92,4 +92,57 @@ class BackfillOnlineRefIPairsCommandTest extends TestCase
         $refIII->refresh();
         $this->assertSame('01010900012', $refIII->related_evaluation_folio);
     }
+
+    public function test_command_ignores_paper_folio_collision_when_creating_online_pair(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
+        $refIII = PaperEvaluation::factory()->online()->referenciaIII()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'folio' => '02010900013',
+            'evaluation_type' => 'referencia_iii',
+            'evaluation_type_code' => '02',
+            'organization_code' => '01',
+            'work_center_code' => '09',
+            'personal_folio' => '00013',
+            'processing_status' => 'completed',
+            'source' => 'online',
+            'citsats_s1' => ['1' => false, '2' => false, '3' => false, '4' => false, '5' => false, '6' => false],
+            'raw_data' => ['referencia_i' => ['acontecimientos_traumaticos' => ['1' => false]]],
+        ]);
+
+        PaperEvaluation::factory()->referenciaI()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'folio' => '01010900013',
+            'evaluation_type' => 'referencia_i',
+            'evaluation_type_code' => '01',
+            'organization_code' => '01',
+            'work_center_code' => '09',
+            'personal_folio' => '00013',
+            'processing_status' => 'completed',
+            'source' => 'paper',
+        ]);
+
+        $this->artisan('evaluations:backfill-online-ref-i-pairs', [
+            '--organization' => $organization->id,
+            '--force' => true,
+        ])
+            ->expectsOutput('Found 1 online Referencia III records to inspect.')
+            ->expectsOutput('Created 1 missing Referencia I records.')
+            ->assertSuccessful();
+
+        $this->assertSame(1, PaperEvaluation::query()
+            ->where('source', 'online')
+            ->where('evaluation_type', 'referencia_i')
+            ->where('folio', '01010900013')
+            ->count());
+
+        $refIII->refresh();
+        $this->assertSame('01010900013', $refIII->related_evaluation_folio);
+    }
 }
