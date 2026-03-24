@@ -39,12 +39,20 @@ class WorkCenterController extends Controller
                     'men_count' => 0,
                     'women_count' => 0,
                     'requires_clinical_attention_count' => 0,
+                    'online_evaluated_people_count' => 0,
+                    'paper_evaluated_people_count' => 0,
+                    'online_clinical_attention_count' => 0,
+                    'paper_clinical_attention_count' => 0,
                 ];
 
                 $workCenter->setAttribute('evaluated_people_count', $metrics['evaluated_people_count']);
                 $workCenter->setAttribute('men_count', $metrics['men_count']);
                 $workCenter->setAttribute('women_count', $metrics['women_count']);
                 $workCenter->setAttribute('requires_clinical_attention_count', $metrics['requires_clinical_attention_count']);
+                $workCenter->setAttribute('online_evaluated_people_count', $metrics['online_evaluated_people_count']);
+                $workCenter->setAttribute('paper_evaluated_people_count', $metrics['paper_evaluated_people_count']);
+                $workCenter->setAttribute('online_clinical_attention_count', $metrics['online_clinical_attention_count']);
+                $workCenter->setAttribute('paper_clinical_attention_count', $metrics['paper_clinical_attention_count']);
             });
 
         return Inertia::render('WorkCenters/Index', [
@@ -57,7 +65,7 @@ class WorkCenterController extends Controller
     /**
      * Build participant and clinical-attention counters per work center.
      *
-     * @return array<string, array{evaluated_people_count: int, men_count: int, women_count: int, requires_clinical_attention_count: int}>
+     * @return array<string, array{evaluated_people_count: int, men_count: int, women_count: int, requires_clinical_attention_count: int, online_evaluated_people_count: int, paper_evaluated_people_count: int, online_clinical_attention_count: int, paper_clinical_attention_count: int}>
      */
     private function buildWorkCenterMetrics(Organization $organization): array
     {
@@ -66,10 +74,10 @@ class WorkCenterController extends Controller
             ->where('processing_status', 'completed')
             ->whereNotNull('work_center_id')
             ->with(['demographicData:id,paper_evaluation_id,gender'])
-            ->select(['id', 'work_center_id', 'personal_folio', 'folio', 'evaluation_type', 'referencia_i_answers', 'demographic_data'])
+            ->select(['id', 'work_center_id', 'source', 'personal_folio', 'folio', 'evaluation_type', 'referencia_i_answers', 'demographic_data'])
             ->get();
 
-        /** @var array<string, array{participants: array<string, true>, participant_gender: array<string, string>, clinical: array<string, true>}> $raw */
+        /** @var array<string, array{participants: array<string, true>, participant_gender: array<string, string>, clinical: array<string, true>, participants_online: array<string, true>, participants_paper: array<string, true>, clinical_online: array<string, true>, clinical_paper: array<string, true>}> $raw */
         $raw = [];
 
         foreach ($evaluations as $evaluation) {
@@ -82,10 +90,26 @@ class WorkCenterController extends Controller
             $gender = $this->resolveNormalizedGender($evaluation->demographicData?->gender, $evaluation->demographic_data);
 
             if (! isset($raw[$workCenterId])) {
-                $raw[$workCenterId] = ['participants' => [], 'participant_gender' => [], 'clinical' => []];
+                $raw[$workCenterId] = [
+                    'participants' => [],
+                    'participant_gender' => [],
+                    'clinical' => [],
+                    'participants_online' => [],
+                    'participants_paper' => [],
+                    'clinical_online' => [],
+                    'clinical_paper' => [],
+                ];
             }
 
             $raw[$workCenterId]['participants'][$participantKey] = true;
+
+            if ($evaluation->source === 'online') {
+                $raw[$workCenterId]['participants_online'][$participantKey] = true;
+            }
+
+            if ($evaluation->source === 'paper') {
+                $raw[$workCenterId]['participants_paper'][$participantKey] = true;
+            }
 
             if ($gender !== null && ! isset($raw[$workCenterId]['participant_gender'][$participantKey])) {
                 $raw[$workCenterId]['participant_gender'][$participantKey] = $gender;
@@ -94,6 +118,14 @@ class WorkCenterController extends Controller
             $answers = is_array($evaluation->referencia_i_answers) ? $evaluation->referencia_i_answers : [];
             if ($evaluation->evaluation_type === 'referencia_i' && $this->requiresClinicalAttention($answers)) {
                 $raw[$workCenterId]['clinical'][$participantKey] = true;
+
+                if ($evaluation->source === 'online') {
+                    $raw[$workCenterId]['clinical_online'][$participantKey] = true;
+                }
+
+                if ($evaluation->source === 'paper') {
+                    $raw[$workCenterId]['clinical_paper'][$participantKey] = true;
+                }
             }
         }
 
@@ -121,6 +153,10 @@ class WorkCenterController extends Controller
                 'men_count' => $menCount,
                 'women_count' => $womenCount,
                 'requires_clinical_attention_count' => count($values['clinical']),
+                'online_evaluated_people_count' => count($values['participants_online']),
+                'paper_evaluated_people_count' => count($values['participants_paper']),
+                'online_clinical_attention_count' => count($values['clinical_online']),
+                'paper_clinical_attention_count' => count($values['clinical_paper']),
             ];
         }
 

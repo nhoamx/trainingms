@@ -79,7 +79,7 @@ class BackfillOnlineRefIPairs extends Command
                 continue;
             }
 
-            if (PaperEvaluation::query()->where('folio', $refIFolio)->exists()) {
+            if (PaperEvaluation::query()->where('folio', $refIFolio)->where('source', 'online')->exists()) {
                 $duplicateFolioCount++;
 
                 continue;
@@ -135,7 +135,7 @@ class BackfillOnlineRefIPairs extends Command
                 continue;
             }
 
-            if (PaperEvaluation::query()->where('folio', $candidate['ref_i_folio'])->exists()) {
+            if (PaperEvaluation::query()->where('folio', $candidate['ref_i_folio'])->where('source', 'online')->exists()) {
                 continue;
             }
 

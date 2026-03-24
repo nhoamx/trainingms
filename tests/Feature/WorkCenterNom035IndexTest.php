@@ -41,6 +41,8 @@ class WorkCenterNom035IndexTest extends TestCase
             ->has('committeeMembers')
             ->has('constitutiveAct')
             ->has('sensitizationVideos')
+            ->has('selectedSource')
+            ->has('sourceSummary')
         );
     }
 
@@ -53,7 +55,10 @@ class WorkCenterNom035IndexTest extends TestCase
         $user->syncRoles(['admin']);
 
         $response = $this->actingAs($user)
-            ->get(route('work-centers.dashboard.nom-035-index', $workCenter));
+            ->get(route('work-centers.dashboard.nom-035-index', [
+                'workCenter' => $workCenter,
+                'source' => 'paper',
+            ]));
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
@@ -98,7 +103,10 @@ class WorkCenterNom035IndexTest extends TestCase
         $user->syncRoles(['admin']);
 
         $response = $this->actingAs($user)
-            ->get(route('work-centers.dashboard.nom-035-index', $workCenter));
+            ->get(route('work-centers.dashboard.nom-035-index', [
+                'workCenter' => $workCenter,
+                'source' => 'paper',
+            ]));
 
         $response->assertInertia(fn ($page) => $page
             ->component('WorkCenters/Nom035DashboardIndex')
@@ -147,11 +155,17 @@ class WorkCenterNom035IndexTest extends TestCase
         $user->syncRoles(['admin']);
 
         $response = $this->actingAs($user)
-            ->get(route('work-centers.dashboard.nom-035-index', $workCenter));
+            ->get(route('work-centers.dashboard.nom-035-index', [
+                'workCenter' => $workCenter,
+                'source' => 'paper',
+            ]));
 
         $response->assertInertia(fn ($page) => $page
             ->component('WorkCenters/Nom035DashboardIndex')
             ->where('totalEvaluations', 8)
+            ->where('selectedSource', 'paper')
+            ->where('sourceSummary.paper', 8)
+            ->where('sourceSummary.online', 0)
             ->where('instruments.0.key', 'referencia_iii')
             ->where('instruments.0.count', 5)
             ->where('instruments.1.key', 'referencia_i')
@@ -168,7 +182,10 @@ class WorkCenterNom035IndexTest extends TestCase
         $user->syncRoles(['admin']);
 
         $response = $this->actingAs($user)
-            ->get(route('work-centers.dashboard.nom-035-index', $workCenter));
+            ->get(route('work-centers.dashboard.nom-035-index', [
+                'workCenter' => $workCenter,
+                'source' => 'paper',
+            ]));
 
         $response->assertInertia(fn ($page) => $page
             ->component('WorkCenters/Nom035DashboardIndex')
@@ -200,7 +217,10 @@ class WorkCenterNom035IndexTest extends TestCase
         $user->syncRoles(['admin']);
 
         $response = $this->actingAs($user)
-            ->get(route('work-centers.dashboard.nom-035-index', $workCenter));
+            ->get(route('work-centers.dashboard.nom-035-index', [
+                'workCenter' => $workCenter,
+                'source' => 'paper',
+            ]));
 
         $response->assertInertia(fn ($page) => $page
             ->where('totalEvaluations', 1)
@@ -228,7 +248,10 @@ class WorkCenterNom035IndexTest extends TestCase
         $user->syncRoles(['admin']);
 
         $response = $this->actingAs($user)
-            ->get(route('work-centers.dashboard.nom-035-index', $workCenter1));
+            ->get(route('work-centers.dashboard.nom-035-index', [
+                'workCenter' => $workCenter1,
+                'source' => 'paper',
+            ]));
 
         $response->assertInertia(fn ($page) => $page
             ->where('totalEvaluations', 2)
@@ -265,7 +288,10 @@ class WorkCenterNom035IndexTest extends TestCase
         $user->syncRoles(['admin']);
 
         $response = $this->actingAs($user)
-            ->get(route('work-centers.dashboard.nom-035-index', $workCenter));
+            ->get(route('work-centers.dashboard.nom-035-index', [
+                'workCenter' => $workCenter,
+                'source' => 'paper',
+            ]));
 
         $response->assertInertia(fn ($page) => $page
             ->where('totalEvaluations', 2)

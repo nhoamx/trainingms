@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,13 +23,14 @@ class WorkCenterNom035IndexController extends Controller
     /**
      * Show the NOM-035 instruments index for a work center.
      */
-    public function show(WorkCenter $workCenter): Response
+    public function show(Request $request, WorkCenter $workCenter): Response
     {
         $this->authorize('viewWorkCenterDashboard', $workCenter);
 
         $workCenter->load(['organization', 'committeeMembers']);
+        $selectedSource = $this->resolveSourceFilter($request);
 
-        $instruments = $this->buildInstrumentsSummary($workCenter);
+        $instruments = $this->buildInstrumentsSummary($workCenter, $selectedSource);
 
         return Inertia::render('WorkCenters/Nom035DashboardIndex', [
             'title' => 'NOM-035-STPS-2018 - '.$workCenter->name,
@@ -45,10 +47,15 @@ class WorkCenterNom035IndexController extends Controller
                     ? asset('storage/'.$workCenter->organization->logo)
                     : null,
             ],
+            'selectedSource' => $selectedSource,
+            'sourceSummary' => [
+                'online' => $this->countTotalParticipants($workCenter, 'online'),
+                'paper' => $this->countTotalParticipants($workCenter, 'paper'),
+            ],
             'instruments' => $instruments,
-            'totalEvaluations' => $this->countTotalParticipants($workCenter),
-            'evaluations' => $this->getGeneralEvaluations($workCenter),
-            'availableEvaluationTypes' => $this->getAvailableEvaluationTypes($workCenter),
+            'totalEvaluations' => $this->countTotalParticipants($workCenter, $selectedSource),
+            'evaluations' => $this->getGeneralEvaluations($workCenter, $selectedSource),
+            'availableEvaluationTypes' => $this->getAvailableEvaluationTypes($workCenter, $selectedSource),
             'committeeMembers' => $workCenter->committeeMembers
                 ->map(fn ($member) => [
                     'id' => $member->id,
@@ -85,15 +92,32 @@ class WorkCenterNom035IndexController extends Controller
         ]);
     }
 
+    private function resolveSourceFilter(Request $request): string
+    {
+        $source = (string) $request->query('source', 'online');
+
+        if (in_array($source, ['online', 'paper'], true)) {
+            return $source;
+        }
+
+        return 'online';
+    }
+
     /**
      * Count unique participants for NOM-035 instruments (Ref I + Ref III).
      */
-    private function countTotalParticipants(WorkCenter $workCenter): int
+    private function countTotalParticipants(WorkCenter $workCenter, ?string $source = null): int
     {
-        return PaperEvaluation::query()
+        $query = PaperEvaluation::query()
             ->where('work_center_id', $workCenter->id)
             ->where('processing_status', 'completed')
-            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros'])
+            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros']);
+
+        if ($source !== null) {
+            $query->where('source', $source);
+        }
+
+        return $query
             ->get(['id', 'personal_folio'])
             ->map(function (PaperEvaluation $evaluation): string {
                 $folio = trim((string) ($evaluation->personal_folio ?? ''));
@@ -176,15 +200,24 @@ class WorkCenterNom035IndexController extends Controller
      *
      * @return array<int, array{key: string, label: string, description: string, count: int, route: string, color: string, icon: string}>
      */
-    private function buildInstrumentsSummary(WorkCenter $workCenter): array
+    private function buildInstrumentsSummary(WorkCenter $workCenter, string $selectedSource): array
     {
-        $counts = PaperEvaluation::query()
+        $rows = PaperEvaluation::query()
             ->where('work_center_id', $workCenter->id)
             ->where('processing_status', 'completed')
-            ->selectRaw('evaluation_type, count(*) as total')
-            ->groupBy('evaluation_type')
-            ->pluck('total', 'evaluation_type')
-            ->toArray();
+            ->whereIn('source', ['online', 'paper'])
+            ->selectRaw('evaluation_type, source, count(*) as total')
+            ->groupBy('evaluation_type', 'source')
+            ->get();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $evaluationType = (string) $row->evaluation_type;
+            $source = (string) $row->source;
+            $total = (int) $row->total;
+
+            $counts[$evaluationType][$source] = $total;
+        }
 
         $definitions = [
             [
@@ -216,8 +249,13 @@ class WorkCenterNom035IndexController extends Controller
             ],
         ];
 
-        return array_map(function (array $definition) use ($counts) {
-            $definition['count'] = $counts[$definition['key']] ?? 0;
+        return array_map(function (array $definition) use ($counts, $selectedSource) {
+            $onlineCount = (int) ($counts[$definition['key']]['online'] ?? 0);
+            $paperCount = (int) ($counts[$definition['key']]['paper'] ?? 0);
+
+            $definition['online_count'] = $onlineCount;
+            $definition['paper_count'] = $paperCount;
+            $definition['count'] = $selectedSource === 'paper' ? $paperCount : $onlineCount;
 
             return $definition;
         }, $definitions);
@@ -228,19 +266,26 @@ class WorkCenterNom035IndexController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
-    private function getGeneralEvaluations(WorkCenter $workCenter): array
+    private function getGeneralEvaluations(WorkCenter $workCenter, ?string $source = null): array
     {
-        return PaperEvaluation::query()
+        $query = PaperEvaluation::query()
             ->where('work_center_id', $workCenter->id)
             ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])
             ->where('processing_status', 'completed')
-            ->with(['demographicData', 'comments'])
+            ->with(['demographicData', 'comments']);
+
+        if ($source !== null) {
+            $query->where('source', $source);
+        }
+
+        return $query
             ->get()
             ->map(function (PaperEvaluation $evaluation) {
                 return [
                     'id' => $evaluation->id,
                     'evaluation_type' => $evaluation->evaluation_type,
                     'personal_folio' => $evaluation->personal_folio,
+                    'source' => $evaluation->source,
                     'demographicData' => $evaluation->demographicData ? [
                         'gender' => $evaluation->demographicData->gender,
                         'contract_type' => $evaluation->demographicData->contract_type,
@@ -258,11 +303,17 @@ class WorkCenterNom035IndexController extends Controller
      *
      * @return array<int, array<string, string>>
      */
-    private function getAvailableEvaluationTypes(WorkCenter $workCenter): array
+    private function getAvailableEvaluationTypes(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluationTypes = PaperEvaluation::query()
+        $query = PaperEvaluation::query()
             ->where('work_center_id', $workCenter->id)
-            ->where('processing_status', 'completed')
+            ->where('processing_status', 'completed');
+
+        if ($source !== null) {
+            $query->where('source', $source);
+        }
+
+        $evaluationTypes = $query
             ->distinct()
             ->pluck('evaluation_type')
             ->toArray();

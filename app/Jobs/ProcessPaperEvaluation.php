@@ -6,6 +6,7 @@ use App\Events\EvaluationProcessingStatusChanged;
 use App\Models\DemographicData;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
+use App\Models\WorkCenter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -31,6 +32,8 @@ class ProcessPaperEvaluation implements ShouldQueue
 
     protected string $fileName;
 
+    protected ?string $instrument;
+
     public int $timeout = 300;
 
     /**
@@ -42,7 +45,8 @@ class ProcessPaperEvaluation implements ShouldQueue
         ?string $batchId = null,
         int $currentIndex = 0,
         int $totalFiles = 1,
-        string $fileName = ''
+        string $fileName = '',
+        ?string $instrument = null
     ) {
         $this->fullPath = $fullPath;
         $this->initiatorUserId = $initiatorUserId;
@@ -50,6 +54,7 @@ class ProcessPaperEvaluation implements ShouldQueue
         $this->currentIndex = $currentIndex;
         $this->totalFiles = $totalFiles;
         $this->fileName = $fileName;
+        $this->instrument = $instrument;
     }
 
     /**
@@ -160,22 +165,28 @@ class ProcessPaperEvaluation implements ShouldQueue
 
             // Find or create organization
             $organization = $this->findOrCreateOrganization($folioData['organization_code']);
+            $workCenter = $this->resolveWorkCenterByCode($organization, $folioData['work_center_code'] ?? null);
 
             // Extract structured data based on evaluation type
             $structuredData = $this->extractStructuredData($rawData, $folioData['evaluation_type'], $folioData['evaluation_type_code']);
 
             // Check if evaluation already exists to preserve evaluee_name
-            $existingEvaluation = PaperEvaluation::where('folio', $folio)->first();
+            $existingEvaluation = PaperEvaluation::query()
+                ->where('folio', $folio)
+                ->where('source', 'paper')
+                ->first();
             $preservedName = $existingEvaluation?->evaluee_name;
 
             // Create or update PaperEvaluation
             $paperEvaluation = PaperEvaluation::updateOrCreate(
-                ['folio' => $folio],
+                ['folio' => $folio, 'source' => 'paper'],
                 [
                     'evaluation_type_code' => $folioData['evaluation_type_code'],
                     'organization_code' => $folioData['organization_code'],
+                    'work_center_code' => $folioData['work_center_code'] ?? null,
                     'personal_folio' => $folioData['personal_folio'],
                     'organization_id' => $organization?->id,
+                    'work_center_id' => $workCenter?->id,
                     'evaluation_type' => $folioData['evaluation_type'],
                     'source' => 'paper',
                     'processing_status' => 'completed',
@@ -213,12 +224,18 @@ class ProcessPaperEvaluation implements ShouldQueue
             // Create failed record
             try {
                 $folioData = PaperEvaluation::parseFolio($folio);
+                $organization = $this->findOrCreateOrganization($folioData['organization_code']);
+                $workCenter = $this->resolveWorkCenterByCode($organization, $folioData['work_center_code'] ?? null);
+
                 PaperEvaluation::updateOrCreate(
-                    ['folio' => $folio],
+                    ['folio' => $folio, 'source' => 'paper'],
                     [
                         'evaluation_type_code' => $folioData['evaluation_type_code'],
                         'organization_code' => $folioData['organization_code'],
+                        'work_center_code' => $folioData['work_center_code'] ?? null,
                         'personal_folio' => $folioData['personal_folio'],
+                        'organization_id' => $organization?->id,
+                        'work_center_id' => $workCenter?->id,
                         'evaluation_type' => $folioData['evaluation_type'],
                         'source' => 'paper',
                         'processing_status' => 'failed',
@@ -469,6 +486,26 @@ class ProcessPaperEvaluation implements ShouldQueue
         }
 
         return $organization;
+    }
+
+    protected function resolveWorkCenterByCode(?Organization $organization, ?string $workCenterCode): ?WorkCenter
+    {
+        if (! $organization || ! is_string($workCenterCode) || trim($workCenterCode) === '') {
+            return null;
+        }
+
+        $normalizedCode = str_pad(trim($workCenterCode), 2, '0', STR_PAD_LEFT);
+        $fourDigitCode = str_pad($normalizedCode, 4, '0', STR_PAD_LEFT);
+
+        return $organization->workCenters()
+            ->where(function ($query) use ($normalizedCode, $fourDigitCode) {
+                $query->where('code', $normalizedCode)
+                    ->orWhere('code', $fourDigitCode)
+                    ->orWhereRaw("LPAD(RIGHT(code, 2), 2, '0') = ?", [$normalizedCode]);
+            })
+            ->orderByDesc('is_primary')
+            ->orderBy('name')
+            ->first();
     }
 
     /**

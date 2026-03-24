@@ -79,6 +79,14 @@ const totalEvaluatedPeople = computed(() => {
   return visibleWorkCenters.value.reduce((total, workCenter) => total + Number(workCenter.evaluated_people_count ?? 0), 0);
 });
 
+const totalOnlineEvaluatedPeople = computed(() => {
+  return visibleWorkCenters.value.reduce((total, workCenter) => total + Number(workCenter.online_evaluated_people_count ?? 0), 0);
+});
+
+const totalPaperEvaluatedPeople = computed(() => {
+  return visibleWorkCenters.value.reduce((total, workCenter) => total + Number(workCenter.paper_evaluated_people_count ?? 0), 0);
+});
+
 const totalClinicalAttention = computed(() => {
   return visibleWorkCenters.value.reduce((total, workCenter) => total + Number(workCenter.requires_clinical_attention_count ?? 0), 0);
 });
@@ -210,7 +218,7 @@ const downloadMetricsExcel = async () => {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
         <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
           <p class="text-xs uppercase tracking-wide text-blue-700">Total centros de trabajo</p>
           <p class="mt-1 text-2xl font-bold text-blue-900">{{ visibleWorkCenters.length }}</p>
@@ -218,6 +226,14 @@ const downloadMetricsExcel = async () => {
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
           <p class="text-xs uppercase tracking-wide text-emerald-700">Total personas evaluadas</p>
           <p class="mt-1 text-2xl font-bold text-emerald-900">{{ totalEvaluatedPeople }}</p>
+        </div>
+        <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+          <p class="text-xs uppercase tracking-wide text-sky-700">Evaluaciones online</p>
+          <p class="mt-1 text-2xl font-bold text-sky-900">{{ totalOnlineEvaluatedPeople }}</p>
+        </div>
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p class="text-xs uppercase tracking-wide text-amber-700">Evaluaciones presenciales</p>
+          <p class="mt-1 text-2xl font-bold text-amber-900">{{ totalPaperEvaluatedPeople }}</p>
         </div>
         <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
           <p class="text-xs uppercase tracking-wide text-rose-700">Personas que requieren atención clínica</p>
@@ -313,6 +329,12 @@ const downloadMetricsExcel = async () => {
                   <p class="mt-1 text-xs text-slate-500">Código: {{ workCenter.code }}</p>
                   <div class="mt-1 flex flex-wrap gap-1.5">
                     <span v-if="workCenter.is_primary" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">Principal</span>
+                    <span class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
+                      Online: {{ workCenter.online_evaluated_people_count ?? 0 }}
+                    </span>
+                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                      Presencial: {{ workCenter.paper_evaluated_people_count ?? 0 }}
+                    </span>
                     <span
                       v-if="Number(workCenter.requires_clinical_attention_count ?? 0) > 0"
                       class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700"
@@ -320,15 +342,24 @@ const downloadMetricsExcel = async () => {
                       Requieren atención clínica: {{ workCenter.requires_clinical_attention_count ?? 0 }}
                     </span>
                   </div>
-                  <div class="mt-3">
+                  <div class="mt-3 flex flex-wrap gap-2">
                     <Link
-                      :href="route('work-centers.dashboard.nom-035-index', { workCenter: workCenter.id })"
-                      class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
+                      :href="route('work-centers.dashboard.nom-035-index', { workCenter: workCenter.id, source: 'online' })"
+                      class="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-sky-700 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
                     >
                       <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path d="M11.03 3.47a.75.75 0 011.06 0l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 11-1.06-1.06l3.97-3.97H3.5a.75.75 0 010-1.5h11.5l-3.97-3.97a.75.75 0 010-1.06z" />
                       </svg>
-                      Ver detalles
+                      Ver Online
+                    </Link>
+                    <Link
+                      :href="route('work-centers.dashboard.nom-035-index', { workCenter: workCenter.id, source: 'paper' })"
+                      class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-amber-700 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
+                    >
+                      <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M11.03 3.47a.75.75 0 011.06 0l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 11-1.06-1.06l3.97-3.97H3.5a.75.75 0 010-1.5h11.5l-3.97-3.97a.75.75 0 010-1.06z" />
+                      </svg>
+                      Ver Presencial
                     </Link>
                   </div>
                 </td>
