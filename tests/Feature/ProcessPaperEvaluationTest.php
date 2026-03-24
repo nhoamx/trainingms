@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
+use App\Models\WorkCenter;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -269,6 +270,58 @@ class ProcessPaperEvaluationTest extends TestCase
         $this->assertDatabaseHas('paper_evaluations', [
             'folio' => '019530001',
             'evaluation_type' => 'referencia_i',
+            'processing_status' => 'completed',
+        ]);
+
+        @unlink($tmpFile);
+    }
+
+    public function test_job_assigns_work_center_from_folio_code_when_available(): void
+    {
+        $organization = Organization::factory()->create([
+            'folio_organization' => '95',
+        ]);
+
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+            'code' => '0002',
+            'name' => 'Centro 02',
+        ]);
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'test_').'.pdf';
+        file_put_contents($tmpFile, '%PDF-1.4 fake content');
+
+        \Illuminate\Support\Facades\Http::fake([
+            config('services.ocr.url').'/process' => \Illuminate\Support\Facades\Http::response([
+                'results' => [
+                    [
+                        'folio' => '02950200001',
+                        'answers' => ['referencia_iii' => ['pregunta_1' => 'SI']],
+                        'marked_image_base64' => null,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        \Illuminate\Support\Facades\Event::fake();
+
+        $job = new \App\Jobs\ProcessPaperEvaluation(
+            $tmpFile,
+            null,
+            null,
+            1,
+            1,
+            'test.pdf'
+        );
+
+        $job->handle();
+
+        $this->assertDatabaseHas('paper_evaluations', [
+            'folio' => '02950200001',
+            'source' => 'paper',
+            'organization_id' => $organization->id,
+            'work_center_code' => '02',
+            'work_center_id' => $workCenter->id,
             'processing_status' => 'completed',
         ]);
 
