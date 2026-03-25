@@ -235,5 +235,109 @@
         ]
       }
     }
+  },
+    "clima-laboral": {
+    "mode": "field_based",
+    "block_order": [
+      "answers",
+      "genero",
+      "contratacion",
+      "puesto",
+      "turno",
+      "areas"
+    ],
+    "questions_block": "answers",
+    "questions_output_key": "likert_planta_3",
+    "questions_count": 23,
+    "simple_values": true,
+    "null_if_ambiguous": true,
+    "column_mappings": {
+      "4": {
+        "C1": "A",
+        "C2": "B",
+        "C3": "C",
+        "C4": "D"
+      }
+    },
+    "rules": [
+      {
+        "range": "1-23",
+        "section": "likert_planta_3",
+        "map": {
+          "C1": "A",
+          "C2": "B",
+          "C3": "C",
+          "C4": "D"
+        }
+      }
+    ],
+    "fields": {
+      "genero": {
+        "type": "single_column",
+        "options": [
+          "Masculino",
+          "Femenino"
+        ]
+      },
+      "contratacion": {
+        "type": "single_column",
+        "output_key": "tipo_contrato",
+        "options": [
+          "Directo",
+          "Indirecto",
+          "Salary"
+        ]
+      },
+      "puesto": {
+        "type": "single_column",
+        "output_key": "puestos",
+        "options": [
+          "OPERADOR COSTURA",
+          "OPERADOR CORTE",
+          "LÍDER",
+          "FLEXIBLE",
+          "INSPECTOR",
+          "CLERK",
+          "TÉCNICO",
+          "MATERIALISTA",
+          "MONTACARGUISTA",
+          "SUPERVISOR",
+          "SUPERINTENDENTE",
+          "GERENTE",
+          "INGENIERO",
+          "ANALISTA",
+          "ADMINISTRATIVO",
+          "GENERALISTA",
+          "MECÁNICO",
+          "COORDINADOR",
+          "PROGRAMADOR/PLANEADOR",
+          "OTROS"
+        ]
+      },
+      "turno": {
+        "type": "single_column",
+        "options": [
+          "Primero",
+          "Segundo"
+        ]
+      },
+      "areas": {
+        "type": "single_column",
+        "options": [
+          "PRODUCCIÓN",
+          "CALIDAD",
+          "MANTENIMIENTO",
+          "ADMINISTRACIÓN",
+          "MATERIALES",
+          "INGENIERÍA",
+          "RECURSOS HUMANOS",
+          "MEJORA CONTINUA",
+          "PROYECTOS / PROGRAMACIÓN",
+          "ALMACÉN",
+          "FINANZAS",
+          "OTROS"
+        ]
+      }
+    }
   }
 }
