@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Bus\PendingBatch;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
@@ -48,5 +49,11 @@ class OmrUploadCenterInstrumentTest extends TestCase
 
         $response->assertStatus(302);
         $response->assertSessionDoesntHaveErrors(['instrument']);
+
+        Bus::assertBatchCount(1);
+        Bus::assertBatched(function (PendingBatch $batch): bool {
+            return $batch->jobs->count() === 1
+                && (bool) ($batch->options['allowFailures'] ?? false) === true;
+        });
     }
 }
