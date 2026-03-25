@@ -27,6 +27,7 @@ return [
         'organizations' => [
             'a06fe33d-6955-4d24-98d1-a375ecb55645',
             'a05bc65b-08cd-45d5-8ae1-f4f9d3eb5238',
+            'a158bba4-1e1c-460d-b8c0-cd8af1e658b2',
         ],
     ],
 
