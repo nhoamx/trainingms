@@ -151,4 +151,11 @@ class ProcessPaperEvaluationAsyncTest extends TestCase
             @unlink($tmpFile);
         }
     }
+
+    public function test_async_job_is_batchable_for_bus_batch_dispatch(): void
+    {
+        $traits = class_uses_recursive(ProcessPaperEvaluationAsync::class);
+
+        $this->assertContains('Illuminate\\Bus\\Batchable', $traits);
+    }
 }

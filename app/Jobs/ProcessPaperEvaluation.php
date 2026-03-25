@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
 use App\Services\DemographicDataNormalizationService;
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -19,13 +20,13 @@ use Illuminate\Support\Facades\Log;
 
 class ProcessPaperEvaluation implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected string $fullPath;
 
     protected ?string $initiatorUserId;
 
-    protected ?string $batchId;
+    protected ?string $uploadBatchId;
 
     protected int $currentIndex;
 
@@ -51,7 +52,7 @@ class ProcessPaperEvaluation implements ShouldQueue
     ) {
         $this->fullPath = $fullPath;
         $this->initiatorUserId = $initiatorUserId;
-        $this->batchId = $batchId;
+        $this->uploadBatchId = $batchId;
         $this->currentIndex = $currentIndex;
         $this->totalFiles = $totalFiles;
         $this->fileName = $fileName;
@@ -106,7 +107,7 @@ class ProcessPaperEvaluation implements ShouldQueue
                 $message,
                 $finished,
                 $this->initiatorUserId,
-                $this->batchId,
+                $this->uploadBatchId,
                 $this->currentIndex,
                 $this->totalFiles,
                 $this->fileName
