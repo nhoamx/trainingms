@@ -97,8 +97,10 @@ class EvaluationController extends Controller
             );
         }
 
-        // 3. Encadenar jobs para garantizar ejecución secuencial y evitar race conditions
-        Bus::chain($jobs)->dispatch();
+        // 3. Despachar como batch tolerante a fallos para que un archivo no detenga el lote
+        Bus::batch($jobs)
+            ->allowFailures()
+            ->dispatch();
 
         // 4. Retornar a la misma página con datos del lote para tracking
         return back()->with('batch', [
