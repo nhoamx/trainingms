@@ -111,7 +111,7 @@ class WorkCenterNom035IndexController extends Controller
         $query = PaperEvaluation::query()
             ->where('work_center_id', $workCenter->id)
             ->where('processing_status', 'completed')
-            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros']);
+            ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros', 'likert']);
 
         if ($source !== null) {
             $query->where('source', $source);
@@ -246,6 +246,15 @@ class WorkCenterNom035IndexController extends Controller
                 'color' => 'orange',
                 'icon' => 'shield-check',
                 'route' => 'work-centers.dashboard.nom-035-cisneros',
+            ],
+            [
+                'key' => 'likert',
+                'label' => 'Clima Laboral',
+                'subtitle' => 'Encuesta de Clima Organizacional',
+                'description' => 'Evaluación del ambiente de trabajo, liderazgo, reconocimiento y bienestar organizacional mediante escala Likert.',
+                'color' => 'teal',
+                'icon' => 'sun',
+                'route' => 'work-centers.dashboard.clima-laboral',
             ],
         ];
 

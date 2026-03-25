@@ -188,6 +188,10 @@
                   <svg v-else-if="instrument.icon === 'shield-check'" class="w-6 h-6" :class="iconColor(instrument.color)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 3.944a11.955 11.955 0 01-8.618 2.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622C17.176 19.29 21 14.59 21 9c0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
+                  <!-- sun icon (Clima Laboral) -->
+                  <svg v-else-if="instrument.icon === 'sun'" class="w-6 h-6" :class="iconColor(instrument.color)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
                 </div>
 
                 <div class="flex-1 min-w-0">
@@ -664,6 +668,7 @@ const colorAccent = (color: string): string => {
     amber: 'bg-amber-500',
     orange: 'bg-orange-500',
     green: 'bg-green-600',
+    teal: 'bg-teal-600',
   };
   return map[color] ?? 'bg-gray-400';
 };
@@ -675,6 +680,7 @@ const iconBg = (color: string): string => {
     amber: 'bg-amber-100',
     orange: 'bg-orange-100',
     green: 'bg-green-100',
+    teal: 'bg-teal-100',
   };
   return map[color] ?? 'bg-gray-100';
 };
@@ -686,6 +692,7 @@ const iconColor = (color: string): string => {
     amber: 'text-amber-600',
     orange: 'text-orange-600',
     green: 'text-green-600',
+    teal: 'text-teal-600',
   };
   return map[color] ?? 'text-gray-600';
 };
@@ -697,6 +704,7 @@ const subtitleColor = (color: string): string => {
     amber: 'text-amber-600',
     orange: 'text-orange-600',
     green: 'text-green-600',
+    teal: 'text-teal-600',
   };
   return map[color] ?? 'text-gray-600';
 };
@@ -708,6 +716,7 @@ const badgeClasses = (color: string): string => {
     amber: 'bg-amber-100 text-amber-800',
     orange: 'bg-orange-100 text-orange-800',
     green: 'bg-green-100 text-green-800',
+    teal: 'bg-teal-100 text-teal-800',
   };
   return map[color] ?? 'bg-gray-100 text-gray-800';
 };
@@ -719,6 +728,7 @@ const pingColor = (color: string): string => {
     amber: 'bg-amber-400',
     orange: 'bg-orange-400',
     green: 'bg-green-400',
+    teal: 'bg-teal-400',
   };
   return map[color] ?? 'bg-gray-400';
 };
@@ -730,6 +740,7 @@ const dotColor = (color: string): string => {
     amber: 'bg-amber-500',
     orange: 'bg-orange-500',
     green: 'bg-green-500',
+    teal: 'bg-teal-500',
   };
   return map[color] ?? 'bg-gray-500';
 };

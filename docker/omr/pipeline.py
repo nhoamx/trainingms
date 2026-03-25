@@ -44,8 +44,8 @@ INSTRUMENT_CONFIG = {
     },
 }
 
-DEFAULT_INSTRUMENT = "grv"
-DEFAULT_PDF = str(SCRIPT_DIR / "file-tests/nom-035-demographic.pdf")
+DEFAULT_INSTRUMENT = "clima-laboral"
+DEFAULT_PDF = str(SCRIPT_DIR / "file-tests/check.pdf")
 LARGE_PDF_THRESHOLD_PAGES = int(os.getenv("OMR_LARGE_PDF_THRESHOLD_PAGES", "25"))
 LARGE_PDF_CHUNK_SIZE = int(os.getenv("OMR_LARGE_PDF_CHUNK_SIZE", "10"))
 
