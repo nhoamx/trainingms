@@ -1,6 +1,8 @@
 import cv2
 import json
+import os
 from pathlib import Path
+from PyPDF2 import PdfReader
 
 from omr.helpers import classify_markers
 from omr.helpers import debug_answers_rois
@@ -44,6 +46,8 @@ INSTRUMENT_CONFIG = {
 
 DEFAULT_INSTRUMENT = "grv"
 DEFAULT_PDF = str(SCRIPT_DIR / "file-tests/nom-035-demographic.pdf")
+LARGE_PDF_THRESHOLD_PAGES = int(os.getenv("OMR_LARGE_PDF_THRESHOLD_PAGES", "25"))
+LARGE_PDF_CHUNK_SIZE = int(os.getenv("OMR_LARGE_PDF_CHUNK_SIZE", "10"))
 
 
 def _get_instrument_annotation_paths(instrument: str) -> tuple[str, str]:
@@ -58,6 +62,34 @@ def _get_instrument_annotation_paths(instrument: str) -> tuple[str, str]:
     return folio_path, answers_path
 
 
+def get_pdf_page_count(pdf_path: str) -> int:
+    reader = PdfReader(pdf_path)
+    return len(reader.pages)
+
+
+def build_page_chunks(total_pages: int, threshold_pages: int, chunk_size: int) -> list[tuple[int, int]]:
+    if total_pages <= 0:
+        return []
+
+    if chunk_size <= 0:
+        raise ValueError("chunk_size debe ser mayor a 0")
+
+    if threshold_pages < 1:
+        threshold_pages = 1
+
+    if total_pages <= threshold_pages:
+        return [(1, total_pages)]
+
+    chunks = []
+    start_page = 1
+    while start_page <= total_pages:
+        end_page = min(start_page + chunk_size - 1, total_pages)
+        chunks.append((start_page, end_page))
+        start_page = end_page + 1
+
+    return chunks
+
+
 def process_pdf(
     pdf_path: str,
     instrument: str,
@@ -70,7 +102,13 @@ def process_pdf(
 
     folio_annotation_path, answers_annotation_path = _get_instrument_annotation_paths(instrument)
 
-    images = pdf_to_images(pdf_path)
+    page_count = get_pdf_page_count(pdf_path)
+    page_chunks = build_page_chunks(
+        total_pages=page_count,
+        threshold_pages=LARGE_PDF_THRESHOLD_PAGES,
+        chunk_size=LARGE_PDF_CHUNK_SIZE,
+    )
+
     folio_annotation = load_folio_annotation(folio_annotation_path)
     answers_annotation = load_answers_annotation(answers_annotation_path)
     answers_mapping = load_answers_mapping(ANSWERS_MAPPING)
@@ -81,65 +119,71 @@ def process_pdf(
 
     page_results = []
 
-    for page_index, image in enumerate(images):
-        print(f"\n📄 Procesando página {page_index}")
+    for first_page, last_page in page_chunks:
+        images = pdf_to_images(pdf_path, first_page=first_page, last_page=last_page)
 
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        thresh = cv2.threshold(
-            gray,
-            0,
-            255,
-            cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU,
-        )[1]
+        for chunk_offset, image in enumerate(images):
+            page_index = (first_page - 1) + chunk_offset
+            print(f"\n📄 Procesando página {page_index}")
 
-        top_markers, bottom_markers = detect_markers(thresh)
-        draw_markers(image, top_markers + bottom_markers, page_index, save=save_debug, storage=storage)
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            thresh = cv2.threshold(
+                gray,
+                0,
+                255,
+                cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU,
+            )[1]
 
-        tl, tr, bl = classify_markers(top_markers, bottom_markers)
-        warped = warp_from_markers(image, tl, tr, bl, page_index, save=save_debug, storage=storage)
+            top_markers, bottom_markers = detect_markers(thresh)
+            draw_markers(image, top_markers + bottom_markers, page_index, save=save_debug, storage=storage)
 
-        if warped is None:
-            print(f"⚠️ Página {page_index} sin warp")
+            tl, tr, bl = classify_markers(top_markers, bottom_markers)
+            warped = warp_from_markers(image, tl, tr, bl, page_index, save=save_debug, storage=storage)
+
+            if warped is None:
+                print(f"⚠️ Página {page_index} sin warp")
+                page_results.append(
+                    {
+                        "page": page_index,
+                        "status": "failed",
+                        "reason": "warp_failed",
+                    }
+                )
+                continue
+
+            normalized = normalize_size(warped, page_number=page_index, save=save_debug, storage=storage)
+
+            if save_debug:
+                debug_folio_roi(normalized, folio_annotation, page_index, storage=storage)
+                debug_answers_rois(normalized, answers_annotation, page_index, storage=storage)
+
+            folio = read_folio(normalized, folio_annotation)
+            answers = read_answers(normalized, answers_annotation, mapping_config=answers_mapping)
+
+            print(f"📌 Página {page_index} folio: {folio}")
+
+            output_json_path = None
+            if folio and "?" not in folio:
+                output_file = output_dir / f"{folio}.json"
+                with output_file.open("w", encoding="utf-8") as file:
+                    json.dump(answers, file, ensure_ascii=False, indent=2)
+                output_json_path = str(output_file)
+
             page_results.append(
                 {
                     "page": page_index,
-                    "status": "failed",
-                    "reason": "warp_failed",
+                    "status": "completed",
+                    "folio": folio,
+                    "answers": answers,
+                    "output_json_path": output_json_path,
                 }
             )
-            continue
-
-        normalized = normalize_size(warped, page_number=page_index, save=save_debug, storage=storage)
-
-        if save_debug:
-            debug_folio_roi(normalized, folio_annotation, page_index, storage=storage)
-            debug_answers_rois(normalized, answers_annotation, page_index, storage=storage)
-
-        folio = read_folio(normalized, folio_annotation)
-        answers = read_answers(normalized, answers_annotation, mapping_config=answers_mapping)
-
-        print(f"📌 Página {page_index} folio: {folio}")
-
-        output_json_path = None
-        if folio and "?" not in folio:
-            output_file = output_dir / f"{folio}.json"
-            with output_file.open("w", encoding="utf-8") as file:
-                json.dump(answers, file, ensure_ascii=False, indent=2)
-            output_json_path = str(output_file)
-
-        page_results.append(
-            {
-                "page": page_index,
-                "status": "completed",
-                "folio": folio,
-                "answers": answers,
-                "output_json_path": output_json_path,
-            }
-        )
 
     return {
         "instrument": str(instrument).lower().strip(),
         "pdf_path": str(pdf_path),
+        "page_count": page_count,
+        "page_chunks": [{"from": chunk[0], "to": chunk[1]} for chunk in page_chunks],
         "pages": page_results,
         "processed_pages": len(page_results),
     }
