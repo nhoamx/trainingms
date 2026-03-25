@@ -36,6 +36,10 @@ INSTRUMENT_CONFIG = {
         "folio_annotation": "grv-folio-annotator.json",
         "answers_annotation": "grv-answers-annotator.json",
     },
+    "clima-laboral": {
+        "folio_annotation": "clima-laboral-folio-annotator.json",
+        "answers_annotation": "clima-laboral-answers-annotator.json",
+    },
 }
 
 DEFAULT_INSTRUMENT = "grv"
