@@ -385,9 +385,11 @@ def _select_top_row(row_scores, min_fill, min_margin):
     }
 
 
-def _read_answers_field_based(image, answers_annotation, instrument_mapping, min_fill, min_margin):
+def _read_answers_field_based(image, answers_annotation, instrument_mapping, instrument, mapping_config, min_fill, min_margin):
     fields_config = instrument_mapping.get("fields", {})
     ordered_block_names = _get_ordered_block_names(answers_annotation, instrument_mapping)
+    simple_values = bool(instrument_mapping.get("simple_values", False))
+    null_if_ambiguous = bool(instrument_mapping.get("null_if_ambiguous", False))
 
     results = {}
 
@@ -395,6 +397,8 @@ def _read_answers_field_based(image, answers_annotation, instrument_mapping, min
         field_config = fields_config.get(block_name)
         if not field_config:
             continue
+
+        target_key = str(field_config.get("output_key", block_name))
 
         thresh, block_grid, columns, rows = _extract_block_grid(answers_annotation, block_name, image)
         if thresh is None:
@@ -413,14 +417,20 @@ def _read_answers_field_based(image, answers_annotation, instrument_mapping, min
             row_index = selected["row"]
             value = options[row_index] if row_index < len(options) else row_index
 
-            results[block_name] = {
-                "value": value,
-                "row": row_index,
-                "selected_column": f"C{column_number}",
-                "confidence": selected["confidence"],
-                "margin": selected["margin"],
-                "ambiguous": selected["ambiguous"],
-            }
+            if simple_values:
+                if null_if_ambiguous and selected["ambiguous"]:
+                    results[target_key] = None
+                else:
+                    results[target_key] = value
+            else:
+                results[target_key] = {
+                    "value": value,
+                    "row": row_index,
+                    "selected_column": f"C{column_number}",
+                    "confidence": selected["confidence"],
+                    "margin": selected["margin"],
+                    "ambiguous": selected["ambiguous"],
+                }
 
         elif field_type == "two_digit_columns":
             tens_column = int(field_config.get("tens_column", 1))
@@ -438,25 +448,104 @@ def _read_answers_field_based(image, answers_annotation, instrument_mapping, min
             tens = tens_selected["row"]
             units = units_selected["row"]
             value = (tens * 10) + units
+            is_ambiguous = bool(tens_selected["ambiguous"] or units_selected["ambiguous"])
 
-            results[block_name] = {
-                "value": value,
-                "tens": tens,
-                "units": units,
-                "selected_columns": {
-                    "tens": f"C{tens_column}",
-                    "units": f"C{units_column}",
-                },
-                "confidence": round((tens_selected["confidence"] + units_selected["confidence"]) / 2, 4),
-                "margin": round((tens_selected["margin"] + units_selected["margin"]) / 2, 4),
-                "ambiguous": bool(tens_selected["ambiguous"] or units_selected["ambiguous"]),
-            }
+            if simple_values:
+                if null_if_ambiguous and is_ambiguous:
+                    results[target_key] = None
+                else:
+                    results[target_key] = value
+            else:
+                results[target_key] = {
+                    "value": value,
+                    "tens": tens,
+                    "units": units,
+                    "selected_columns": {
+                        "tens": f"C{tens_column}",
+                        "units": f"C{units_column}",
+                    },
+                    "confidence": round((tens_selected["confidence"] + units_selected["confidence"]) / 2, 4),
+                    "margin": round((tens_selected["margin"] + units_selected["margin"]) / 2, 4),
+                    "ambiguous": is_ambiguous,
+                }
+
+    questions_block = instrument_mapping.get("questions_block")
+    if questions_block and questions_block in answers_annotation:
+        thresh, block_grid, columns, rows = _extract_block_grid(answers_annotation, questions_block, image)
+        if thresh is not None:
+            question_number = int(instrument_mapping.get("question_start", 1))
+            max_questions = int(instrument_mapping.get("questions_count", len(rows)))
+            questions_output_key = str(instrument_mapping.get("questions_output_key", "questions"))
+            questions = {}
+
+            for row in rows:
+                if len(questions) >= max_questions:
+                    break
+
+                option_scores = {}
+
+                for col in columns:
+                    key = f"C{col}R{row}"
+                    point = block_grid.get(key)
+                    if point is None:
+                        continue
+
+                    px = int(point["x"])
+                    py = int(point["y"])
+                    option_scores[f"C{col}"] = get_fill_ratio(thresh, px, py)
+
+                if not option_scores:
+                    continue
+
+                ranked = sorted(option_scores.items(), key=lambda item: item[1], reverse=True)
+                selected_column, selected_score = ranked[0]
+                second_score = ranked[1][1] if len(ranked) > 1 else 0.0
+                margin = selected_score - second_score
+                ambiguous = selected_score < min_fill or margin < min_margin
+
+                selected_label, mapping_section = _resolve_answer_mapping(
+                    question_number=question_number,
+                    selected_column=selected_column,
+                    column_count=len(columns),
+                    instrument=instrument,
+                    mapping_config=mapping_config,
+                )
+
+                if simple_values:
+                    if null_if_ambiguous and ambiguous:
+                        questions[str(question_number)] = None
+                    else:
+                        questions[str(question_number)] = selected_label
+                else:
+                    questions[str(question_number)] = {
+                        "value": selected_label,
+                        "selected_column": selected_column,
+                        "confidence": round(float(selected_score), 4),
+                        "margin": round(float(margin), 4),
+                        "ambiguous": ambiguous,
+                        "block": questions_block,
+                        "row": row,
+                    }
+                    if mapping_section:
+                        questions[str(question_number)]["mapping_section"] = mapping_section
+
+                question_number += 1
+
+            results[questions_output_key] = questions
 
     education_complete = results.get("education_level")
     education_incomplete = results.get("incomplete_education_level")
     if education_complete is not None or education_incomplete is not None:
-        complete_ok = bool(education_complete and not education_complete.get("ambiguous", True))
-        incomplete_ok = bool(education_incomplete and not education_incomplete.get("ambiguous", True))
+        complete_ok = bool(
+            isinstance(education_complete, dict)
+            and education_complete
+            and not education_complete.get("ambiguous", True)
+        )
+        incomplete_ok = bool(
+            isinstance(education_incomplete, dict)
+            and education_incomplete
+            and not education_incomplete.get("ambiguous", True)
+        )
         results["_validations"] = {
             "education_any_selected": bool(complete_ok or incomplete_ok)
         }
@@ -479,6 +568,8 @@ def read_answers(image, annotation, min_fill=0.3, min_margin=0.05, mapping_confi
             image=image,
             answers_annotation=answers_annotation,
             instrument_mapping=instrument_mapping,
+            instrument=instrument,
+            mapping_config=mapping_config,
             min_fill=min_fill,
             min_margin=min_margin,
         )

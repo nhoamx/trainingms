@@ -43,6 +43,12 @@ const INSTRUMENT_OPTIONS = [
         label: 'Referencia V',
         summary: 'Datos demográficos y laborales de la persona.',
     },
+    {
+        value: 'clima-laboral',
+        shortLabel: 'Formato D',
+        label: 'Clima Laboral',
+        summary: 'Evaluación de clima laboral (Likert 23 preguntas).',
+    },
 ];
 
 const form = useForm({

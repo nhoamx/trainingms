@@ -54,7 +54,7 @@ class EvaluationController extends Controller
         $validated = $request->validate([
             'files' => 'required|array|min:1|max:'.$maxBatchFiles,
             'files.*' => 'file|mimes:pdf|max:20480', // 20MB max por archivo
-            'instrument' => 'nullable|string|in:gri,griii,grv',
+            'instrument' => 'nullable|string|in:gri,griii,grv,clima-laboral',
         ]);
 
         $instrument = $validated['instrument'] ?? null;
