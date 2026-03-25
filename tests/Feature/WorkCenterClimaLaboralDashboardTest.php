@@ -33,9 +33,9 @@ class WorkCenterClimaLaboralDashboardTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('WorkCenters/ClimaLaboralDashboard')
             ->where('workCenter.id', $workCenter->id)
-            ->where('organization.id', $organization->id)
-            ->has('evaluations')
-            ->where('totalEvaluations', 3)
+            ->where('dashboardData.organization.id', $organization->id)
+            ->has('evaluations', 3)
+            ->has('dashboardData.demographic_details')
         );
     }
 
@@ -85,7 +85,7 @@ class WorkCenterClimaLaboralDashboardTest extends TestCase
         $this->actingAs($user)
             ->get(route('work-centers.dashboard.clima-laboral', $workCenter))
             ->assertInertia(fn ($page) => $page
-                ->where('totalEvaluations', 2)
+                ->has('evaluations', 2)
             );
     }
 }

@@ -28,32 +28,49 @@ class WorkCenterClimaLaboralDashboardController extends Controller
 
         $workCenter->load('organization');
 
-        $evaluations = PaperEvaluation::query()
+        $paperEvaluations = PaperEvaluation::query()
             ->where('work_center_id', $workCenter->id)
             ->where('evaluation_type', 'likert')
             ->where('processing_status', 'completed')
-            ->with(['demographicData'])
-            ->get()
-            ->map(function (PaperEvaluation $evaluation): array {
-                $scores = $this->likertScoreService->calculateLikertScores($evaluation);
+            ->with(['demographicData', 'comments'])
+            ->get();
 
-                return [
-                    'id' => $evaluation->id,
-                    'folio' => $evaluation->folio,
-                    'personal_folio' => $evaluation->personal_folio,
-                    'total_score' => $scores['total_score'],
-                    'interpretation' => $scores['interpretation'],
-                    'demographicData' => $evaluation->demographicData ? [
-                        'gender' => $evaluation->demographicData->gender,
-                        'contract_type' => $evaluation->demographicData->contract_type,
-                        'position' => $evaluation->demographicData->position,
-                        'department' => $evaluation->demographicData->department,
-                        'work_schedule' => $evaluation->demographicData->work_schedule,
-                    ] : null,
+        $demographicDetails = $this->buildDemographicDetails($paperEvaluations);
+
+        $evaluations = $paperEvaluations->map(function (PaperEvaluation $evaluation): array {
+            $scores = $this->likertScoreService->calculateLikertScores($evaluation);
+
+            $dimensions = [];
+            foreach ($scores['dimensions'] as $dimensionName => $dimensionData) {
+                $dimensions[] = [
+                    'name' => $dimensionName,
+                    'score' => $dimensionData['score'],
+                    'interpretation' => $dimensionData['interpretation'],
                 ];
-            })
-            ->values()
-            ->all();
+            }
+
+            $comments = $evaluation->comments->map(fn ($comment): array => [
+                'factor' => $comment->factor,
+                'comment' => $comment->comment,
+            ]);
+
+            return [
+                'id' => $evaluation->id,
+                'folio' => $evaluation->folio,
+                'personal_folio' => $evaluation->personal_folio,
+                'demographicData' => $evaluation->demographicData ? [
+                    'gender' => $evaluation->demographicData->gender,
+                    'contract_type' => $evaluation->demographicData->contract_type,
+                    'position' => $evaluation->demographicData->position,
+                    'department' => $evaluation->demographicData->department,
+                    'work_schedule' => $evaluation->demographicData->work_schedule,
+                ] : null,
+                'dimensions' => $dimensions,
+                'comments' => $comments,
+                'total_score' => $scores['total_score'],
+                'interpretation' => $scores['interpretation'],
+            ];
+        })->values()->all();
 
         return Inertia::render('WorkCenters/ClimaLaboralDashboard', [
             'title' => 'Clima Laboral - '.$workCenter->name,
@@ -62,15 +79,62 @@ class WorkCenterClimaLaboralDashboardController extends Controller
                 'name' => $workCenter->name,
                 'code' => $workCenter->code,
             ],
-            'organization' => [
-                'id' => $workCenter->organization->id,
-                'name' => $workCenter->organization->name,
-                'logo' => $workCenter->organization->logo
-                    ? asset('storage/'.$workCenter->organization->logo)
-                    : null,
+            'dashboardData' => [
+                'organization' => [
+                    'id' => $workCenter->organization->id,
+                    'name' => $workCenter->organization->name,
+                    'logo' => $workCenter->organization->logo
+                        ? asset('storage/'.$workCenter->organization->logo)
+                        : null,
+                ],
+                'demographic_details' => $demographicDetails,
             ],
             'evaluations' => $evaluations,
-            'totalEvaluations' => count($evaluations),
         ]);
+    }
+
+    /**
+     * Builds demographic details from a collection of PaperEvaluations.
+     *
+     * @param  \Illuminate\Support\Collection<int, PaperEvaluation>  $evaluations
+     * @return array{genders: string[], contract_types: string[], positions: string[], areas: string[], shifts: string[], total_evaluations: int}
+     */
+    private function buildDemographicDetails(\Illuminate\Support\Collection $evaluations): array
+    {
+        $genders = [];
+        $contractTypes = [];
+        $positions = [];
+        $areas = [];
+        $shifts = [];
+
+        foreach ($evaluations as $evaluation) {
+            $demo = $evaluation->demographicData;
+            if ($demo) {
+                if ($demo->gender) {
+                    $genders[$demo->gender] = true;
+                }
+                if ($demo->contract_type) {
+                    $contractTypes[$demo->contract_type] = true;
+                }
+                if ($demo->position) {
+                    $positions[$demo->position] = true;
+                }
+                if ($demo->department) {
+                    $areas[$demo->department] = true;
+                }
+                if ($demo->work_schedule) {
+                    $shifts[$demo->work_schedule] = true;
+                }
+            }
+        }
+
+        return [
+            'genders' => array_keys($genders),
+            'contract_types' => array_keys($contractTypes),
+            'positions' => array_keys($positions),
+            'areas' => array_keys($areas),
+            'shifts' => array_keys($shifts),
+            'total_evaluations' => $evaluations->count(),
+        ];
     }
 }
