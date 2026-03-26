@@ -31,7 +31,7 @@ class LikertScoreService
 
             foreach ($data['preguntas'] as $questionNum) {
                 $answer = $questions[(string) $questionNum] ?? null;
-                $dimensionScore += $config['valorOpciones'][$answer] ?? 0;
+                $dimensionScore += $config['valorOpciones'][$answer] ?? $config['valorOpciones']['A'];
             }
 
             // Get interpretation for this dimension
@@ -74,7 +74,7 @@ class LikertScoreService
                 $questionDetails[] = [
                     'number' => $questionNum,
                     'answer' => $answer,
-                    'value' => $config['valorOpciones'][$answer] ?? 0,
+                    'value' => $config['valorOpciones'][$answer] ?? $config['valorOpciones']['A'],
                 ];
             }
 
@@ -183,7 +183,7 @@ class LikertScoreService
 
             foreach ($data['preguntas'] as $questionNum) {
                 $answer = $questions[(string) $questionNum] ?? null;
-                $dimensionScore += $config['valorOpciones'][$answer] ?? 0;
+                $dimensionScore += $config['valorOpciones'][$answer] ?? $config['valorOpciones']['A'];
             }
 
             // Get interpretation for this dimension
