@@ -67,7 +67,9 @@ class ProcessBulkEvaluationImport implements ShouldQueue
                 $this->bulkImportJob->source,
                 function ($processedRows, $totalRows, $updatedCount, $skippedCount) {
                     $this->updateProgress($processedRows, $totalRows, $updatedCount, $skippedCount);
-                }
+                },
+                $this->bulkImportJob->work_center_id,
+                $this->bulkImportJob->evaluation_type,
             );
 
             // Get file path from storage

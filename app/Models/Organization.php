@@ -172,6 +172,16 @@ class Organization extends Model
         return $this->hasOne(WorkCenter::class)->where('is_primary', true);
     }
 
+    public function climaSections()
+    {
+        return $this->hasMany(OrganizationClimaSection::class);
+    }
+
+    public function conclusionsFiles()
+    {
+        return $this->hasMany(OrganizationConclusionsFile::class)->orderBy('slot');
+    }
+
     public function hasInstrument(string $instrumentName): bool
     {
         return $this->instruments()->where('name', $instrumentName)->exists();

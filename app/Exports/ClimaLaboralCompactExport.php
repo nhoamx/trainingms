@@ -34,9 +34,17 @@ class ClimaLaboralCompactExport implements FromArray, WithHeadings, WithStrictNu
             'Folio',
             'Puntaje',
             'Nivel',
-            'Tipo de Contrato',
+            'Género',
+            'Contratación',
             'Área',
             'Puesto',
+            'Turno',
+            'Línea',
+            'Gerente de Planta',
+            'Gerente de Producción',
+            'Gerente de RH',
+            'Supervisor',
+            'Comentarios Adicionales',
         ];
     }
 

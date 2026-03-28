@@ -181,6 +181,38 @@ class WorkCenter extends Model
     }
 
     /**
+     * Get clima laboral narrative sections for this work center.
+     */
+    public function climaSections(): HasMany
+    {
+        return $this->hasMany(WorkCenterClimaSection::class);
+    }
+
+    /**
+     * Get clima laboral reports for this work center.
+     */
+    public function climaReports(): HasMany
+    {
+        return $this->hasMany(WorkCenterClimaReport::class);
+    }
+
+    /**
+     * Get clima laboral evidences for this work center.
+     */
+    public function climaEvidences(): HasMany
+    {
+        return $this->hasMany(WorkCenterClimaEvidence::class);
+    }
+
+    /**
+     * Get conclusions files for this work center.
+     */
+    public function conclusionsFiles(): HasMany
+    {
+        return $this->hasMany(WorkCenterConclusionsFile::class);
+    }
+
+    /**
      * Scope to get only primary work centers
      */
     public function scopePrimary($query)

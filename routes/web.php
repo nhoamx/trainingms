@@ -107,6 +107,66 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/centro-trabajo/{workCenter}/dashboard/clima-laboral', [\App\Http\Controllers\WorkCenter\WorkCenterClimaLaboralDashboardController::class, 'show'])
         ->name('work-centers.dashboard.clima-laboral');
 
+    Route::post('/centro-trabajo/{workCenter}/clima-laboral/sections', [\App\Http\Controllers\WorkCenter\WorkCenterClimaSectionController::class, 'upsert'])
+        ->name('work-centers.clima.sections.upsert')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::post('/centro-trabajo/{workCenter}/clima-laboral/reports', [\App\Http\Controllers\WorkCenter\WorkCenterClimaReportController::class, 'store'])
+        ->name('work-centers.clima.reports.store')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::patch('/centro-trabajo/{workCenter}/clima-laboral/reports/{report}/publish', [\App\Http\Controllers\WorkCenter\WorkCenterClimaReportController::class, 'togglePublish'])
+        ->name('work-centers.clima.reports.toggle-publish')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::patch('/centro-trabajo/{workCenter}/clima-laboral/reports/{report}/active', [\App\Http\Controllers\WorkCenter\WorkCenterClimaReportController::class, 'setActive'])
+        ->name('work-centers.clima.reports.set-active')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::get('/centro-trabajo/{workCenter}/clima-laboral/reports/{report}/download', [\App\Http\Controllers\WorkCenter\WorkCenterClimaReportController::class, 'download'])
+        ->name('work-centers.clima.reports.download')
+        ->middleware('can:viewWorkCenterDashboard,workCenter');
+
+    Route::delete('/centro-trabajo/{workCenter}/clima-laboral/reports/{report}', [\App\Http\Controllers\WorkCenter\WorkCenterClimaReportController::class, 'destroy'])
+        ->name('work-centers.clima.reports.destroy')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::post('/centro-trabajo/{workCenter}/clima-laboral/evidences', [\App\Http\Controllers\WorkCenter\WorkCenterClimaEvidenceController::class, 'store'])
+        ->name('work-centers.clima.evidences.store')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::patch('/centro-trabajo/{workCenter}/clima-laboral/evidences/{evidence}/publish', [\App\Http\Controllers\WorkCenter\WorkCenterClimaEvidenceController::class, 'togglePublish'])
+        ->name('work-centers.clima.evidences.toggle-publish')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::get('/centro-trabajo/{workCenter}/clima-laboral/evidences/{evidence}/download', [\App\Http\Controllers\WorkCenter\WorkCenterClimaEvidenceController::class, 'download'])
+        ->name('work-centers.clima.evidences.download')
+        ->middleware('can:viewWorkCenterDashboard,workCenter');
+
+    Route::delete('/centro-trabajo/{workCenter}/clima-laboral/evidences/{evidence}', [\App\Http\Controllers\WorkCenter\WorkCenterClimaEvidenceController::class, 'destroy'])
+        ->name('work-centers.clima.evidences.destroy')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::post('/centro-trabajo/{workCenter}/clima-laboral/conclusiones/archivos', [\App\Http\Controllers\WorkCenter\WorkCenterConclusionsFileController::class, 'store'])
+        ->name('work-centers.clima.conclusions-files.store')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::get('/centro-trabajo/{workCenter}/clima-laboral/conclusiones/archivos/{file}/download', [\App\Http\Controllers\WorkCenter\WorkCenterConclusionsFileController::class, 'download'])
+        ->name('work-centers.clima.conclusions-files.download')
+        ->middleware('can:viewWorkCenterDashboard,workCenter');
+
+    Route::patch('/centro-trabajo/{workCenter}/clima-laboral/conclusiones/archivos/{file}/toggle-publish', [\App\Http\Controllers\WorkCenter\WorkCenterConclusionsFileController::class, 'togglePublish'])
+        ->name('work-centers.clima.conclusions-files.toggle-publish')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::delete('/centro-trabajo/{workCenter}/clima-laboral/conclusiones/archivos/{file}', [\App\Http\Controllers\WorkCenter\WorkCenterConclusionsFileController::class, 'destroy'])
+        ->name('work-centers.clima.conclusions-files.destroy')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::post('/centro-trabajo/{workCenter}/clima-laboral/actualizacion-masiva', [\App\Http\Controllers\WorkCenter\WorkCenterClimaLaboralDashboardController::class, 'bulkUpdate'])
+        ->name('work-centers.clima.bulk-update')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
     Route::post('/centro-trabajo/{workCenter}/comite/miembros', [\App\Http\Controllers\WorkCenter\WorkCenterCommitteeMemberController::class, 'store'])
         ->name('work-centers.committee-members.store')
         ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);

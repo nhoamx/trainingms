@@ -2,7 +2,6 @@
   <Dashboard>
     <div class="py-8">
       <div class="mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Breadcrumb -->
         <nav class="mb-6 flex items-center gap-2 text-sm text-gray-500" aria-label="Breadcrumb">
           <Link :href="route('my-work-centers')" class="hover:text-gray-700 transition-colors">
             {{ t('My Work Centers') }}
@@ -13,7 +12,6 @@
           <span class="font-medium text-teal-700">{{ t('Work Climate') }}</span>
         </nav>
 
-        <!-- Header -->
         <div class="mb-8">
           <div class="flex flex-col sm:flex-row sm:items-center gap-6 mb-4">
             <div v-if="dashboardData.organization.logo" class="flex-shrink-0">
@@ -34,7 +32,29 @@
           </div>
         </div>
 
-        <!-- Tabs Navigation -->
+        <div v-if="canManageClima" class="mb-5 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <div class="flex items-center gap-2 text-sm text-amber-800">
+            <svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <span class="font-medium">
+              {{ isPreviewMode ? t('Previewing as organization user') : t('Admin Mode — content editing enabled') }}
+            </span>
+          </div>
+          <button
+            @click="isPreviewMode = !isPreviewMode"
+            :class="[
+              'rounded-lg px-4 py-1.5 text-sm font-semibold transition-all',
+              isPreviewMode
+                ? 'bg-amber-600 text-white hover:bg-amber-700'
+                : 'border border-amber-300 text-amber-800 hover:bg-amber-100',
+            ]"
+          >
+            {{ isPreviewMode ? t('Exit preview') : t('Preview as user') }}
+          </button>
+        </div>
+
         <div class="mb-8">
           <nav class="flex flex-wrap gap-2 lg:gap-4" aria-label="Tabs">
             <button
@@ -54,10 +74,8 @@
           </nav>
         </div>
 
-        <!-- Tab Content -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200">
           <div class="p-6 sm:p-8">
-            <!-- Datos Demográficos -->
             <div v-show="activeTab === 'demographic'" class="animate-fade-in">
               <DemographicDataTab
                 :demographic-details="dashboardData.demographic_details"
@@ -65,19 +83,20 @@
               />
             </div>
 
-            <!-- Resultados -->
             <div v-show="activeTab === 'results'" class="animate-fade-in space-y-8">
               <ClimaLaboralResultsTab
                 :evaluations="evaluations"
                 :organization-id="dashboardData.organization.id"
+                :work-center-id="effectiveCanManage ? workCenter.id : ''"
               />
+
 
               <div class="border-t border-gray-200"></div>
 
-              <div class="bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-8 border border-teal-100">
+              <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-8 border border-blue-100">
                 <div class="max-w-2xl mx-auto text-center">
-                  <div class="inline-flex items-center justify-center w-16 h-16 bg-teal-100 rounded-full mb-4">
-                    <svg class="w-8 h-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
@@ -87,7 +106,7 @@
                     :href="`/organization/${dashboardData.organization.id}/likert/report`"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+                    class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   >
                     <span>{{ t('View Report') }}</span>
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -98,265 +117,286 @@
               </div>
             </div>
 
-            <!-- Análisis -->
-            <div v-show="activeTab === 'analysis'" class="animate-fade-in">
-              <TopRiskFactorsTab
-                :evaluations="evaluations"
-                :demographic-details="dashboardData.demographic_details"
-                :organization="dashboardData.organization"
-              />
+            <div v-show="activeTab === 'analysis'" class="animate-fade-in space-y-6">
+              <!-- Top Risk Factors with Demographic Filters -->
+              <div class="overflow-hidden rounded-xl border border-gray-200">
+                <div class="border-b border-gray-200 bg-gray-50 p-5">
+                  <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-gray-900">{{ t('Demographic Filters') }}</h3>
+                    <button
+                      @click="resetAnalysisFilters"
+                      class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
+                    >
+                      ↺ {{ t('Reset Filters') }}
+                    </button>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('Gender') }}</label>
+                      <select v-model="analysisFilters.gender" class="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 focus:border-teal-500 focus:ring-teal-500">
+                        <option value="">{{ t('All') }}</option>
+                        <option v-for="g in dashboardData.demographic_details.genders" :key="g" :value="g">{{ g }}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('Contract Type') }}</label>
+                      <select v-model="analysisFilters.contract_type" class="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 focus:border-teal-500 focus:ring-teal-500">
+                        <option value="">{{ t('All') }}</option>
+                        <option v-for="ct in dashboardData.demographic_details.contract_types" :key="ct" :value="ct">{{ ct }}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('Position') }}</label>
+                      <select v-model="analysisFilters.position" class="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 focus:border-teal-500 focus:ring-teal-500">
+                        <option value="">{{ t('All') }}</option>
+                        <option v-for="p in dashboardData.demographic_details.positions" :key="p" :value="p">{{ p }}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('Area') }}</label>
+                      <select v-model="analysisFilters.area" class="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 focus:border-teal-500 focus:ring-teal-500">
+                        <option value="">{{ t('All') }}</option>
+                        <option v-for="a in dashboardData.demographic_details.areas" :key="a" :value="a">{{ a }}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('Shift') }}</label>
+                      <select v-model="analysisFilters.shift" class="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 focus:border-teal-500 focus:ring-teal-500">
+                        <option value="">{{ t('All') }}</option>
+                        <option v-for="s in dashboardData.demographic_details.shifts" :key="s" :value="s">{{ s }}</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-5">
+                  <h3 class="mb-1 text-base font-semibold text-gray-900">{{ t('Top 3 Risk Factors') }}</h3>
+                  <p class="mb-4 text-xs text-gray-500">
+                    {{ t('Based on total disagreement responses') }} · {{ filteredAnalysisEvaluations.length }} {{ t('evaluations') }}
+                  </p>
+
+                  <div v-if="topRiskFactors.length > 0" class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                      <thead class="border-y border-gray-200 bg-gray-50">
+                        <tr>
+                          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">{{ t('Factor') }}</th>
+                          <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide">
+                            <span class="inline-block rounded-full bg-green-100 px-2.5 py-1 text-green-800">{{ t('Strongly Agree') }}</span>
+                          </th>
+                          <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide">
+                            <span class="inline-block rounded-full bg-blue-100 px-2.5 py-1 text-blue-800">{{ t('Agree') }}</span>
+                          </th>
+                          <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide">
+                            <span class="inline-block rounded-full bg-orange-100 px-2.5 py-1 text-orange-800">{{ t('Disagree') }}</span>
+                          </th>
+                          <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide">
+                            <span class="inline-block rounded-full bg-red-100 px-2.5 py-1 text-red-800">{{ t('Strongly Disagree') }}</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100">
+                        <tr v-for="(factor, index) in topRiskFactors" :key="factor.name" class="transition-colors hover:bg-gray-50">
+                          <td class="px-4 py-3">
+                            <div class="flex items-center gap-3">
+                              <span
+                                class="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                                :class="riskFactorBadgeClass(index)"
+                              >
+                                {{ index + 1 }}
+                              </span>
+                              <span class="font-medium text-gray-900">{{ factor.name }}</span>
+                            </div>
+                          </td>
+                          <td class="px-4 py-3 text-center">
+                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 font-semibold text-green-700">{{ factor.counts['Totally Agree'] ?? 0 }}</span>
+                          </td>
+                          <td class="px-4 py-3 text-center">
+                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 font-semibold text-blue-700">{{ factor.counts['Agree'] ?? 0 }}</span>
+                          </td>
+                          <td class="px-4 py-3 text-center">
+                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 font-semibold text-orange-700">{{ factor.counts['Disagree'] ?? 0 }}</span>
+                          </td>
+                          <td class="px-4 py-3 text-center">
+                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 font-semibold text-red-700">{{ factor.counts['Totally Disagree'] ?? 0 }}</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div v-else class="rounded-lg border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500">
+                    {{ t('Try changing the filters to see risk factors') }}
+                  </div>
+                </div>
+              </div>
+
+              <section class="p-5">
+                <div class="mb-4 flex items-start justify-between gap-3">
+                  <h2 class="text-2xl font-bold text-gray-800">{{ t('Analysis by Department') }}</h2>
+                  <span :class="statusClass(climaContent.sections.analysis_department.status)">{{ statusLabel(climaContent.sections.analysis_department.status) }}</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">{{ t('Explain findings by departments in clear language for operational leaders.') }}</p>
+                <RichTextEditor
+                  v-if="effectiveCanManage"
+                  v-model="sectionDrafts.analysis_department"
+                />
+                <RichTextEditor
+                  v-else
+                  :model-value="sectionDrafts.analysis_department || `<p>${t('No published content yet.')}</p>`"
+                  :readonly="true"
+                />
+                <div v-if="effectiveCanManage" class="mt-3 flex gap-2">
+                  <button @click="saveSection('analysis_department', 'draft')" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">{{ t('Save Draft') }}</button>
+                  <button @click="saveSection('analysis_department', 'published')" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">{{ t('Publish') }}</button>
+                </div>
+              </section>
+
+              <section class="p-5">
+                <div class="mb-4 flex items-start justify-between gap-3">
+                  <h2 class="text-2xl font-bold text-gray-800">{{ t('Analysis by Position') }}</h2>
+                  <span :class="statusClass(climaContent.sections.analysis_position.status)">{{ statusLabel(climaContent.sections.analysis_position.status) }}</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">{{ t('Describe behavior by role type and where support actions are needed.') }}</p>
+                <RichTextEditor
+                  v-if="effectiveCanManage"
+                  v-model="sectionDrafts.analysis_position"
+                />
+                <RichTextEditor
+                  v-else
+                  :model-value="sectionDrafts.analysis_position || `<p>${t('No published content yet.')}</p>`"
+                  :readonly="true"
+                />
+                <div v-if="effectiveCanManage" class="mt-3 flex gap-2">
+                  <button @click="saveSection('analysis_position', 'draft')" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">{{ t('Save Draft') }}</button>
+                  <button @click="saveSection('analysis_position', 'published')" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">{{ t('Publish') }}</button>
+                </div>
+              </section>
             </div>
 
-            <div v-show="activeTab === 'recomendaciones'" class="animate-fade-in">
-              <template v-if="dashboardData.organization.id === 'a05bc65b-08cd-45d5-8ae1-f4f9d3eb5238'">
-                <RecommendationsTab :evaluations="evaluations" />
-              </template>
-              <template v-else>
-                <RecommendationsP3Tab :evaluations="evaluations" />
-              </template>
+            <div v-show="activeTab === 'recomendaciones'" class="animate-fade-in space-y-4">
+              <!-- Structured factors table -->
+              <section class="p-5">
+                <div class="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <h2 class="text-2xl font-bold text-gray-800">{{ t('Recommendations') }}</h2>
+                    <p class="mt-0.5 text-sm text-gray-500">{{ t('Factor / Action / Department') }}</p>
+                  </div>
+                  <span :class="statusClass(climaContent.sections.recommendations_factors.status)">{{ statusLabel(climaContent.sections.recommendations_factors.status) }}</span>
+                </div>
+                <RecommendationFactorsBuilder
+                  v-model="sectionDrafts.recommendations_factors"
+                  :readonly="!effectiveCanManage"
+                />
+                <div v-if="effectiveCanManage" class="mt-4 flex gap-2">
+                  <button @click="saveSection('recommendations_factors', 'draft')" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">{{ t('Save Draft') }}</button>
+                  <button @click="saveSection('recommendations_factors', 'published')" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">{{ t('Publish') }}</button>
+                </div>
+              </section>
+
+              <!-- Free-text recommendations -->
+              <section class="p-5">
+                <div class="mb-4 flex items-start justify-between gap-3">
+                  <h2 class="text-2xl font-bold text-gray-800">{{ t('Additional Notes') }}</h2>
+                  <span :class="statusClass(climaContent.sections.recommendations.status)">{{ statusLabel(climaContent.sections.recommendations.status) }}</span>
+                </div>
+                <RichTextEditor
+                  v-if="effectiveCanManage"
+                  v-model="sectionDrafts.recommendations"
+                />
+                <RichTextEditor
+                  v-else
+                  :model-value="sectionDrafts.recommendations || `<p>${t('No published content yet.')}</p>`"
+                  :readonly="true"
+                />
+                <div v-if="effectiveCanManage" class="mt-3 flex gap-2">
+                  <button @click="saveSection('recommendations', 'draft')" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">{{ t('Save Draft') }}</button>
+                  <button @click="saveSection('recommendations', 'published')" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">{{ t('Publish') }}</button>
+                </div>
+              </section>
             </div>
 
             <div v-show="activeTab === 'foda'" class="animate-fade-in">
-              <FodaDataTab />
+              <section class="p-5">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                  <h3 class="text-lg font-semibold text-gray-900">{{ t('SWOT') }}</h3>
+                  <span :class="statusClass(climaContent.sections.foda.status)">{{ statusLabel(climaContent.sections.foda.status) }}</span>
+                </div>
+                <FodaBuilder
+                  v-model="sectionDrafts.foda"
+                  :readonly="!effectiveCanManage"
+                />
+                <div v-if="effectiveCanManage" class="mt-4 flex gap-2">
+                  <button @click="saveSection('foda', 'draft')" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">{{ t('Save Draft') }}</button>
+                  <button @click="saveSection('foda', 'published')" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">{{ t('Publish') }}</button>
+                </div>
+              </section>
             </div>
 
             <div v-show="activeTab === 'conclusions'" class="animate-fade-in">
-              <!-- Planta 1 Conclusions -->
-              <template v-if="dashboardData.organization.id === 'a05bc65b-08cd-45d5-8ae1-f4f9d3eb5238'">
-                <div class="max-w-4xl mx-auto">
-                  <div class="text-center mb-8">
-                    <h2 class="text-3xl font-bold text-gray-900 mb-2">{{ t('Conclusions') }}</h2>
-                    <p class="text-gray-600">JAROPAMEX S.A. DE C.V. - PLANTA 1</p>
-                    <p class="text-sm text-gray-500 mt-2">
-                      <span class="font-medium">{{ t('Evaluation period') }}:</span> {{ t('November') }} 2025 |
-                      <span class="font-medium">{{ t('Issue date') }}:</span> 10/12/2025
-                    </p>
-                  </div>
-
-                  <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-                    <h3 class="text-lg font-semibold text-blue-900 mb-2">{{ t('General Objective') }}</h3>
-                    <p class="text-blue-800">
-                      {{ t('Evaluate the perception of employees regarding leadership, communication, recognition, work organization, and well-being, to guide decisions and improvement plans.') }}
-                    </p>
-                  </div>
-
-                  <h3 class="text-2xl font-bold text-gray-900 mb-6">{{ t('Analysis') }}</h3>
-
-                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
-                    <div class="flex items-center gap-2 mb-3">
-                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
-                      <h4 class="text-xl font-bold text-gray-900">1) {{ t('Recognition and Reward') }}</h4>
-                    </div>
-                    <p class="text-gray-700 mb-4">
-                      {{ t('There is a strong perception of lack of recognition and clear rewards, which can impact motivation, discipline, and retention.') }}
-                    </p>
-                    <div class="bg-white rounded-lg p-4">
-                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Priority Actions') }}:</h5>
-                      <ul class="list-disc list-inside text-gray-700 space-y-1">
-                        <li>{{ t('Immediate recognition program for safety, quality, and attendance.') }}</li>
-                        <li>{{ t('Transparent criteria for critical roles and rewards.') }}</li>
-                        <li>{{ t('Train middle management in leadership best practices, avoiding violence.') }}</li>
-                        <li>{{ t('Staff motivation by supervisors and leaders (they are not identified).') }}</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
-                    <div class="flex items-center gap-2 mb-3">
-                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
-                      <h4 class="text-xl font-bold text-gray-900">2) {{ t('Training and Development') }}</h4>
-                    </div>
-                    <p class="text-gray-700 mb-4">
-                      {{ t('A significant gap is observed in effective training and educational resources, with direct risk to quality, rework, and safety.') }}
-                    </p>
-                    <div class="bg-white rounded-lg p-4">
-                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Recommended Actions') }}:</h5>
-                      <ul class="list-disc list-inside text-gray-700 space-y-1">
-                        <li>{{ t('Skills and gaps matrix by position/team.') }}</li>
-                        <li>{{ t('Train middle management in leadership best practices, avoiding violence.') }}</li>
-                        <li>{{ t('Certify internal instructors.') }}</li>
-                        <li>{{ t('Measure effectiveness with competency tests for internal employee growth.') }}</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
-                    <div class="flex items-center gap-2 mb-3">
-                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
-                      <h4 class="text-xl font-bold text-gray-900">3) {{ t('Work-Life Balance') }}</h4>
-                    </div>
-                    <p class="text-gray-700 mb-4">
-                      {{ t('Responses point to fatigue and pressure from overtime/shifts, a probable trigger for absenteeism and psychosocial risks.') }}
-                    </p>
-                    <div class="bg-white rounded-lg p-4">
-                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Recommended Actions') }}:</h5>
-                      <ul class="list-disc list-inside text-gray-700 space-y-1">
-                        <li>{{ t('Clear overtime rules with equitable rotation.') }}</li>
-                        <li>{{ t('Adjust shift patterns to reduce fatigue.') }}</li>
-                        <li>{{ t('Clear and humane process for absenteeism and time off.') }}</li>
-                        <li>{{ t('Pulse surveys and safety metrics for monitoring.') }}</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div class="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
-                    <div class="text-center mb-4">
-                      <h3 class="text-xl font-bold text-gray-900 mb-2">{{ t('Intervention Programs Available') }}</h3>
-                      <p class="text-gray-600 text-sm">{{ t('Download the intervention programs designed for this organization') }}</p>
-                    </div>
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                      <a
-                        href="/assets/plantas/a05bc65b-08cd-45d5-8ae1-f4f9d3eb5238/PROGRAMA-DE-INTERVENCION-JAROPAMEX-PLANTA-1-2025-Programa-General-Planta 1.pdf"
-                        download
-                        class="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
-                      >
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                        </svg>
-                        {{ t('Download General Program') }}
-                      </a>
-                      <a
-                        href="/assets/plantas/a05bc65b-08cd-45d5-8ae1-f4f9d3eb5238/PROGRAMA-DE-INTERVENCION-JAROPAMEX-PLANTA-1-2025-Programa-Salary-Planta-1.pdf"
-                        download
-                        class="inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg"
-                      >
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                        </svg>
-                        {{ t('Download Salary Program') }}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </template>
-
-              <!-- Planta 3 Conclusions -->
-              <template v-else-if="dashboardData.organization.id === 'a06fe33d-6955-4d24-98d1-a375ecb55645'">
-                <div class="max-w-4xl mx-auto">
-                  <div class="text-center mb-8">
-                    <h2 class="text-3xl font-bold text-gray-900 mb-2">{{ t('Conclusions') }}</h2>
-                    <p class="text-gray-600">JAROPAMEX S.A. DE C.V. - PLANTA 3</p>
-                    <p class="text-sm text-gray-500 mt-2">
-                      <span class="font-medium">{{ t('Evaluation period') }}:</span> {{ t('November') }} 2025 |
-                      <span class="font-medium">{{ t('Issue date') }}:</span> 10/12/2025
-                    </p>
-                  </div>
-
-                  <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-                    <h3 class="text-lg font-semibold text-blue-900 mb-2">{{ t('General Objective') }}</h3>
-                    <p class="text-blue-800">{{ t('General study objective') }}</p>
-                  </div>
-
-                  <h3 class="text-2xl font-bold text-gray-900 mb-6">{{ t('Analysis') }}</h3>
-
-                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
-                    <div class="flex items-center gap-2 mb-3">
-                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
-                      <h4 class="text-xl font-bold text-gray-900">1) {{ t('Work-Life Balance Critical') }}</h4>
-                    </div>
-                    <p class="text-gray-700 mb-4">
-                      {{ t('Responses indicate fatigue and pressure from overtime/shifts, a likely trigger for absenteeism and psychosocial risks.') }}
-                    </p>
-                    <div class="bg-white rounded-lg p-4">
-                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Recommended Actions') }}:</h5>
-                      <ul class="list-disc list-inside text-gray-700 space-y-1">
-                        <li>{{ t('Clear overtime rules with equitable rotation') }}</li>
-                        <li>{{ t('Adjust shift patterns to reduce fatigue') }}</li>
-                        <li>{{ t('Clear and humane process for absenteeism and time off') }}</li>
-                        <li>{{ t('Pulse surveys and safety metrics for monitoring') }}</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
-                    <div class="flex items-center gap-2 mb-3">
-                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
-                      <h4 class="text-xl font-bold text-gray-900">2) {{ t('Professional Advancement Critical') }}</h4>
-                    </div>
-                    <p class="text-gray-700 mb-4">
-                      {{ t('Predominates perception of few clear growth paths; this tends to increase turnover and disengagement.') }}
-                    </p>
-                    <div class="bg-white rounded-lg p-4">
-                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Recommended Actions') }}:</h5>
-                      <ul class="list-disc list-inside text-gray-700 space-y-1">
-                        <li>{{ t('Career paths by job family') }}</li>
-                        <li>{{ t('Verifiable promotion criteria') }}</li>
-                        <li>{{ t('Team leader development program') }}</li>
-                        <li>{{ t('Post vacancies internally first and measure mobility') }}</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div class="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 mb-6">
-                    <div class="flex items-center gap-2 mb-3">
-                      <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">{{ t('CRITICAL') }}</span>
-                      <h4 class="text-xl font-bold text-gray-900">3) {{ t('Recognition and Reward Critical') }}</h4>
-                    </div>
-                    <p class="text-gray-700 mb-4">
-                      {{ t('Significant gap observed in effective training and educational resources, with direct risk to quality, rework, and safety.') }}
-                    </p>
-                    <div class="bg-white rounded-lg p-4">
-                      <h5 class="font-semibold text-gray-900 mb-2">{{ t('Recommended Actions') }}:</h5>
-                      <ul class="list-disc list-inside text-gray-700 space-y-1">
-                        <li>{{ t('Skills and gaps matrix by position/team') }}</li>
-                        <li>{{ t('Train middle management in leadership best practices, avoiding violence') }}</li>
-                        <li>{{ t('Certify internal instructors') }}</li>
-                        <li>{{ t('Measure effectiveness with competency tests for internal employee growth') }}</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div class="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
-                    <div class="text-center mb-4">
-                      <h3 class="text-xl font-bold text-gray-900 mb-2">{{ t('Intervention Programs Available') }}</h3>
-                      <p class="text-gray-600 text-sm">{{ t('Download the intervention programs designed for this organization') }}</p>
-                    </div>
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                      <a
-                        href="/assets/plantas/a06fe33d-6955-4d24-98d1-a375ecb55645/PROGRAMA-DE-INTERVENCION-JAROPAMEX-PLANTA-3-2025-Programa-General-Planta-3.pdf"
-                        download
-                        class="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
-                      >
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                        </svg>
-                        {{ t('Download General Program') }}
-                      </a>
-                      <a
-                        href="/assets/plantas/a06fe33d-6955-4d24-98d1-a375ecb55645/PROGRAMA-DE-INTERVENCION-JAROPAMEX-PLANTA-3-2025-Programa-Salary-Planta-3.pdf"
-                        download
-                        class="inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg"
-                      >
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                        </svg>
-                        {{ t('Download Salary Program') }}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </template>
-
-              <!-- Other organizations - Coming Soon -->
-              <template v-else>
-                <div class="text-center py-16">
-                  <div class="text-6xl mb-4">🚧</div>
-                  <p class="text-2xl font-semibold text-gray-900 mb-2">{{ t('Document in Preparation') }}</p>
-                  <p class="text-gray-600">{{ t('We are working on the conclusions for your organization. It will be available soon.') }}</p>
-                </div>
-              </template>
-            </div>
-
-            <!-- Informe -->
-            <div v-show="activeTab === 'report'" class="animate-fade-in">
-              <ReportTab
-                :organization-id="dashboardData.organization.id"
+              <ConclusionsBuilderTab
+                v-model="conclusionsDraft"
                 :organization-name="dashboardData.organization.name"
+                :work-center-id="workCenter.id"
+                :files="conclusionsContent.files"
+                :section-status="conclusionsContent.section.status"
+                :can-manage="effectiveCanManage"
               />
             </div>
 
-            <div v-show="activeTab === 'evidence'" class="animate-fade-in">
-              <EvidencesDataTab :organization-info="dashboardData.organization" />
+            <div v-show="activeTab === 'report'" class="animate-fade-in">
+              <ReportCardBuilder
+                v-model="sectionDrafts.report_card_config"
+                :readonly="!effectiveCanManage"
+                :reports="climaContent.reports"
+                :work-center-id="workCenter.id"
+                :locale="locale"
+                @save="saveSection('report_card_config', $event)"
+                @toggle-publish="toggleReportPublish"
+                @set-active="setActiveReport"
+                @delete-report="deleteReport"
+              />
+            </div>
+
+            <div v-show="activeTab === 'evidence'" class="animate-fade-in space-y-5">
+              <!-- Upload zone (managers only) -->
+              <div v-if="effectiveCanManage" class="rounded-xl border border-gray-200 bg-white p-5">
+                <div class="mb-3 flex items-center justify-between">
+                  <h3 class="text-sm font-semibold text-gray-700">{{ t('Upload photos') }}</h3>
+                  <span v-if="evidenceUploadQueue.length" class="rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-700">
+                    {{ t('Uploading') }} {{ evidenceUploadQueue.length }}…
+                  </span>
+                </div>
+                <FileDropZone
+                  multiple
+                  type="image"
+                  accept="image/png,image/jpeg,image/webp"
+                  :language="locale"
+                  :uploading="evidenceUploadQueue.length > 0"
+                  @files-selected="uploadEvidenceFiles"
+                />
+              </div>
+
+              <!-- Gallery -->
+              <div v-if="climaContent.evidences.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="evidence in climaContent.evidences" :key="evidence.id" class="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                  <div class="relative">
+                    <img :src="evidence.preview_url" :alt="evidence.title || evidence.original_filename" class="h-48 w-full object-cover" />
+                    <div v-if="!evidence.is_published" class="absolute left-2 top-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">{{ t('Draft') }}</div>
+                  </div>
+                  <div class="p-3">
+                    <p class="truncate text-sm font-medium text-gray-800">{{ evidence.title || evidence.original_filename }}</p>
+                    <p class="mt-0.5 text-xs text-gray-400">{{ evidence.file_size_human }}</p>
+                    <div class="mt-3 flex flex-wrap gap-1.5">
+                      <a :href="route('work-centers.clima.evidences.download', [workCenter.id, evidence.id])" class="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100">↓</a>
+                      <button v-if="effectiveCanManage" @click="toggleEvidencePublish(evidence.id)" class="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100">{{ evidence.is_published ? t('Unpublish') : t('Publish') }}</button>
+                      <button v-if="effectiveCanManage" @click="deleteEvidence(evidence.id)" class="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50">{{ t('Delete') }}</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="rounded-xl border border-dashed border-gray-300 bg-gray-50 py-14 text-center text-sm text-gray-400 italic">
+                {{ t('No photos uploaded yet.') }}
+              </div>
             </div>
           </div>
         </div>
@@ -366,21 +406,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { computed, reactive, ref } from 'vue';
+import { Link, router, useForm } from '@inertiajs/vue3';
 import Dashboard from '../../Layouts/Dashboard.vue';
 import DemographicDataTab from '@/Components/Organization/DemographicDataTab.vue';
-import TopRiskFactorsTab from '@/Components/Organization/TopRiskFactorsTab.vue';
-import RecommendationsTab from '@/Components/Organization/RecommendationsTab.vue';
-import EvidencesDataTab from '@/Components/Organization/EvidencesDataTab.vue';
-import FodaDataTab from '@/Components/Organization/FodaDataTab.vue';
-import RecommendationsP3Tab from '@/Components/Organization/RecommendationsP3Tab.vue';
-import ReportTab from '@/Components/Organization/ReportTab.vue';
 import ClimaLaboralResultsTab from '@/Components/Organization/ClimaLaboralResultsTab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
+import RichTextEditor from '@/Components/RichTextEditor.vue';
+import RecommendationFactorsBuilder from '@/Components/WorkCenter/RecommendationFactorsBuilder.vue';
+import ReportCardBuilder from '@/Components/WorkCenter/ReportCardBuilder.vue';
+import FileDropZone from '@/Components/WorkCenter/FileDropZone.vue';
+import FodaBuilder from '@/Components/WorkCenter/FodaBuilder.vue';
+import ConclusionsBuilderTab from '@/Components/Organization/ConclusionsBuilderTab.vue';
 import { useTranslations } from '@/composables/useTranslations';
 
-const { t } = useTranslations();
+const { t, locale } = useTranslations();
 
 interface Tab {
   key: string;
@@ -391,8 +431,8 @@ interface DemographicDetails {
   genders: string[];
   contract_types: string[];
   positions: string[];
-  departments: string[];
-  work_schedules: string[];
+  areas: string[];
+  shifts: string[];
   total_evaluations: number;
 }
 
@@ -411,20 +451,87 @@ interface WorkCenter {
   code: string;
 }
 
+interface DimensionScore {
+  name: string;
+  score: number;
+  interpretation: string;
+}
+
 interface Evaluation {
   id: string;
+  folio: string;
+  personal_folio: string;
+  total_score: number;
+  interpretation: string;
   demographic_data?: Record<string, unknown>;
-  demographicData?: Record<string, unknown>;
-  scores?: {
-    total_score?: number;
-    interpretation?: string;
+  demographicData?: {
+    gender?: string;
+    contract_type?: string;
+    position?: string;
+    department?: string;
+    work_schedule?: string;
   };
+  dimensions?: DimensionScore[];
+}
+
+interface ClimaSectionState {
+  content: string | null;
+  status: 'draft' | 'published';
+}
+
+interface ClimaReportItem {
+  id: number;
+  title: string;
+  language: string;
+  original_filename: string;
+  file_size_human: string;
+  is_published: boolean;
+  is_active: boolean;
+  created_at: string | null;
+}
+
+interface ClimaEvidenceItem {
+  id: number;
+  title: string | null;
+  description: string | null;
+  preview_url: string;
+  original_filename: string;
+  file_size_human: string;
+  is_published: boolean;
+}
+
+interface ConclusionsFileItem {
+  id: number;
+  slot: number;
+  title: string;
+  color: string;
+  original_filename: string;
+  file_size_human: string;
+  is_published: boolean;
 }
 
 interface Props {
   dashboardData: DashboardData;
   workCenter: WorkCenter;
   evaluations?: Evaluation[];
+  canManageClima: boolean;
+  climaContent: {
+    sections: {
+      analysis_department: ClimaSectionState;
+      analysis_position: ClimaSectionState;
+      recommendations: ClimaSectionState;
+      recommendations_factors: ClimaSectionState;
+      report_card_config: ClimaSectionState;
+      foda: ClimaSectionState;
+      conclusions: ClimaSectionState;
+    };
+    reports: ClimaReportItem[];
+    evidences: ClimaEvidenceItem[];
+  };
+  conclusionsContent: {
+    section: { content: string | null; status: 'draft' | 'published' };
+    files: Record<string, ConclusionsFileItem>;
+  };
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -451,6 +558,198 @@ const translatedTabs = computed(() =>
 
 const activeTab = ref<string>('demographic');
 const evaluations = ref<Evaluation[]>(props.evaluations || []);
+const conclusionsDraft = ref<string>(props.conclusionsContent.section.content ?? '{}');
+
+const isPreviewMode = ref<boolean>(false);
+const effectiveCanManage = computed(() => props.canManageClima && !isPreviewMode.value);
+
+const analysisFilters = reactive({
+  gender: '',
+  contract_type: '',
+  position: '',
+  area: '',
+  shift: '',
+});
+
+const filteredAnalysisEvaluations = computed(() =>
+  evaluations.value.filter(evaluation => {
+    const demo = evaluation.demographicData ?? {};
+    if (analysisFilters.gender && demo.gender !== analysisFilters.gender) { return false; }
+    if (analysisFilters.contract_type && demo.contract_type !== analysisFilters.contract_type) { return false; }
+    if (analysisFilters.position && demo.position !== analysisFilters.position) { return false; }
+    if (analysisFilters.area && demo.department !== analysisFilters.area) { return false; }
+    if (analysisFilters.shift && demo.work_schedule !== analysisFilters.shift) { return false; }
+    return true;
+  }));
+
+const topRiskFactors = computed(() => {
+  const interpretationMap: Record<string, string> = {
+    'Totalmente de Acuerdo': 'Totally Agree',
+    'De Acuerdo': 'Agree',
+    'Desacuerdo': 'Disagree',
+    'Totalmente Desacuerdo': 'Totally Disagree',
+  };
+  const factorMap: Record<string, Record<string, number>> = {};
+
+  filteredAnalysisEvaluations.value.forEach(evaluation => {
+    if (!evaluation.dimensions || !Array.isArray(evaluation.dimensions)) { return; }
+    evaluation.dimensions.forEach(dimension => {
+      if (!factorMap[dimension.name]) {
+        factorMap[dimension.name] = { 'Totally Agree': 0, 'Agree': 0, 'Disagree': 0, 'Totally Disagree': 0 };
+      }
+      const key = interpretationMap[dimension.interpretation] ?? dimension.interpretation ?? '';
+      if (factorMap[dimension.name][key] !== undefined) {
+        factorMap[dimension.name][key]++;
+      }
+    });
+  });
+
+  return Object.entries(factorMap)
+    .map(([name, counts]) => ({
+      name,
+      counts,
+      disagreementSum: (counts['Disagree'] ?? 0) + (counts['Totally Disagree'] ?? 0),
+    }))
+    .sort((a, b) => b.disagreementSum - a.disagreementSum);
+});
+
+const riskFactorBadgeClass = (index: number): string => {
+  if (index === 0) { return 'bg-red-600 text-white'; }
+  if (index === 1) { return 'bg-orange-500 text-white'; }
+  if (index === 2) { return 'bg-yellow-500 text-white'; }
+  return 'bg-slate-400 text-white';
+};
+
+const resetAnalysisFilters = (): void => {
+  analysisFilters.gender = '';
+  analysisFilters.contract_type = '';
+  analysisFilters.position = '';
+  analysisFilters.area = '';
+  analysisFilters.shift = '';
+};
+
+const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);
+
+const sectionDrafts = reactive({
+  analysis_department: props.climaContent.sections.analysis_department.content ?? '',
+  analysis_position: props.climaContent.sections.analysis_position.content ?? '',
+  recommendations: props.climaContent.sections.recommendations.content ?? '',
+  recommendations_factors: props.climaContent.sections.recommendations_factors.content ?? '[]',
+  report_card_config: props.climaContent.sections.report_card_config.content ?? '{}',
+  foda: props.climaContent.sections.foda.content ?? '[]',
+  conclusions: props.climaContent.sections.conclusions.content ?? '',
+});
+
+const sectionForm = useForm({
+  section_key: '',
+  content: '',
+  status: 'draft',
+});
+
+const reportForm = useForm({
+  title: '',
+  report_file: null as File | null,
+  is_published: true,
+  is_active: true,
+});
+
+const evidenceForm = useForm({
+  title: '',
+  description: '',
+  evidence_file: null as File | null,
+  is_published: true,
+});
+
+const evidenceUploadQueue = ref<number[]>([]);
+
+const uploadEvidenceFiles = (files: File[]): void => {
+  files.forEach((file, i) => {
+    const id = Date.now() + i;
+    evidenceUploadQueue.value.push(id);
+
+    const form = useForm({
+      title: null as string | null,
+      description: null as string | null,
+      evidence_file: file as File | null,
+      is_published: true,
+    });
+
+    form.post(route('work-centers.clima.evidences.store', props.workCenter.id), {
+      forceFormData: true,
+      preserveScroll: true,
+      onFinish: () => {
+        evidenceUploadQueue.value = evidenceUploadQueue.value.filter(q => q !== id);
+      },
+    });
+  });
+};
+
+const activePublishedReport = computed(() => {
+  return props.climaContent.reports.find(report => report.is_active && report.is_published)
+    ?? props.climaContent.reports.find(report => report.is_published)
+    ?? null;
+});
+
+const statusLabel = (status: 'draft' | 'published'): string => {
+  return status === 'published' ? t('Published') : t('Draft');
+};
+
+const statusClass = (status: 'draft' | 'published'): string => {
+  return status === 'published'
+    ? 'rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700'
+    : 'rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700';
+};
+
+const saveSection = (sectionKey: string, status: 'draft' | 'published'): void => {
+  sectionForm.section_key = sectionKey;
+  sectionForm.content = sectionDrafts[sectionKey as keyof typeof sectionDrafts];
+  sectionForm.status = status;
+
+  sectionForm.post(route('work-centers.clima.sections.upsert', props.workCenter.id), {
+    preserveScroll: true,
+  });
+};
+
+const onReportFileChange = (event: Event): void => {
+  const target = event.target as HTMLInputElement;
+  reportForm.report_file = target.files?.[0] ?? null;
+};
+
+const submitReport = (): void => {
+  reportForm.post(route('work-centers.clima.reports.store', props.workCenter.id), {
+    preserveScroll: true,
+    forceFormData: true,
+    onSuccess: () => {
+      reportForm.reset('title', 'report_file');
+      reportForm.is_published = true;
+      reportForm.is_active = true;
+    },
+  });
+};
+
+const toggleReportPublish = (reportId: number): void => {
+  router.patch(route('work-centers.clima.reports.toggle-publish', [props.workCenter.id, reportId]), {}, { preserveScroll: true });
+};
+
+const setActiveReport = (reportId: number): void => {
+  router.patch(route('work-centers.clima.reports.set-active', [props.workCenter.id, reportId]), {}, { preserveScroll: true });
+};
+
+const deleteReport = (reportId: number): void => {
+  router.delete(route('work-centers.clima.reports.destroy', [props.workCenter.id, reportId]), { preserveScroll: true });
+};
+
+const onEvidenceFileChange = (_event: Event): void => { /* replaced by uploadEvidenceFiles */ };
+
+const submitEvidence = (): void => { /* replaced by uploadEvidenceFiles */ };
+
+const toggleEvidencePublish = (evidenceId: number): void => {
+  router.patch(route('work-centers.clima.evidences.toggle-publish', [props.workCenter.id, evidenceId]), {}, { preserveScroll: true });
+};
+
+const deleteEvidence = (evidenceId: number): void => {
+  router.delete(route('work-centers.clima.evidences.destroy', [props.workCenter.id, evidenceId]), { preserveScroll: true });
+};
 </script>
 
 <style scoped>
