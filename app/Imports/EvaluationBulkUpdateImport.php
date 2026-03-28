@@ -45,6 +45,31 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
         'turno' => ['type' => 'demographic', 'field' => 'work_schedule'],
         'tipo_de_empleado' => ['type' => 'demographic', 'field' => 'contract_type'],
 
+        // Likert answer columns (P1–P23), values must be A/B/C/D
+        'p1' => ['type' => 'likert_answer', 'question' => '1'],
+        'p2' => ['type' => 'likert_answer', 'question' => '2'],
+        'p3' => ['type' => 'likert_answer', 'question' => '3'],
+        'p4' => ['type' => 'likert_answer', 'question' => '4'],
+        'p5' => ['type' => 'likert_answer', 'question' => '5'],
+        'p6' => ['type' => 'likert_answer', 'question' => '6'],
+        'p7' => ['type' => 'likert_answer', 'question' => '7'],
+        'p8' => ['type' => 'likert_answer', 'question' => '8'],
+        'p9' => ['type' => 'likert_answer', 'question' => '9'],
+        'p10' => ['type' => 'likert_answer', 'question' => '10'],
+        'p11' => ['type' => 'likert_answer', 'question' => '11'],
+        'p12' => ['type' => 'likert_answer', 'question' => '12'],
+        'p13' => ['type' => 'likert_answer', 'question' => '13'],
+        'p14' => ['type' => 'likert_answer', 'question' => '14'],
+        'p15' => ['type' => 'likert_answer', 'question' => '15'],
+        'p16' => ['type' => 'likert_answer', 'question' => '16'],
+        'p17' => ['type' => 'likert_answer', 'question' => '17'],
+        'p18' => ['type' => 'likert_answer', 'question' => '18'],
+        'p19' => ['type' => 'likert_answer', 'question' => '19'],
+        'p20' => ['type' => 'likert_answer', 'question' => '20'],
+        'p21' => ['type' => 'likert_answer', 'question' => '21'],
+        'p22' => ['type' => 'likert_answer', 'question' => '22'],
+        'p23' => ['type' => 'likert_answer', 'question' => '23'],
+
         // Skip these columns (metadata, not data)
         'no' => ['type' => 'skip'],
     ];
@@ -292,6 +317,18 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                             $updated = true;
                         }
                         break;
+
+                    case 'likert_answer':
+                        $answerUpdated = $this->updateLikertAnswer(
+                            $evaluation,
+                            $fieldInfo['question'],
+                            $value,
+                            $rowNumber
+                        );
+                        if ($answerUpdated) {
+                            $updated = true;
+                        }
+                        break;
                 }
             } else {
                 // Unknown field - treat as custom field
@@ -427,5 +464,38 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
     public function getErrors(): array
     {
         return $this->errors;
+    }
+
+    /**
+     * Update a single Likert answer in likert_answers['questions']
+     */
+    protected function updateLikertAnswer(PaperEvaluation $evaluation, string $questionNumber, mixed $value, int $rowNumber): bool
+    {
+        if ($evaluation->evaluation_type !== 'likert') {
+            return false;
+        }
+
+        $normalized = strtoupper(trim((string) $value));
+
+        if (! in_array($normalized, ['A', 'B', 'C', 'D'], true)) {
+            Log::warning("Row {$rowNumber}: invalid Likert answer '{$value}' for question {$questionNumber}, skipping");
+
+            return false;
+        }
+
+        $likertAnswers = $evaluation->likert_answers ?? [];
+        $current = $likertAnswers['questions'][$questionNumber] ?? null;
+
+        if ($current === $normalized) {
+            return false;
+        }
+
+        $likertAnswers['questions'][$questionNumber] = $normalized;
+        $evaluation->likert_answers = $likertAnswers;
+        $evaluation->save();
+
+        Log::info("Updated likert_answers.questions.{$questionNumber} to '{$normalized}' for row {$rowNumber}");
+
+        return true;
     }
 }

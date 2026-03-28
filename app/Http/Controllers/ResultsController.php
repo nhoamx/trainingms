@@ -12,6 +12,7 @@ use App\Models\BulkImportJob;
 use App\Models\Category;
 use App\Models\DemographicData;
 use App\Models\Evaluation;
+use App\Models\EvaluationCustomField;
 use App\Models\FolioBatch;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
@@ -447,9 +448,19 @@ class ResultsController extends Controller
             return response()->json(['error' => 'No se encontraron evaluaciones de clima laboral'], 404);
         }
 
+        // Compute custom field keys once (derived from heading labels)
+        $lineaKey = EvaluationCustomField::labelToKey('Línea');
+        $gerentePlantaKey = EvaluationCustomField::labelToKey('Gerente de Planta');
+        $gerenteProduccionKey = EvaluationCustomField::labelToKey('Gerente de Producción');
+        $gerenteRhKey = EvaluationCustomField::labelToKey('Gerente de RH');
+        $supervisorKey = EvaluationCustomField::labelToKey('Supervisor');
+        $comentariosKey = EvaluationCustomField::labelToKey('Comentarios Adicionales');
+
         // Map evaluations to compact format
         $exportData = [];
         foreach ($evaluations as $evaluation) {
+            $answers = $evaluation['answers'] ?? [];
+            $customFields = $evaluation['customFields'] ?? [];
             $exportData[] = [
                 $evaluation['personal_folio'] ?? $evaluation['folio'] ?? '',
                 $evaluation['scores']['total_score'] ?? '',
@@ -459,12 +470,35 @@ class ResultsController extends Controller
                 $evaluation['demographics']['area'] ?? '',
                 $evaluation['demographics']['puesto'] ?? '',
                 $evaluation['demographics']['turno'] ?? '',
-                '', // Línea
-                '', // Gerente de Planta
-                '', // Gerente de Producción
-                '', // Gerente de RH
-                '', // Supervisor
-                '', // Comentarios Adicionales
+                $customFields[$lineaKey]['value'] ?? '',
+                $customFields[$gerentePlantaKey]['value'] ?? '',
+                $customFields[$gerenteProduccionKey]['value'] ?? '',
+                $customFields[$gerenteRhKey]['value'] ?? '',
+                $customFields[$supervisorKey]['value'] ?? '',
+                $customFields[$comentariosKey]['value'] ?? '',
+                $answers['1'] ?? '',
+                $answers['2'] ?? '',
+                $answers['3'] ?? '',
+                $answers['4'] ?? '',
+                $answers['5'] ?? '',
+                $answers['6'] ?? '',
+                $answers['7'] ?? '',
+                $answers['8'] ?? '',
+                $answers['9'] ?? '',
+                $answers['10'] ?? '',
+                $answers['11'] ?? '',
+                $answers['12'] ?? '',
+                $answers['13'] ?? '',
+                $answers['14'] ?? '',
+                $answers['15'] ?? '',
+                $answers['16'] ?? '',
+                $answers['17'] ?? '',
+                $answers['18'] ?? '',
+                $answers['19'] ?? '',
+                $answers['20'] ?? '',
+                $answers['21'] ?? '',
+                $answers['22'] ?? '',
+                $answers['23'] ?? '',
             ];
         }
 
