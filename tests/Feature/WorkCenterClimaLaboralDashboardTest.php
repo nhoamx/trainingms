@@ -34,8 +34,12 @@ class WorkCenterClimaLaboralDashboardTest extends TestCase
             ->component('WorkCenters/ClimaLaboralDashboard')
             ->where('workCenter.id', $workCenter->id)
             ->where('dashboardData.organization.id', $organization->id)
+            ->where('canManageClima', true)
             ->has('evaluations', 3)
             ->has('dashboardData.demographic_details')
+            ->has('climaContent.sections')
+            ->has('climaContent.reports')
+            ->has('climaContent.evidences')
         );
     }
 
@@ -52,6 +56,9 @@ class WorkCenterClimaLaboralDashboardTest extends TestCase
             ->get(route('work-centers.dashboard.clima-laboral', $workCenter));
 
         $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->where('canManageClima', false)
+        );
     }
 
     public function test_unauthenticated_user_is_redirected(): void

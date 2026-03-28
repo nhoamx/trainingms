@@ -454,9 +454,17 @@ class ResultsController extends Controller
                 $evaluation['personal_folio'] ?? $evaluation['folio'] ?? '',
                 $evaluation['scores']['total_score'] ?? '',
                 $evaluation['scores']['interpretation'] ?? 'Sin clasificar',
+                $evaluation['demographics']['genero'] ?? '',
                 $evaluation['demographics']['tipo_contrato'] ?? '',
                 $evaluation['demographics']['area'] ?? '',
                 $evaluation['demographics']['puesto'] ?? '',
+                $evaluation['demographics']['turno'] ?? '',
+                '', // Línea
+                '', // Gerente de Planta
+                '', // Gerente de Producción
+                '', // Gerente de RH
+                '', // Supervisor
+                '', // Comentarios Adicionales
             ];
         }
 

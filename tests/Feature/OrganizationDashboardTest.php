@@ -139,6 +139,8 @@ class OrganizationDashboardTest extends TestCase
             ->has('evaluations', 1)
             ->has('evaluations.0', fn ($eval) => $eval
                 ->has('id')
+                ->has('folio')
+                ->has('personal_folio')
                 ->has('demographicData')
                 ->has('dimensions')
                 ->has('comments', 3)

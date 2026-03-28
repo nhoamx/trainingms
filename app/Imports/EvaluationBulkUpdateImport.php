@@ -56,16 +56,29 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
      */
     protected $progressCallback = null;
 
+    protected ?string $workCenterId;
+
+    protected ?string $evaluationType;
+
     /**
      * @param  string  $organizationId  UUID de la organización para filtrar evaluaciones
      * @param  string|null  $source  Tipo de fuente ('paper', 'online', o null para ambos)
      * @param  callable|null  $progressCallback  Optional callback to report progress (processedRows, totalRows)
+     * @param  string|null  $workCenterId  UUID del centro de trabajo para filtrar evaluaciones
+     * @param  string|null  $evaluationType  Tipo de evaluación para filtrar ('likert', 'referencia_iii', etc.)
      */
-    public function __construct(string $organizationId, ?string $source = null, ?callable $progressCallback = null)
-    {
+    public function __construct(
+        string $organizationId,
+        ?string $source = null,
+        ?callable $progressCallback = null,
+        ?string $workCenterId = null,
+        ?string $evaluationType = null,
+    ) {
         $this->organizationId = $organizationId;
         $this->source = $source;
         $this->progressCallback = $progressCallback;
+        $this->workCenterId = $workCenterId;
+        $this->evaluationType = $evaluationType;
     }
 
     /**
@@ -135,6 +148,16 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
                     ->where('organization_id', $this->organizationId)
                     ->where('processing_status', 'completed')
                     ->with(['demographicData', 'customFields']);
+
+                // Filter by work center if specified
+                if ($this->workCenterId) {
+                    $query->where('work_center_id', $this->workCenterId);
+                }
+
+                // Filter by evaluation type if specified
+                if ($this->evaluationType) {
+                    $query->where('evaluation_type', $this->evaluationType);
+                }
 
                 // Filter by source if specified
                 if ($this->source) {

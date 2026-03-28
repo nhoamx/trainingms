@@ -13,10 +13,12 @@ class BulkImportJob extends Model
 
     protected $fillable = [
         'organization_id',
+        'work_center_id',
         'user_id',
         'file_name',
         'file_path',
         'source',
+        'evaluation_type',
         'status',
         'total_rows',
         'processed_rows',
@@ -43,6 +45,11 @@ class BulkImportJob extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function workCenter(): BelongsTo
+    {
+        return $this->belongsTo(WorkCenter::class);
     }
 
     public function user(): BelongsTo
