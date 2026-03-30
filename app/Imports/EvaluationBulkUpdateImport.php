@@ -121,6 +121,16 @@ class EvaluationBulkUpdateImport implements ToCollection, WithHeadingRow
      */
     public function collection(Collection $rows)
     {
+        // Legacy importer: disabled for the current folio process.
+        // Keep this class for historical reference only.
+        Log::warning('EvaluationBulkUpdateImport legacy importer is disabled; use EvaluationBulkUpdateImportV2 instead', [
+            'organization_id' => $this->organizationId,
+            'rows' => $rows->count(),
+        ]);
+        $this->errors[] = 'Importador legacy deshabilitado. Usa EvaluationBulkUpdateImportV2.';
+
+        return;
+
         Log::info('=== BULK UPDATE IMPORT STARTED ===');
         Log::info('Total rows to process: '.$rows->count());
         Log::info('Organization ID: '.$this->organizationId);

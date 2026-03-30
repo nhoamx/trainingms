@@ -660,6 +660,25 @@
     "Describe the threat...": "Describe la amenaza...",
     "e.g. Safe Work Environment": "Ej. Ambiente de Trabajo Seguro",
     "Add Row": "Agregar fila",
-    "Drag & drop or click to upload": "Arrastra o haz clic para subir"
+    "Drag & drop or click to upload": "Arrastra o haz clic para subir",
+    "Import records from Excel": "Importar registros desde Excel",
+    "Uploading file...": "Subiendo archivo...",
+    "Processing file": "Procesando archivo",
+    "Progress": "Progreso",
+    "Rows processed": "Filas procesadas",
+    "Updated": "Actualizados",
+    "Skipped": "Omitidos",
+    "Errors": "Errores",
+    "Import errors": "Errores de importación",
+    "Pending": "Pendiente",
+    "Processing": "Procesando",
+    "Completed": "Completado",
+    "Failed": "Fallido",
+    "Import completed": "Importación completada",
+    "Import failed": "Importación fallida",
+    "Status": "Estado",
+    "File uploaded. Processing started.": "Archivo cargado. El procesamiento inició.",
+    "Import completed summary": "Importación finalizada. Actualizados: :updated, omitidos: :skipped, errores: :errors.",
+    "Could not fetch import status. Please refresh the page.": "No se pudo obtener el estado de la importación. Por favor recarga la página."
 }
 

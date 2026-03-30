@@ -49,10 +49,83 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span>{{ isImporting ? t('Importing...') : t('Import Excel') }}</span>
+              <span>{{ isImporting ? t('Uploading file...') : t('Import records from Excel') }}</span>
             </button>
           </template>
         </div>
+      </div>
+    </div>
+
+    <div
+      v-if="importStatus"
+      :class="[
+        'rounded-xl border p-4 sm:p-5',
+        importStatus.status === 'failed'
+          ? 'border-red-200 bg-red-50'
+          : importStatus.status === 'completed'
+            ? 'border-emerald-200 bg-emerald-50'
+            : 'border-blue-200 bg-blue-50',
+      ]"
+    >
+      <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="text-sm font-semibold text-slate-900">
+            {{
+              importStatus.status === 'failed'
+                ? t('Import failed')
+                : importStatus.status === 'completed'
+                  ? t('Import completed')
+                  : t('Processing file')
+            }}
+          </p>
+          <p class="mt-1 text-xs text-slate-600">{{ importStatus.file_name }}</p>
+        </div>
+        <span class="rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-slate-700">
+          {{ t('Status') }}: {{ statusLabel(importStatus.status) }}
+        </span>
+      </div>
+
+      <div class="mb-2 flex items-center justify-between text-xs text-slate-700">
+        <span>{{ t('Progress') }}</span>
+        <span>{{ importStatus.progress_percentage }}%</span>
+      </div>
+      <div class="h-2 overflow-hidden rounded-full bg-white/80">
+        <div
+          class="h-full rounded-full bg-blue-600 transition-all duration-300"
+          :style="{ width: `${importStatus.progress_percentage}%` }"
+        ></div>
+      </div>
+
+      <div class="mt-3 text-xs text-slate-700">
+        {{ t('Rows processed') }}: {{ importStatus.processed_rows }} / {{ importStatus.total_rows }}
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="rounded-lg border border-emerald-200 bg-white px-3 py-2">
+          <p class="text-[11px] uppercase tracking-wide text-slate-500">{{ t('Updated') }}</p>
+          <p class="text-lg font-semibold text-emerald-700">{{ importStatus.updated_count }}</p>
+        </div>
+        <div class="rounded-lg border border-amber-200 bg-white px-3 py-2">
+          <p class="text-[11px] uppercase tracking-wide text-slate-500">{{ t('Skipped') }}</p>
+          <p class="text-lg font-semibold text-amber-700">{{ importStatus.skipped_count }}</p>
+        </div>
+        <div class="rounded-lg border border-rose-200 bg-white px-3 py-2">
+          <p class="text-[11px] uppercase tracking-wide text-slate-500">{{ t('Errors') }}</p>
+          <p class="text-lg font-semibold text-rose-700">{{ importStatus.errors.length }}</p>
+        </div>
+      </div>
+
+      <div v-if="importStatus.status === 'failed' && importStatus.error_message" class="mt-4 rounded-lg border border-red-200 bg-white p-3 text-sm text-red-700">
+        {{ importStatus.error_message }}
+      </div>
+
+      <div v-if="importStatus.errors.length > 0" class="mt-4 rounded-lg border border-slate-200 bg-white p-3">
+        <p class="mb-2 text-xs font-semibold text-slate-700">{{ t('Import errors') }}</p>
+        <ul class="max-h-40 list-disc space-y-1 overflow-y-auto pl-5 text-xs text-slate-700">
+          <li v-for="(error, index) in importStatus.errors.slice(0, 20)" :key="`${index}-${error}`">
+            {{ error }}
+          </li>
+        </ul>
       </div>
     </div>
 
@@ -289,8 +362,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import axios from 'axios';
+import { router } from '@inertiajs/vue3';
 import { ChartBarIcon } from '@heroicons/vue/24/outline';
 import { useTranslations } from '@/composables/useTranslations';
 import EvaluationsTable from './ClimaLaboral/EvaluationsTable.vue';
@@ -322,6 +396,19 @@ interface SatisfactionLevel {
   cardClass?: string;
 }
 
+interface BulkImportStatus {
+  id: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  total_rows: number;
+  processed_rows: number;
+  updated_count: number;
+  skipped_count: number;
+  progress_percentage: number;
+  errors: string[];
+  error_message: string | null;
+  file_name: string;
+}
+
 interface Props {
   evaluations?: Evaluation[];
   organizationId?: string | number;
@@ -339,6 +426,9 @@ const isExporting = ref<boolean>(false);
 const isImporting = ref<boolean>(false);
 const importFileInput = ref<HTMLInputElement | null>(null);
 const importFeedback = ref<{ success: boolean; message: string } | null>(null);
+const importStatus = ref<BulkImportStatus | null>(null);
+const activeImportJobId = ref<number | null>(null);
+const pollIntervalId = ref<number | null>(null);
 
 const satisfactionLevels: SatisfactionLevel[] = [
   { 
@@ -407,6 +497,84 @@ const getDistributionByLevel = (interpretationKey: string, type: 'area' | 'posit
     .sort((a, b) => b.count - a.count);
 };
 
+const statusLabel = (status: BulkImportStatus['status']): string => {
+  if (status === 'pending') {
+    return t('Pending');
+  }
+
+  if (status === 'processing') {
+    return t('Processing');
+  }
+
+  if (status === 'completed') {
+    return t('Completed');
+  }
+
+  return t('Failed');
+};
+
+const stopPollingImportStatus = (): void => {
+  if (pollIntervalId.value !== null) {
+    window.clearInterval(pollIntervalId.value);
+    pollIntervalId.value = null;
+  }
+};
+
+const refreshImportStatus = async (jobId: number): Promise<void> => {
+  try {
+    const response = await axios.get((window as any).route('bulk-import.status', jobId));
+    importStatus.value = response.data as BulkImportStatus;
+
+    if (importStatus.value.status === 'completed') {
+      stopPollingImportStatus();
+      importFeedback.value = {
+        success: true,
+        message: t('Import completed summary', {
+          updated: importStatus.value.updated_count,
+          skipped: importStatus.value.skipped_count,
+          errors: importStatus.value.errors.length,
+        }),
+      };
+
+      router.reload({
+        only: ['evaluations', 'dashboardData'],
+        preserveScroll: true,
+      });
+    }
+
+    if (importStatus.value.status === 'failed') {
+      stopPollingImportStatus();
+      importFeedback.value = {
+        success: false,
+        message: importStatus.value.error_message || t('Import failed'),
+      };
+    }
+  } catch (error) {
+    stopPollingImportStatus();
+    importFeedback.value = {
+      success: false,
+      message: t('Could not fetch import status. Please refresh the page.'),
+    };
+  }
+};
+
+const startPollingImportStatus = (jobId: number): void => {
+  stopPollingImportStatus();
+  activeImportJobId.value = jobId;
+
+  void refreshImportStatus(jobId);
+
+  pollIntervalId.value = window.setInterval(() => {
+    if (activeImportJobId.value !== null) {
+      void refreshImportStatus(activeImportJobId.value);
+    }
+  }, 1500);
+};
+
+onBeforeUnmount(() => {
+  stopPollingImportStatus();
+});
+
 // Export to Excel
 const exportToExcel = async () => {
   if (isExporting.value || !props.organizationId) return;
@@ -456,6 +624,7 @@ const onImportFileChange = async (event: Event) => {
 
   isImporting.value = true;
   importFeedback.value = null;
+  importStatus.value = null;
 
   try {
     const formData = new FormData();
@@ -467,7 +636,16 @@ const onImportFileChange = async (event: Event) => {
       { headers: { 'Content-Type': 'multipart/form-data' } },
     );
 
-    importFeedback.value = { success: true, message: response.data.message };
+    const bulkImportJobId = response.data.bulk_import_job_id as number | undefined;
+
+    importFeedback.value = {
+      success: true,
+      message: response.data.message || t('File uploaded. Processing started.'),
+    };
+
+    if (bulkImportJobId) {
+      startPollingImportStatus(bulkImportJobId);
+    }
   } catch (error: any) {
     const message = error?.response?.data?.message ?? 'Error al procesar el archivo. Intente nuevamente.';
     importFeedback.value = { success: false, message };

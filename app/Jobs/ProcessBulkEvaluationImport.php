@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Events\BulkImportProgress;
-use App\Imports\EvaluationBulkUpdateImport;
+use App\Imports\EvaluationBulkUpdateImportV2;
 use App\Models\BulkImportJob;
 use App\Services\OrganizationReportCacheService;
 use App\Support\BatchModeContext;
@@ -62,7 +62,7 @@ class ProcessBulkEvaluationImport implements ShouldQueue
             BatchModeContext::enableForOrganization($organizationId);
 
             // Create import with progress callback
-            $import = new EvaluationBulkUpdateImport(
+            $import = new EvaluationBulkUpdateImportV2(
                 $organizationId,
                 $this->bulkImportJob->source,
                 function ($processedRows, $totalRows, $updatedCount, $skippedCount) {

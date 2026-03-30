@@ -39,6 +39,11 @@ class WorkCenterClimaBulkUpdateTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonFragment(['success' => true]);
+        $response->assertJsonStructure([
+            'success',
+            'message',
+            'bulk_import_job_id',
+        ]);
 
         $this->assertDatabaseHas('bulk_import_jobs', [
             'organization_id' => $organization->id,

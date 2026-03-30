@@ -461,9 +461,10 @@ class ResultsController extends Controller
         foreach ($evaluations as $evaluation) {
             $answers = $evaluation['answers'] ?? [];
             $customFields = $evaluation['customFields'] ?? [];
+            $commentFields = $this->formatCompactCommentFields($evaluation['comments'] ?? []);
             $exportData[] = [
                 $evaluation['personal_folio'] ?? $evaluation['folio'] ?? '',
-                $evaluation['evaluee_name'] ?? 'Sin nombre',
+                $evaluation['evaluee_name'] ?? '',
                 $evaluation['scores']['total_score'] ?? '',
                 $evaluation['scores']['interpretation'] ?? 'Sin clasificar',
                 $evaluation['demographics']['genero'] ?? '',
@@ -476,7 +477,8 @@ class ResultsController extends Controller
                 $customFields[$gerenteProduccionKey]['value'] ?? '',
                 $customFields[$gerenteRhKey]['value'] ?? '',
                 $customFields[$supervisorKey]['value'] ?? '',
-                $customFields[$comentariosKey]['value'] ?? '',
+                $commentFields['comments'] !== '' ? $commentFields['comments'] : ($customFields[$comentariosKey]['value'] ?? ''),
+                $commentFields['factors'],
                 $answers['1'] ?? '',
                 $answers['2'] ?? '',
                 $answers['3'] ?? '',
@@ -509,6 +511,43 @@ class ResultsController extends Controller
             new ClimaLaboralCompactExport($exportData),
             $filename
         );
+    }
+
+    /**
+     * @param  array<int, array{factor?: string|null, comment?: string|null}>  $comments
+     * @return array{comments: string, factors: string}
+     */
+    private function formatCompactCommentFields(array $comments): array
+    {
+        if (empty($comments)) {
+            return [
+                'comments' => '',
+                'factors' => '',
+            ];
+        }
+
+        $commentLines = [];
+        $factorLines = [];
+        foreach ($comments as $entry) {
+            $factor = trim((string) ($entry['factor'] ?? ''));
+            $comment = trim((string) ($entry['comment'] ?? ''));
+
+            if ($factor === '' && $comment === '') {
+                continue;
+            }
+
+            if ($comment === '') {
+                continue;
+            }
+
+            $commentLines[] = $comment;
+            $factorLines[] = $factor;
+        }
+
+        return [
+            'comments' => implode("\n", $commentLines),
+            'factors' => implode("\n", $factorLines),
+        ];
     }
 
     /**

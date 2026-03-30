@@ -673,6 +673,25 @@
     "Document": "Document",
     "No file uploaded yet.": "No file uploaded yet.",
     "e.g. Planta 1": "e.g. Plant 1",
-    "e.g. Noviembre 2025": "e.g. November 2025"
+    "e.g. Noviembre 2025": "e.g. November 2025",
+    "Import records from Excel": "Import records from Excel",
+    "Uploading file...": "Uploading file...",
+    "Processing file": "Processing file",
+    "Progress": "Progress",
+    "Rows processed": "Rows processed",
+    "Updated": "Updated",
+    "Skipped": "Skipped",
+    "Errors": "Errors",
+    "Import errors": "Import errors",
+    "Pending": "Pending",
+    "Processing": "Processing",
+    "Completed": "Completed",
+    "Failed": "Failed",
+    "Import completed": "Import completed",
+    "Import failed": "Import failed",
+    "Status": "Status",
+    "File uploaded. Processing started.": "File uploaded. Processing started.",
+    "Import completed summary": "Import finished. Updated: :updated, skipped: :skipped, errors: :errors.",
+    "Could not fetch import status. Please refresh the page.": "Could not fetch import status. Please refresh the page."
 }
 
