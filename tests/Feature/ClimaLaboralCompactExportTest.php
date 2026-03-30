@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Exports\ClimaLaboralCompactExport;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\User;
@@ -127,5 +128,13 @@ class ClimaLaboralCompactExportTest extends TestCase
             ->post(route('organization.clima-laboral.export-compact', $this->organization->id));
 
         $response->assertStatus(403);
+    }
+
+    public function test_compact_export_headings_include_evaluee_name(): void
+    {
+        $headings = (new ClimaLaboralCompactExport([]))->headings();
+
+        $this->assertSame('Folio', $headings[0]);
+        $this->assertSame('Nombre del Evaluado', $headings[1]);
     }
 }

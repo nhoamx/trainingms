@@ -32,6 +32,7 @@ class ClimaLaboralCompactExport implements FromArray, WithHeadings, WithStrictNu
     {
         return [
             'Folio',
+            'Nombre del Evaluado',
             'Puntaje',
             'Nivel',
             'Género',

@@ -463,6 +463,7 @@ class ResultsController extends Controller
             $customFields = $evaluation['customFields'] ?? [];
             $exportData[] = [
                 $evaluation['personal_folio'] ?? $evaluation['folio'] ?? '',
+                $evaluation['evaluee_name'] ?? 'Sin nombre',
                 $evaluation['scores']['total_score'] ?? '',
                 $evaluation['scores']['interpretation'] ?? 'Sin clasificar',
                 $evaluation['demographics']['genero'] ?? '',
