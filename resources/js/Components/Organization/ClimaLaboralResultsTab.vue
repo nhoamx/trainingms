@@ -1,57 +1,117 @@
 <template>
   <div class="space-y-6">
-    <!-- Encabezado -->
-    <div class="border-b border-slate-200 pb-6">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="p-2 bg-blue-100 rounded-lg">
-            <ChartBarIcon class="w-6 h-6 text-blue-600" />
+    <div class="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+      <div class="flex flex-col gap-5">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div class="flex items-start gap-3">
+            <div class="rounded-lg bg-indigo-100 p-2">
+              <ChartBarIcon class="h-6 w-6 text-indigo-700" />
+            </div>
+            <div>
+              <h2 class="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{{ t('Work Climate Results') }}</h2>
+              <p class="mt-1 text-sm text-slate-600">{{ t('Analysis by satisfaction level') }}</p>
+            </div>
           </div>
-          <div>
-            <h2 class="text-3xl font-bold text-slate-900">{{ t('Work Climate Results') }}</h2>
-            <p class="text-slate-600 mt-2">{{ t('Analysis by satisfaction level') }}</p>
+          <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-right">
+            <p class="text-[11px] font-medium uppercase tracking-wide text-slate-500">{{ t('Total Evaluations') }}</p>
+            <p class="text-lg font-semibold text-slate-900">{{ evaluations.length }}</p>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <button
-            @click="exportToExcel"
-            :disabled="isExporting || evaluations.length === 0"
-            class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <svg v-if="!isExporting" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <svg v-else class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span>{{ isExporting ? t('Exporting...') : t('Export to Excel') }}</span>
-          </button>
+        <input
+          ref="importFileInput"
+          type="file"
+          accept=".xlsx,.xls"
+          class="hidden"
+          @change="onImportFileChange"
+        />
+        <input
+          ref="commentsImportFileInput"
+          type="file"
+          accept=".xlsx,.xls"
+          class="hidden"
+          @change="onCommentsImportFileChange"
+        />
 
-          <template v-if="workCenterId">
-            <input
-              ref="importFileInput"
-              type="file"
-              accept=".xlsx,.xls"
-              class="hidden"
-              @change="onImportFileChange"
-            />
+        <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <section class="flex min-h-[190px] flex-col rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+            <div class="mb-2 h-1 w-12 rounded-full bg-emerald-500/80"></div>
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{{ t('Results export') }}</p>
+            <p class="mt-1 text-sm text-slate-700">{{ t('Download the consolidated climate report to share or audit.') }}</p>
+            <button
+              @click="exportToExcel"
+              :disabled="isExporting || evaluations.length === 0"
+              class="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <svg v-if="!isExporting" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <svg v-else class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>{{ isExporting ? t('Exporting...') : t('Download Excel report') }}</span>
+            </button>
+          </section>
+
+          <section
+            v-if="workCenterId"
+            class="flex min-h-[190px] flex-col rounded-lg border border-slate-200 bg-slate-50/70 p-4"
+          >
+            <div class="mb-2 h-1 w-12 rounded-full bg-indigo-500/80"></div>
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{{ t('Evaluations update import') }}</p>
+            <p class="mt-1 text-sm text-slate-700">{{ t('Upload an Excel file to update scores, factors, and demographic fields.') }}</p>
             <button
               @click="importFileInput?.click()"
               :disabled="isImporting"
-              class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              class="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               :title="t('Import and update records from Excel')"
             >
-              <svg v-if="!isImporting" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="!isImporting" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
-              <svg v-else class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <svg v-else class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
               <span>{{ isImporting ? t('Uploading file...') : t('Import records from Excel') }}</span>
             </button>
-          </template>
+          </section>
+
+          <section
+            v-if="workCenterId"
+            class="flex min-h-[190px] flex-col rounded-lg border border-slate-200 bg-slate-50/70 p-4"
+          >
+            <div class="mb-2 h-1 w-12 rounded-full bg-amber-500/80"></div>
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{{ t('Comments update import') }}</p>
+            <p class="mt-1 text-sm text-slate-700">{{ t('Use one row per comment. You can repeat the same folio multiple times.') }}</p>
+            <div class="mt-auto space-y-2">
+              <button
+                @click="downloadCommentsTemplate"
+                class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                :title="t('Download comments template')"
+              >
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>{{ t('Comments template') }}</span>
+              </button>
+              <button
+                @click="commentsImportFileInput?.click()"
+                :disabled="isImportingComments"
+                class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                :title="t('Import comments from Excel')"
+              >
+                <svg v-if="!isImportingComments" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <svg v-else class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>{{ isImportingComments ? t('Uploading file...') : t('Import comments from Excel') }}</span>
+              </button>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -181,7 +241,7 @@
           <div class="flex items-center gap-3 mb-6">
             <h3 class="text-2xl font-bold text-blue-900">{{ t('Global View') }}</h3>
           </div>
-          
+
           <!-- Distribution Cards -->
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div
@@ -217,7 +277,7 @@
               </p>
             </div>
           </div>
-          
+
           <EvaluationsTable 
             :evaluations="getEvaluationsByLevel('Totalmente de Acuerdo')"
             :empty-message="t('No evaluations in this level')"
@@ -424,7 +484,9 @@ const props = withDefaults(defineProps<Props>(), {
 const activeSatisfactionLevel = ref<string>('global');
 const isExporting = ref<boolean>(false);
 const isImporting = ref<boolean>(false);
+const isImportingComments = ref<boolean>(false);
 const importFileInput = ref<HTMLInputElement | null>(null);
+const commentsImportFileInput = ref<HTMLInputElement | null>(null);
 const importFeedback = ref<{ success: boolean; message: string } | null>(null);
 const importStatus = ref<BulkImportStatus | null>(null);
 const activeImportJobId = ref<number | null>(null);
@@ -558,7 +620,7 @@ const refreshImportStatus = async (jobId: number): Promise<void> => {
   }
 };
 
-const startPollingImportStatus = (jobId: number): void => {
+const startPollingImportStatus = (jobId: number, intervalMs = 5000): void => {
   stopPollingImportStatus();
   activeImportJobId.value = jobId;
 
@@ -568,7 +630,7 @@ const startPollingImportStatus = (jobId: number): void => {
     if (activeImportJobId.value !== null) {
       void refreshImportStatus(activeImportJobId.value);
     }
-  }, 1500);
+  }, intervalMs);
 };
 
 onBeforeUnmount(() => {
@@ -653,6 +715,52 @@ const onImportFileChange = async (event: Event) => {
     isImporting.value = false;
     // Reset file input so the same file can be re-selected
     if (importFileInput.value) { importFileInput.value.value = ''; }
+  }
+};
+
+const downloadCommentsTemplate = (): void => {
+  if (!props.workCenterId) {
+    return;
+  }
+
+  window.location.href = (window as any).route('work-centers.clima.comments-template', props.workCenterId);
+};
+
+const onCommentsImportFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file || !props.workCenterId) { return; }
+
+  isImportingComments.value = true;
+  importFeedback.value = null;
+  importStatus.value = null;
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await axios.post(
+      (window as any).route('work-centers.clima.bulk-comments', props.workCenterId),
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+
+    const bulkImportJobId = response.data.bulk_import_job_id as number | undefined;
+
+    importFeedback.value = {
+      success: true,
+      message: response.data.message || t('File uploaded. Processing started.'),
+    };
+
+    if (bulkImportJobId) {
+      startPollingImportStatus(bulkImportJobId, 5000);
+    }
+  } catch (error: any) {
+    const message = error?.response?.data?.message ?? t('Error processing comments file. Please try again.');
+    importFeedback.value = { success: false, message };
+  } finally {
+    isImportingComments.value = false;
+    if (commentsImportFileInput.value) { commentsImportFileInput.value.value = ''; }
   }
 };
 </script>

@@ -6,6 +6,7 @@ use App\Models\EvaluationComment;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\User;
+use App\Models\WorkCenter;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -192,6 +193,77 @@ class EvaluationCommentsTest extends TestCase
             'paper_evaluation_id' => $evaluation->id,
             'comment' => 'Test comment with singular',
             'factor' => 'Violencia',
+        ]);
+    }
+
+    public function test_bulk_comments_import_allows_multiple_comments_for_same_folio_and_factor(): void
+    {
+        $organization = Organization::factory()->create();
+        $evaluation = PaperEvaluation::factory()
+            ->for($organization)
+            ->likert()
+            ->create(['personal_folio' => '00001']);
+
+        $import = new \App\Imports\EvaluationBulkCommentsImport($organization->id);
+
+        $rows = collect([
+            collect([
+                'folio' => '00001',
+                'comentario' => 'Comentario 1',
+                'factor' => 'Entorno Laboral Seguro',
+            ]),
+            collect([
+                'folio' => '00001',
+                'comentario' => 'Comentario 2',
+                'factor' => 'Entorno Laboral Seguro',
+            ]),
+            collect([
+                'folio' => '00001',
+                'comentario' => 'Comentario 3',
+                'factor' => 'Entorno Laboral Seguro',
+            ]),
+        ]);
+
+        $import->collection($rows);
+
+        $this->assertEquals(3, EvaluationComment::where('paper_evaluation_id', $evaluation->id)->count());
+    }
+
+    public function test_bulk_comments_import_respects_work_center_scope(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenterA = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+        $workCenterB = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        $evaluationA = PaperEvaluation::factory()
+            ->for($organization)
+            ->likert()
+            ->create([
+                'work_center_id' => $workCenterA->id,
+                'personal_folio' => '00001',
+            ]);
+
+        PaperEvaluation::factory()
+            ->for($organization)
+            ->likert()
+            ->create([
+                'work_center_id' => $workCenterB->id,
+                'personal_folio' => '00001',
+            ]);
+
+        $import = new \App\Imports\EvaluationBulkCommentsImport($organization->id, null, $workCenterA->id);
+        $import->collection(collect([
+            collect([
+                'folio' => '1',
+                'comentario' => 'Solo centro A',
+                'factor' => 'Liderazgo',
+            ]),
+        ]));
+
+        $this->assertDatabaseHas('evaluation_comments', [
+            'paper_evaluation_id' => $evaluationA->id,
+            'comment' => 'Solo centro A',
+            'factor' => 'Liderazgo',
         ]);
     }
 }

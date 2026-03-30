@@ -167,6 +167,14 @@ Route::middleware(['auth'])->group(function () {
         ->name('work-centers.clima.bulk-update')
         ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
 
+    Route::get('/centro-trabajo/{workCenter}/clima-laboral/comentarios/plantilla', [\App\Http\Controllers\WorkCenter\WorkCenterClimaLaboralDashboardController::class, 'downloadCommentsTemplate'])
+        ->name('work-centers.clima.comments-template')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
+    Route::post('/centro-trabajo/{workCenter}/clima-laboral/comentarios/carga-masiva', [\App\Http\Controllers\WorkCenter\WorkCenterClimaLaboralDashboardController::class, 'bulkCommentsUpdate'])
+        ->name('work-centers.clima.bulk-comments')
+        ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);
+
     Route::post('/centro-trabajo/{workCenter}/comite/miembros', [\App\Http\Controllers\WorkCenter\WorkCenterCommitteeMemberController::class, 'store'])
         ->name('work-centers.committee-members.store')
         ->middleware(['can:viewWorkCenterDashboard,workCenter', 'role:admin|super-admin']);

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\WorkCenter;
 
+use App\Exports\WorkCenterCommentsTemplateExport;
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessBulkCommentsImport;
 use App\Jobs\ProcessBulkEvaluationImport;
 use App\Models\BulkImportJob;
 use App\Models\PaperEvaluation;
@@ -15,6 +17,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Dashboard de Clima Laboral para un centro de trabajo.
@@ -287,6 +291,46 @@ class WorkCenterClimaLaboralDashboardController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'El archivo se está procesando en segundo plano. Los registros serán actualizados en breve.',
+            'bulk_import_job_id' => $bulkImportJob->id,
+        ]);
+    }
+
+    public function downloadCommentsTemplate(Request $request, WorkCenter $workCenter): BinaryFileResponse
+    {
+        $this->authorize('viewWorkCenterDashboard', $workCenter);
+
+        $filename = 'plantilla_comentarios_'.str_replace(' ', '_', $workCenter->name).'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(new WorkCenterCommentsTemplateExport($workCenter), $filename);
+    }
+
+    public function bulkCommentsUpdate(Request $request, WorkCenter $workCenter): JsonResponse
+    {
+        $this->authorize('viewWorkCenterDashboard', $workCenter);
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls', 'max:10240'],
+        ]);
+
+        $file = $request->file('file');
+        $filePath = $file->store('bulk-imports', 'local');
+
+        $bulkImportJob = BulkImportJob::create([
+            'organization_id' => $workCenter->organization_id,
+            'work_center_id' => $workCenter->id,
+            'user_id' => $request->user()->id,
+            'file_name' => $file->getClientOriginalName(),
+            'file_path' => $filePath,
+            'source' => null,
+            'evaluation_type' => 'likert',
+            'status' => 'pending',
+        ]);
+
+        ProcessBulkCommentsImport::dispatch($bulkImportJob);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'El archivo de comentarios se está procesando en segundo plano. Verás el avance en breve.',
             'bulk_import_job_id' => $bulkImportJob->id,
         ]);
     }

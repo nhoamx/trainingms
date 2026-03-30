@@ -66,7 +66,8 @@ class ProcessBulkCommentsImport implements ShouldQueue
                 $organizationId,
                 function ($processedRows, $totalRows, $updatedCount, $skippedCount) {
                     $this->updateProgress($processedRows, $totalRows, $updatedCount, $skippedCount);
-                }
+                },
+                $this->bulkImportJob->work_center_id,
             );
 
             // Get file path from storage

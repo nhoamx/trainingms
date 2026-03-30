@@ -450,6 +450,7 @@ class ResultsController extends Controller
 
         // Compute custom field keys once (derived from heading labels)
         $lineaKey = EvaluationCustomField::labelToKey('Línea');
+        $gerenteKey = EvaluationCustomField::labelToKey('Gerente');
         $gerentePlantaKey = EvaluationCustomField::labelToKey('Gerente de Planta');
         $gerenteProduccionKey = EvaluationCustomField::labelToKey('Gerente de Producción');
         $gerenteRhKey = EvaluationCustomField::labelToKey('Gerente de RH');
@@ -473,7 +474,7 @@ class ResultsController extends Controller
                 $evaluation['demographics']['puesto'] ?? '',
                 $evaluation['demographics']['turno'] ?? '',
                 $customFields[$lineaKey]['value'] ?? '',
-                $customFields[$gerentePlantaKey]['value'] ?? '',
+                $customFields[$gerenteKey]['value'] ?? ($customFields[$gerentePlantaKey]['value'] ?? ''),
                 $customFields[$gerenteProduccionKey]['value'] ?? '',
                 $customFields[$gerenteRhKey]['value'] ?? '',
                 $customFields[$supervisorKey]['value'] ?? '',

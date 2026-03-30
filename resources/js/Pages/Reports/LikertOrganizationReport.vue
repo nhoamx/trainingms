@@ -1127,12 +1127,6 @@ const filteredEvaluations = computed(() => {
     if (filters.value.area && evaluation.demographics.area !== filters.value.area) return false
     if (filters.value.turno && evaluation.demographics.turno !== filters.value.turno) return false
     
-    // Factor filter (filter evaluations that have a comment for the selected factor)
-    if (filters.value.factor) {
-      const hasFactorComment = evaluation.comments?.some(comment => comment.factor === filters.value.factor)
-      if (!hasFactorComment) return false
-    }
-    
     // Custom field filters
     for (const [key, value] of Object.entries(customFilters.value)) {
       if (value && evaluation.customFields?.[key]?.value !== value) return false
@@ -1193,6 +1187,10 @@ const filteredComments = computed(() => {
   filteredEvaluations.value.forEach(evaluation => {
     if (evaluation.comments && evaluation.comments.length > 0) {
       evaluation.comments.forEach(comment => {
+        if (filters.value.factor && comment.factor !== filters.value.factor) {
+          return
+        }
+
         comments.push({
           folio: evaluation.personal_folio,
           name: evaluation.evaluee_name,
@@ -1612,6 +1610,7 @@ const resetFilters = () => {
     puesto: '',
     area: '',
     turno: '',
+    factor: '',
   }
   // Reset custom filters
   Object.keys(customFilters.value).forEach(key => {
@@ -2002,10 +2001,6 @@ const valorOpciones = { A: 4, B: 3, C: 2, D: 1 }
 
 // Computed property para título dinámico del mapa de calor
 const heatmapTitle = computed(() => {
-  if (filters.value.factor) {
-    console.log('Entro al filltro')
-    return `Mapa de Calor: ${filters.value.factor}`
-  }
   return 'Mapa de Calor'
 })
 

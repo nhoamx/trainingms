@@ -19,6 +19,8 @@ class EvaluationBulkCommentsImport implements ToCollection, WithHeadingRow
 
     protected string $organizationId;
 
+    protected ?string $workCenterId;
+
     /**
      * Callback to report progress
      */
@@ -28,10 +30,11 @@ class EvaluationBulkCommentsImport implements ToCollection, WithHeadingRow
      * @param  string  $organizationId  UUID de la organización para filtrar evaluaciones
      * @param  callable|null  $progressCallback  Optional callback to report progress
      */
-    public function __construct(string $organizationId, ?callable $progressCallback = null)
+    public function __construct(string $organizationId, ?callable $progressCallback = null, ?string $workCenterId = null)
     {
         $this->organizationId = $organizationId;
         $this->progressCallback = $progressCallback;
+        $this->workCenterId = $workCenterId;
     }
 
     /**
@@ -80,10 +83,11 @@ class EvaluationBulkCommentsImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                // Extract folio personal
-                $personalFolio = $this->extractPersonalFolio($row);
+                // Extract folio personal candidates to support 4/5 digits and leading zeros.
+                $folioMatchData = $this->extractPersonalFolioMatchData($row);
+                $personalFolioCandidates = $folioMatchData['candidates'];
 
-                if (empty($personalFolio)) {
+                if (empty($personalFolioCandidates)) {
                     $this->errors[] = "Fila {$rowNumber}: Folio Personal es requerido";
                     $this->skippedCount++;
                     Log::warning("Row {$rowNumber} skipped - missing personal_folio");
@@ -91,17 +95,23 @@ class EvaluationBulkCommentsImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                Log::info("Row {$rowNumber} personal folio: {$personalFolio}");
+                Log::info("Row {$rowNumber} personal folio candidates", ['candidates' => $personalFolioCandidates]);
 
                 // Find the Likert evaluation for this personal folio
-                $evaluation = PaperEvaluation::where('personal_folio', $personalFolio)
+                $query = PaperEvaluation::whereIn('personal_folio', $personalFolioCandidates)
                     ->where('organization_id', $this->organizationId)
                     ->where('evaluation_type', 'likert')
-                    ->where('processing_status', 'completed')
-                    ->first();
+                    ->where('processing_status', 'completed');
+
+                if ($this->workCenterId !== null) {
+                    $query->where('work_center_id', $this->workCenterId);
+                }
+
+                $evaluation = $query->first();
 
                 if (! $evaluation) {
-                    $this->errors[] = "Fila {$rowNumber}: No se encontró evaluación Likert para el folio {$personalFolio}";
+                    $folioLabel = $folioMatchData['raw'] ?? $personalFolioCandidates[0];
+                    $this->errors[] = "Fila {$rowNumber}: No se encontró evaluación Likert para el folio {$folioLabel}";
                     $this->skippedCount++;
                     Log::warning("Row {$rowNumber} skipped - no Likert evaluation found");
 
@@ -143,24 +153,65 @@ class EvaluationBulkCommentsImport implements ToCollection, WithHeadingRow
     /**
      * Extract personal folio from row using various possible column names
      */
-    protected function extractPersonalFolio(Collection $row): ?string
+    protected function extractPersonalFolioMatchData(Collection $row): array
     {
-        // Try different possible column names for personal folio
         $possibleKeys = ['folio_personal', 'folio', 'numero'];
 
         foreach ($possibleKeys as $key) {
-            if (isset($row[$key]) && ! empty($row[$key])) {
-                $value = $row[$key];
-                // Pad to 4 digits if numeric
-                if (is_numeric($value)) {
-                    return str_pad((string) intval($value), 4, '0', STR_PAD_LEFT);
-                }
+            if (! isset($row[$key]) || $row[$key] === null || $row[$key] === '') {
+                continue;
+            }
 
-                return (string) $value;
+            $rawValue = trim((string) $row[$key]);
+            if ($rawValue === '') {
+                continue;
+            }
+
+            return [
+                'raw' => $rawValue,
+                'candidates' => $this->buildFolioCandidates($rawValue),
+            ];
+        }
+
+        return [
+            'raw' => null,
+            'candidates' => [],
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function buildFolioCandidates(string $rawValue): array
+    {
+        $candidates = [];
+
+        $trimmed = trim($rawValue);
+        if ($trimmed !== '') {
+            $candidates[] = $trimmed;
+        }
+
+        $digitsOnly = preg_replace('/\D+/', '', $trimmed);
+        if ($digitsOnly !== null && $digitsOnly !== '') {
+            $candidates[] = $digitsOnly;
+
+            $withoutLeadingZeros = ltrim($digitsOnly, '0');
+            if ($withoutLeadingZeros === '') {
+                $withoutLeadingZeros = '0';
+            }
+
+            $candidates[] = $withoutLeadingZeros;
+
+            foreach ([4, 5] as $length) {
+                if (strlen($withoutLeadingZeros) <= $length) {
+                    $candidates[] = str_pad($withoutLeadingZeros, $length, '0', STR_PAD_LEFT);
+                }
             }
         }
 
-        return null;
+        return array_values(array_unique(array_filter($candidates, function ($candidate) {
+            return $candidate !== '';
+        })));
     }
 
     /**
@@ -179,16 +230,12 @@ class EvaluationBulkCommentsImport implements ToCollection, WithHeadingRow
             return false;
         }
 
-        // Create or update the comment for this evaluation and factor
-        EvaluationComment::updateOrCreate(
-            [
-                'paper_evaluation_id' => $evaluation->id,
-                'factor' => trim($factor),
-            ],
-            [
-                'comment' => trim($comment),
-            ]
-        );
+        // Allow multiple comments per folio/factor while preventing exact duplicates.
+        EvaluationComment::firstOrCreate([
+            'paper_evaluation_id' => $evaluation->id,
+            'factor' => trim($factor),
+            'comment' => trim($comment),
+        ]);
 
         Log::info('Created/updated comment for evaluation', [
             'row' => $rowNumber,

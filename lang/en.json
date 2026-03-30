@@ -26,6 +26,17 @@
     "Language": "Language",
     "Spanish": "Spanish",
     "English": "English",
+    "Export": "Export",
+    "Download current results in Excel format.": "Download current results in Excel format.",
+    "Records import": "Records import",
+    "Update evaluations and demographic fields from an Excel file.": "Update evaluations and demographic fields from an Excel file.",
+    "Comments import": "Comments import",
+    "Results export": "Results export",
+    "Download the consolidated climate report to share or audit.": "Download the consolidated climate report to share or audit.",
+    "Download Excel report": "Download Excel report",
+    "Evaluations update import": "Evaluations update import",
+    "Upload an Excel file to update scores, factors, and demographic fields.": "Upload an Excel file to update scores, factors, and demographic fields.",
+    "Comments update import": "Comments update import",
 
     "General Information": "General Information",
     "Company Name": "Company Name",
@@ -551,6 +562,8 @@
     "QC Technician": "QC Technician",
     "Import / Export": "Import / Export",
     "Management": "Management",
+    "Export to Excel": "Export to Excel",
+    "Exporting...": "Exporting...",
 
     "Launch immediate recognition program for safety, quality and attendance": "Launch immediate recognition program for safety, quality and attendance",
     "Define transparent criteria for assignment to critical roles and rewards": "Define transparent criteria for assignment to critical roles and rewards",
@@ -691,6 +704,11 @@
     "Import failed": "Import failed",
     "Status": "Status",
     "File uploaded. Processing started.": "File uploaded. Processing started.",
+    "Comments template": "Comments template",
+    "Download comments template": "Download comments template",
+    "Import comments from Excel": "Import comments from Excel",
+    "Use one row per comment. You can repeat the same folio multiple times.": "Use one row per comment. You can repeat the same folio multiple times.",
+    "Error processing comments file. Please try again.": "Error processing comments file. Please try again.",
     "Import completed summary": "Import finished. Updated: :updated, skipped: :skipped, errors: :errors.",
     "Could not fetch import status. Please refresh the page.": "Could not fetch import status. Please refresh the page."
 }

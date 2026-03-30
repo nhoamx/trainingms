@@ -41,7 +41,7 @@ class ClimaLaboralCompactExport implements FromArray, WithHeadings, WithStrictNu
             'Puesto',
             'Turno',
             'Línea',
-            'Gerente de Planta',
+            'Gerente',
             'Gerente de Producción',
             'Gerente de RH',
             'Supervisor',
