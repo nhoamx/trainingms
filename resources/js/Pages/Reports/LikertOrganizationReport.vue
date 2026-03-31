@@ -798,7 +798,6 @@
               <td class="py-2">
                 <a
                   :href="route('organization.results.likert', { organization: organizationId, personalFolio: item.folio })"
-                  target="_blank"
                   class="inline-flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
                   {{ t('View data') }}
