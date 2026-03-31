@@ -7,6 +7,7 @@ use App\Models\PaperEvaluation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class LikertDetailImageSecurityTest extends TestCase
@@ -50,6 +51,15 @@ class LikertDetailImageSecurityTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
         $this->organizationUser->assignRole('organization');
+
+        Storage::disk('public')->put('folios/059990001.png', 'fake-image-content');
+    }
+
+    protected function tearDown(): void
+    {
+        Storage::disk('public')->delete('folios/059990001.png');
+
+        parent::tearDown();
     }
 
     /**
@@ -113,6 +123,27 @@ class LikertDetailImageSecurityTest extends TestCase
             ->component('Results/LikertDetail')
             ->where('isAdmin', true)
             ->has('evaluation.scanned_image_url')
+        );
+    }
+
+    /**
+     * Admin users should not receive scanned_image_url if the image is missing.
+     */
+    public function test_admin_cannot_see_scanned_image_url_when_file_is_missing(): void
+    {
+        Storage::disk('public')->delete('folios/059990001.png');
+
+        $response = $this->actingAs($this->adminUser)
+            ->get(route('organization.results.likert', [
+                'organization' => $this->organization->id,
+                'personalFolio' => '0001',
+            ]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Results/LikertDetail')
+            ->where('isAdmin', true)
+            ->where('evaluation.scanned_image_url', null)
         );
     }
 }

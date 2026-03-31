@@ -142,7 +142,7 @@
     "Professional Advancement": "Avance Profesional",
     "Employee Support": "Apoyo al Empleado",
 
-    "Back to List": "Volver a Lista",
+    "Back to List": "Volver",
     "Personal Folio": "Folio Personal",
     "No name assigned": "Sin nombre asignado",
     "Date": "Fecha",
@@ -288,6 +288,9 @@
     "Save Changes": "Guardar Cambios",
     "Saving...": "Guardando...",
     "Clear all": "Limpiar todas",
+    "Active Filters": "Filtros Activos",
+    "Filters apply instantly. Use this panel to focus the report without leaving the page.": "Los filtros se aplican al instante. Usa este panel para enfocar el reporte sin salir de la página.",
+    "Tip: click any active filter chip to remove only that filter.": "Tip: haz clic en cualquier chip activo para quitar solo ese filtro.",
     "Clear": "Vaciar",
     "Save Answers": "Guardar Respuestas",
 

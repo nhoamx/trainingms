@@ -54,108 +54,193 @@
       </div>
 
       <div v-else>
-        <!-- Filtros Demográficos -->
-        <div class="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('Filters') }}</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Género -->
+        <div ref="filtersPanelRef" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6 space-y-5">
+          <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Gender') }}</label>
-              <select 
-                v-model="filters.genero"
-                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">{{ t('All') }}</option>
-                <option v-for="g in demographics.generos" :key="g" :value="g">{{ g }}</option>
-              </select>
+              <h3 class="text-lg font-semibold text-slate-900">{{ t('Filters') }}</h3>
+              <p class="mt-1 text-sm text-slate-600">{{ t('Filters apply instantly. Use this panel to focus the report without leaving the page.') }}</p>
             </div>
-
-            <!-- Tipo de Contrato -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Contract Type') }}</label>
-              <select 
-                v-model="filters.tipo_contrato"
-                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">{{ t('All') }}</option>
-                <option v-for="tc in demographics.tipos_contrato" :key="tc" :value="tc">{{ tc }}</option>
-              </select>
-            </div>
-
-            <!-- Puesto -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Position') }}</label>
-              <select 
-                v-model="filters.puesto"
-                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">{{ t('All') }}</option>
-                <option v-for="p in demographics.puestos" :key="p" :value="p">{{ getPuestoName(p) }}</option>
-              </select>
-            </div>
-
-            <!-- Área -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Area') }}</label>
-              <select 
-                v-model="filters.area"
-                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">{{ t('All') }}</option>
-                <option v-for="a in demographics.areas" :key="a" :value="a">{{ getAreaName(a) }}</option>
-              </select>
-            </div>
-
-            <!-- Turno -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Shift') }}</label>
-              <select 
-                v-model="filters.turno"
-                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">{{ t('All') }}</option>
-                <option v-for="t in demographics.turnos" :key="t" :value="t">{{ t }}</option>
-              </select>
-            </div>
-
-            <!-- Factor (for comments) -->
-            <div v-if="factors.length > 0">
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Factor (Comments)') }}</label>
-              <select 
-                v-model="filters.factor"
-                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">{{ t('All') }}</option>
-                <option v-for="f in factors" :key="f" :value="f">{{ f }}</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Custom Field Filters -->
-          <div v-if="Object.keys(customFieldFilters).length > 0" class="mt-4 pt-4 border-t border-gray-200">
-            <h4 class="text-sm font-medium text-gray-700 mb-3">{{ t('Additional Fields') }}</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div v-for="(fieldData, fieldKey) in customFieldFilters" :key="fieldKey">
-                <label class="block text-sm font-medium text-gray-700 mb-2">{{ fieldData.label }}</label>
-                <select 
-                  v-model="customFilters[fieldKey]"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value="">{{ t('All') }}</option>
-                  <option v-for="val in fieldData.values" :key="val" :value="val">{{ val }}</option>
-                </select>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+              <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <div class="text-slate-500">{{ t('Showing') }}</div>
+                <div class="text-sm font-semibold text-slate-900">{{ filteredEvaluations.length }}</div>
+              </div>
+              <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <div class="text-slate-500">{{ t('Total') }}</div>
+                <div class="text-sm font-semibold text-slate-900">{{ evaluations.length }}</div>
+              </div>
+              <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 col-span-2 sm:col-span-1">
+                <div class="text-slate-500">{{ t('Active Filters') }}</div>
+                <div class="text-sm font-semibold text-slate-900">{{ activeFilterCount }}</div>
               </div>
             </div>
           </div>
 
-          <!-- Reset Filters Button -->
-          <div class="mt-4">
-            <button 
+          <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              class="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-300"
+              :style="{ width: `${filteredProgressPercent}%` }"
+            ></div>
+          </div>
+
+          <div v-if="activeFilterChips.length > 0" class="rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+            <div class="flex items-center justify-between gap-3 mb-2">
+              <p class="text-xs font-semibold text-blue-800">{{ t('Active Filters') }}</p>
+              <button
+                @click="resetFilters"
+                class="text-xs font-medium text-blue-700 hover:text-blue-900 underline underline-offset-2"
+              >
+                {{ t('Clear all') }}
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="chip in activeFilterChips"
+                :key="chip.id"
+                @click="clearFilterChip(chip)"
+                class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full text-xs border border-blue-200 bg-white text-slate-700 hover:bg-blue-100 transition-colors"
+              >
+                <span class="font-medium text-slate-900">{{ chip.label }}:</span>
+                <span>{{ chip.value }}</span>
+                <span class="text-blue-600 font-semibold">×</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            <section class="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+              <h4 class="text-sm font-semibold text-slate-900 mb-3">{{ t('Demographic Filters') }}</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ t('Gender') }}</label>
+                  <select
+                    v-model="filters.genero"
+                    class="w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">{{ t('All') }}</option>
+                    <option v-for="g in demographics.generos" :key="g" :value="g">{{ g }}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ t('Contract Type') }}</label>
+                  <select
+                    v-model="filters.tipo_contrato"
+                    class="w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">{{ t('All') }}</option>
+                    <option v-for="tc in demographics.tipos_contrato" :key="tc" :value="tc">{{ tc }}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ t('Position') }}</label>
+                  <select
+                    v-model="filters.puesto"
+                    class="w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">{{ t('All') }}</option>
+                    <option v-for="p in demographics.puestos" :key="p" :value="p">{{ getPuestoName(p) }}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ t('Area') }}</label>
+                  <select
+                    v-model="filters.area"
+                    class="w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">{{ t('All') }}</option>
+                    <option v-for="a in demographics.areas" :key="a" :value="a">{{ getAreaName(a) }}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ t('Shift') }}</label>
+                  <select
+                    v-model="filters.turno"
+                    class="w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">{{ t('All') }}</option>
+                    <option v-for="t in demographics.turnos" :key="t" :value="t">{{ t }}</option>
+                  </select>
+                </div>
+
+                <div v-if="factors.length > 0">
+                  <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ t('Factor (Comments)') }}</label>
+                  <select
+                    v-model="filters.factor"
+                    class="w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">{{ t('All') }}</option>
+                    <option v-for="f in factors" :key="f" :value="f">{{ f }}</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <section class="rounded-lg border border-slate-200 bg-slate-50/60 p-4" v-if="Object.keys(customFieldFilters).length > 0">
+              <h4 class="text-sm font-semibold text-slate-900 mb-3">{{ t('Additional Fields') }}</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div v-for="(fieldData, fieldKey) in customFieldFilters" :key="fieldKey">
+                  <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ formatCustomFieldLabel(fieldKey, fieldData.label) }}</label>
+                  <select
+                    v-model="customFilters[fieldKey]"
+                    class="w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">{{ t('All') }}</option>
+                    <option v-for="val in fieldData.values" :key="val" :value="val">{{ val }}</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+            <p class="text-xs text-slate-500">
+              {{ t('Tip: click any active filter chip to remove only that filter.') }}
+            </p>
+            <button
               @click="resetFilters"
-              class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm"
+              class="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 transition-colors text-sm font-medium"
             >
               {{ t('Clear Filters') }}
             </button>
+          </div>
+        </div>
+
+        <div
+          v-if="activeFilterChips.length > 0 && !isFiltersPanelVisible"
+          class="sticky top-20 z-50 mb-4 rounded-2xl border-2 border-cyan-300 bg-gradient-to-r from-cyan-50/95 to-blue-50/95 backdrop-blur supports-[backdrop-filter]:from-cyan-50/85 supports-[backdrop-filter]:to-blue-50/85 shadow-lg ring-1 ring-cyan-200"
+        >
+          <div class="px-4 py-3">
+            <div class="flex items-center justify-between gap-3 mb-2">
+              <div class="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-blue-900 uppercase">
+                <span class="relative flex h-2.5 w-2.5">
+                  <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-500 opacity-75"></span>
+                  <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-cyan-600"></span>
+                </span>
+                {{ t('Active Filters') }} ({{ activeFilterCount }})
+              </div>
+              <button
+                @click="resetFilters"
+                class="text-xs font-semibold text-blue-800 hover:text-blue-950 underline underline-offset-2"
+              >
+                {{ t('Clear Filters') }}
+              </button>
+            </div>
+            <div class="flex gap-2 overflow-x-auto pb-1">
+              <button
+                v-for="chip in activeFilterChips"
+                :key="`sticky-${chip.id}`"
+                @click="clearFilterChip(chip)"
+                class="shrink-0 inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full text-xs border border-blue-300 bg-white text-slate-800 hover:bg-blue-100 transition-colors"
+              >
+                <span class="font-medium text-slate-900">{{ chip.label }}:</span>
+                <span>{{ chip.value }}</span>
+                <span class="text-blue-600 font-semibold">×</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -398,7 +483,6 @@
                         <td class="border border-gray-300 px-2 py-2 text-xs font-semibold sticky left-0 bg-white z-10">
                           <a
                             :href="route('organization.results.likert', { organization: organizationId, personalFolio: evaluation.personal_folio })"
-                            target="_blank"
                             class="text-blue-600 hover:text-blue-800 hover:underline"
                           >
                             {{ evaluation.personal_folio }}
@@ -510,6 +594,7 @@
                   </div>
                   <div class="flex items-center gap-4">
                     <button
+                      v-if="isAdmin || isSuperAdmin"
                       @click="exportHeatmapToExcel('dimension')"
                       :disabled="isExportingHeatmap"
                       class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -565,7 +650,6 @@
                         <td class="border border-gray-300 px-2 py-2 text-xs font-semibold sticky left-0 bg-white z-10">
                           <a
                             :href="route('organization.results.likert', { organization: organizationId, personalFolio: evaluation.personal_folio })"
-                            target="_blank"
                             class="text-blue-600 hover:text-blue-800 hover:underline"
                           >
                             {{ evaluation.personal_folio }}
@@ -897,6 +981,9 @@ const filters = ref({
   turno: '',
   factor: '',
 })
+const filtersPanelRef = ref(null)
+const isFiltersPanelVisible = ref(true)
+let filtersPanelObserver = null
 
 // Initialize custom field filters based on available custom fields
 const customFilters = ref(
@@ -913,6 +1000,21 @@ const chartInstances = ref({}) // keyed instances; we'll use 'Total', 'Dimension
 const TOTAL_CHART_KEY = 'Total'
 const DIMENSION_CHART_KEY = 'Dimension'
 const QUESTION_SCORES_CHART_KEY = 'QuestionScores'
+const chartRenderToken = ref(0)
+
+const destroyChart = (chartKey) => {
+  const chart = chartInstances.value[chartKey]
+  if (chart) {
+    chart.destroy()
+    delete chartInstances.value[chartKey]
+  }
+}
+
+const destroyQuantitativeCharts = () => {
+  destroyChart(TOTAL_CHART_KEY)
+  destroyChart(DIMENSION_CHART_KEY)
+  destroyChart(QUESTION_SCORES_CHART_KEY)
+}
 
 // Sorting state for heatmap
 const sortColumn = ref(null) // Question number to sort by, or null for default (folio asc)
@@ -978,6 +1080,8 @@ const selectedExportCount = computed(() => {
   }, 0)
 })
 
+const canManageReportFiles = computed(() => props.isAdmin || props.isSuperAdmin)
+
 const openExportByLevelModal = () => {
   selectedExportLevels.value = []
   exportByLevelError.value = ''
@@ -991,6 +1095,10 @@ const closeExportByLevelModal = () => {
 }
 
 const downloadByLevel = async () => {
+  if (!canManageReportFiles.value) {
+    return
+  }
+
   if (selectedExportLevels.value.length === 0) {
     exportByLevelError.value = 'Debe seleccionar al menos un nivel'
     return
@@ -1043,6 +1151,10 @@ const downloadByLevel = async () => {
 }
 
 const downloadWordReport = async () => {
+  if (!canManageReportFiles.value) {
+    return
+  }
+
   isDownloading.value = true
   downloadMessage.value = 'Iniciando generación del reporte...'
   downloadMessageClass.value = 'bg-blue-100 text-blue-800'
@@ -1135,6 +1247,117 @@ const filteredEvaluations = computed(() => {
     return true
   })
 })
+
+const filteredProgressPercent = computed(() => {
+  if (props.evaluations.length === 0) {
+    return 0
+  }
+
+  return Math.round((filteredEvaluations.value.length / props.evaluations.length) * 100)
+})
+
+const activeFilterChips = computed(() => {
+  const chips = []
+
+  if (filters.value.genero) {
+    chips.push({ id: 'genero', key: 'genero', type: 'base', label: t('Gender'), value: filters.value.genero })
+  }
+
+  if (filters.value.tipo_contrato) {
+    chips.push({ id: 'tipo_contrato', key: 'tipo_contrato', type: 'base', label: t('Contract Type'), value: filters.value.tipo_contrato })
+  }
+
+  if (filters.value.puesto) {
+    chips.push({ id: 'puesto', key: 'puesto', type: 'base', label: t('Position'), value: getPuestoName(filters.value.puesto) })
+  }
+
+  if (filters.value.area) {
+    chips.push({ id: 'area', key: 'area', type: 'base', label: t('Area'), value: getAreaName(filters.value.area) })
+  }
+
+  if (filters.value.turno) {
+    chips.push({ id: 'turno', key: 'turno', type: 'base', label: t('Shift'), value: filters.value.turno })
+  }
+
+  if (filters.value.factor) {
+    chips.push({ id: 'factor', key: 'factor', type: 'base', label: t('Factor (Comments)'), value: filters.value.factor })
+  }
+
+  Object.entries(customFilters.value).forEach(([key, value]) => {
+    if (!value) {
+      return
+    }
+
+    chips.push({
+      id: `custom-${key}`,
+      key,
+      type: 'custom',
+      label: formatCustomFieldLabel(key, props.customFieldFilters?.[key]?.label || ''),
+      value,
+    })
+  })
+
+  return chips
+})
+
+const activeFilterCount = computed(() => {
+  return activeFilterChips.value.length
+})
+
+const clearFilterChip = (chip) => {
+  if (chip.type === 'custom') {
+    if (Object.prototype.hasOwnProperty.call(customFilters.value, chip.key)) {
+      customFilters.value[chip.key] = ''
+    }
+
+    return
+  }
+
+  if (Object.prototype.hasOwnProperty.call(filters.value, chip.key)) {
+    filters.value[chip.key] = ''
+  }
+}
+
+const formatCustomFieldLabel = (fieldKey, explicitLabel = '') => {
+  const label = (explicitLabel || '').trim()
+
+  const aliases = {
+    gerente_de_planta: 'Gerente de planta',
+    gerente_de_produccion: 'Gerente de producción',
+    gerente_de_rh: 'Gerente de RH',
+  }
+
+  const sourceText = label && label !== fieldKey ? label : (aliases[fieldKey] || fieldKey)
+
+  const normalized = sourceText
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  const accentMap = {
+    produccion: 'producción',
+    administracion: 'administración',
+    operacion: 'operación',
+    evaluacion: 'evaluación',
+    gestion: 'gestión',
+    organizacion: 'organización',
+    area: 'área',
+    lider: 'líder',
+  }
+
+  const withAccents = normalized.replace(/\b([a-zA-ZáéíóúÁÉÍÓÚñÑ]+)\b/g, (word) => {
+    const normalizedWord = word.toLowerCase()
+    if (accentMap[normalizedWord]) {
+      return accentMap[normalizedWord]
+    }
+
+    return word
+  })
+
+  return withAccents
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .replace(/\bRh\b/g, 'RH')
+}
 
 // Sorted and filtered evaluations for heatmap display
 const sortedFilteredEvaluations = computed(() => {
@@ -1242,6 +1465,10 @@ watch([filters, customFilters, mainTabType], () => {
 
 // Export heatmap to Excel
 const exportHeatmapToExcel = async (heatmapType = 'total') => {
+  if (!canManageReportFiles.value) {
+    return
+  }
+
   isExportingHeatmap.value = true
   exportMessage.value = 'Preparando descarga...'
   exportMessageClass.value = 'bg-blue-100 text-blue-800'
@@ -1746,9 +1973,10 @@ const getScoreLevel = (score) => {
 }
 
 const createPieChart = (canvasRef, labels, data, title, legendClickHandler = null, legendPosition = 'right') => {
-  if (!canvasRef) return
+  if (!canvasRef || !canvasRef.isConnected) return
 
   const ctx = canvasRef.getContext('2d')
+  if (!ctx) return
   
   // Destroy existing chart if any
   const existingChart = chartInstances.value[title]
@@ -1773,6 +2001,7 @@ const createPieChart = (canvasRef, labels, data, title, legendClickHandler = nul
     options: {
       responsive: true,
       maintainAspectRatio: true,
+      animation: false,
       plugins: {
         legend: {
           position: legendPosition,
@@ -1834,9 +2063,10 @@ const createPieChart = (canvasRef, labels, data, title, legendClickHandler = nul
 
 // Create bar chart for question scores (not affected by filters)
 const createQuestionScoresChart = () => {
-  if (!questionScoresChart.value) return
+  if (!questionScoresChart.value || !questionScoresChart.value.isConnected) return
   
   const ctx = questionScoresChart.value.getContext('2d')
+  if (!ctx) return
   
   // Destroy existing chart if any
   const existingChart = chartInstances.value[QUESTION_SCORES_CHART_KEY]
@@ -1865,6 +2095,7 @@ const createQuestionScoresChart = () => {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: false,
       plugins: {
         legend: {
           display: false
@@ -1936,10 +2167,29 @@ const createQuestionScoresChart = () => {
 }
 
 const renderCharts = () => {
+  chartRenderToken.value += 1
+  const currentRenderToken = chartRenderToken.value
+
+  if (mainTabType.value !== 'cuantitativos') {
+    destroyQuantitativeCharts()
+    return
+  }
+
   nextTick(() => {
+    if (currentRenderToken !== chartRenderToken.value) {
+      return
+    }
+
+    if (mainTabType.value !== 'cuantitativos') {
+      destroyQuantitativeCharts()
+      return
+    }
+
     // Question scores bar chart (NOT affected by filters)
     if (questionScoresChart.value && props.evaluations.length > 0) {
       createQuestionScoresChart()
+    } else {
+      destroyChart(QUESTION_SCORES_CHART_KEY)
     }
 
     // Total pie chart - Distribution by Clima Laboral level
@@ -1954,7 +2204,11 @@ const renderCharts = () => {
           const items = getFoliosForClimaLevel(levelLabel)
           openFoliosModal(`Folios en ${levelLabel} (Clima Laboral)`, items)
         }, 'bottom')
+      } else {
+        destroyChart(TOTAL_CHART_KEY)
       }
+    } else {
+      destroyChart(TOTAL_CHART_KEY)
     }
 
     // Dimension-specific pie chart - Only for active tab
@@ -1977,23 +2231,55 @@ const renderCharts = () => {
             'bottom'
           )
         } else {
-          // Destroy existing dimension chart if no data
-          if (chartInstances.value[DIMENSION_CHART_KEY]) {
-            chartInstances.value[DIMENSION_CHART_KEY].destroy()
-            delete chartInstances.value[DIMENSION_CHART_KEY]
-          }
+          destroyChart(DIMENSION_CHART_KEY)
         }
       }
+    } else {
+      destroyChart(DIMENSION_CHART_KEY)
     }
   })
 }
 
 onMounted(() => {
+  if (filtersPanelRef.value) {
+    filtersPanelObserver = new IntersectionObserver(
+      ([entry]) => {
+        isFiltersPanelVisible.value = entry.isIntersecting
+      },
+      {
+        root: null,
+        threshold: 0.1,
+      }
+    )
+
+    filtersPanelObserver.observe(filtersPanelRef.value)
+  }
+
   renderCharts()
 })
 
 watch([activeTab, filteredDimensions], () => {
   renderCharts()
+}, { deep: true })
+
+watch(mainTabType, (currentTab, previousTab) => {
+  chartRenderToken.value += 1
+
+  if (currentTab === 'cuantitativos' && previousTab !== 'cuantitativos') {
+    activeTab.value = 'Total'
+    renderCharts()
+    return
+  }
+
+  if (currentTab !== 'cuantitativos') {
+    destroyQuantitativeCharts()
+  }
+})
+
+watch([filteredClimaLaboralDistribution, questionScoreTotals], () => {
+  if (mainTabType.value === 'cuantitativos') {
+    renderCharts()
+  }
 }, { deep: true })
 
 // Compute the list of folios for a given level in the current dimension
@@ -2063,4 +2349,17 @@ const openFoliosModal = (title, items) => {
   showFoliosModal.value = true
 }
 const closeFoliosModal = () => { showFoliosModal.value = false }
+
+onUnmounted(() => {
+  if (filtersPanelObserver && filtersPanelRef.value) {
+    filtersPanelObserver.unobserve(filtersPanelRef.value)
+  }
+
+  if (filtersPanelObserver) {
+    filtersPanelObserver.disconnect()
+    filtersPanelObserver = null
+  }
+
+  destroyQuantitativeCharts()
+})
 </script>

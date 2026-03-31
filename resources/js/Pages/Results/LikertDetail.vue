@@ -5,8 +5,8 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
                 <div class="flex justify-between items-center">
                     <div  class="flex items-center space-x-4">
-                        <Link v-if="isAdmin"
-                            :href="route('organization.results.list', { organization: organization.id })"
+                        <Link
+                            :href="route('organization.likert.report', { organization: organization.id })"
                             class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 flex items-center"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -31,7 +31,7 @@
             </div>
 
             <!-- Scanned Form Image (Admin/SuperAdmin only) -->
-            <div v-if="evaluation.scanned_image_url && isAdmin" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
+            <div v-if="showScannedForm" class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
                 <h2 class="text-xl font-bold text-gray-900 mb-4">{{ t('Scanned Form') }}</h2>
                 <div class="flex justify-center items-center bg-gray-50 rounded-lg p-4 min-h-64">
                     <button
@@ -41,6 +41,7 @@
                         <img 
                             :src="evaluation.scanned_image_url" 
                             :alt="`Formulario escaneado - ${personalFolio}`"
+                            @error="onScannedImageError"
                             class="max-w-full max-h-64 rounded border border-gray-200 shadow group-hover:shadow-lg transition-shadow"
                         />
                         <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded transition-all flex items-center justify-center">
@@ -126,9 +127,9 @@
                     </button>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <!-- Total Score (Clima Laboral) -->
-                    <div class="p-6 rounded-lg border-2" :class="getClimaLaboralBgClass(scores.total_score)">
+                    <div class="p-6 rounded-lg border-2 lg:col-span-1 self-start h-fit" :class="getClimaLaboralBgClass(scores.total_score)">
                         <h3 class="text-lg font-semibold mb-2" :class="getClimaLaboralTextClass(scores.total_score)">{{ t('Work Climate') }}</h3>
                         <div class="text-5xl font-bold mb-2" :class="getClimaLaboralTextClass(scores.total_score)">
                             {{ scores.total_score }}
@@ -139,7 +140,7 @@
                     </div>
 
                     <!-- Demographic Data -->
-                    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 lg:col-span-2">
                         <h3 class="text-lg font-semibold text-gray-700 mb-4">{{ t('Demographic Data') }}</h3>
                         <div class="space-y-2 text-sm">
                             <div class="flex justify-between">
@@ -170,7 +171,7 @@
                                     :key="key"
                                     class="flex justify-between"
                                 >
-                                    <span class="text-gray-600">{{ field.label }}:</span>
+                                    <span class="text-gray-600">{{ formatCustomFieldLabel(key, field.label) }}:</span>
                                     <span class="font-medium">{{ field.value || t('Not specified') }}</span>
                                 </div>
                             </template>
@@ -292,7 +293,7 @@
 
     <!-- Edit Demographic Data Modal -->
     <div
-        v-if="showEditModal"
+        v-if="showEditModal && isAdmin"
         class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
         @click="showEditModal = false"
     >
@@ -434,7 +435,7 @@
     </div>
     
         <!-- Edit Answers Modal -->
-        <div v-if="showAnswersModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click="showAnswersModal = false">
+        <div v-if="showAnswersModal && isAdmin" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click="showAnswersModal = false">
             <div class="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden" @click.stop>
                 <div class="flex items-center justify-between p-6 border-b border-gray-200">
                     <h3 class="text-xl font-bold text-gray-900">{{ t('Edit Answers') }} (A/B/C/D)</h3>
@@ -497,7 +498,7 @@
 
 <script setup>
 import { Link } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import Dashboard from '@/Layouts/Dashboard.vue'
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue'
 import { useTranslations } from '@/composables/useTranslations'
@@ -557,6 +558,37 @@ const isSubmitting = ref(false)
 const showAnswersModal = ref(false)
 const answersSubmitting = ref(false)
 const editableAnswers = ref({})
+const scannedImageHasError = ref(false)
+
+const showScannedForm = computed(() => {
+    return props.isAdmin && !!props.evaluation?.scanned_image_url && !scannedImageHasError.value
+})
+
+const onScannedImageError = () => {
+    scannedImageHasError.value = true
+    showImageModal.value = false
+}
+
+const formatCustomFieldLabel = (fieldKey, explicitLabel = '') => {
+    const label = (explicitLabel || '').trim()
+
+    const aliases = {
+        gerente_de_planta: 'Gerente de planta',
+        gerente_de_produccion: 'Gerente de producción',
+        gerente_de_rh: 'Gerente de RH',
+    }
+
+    const sourceText = label && label !== fieldKey ? label : (aliases[fieldKey] || fieldKey)
+
+    return sourceText
+        .replace(/_/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\bproduccion\b/gi, 'producción')
+        .replace(/\barea\b/gi, 'área')
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+        .replace(/\bRh\b/g, 'RH')
+}
 
 const formData = ref({
     evaluee_name: props.evaluation?.evaluee_name || '',
@@ -796,6 +828,10 @@ const getClimaLaboralTextClass = (score) => {
 }
 
 const submitForm = async () => {
+    if (!props.isAdmin) {
+        return
+    }
+
     isSubmitting.value = true
     
     try {
@@ -837,6 +873,10 @@ const submitForm = async () => {
 
 // ===== Edit Answers Modal logic =====
 const openAnswersModal = () => {
+    if (!props.isAdmin) {
+        return
+    }
+
     // Initialize editable answers from current props.questions
     const map = {}
     for (const q of props.questions || []) {
@@ -853,6 +893,10 @@ const setAllBlank = () => {
 }
 
 const saveAnswers = async () => {
+    if (!props.isAdmin) {
+        return
+    }
+
     answersSubmitting.value = true
     try {
         const payload = { answers: editableAnswers.value }

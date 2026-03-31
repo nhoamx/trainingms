@@ -24,6 +24,7 @@ use App\Services\PaperEvaluationScoreService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -1508,7 +1509,7 @@ class ResultsController extends Controller
         ]);
     }
 
-    public function showLikertDetails(Organization $organization, string $personalFolio)
+    public function showLikertDetails(Organization $organization, string $personalFolio, Request $request)
     {
         $this->authorize('view-organization-results', $organization);
 
@@ -1550,7 +1551,11 @@ class ResultsController extends Controller
             }
         }
 
-        $isAdmin = auth()->user()->hasRole(['admin', 'super-admin']);
+        $isAdmin = $request->user() && $request->user()->hasRole(['admin', 'super-admin']);
+        $scannedImagePath = 'folios/'.$likert->folio.'.png';
+        $scannedImageUrl = $isAdmin && Storage::disk('public')->exists($scannedImagePath)
+            ? asset('storage/'.$scannedImagePath)
+            : null;
 
         // Get custom fields as key-value pairs
         $customFieldLabels = config('custom_field_labels');
@@ -1577,7 +1582,7 @@ class ResultsController extends Controller
                 'evaluee_name' => $likert->evaluee_name,
                 'created_at' => $likert->created_at->format('Y-m-d H:i:s'),
                 'personal_folio' => $personalFolio,
-                'scanned_image_url' => $isAdmin ? asset('storage/folios/'.$likert->folio.'.png') : null,
+                'scanned_image_url' => $scannedImageUrl,
             ],
             'scores' => $scores,
             'demographic' => $demographic,
@@ -1607,6 +1612,10 @@ class ResultsController extends Controller
     public function updateLikertDemographicData(Organization $organization, string $personalFolio, Request $request)
     {
         $this->authorize('view-organization-results', $organization);
+
+        if (! $request->user() || ! $request->user()->hasRole(['admin', 'super-admin'])) {
+            abort(403, 'No autorizado para editar datos de esta evaluación.');
+        }
 
         // Get Likert evaluation
         $likert = PaperEvaluation::where('organization_id', $organization->id)
@@ -1649,6 +1658,10 @@ class ResultsController extends Controller
     public function updateLikertAnswers(Organization $organization, string $personalFolio, Request $request)
     {
         $this->authorize('view-organization-results', $organization);
+
+        if (! $request->user() || ! $request->user()->hasRole(['admin', 'super-admin'])) {
+            abort(403, 'No autorizado para editar respuestas de esta evaluación.');
+        }
 
         // Validate: answers must be an array of questionNumber => A|B|C|D|null
         $validated = $request->validate([
