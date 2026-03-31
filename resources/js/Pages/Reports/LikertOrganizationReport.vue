@@ -733,6 +733,20 @@
               {{ t('No comments available with current filters.') }}
             </div>
             <div v-else>
+              <div class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h4 class="text-md font-semibold text-slate-900">{{ t('Comments by Factor') }}</h4>
+                <p class="mt-1 text-xs text-slate-600">{{ t('Comment distribution based on applied demographic filters') }}</p>
+                <div class="relative h-72 mt-4">
+                  <canvas ref="commentsByFactorChartCanvas"></canvas>
+                </div>
+                <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                  <div v-for="item in orderedCommentFactors" :key="item.factor" class="flex items-center justify-between rounded border border-slate-200 bg-white px-2.5 py-1.5">
+                    <span class="text-slate-600 truncate pr-2">{{ item.factor }}</span>
+                    <span class="font-semibold text-slate-900">{{ item.count }}</span>
+                  </div>
+                </div>
+              </div>
+
               <h3 class="text-lg font-semibold text-gray-900 mb-4">
                 {{ t('Comments by Factor') }}
                 <span class="text-sm font-normal text-gray-600 ml-2">({{ filteredComments.length }} {{ t('comments') }})</span>
@@ -995,10 +1009,12 @@ const customFilters = ref(
 const pieChartTotal = ref(null)
 const dimensionChartCanvas = ref(null)
 const questionScoresChart = ref(null)
+const commentsByFactorChartCanvas = ref(null)
 const chartInstances = ref({}) // keyed instances; we'll use 'Total', 'Dimension', 'QuestionScores'
 const TOTAL_CHART_KEY = 'Total'
 const DIMENSION_CHART_KEY = 'Dimension'
 const QUESTION_SCORES_CHART_KEY = 'QuestionScores'
+const COMMENTS_FACTOR_CHART_KEY = 'CommentsByFactor'
 const chartRenderToken = ref(0)
 
 const destroyChart = (chartKey) => {
@@ -1013,6 +1029,10 @@ const destroyQuantitativeCharts = () => {
   destroyChart(TOTAL_CHART_KEY)
   destroyChart(DIMENSION_CHART_KEY)
   destroyChart(QUESTION_SCORES_CHART_KEY)
+}
+
+const destroyQualitativeCharts = () => {
+  destroyChart(COMMENTS_FACTOR_CHART_KEY)
 }
 
 // Sorting state for heatmap
@@ -1435,6 +1455,19 @@ const groupedComments = computed(() => {
     groups[comment.factor].push(comment)
   })
   return groups
+})
+
+const orderedCommentFactors = computed(() => {
+  const factors = {}
+
+  filteredComments.value.forEach((comment) => {
+    const factor = (comment.factor || '').trim() || 'Sin factor'
+    factors[factor] = (factors[factor] || 0) + 1
+  })
+
+  return Object.entries(factors)
+    .map(([factor, count]) => ({ factor, count }))
+    .sort((a, b) => b.count - a.count)
 })
 
 // Toggle sort by column
@@ -2165,6 +2198,118 @@ const createQuestionScoresChart = () => {
   chartInstances.value[QUESTION_SCORES_CHART_KEY] = chart
 }
 
+const getCommentFactorChartColor = (index) => {
+  const colors = [
+    'rgba(59, 130, 246, 0.8)',
+    'rgba(34, 197, 94, 0.8)',
+    'rgba(251, 146, 60, 0.8)',
+    'rgba(236, 72, 153, 0.8)',
+    'rgba(14, 165, 233, 0.8)',
+    'rgba(168, 85, 247, 0.8)',
+    'rgba(234, 179, 8, 0.8)',
+    'rgba(239, 68, 68, 0.8)',
+  ]
+
+  return colors[index % colors.length]
+}
+
+const createCommentsByFactorChart = () => {
+  if (!commentsByFactorChartCanvas.value || !commentsByFactorChartCanvas.value.isConnected) {
+    return
+  }
+
+  const ctx = commentsByFactorChartCanvas.value.getContext('2d')
+  if (!ctx) {
+    return
+  }
+
+  const existingChart = chartInstances.value[COMMENTS_FACTOR_CHART_KEY]
+  if (existingChart) {
+    existingChart.destroy()
+  }
+
+  const labels = orderedCommentFactors.value.map((item) => item.factor)
+  const data = orderedCommentFactors.value.map((item) => item.count)
+  const backgroundColors = labels.map((_, index) => getCommentFactorChartColor(index))
+
+  const chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: backgroundColors,
+        borderColor: backgroundColors.map((color) => color.replace('0.8', '1')),
+        borderWidth: 1.5,
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          callbacks: {
+            label: function (context) {
+              const count = context.parsed.x || 0
+              const label = count === 1 ? 'comentario' : 'comentarios'
+              return `${count} ${label}`
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0,
+            color: '#64748b',
+          },
+          grid: {
+            color: '#e2e8f0',
+          },
+        },
+        y: {
+          ticks: {
+            color: '#334155',
+          },
+          grid: {
+            display: false,
+          },
+        },
+      },
+    },
+  })
+
+  chartInstances.value[COMMENTS_FACTOR_CHART_KEY] = chart
+}
+
+const renderQualitativeChart = () => {
+  if (mainTabType.value !== 'cualitativos') {
+    destroyQualitativeCharts()
+    return
+  }
+
+  nextTick(() => {
+    if (mainTabType.value !== 'cualitativos') {
+      destroyQualitativeCharts()
+      return
+    }
+
+    if (orderedCommentFactors.value.length > 0 && commentsByFactorChartCanvas.value) {
+      createCommentsByFactorChart()
+      return
+    }
+
+    destroyQualitativeCharts()
+  })
+}
+
 const renderCharts = () => {
   chartRenderToken.value += 1
   const currentRenderToken = chartRenderToken.value
@@ -2273,11 +2418,24 @@ watch(mainTabType, (currentTab, previousTab) => {
   if (currentTab !== 'cuantitativos') {
     destroyQuantitativeCharts()
   }
+
+  if (currentTab === 'cualitativos') {
+    renderQualitativeChart()
+    return
+  }
+
+  destroyQualitativeCharts()
 })
 
 watch([filteredClimaLaboralDistribution, questionScoreTotals], () => {
   if (mainTabType.value === 'cuantitativos') {
     renderCharts()
+  }
+}, { deep: true })
+
+watch(orderedCommentFactors, () => {
+  if (mainTabType.value === 'cualitativos') {
+    renderQualitativeChart()
   }
 }, { deep: true })
 
@@ -2360,5 +2518,6 @@ onUnmounted(() => {
   }
 
   destroyQuantitativeCharts()
+  destroyQualitativeCharts()
 })
 </script>
