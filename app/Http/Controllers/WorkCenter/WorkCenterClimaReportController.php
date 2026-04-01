@@ -109,10 +109,6 @@ class WorkCenterClimaReportController extends Controller
             abort(403, 'No autorizado.');
         }
 
-        if (! request()->user()?->hasRole(['admin', 'super-admin']) && ! $report->is_published) {
-            abort(403, 'No autorizado para descargar este informe.');
-        }
-
         return response()->download(Storage::disk('public')->path($report->storage_path), $report->original_filename);
     }
 

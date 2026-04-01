@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Organization;
 use App\Models\User;
+use App\Models\WorkCenter;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -56,5 +57,23 @@ class RecommendationsP3TabTest extends TestCase
             ->has('dashboardData')
             ->has('dashboardData.organization')
         );
+    }
+
+    public function test_organization_user_is_redirected_to_work_center_clima_dashboard_when_work_center_exists(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+            'is_primary' => true,
+        ]);
+
+        $user = User::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+        $user->syncRoles(['organization']);
+
+        $this->actingAs($user)
+            ->get("/organizacion/{$organization->id}/dashboard")
+            ->assertRedirect(route('work-centers.dashboard.clima-laboral', $workCenter));
     }
 }

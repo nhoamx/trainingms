@@ -9,6 +9,7 @@ use App\Services\LikertScoreService;
 use App\Services\OrganizationDataService;
 use App\Services\OrganizationReportCacheService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,7 +34,7 @@ class OrganizationDashboardController extends Controller
      * Determina dinámicamente qué tipo(s) de evaluación tiene la organización
      * y redirige al dashboard correspondiente o muestra un selector si hay múltiples
      */
-    public function show(Organization $organization): Response
+    public function show(Organization $organization): Response|RedirectResponse
     {
         $this->authorize('viewOrganizationDashboard', $organization);
 
@@ -102,7 +103,7 @@ class OrganizationDashboardController extends Controller
     /**
      * Show dashboard for a specific evaluation type
      */
-    protected function showDashboardForType(Organization $organization, array $evaluationType): Response
+    protected function showDashboardForType(Organization $organization, array $evaluationType): Response|RedirectResponse
     {
         $typeId = $evaluationType['id'];
 
@@ -234,9 +235,21 @@ class OrganizationDashboardController extends Controller
      * Muestra el dashboard de Likert/Clima Laboral
      * Public method for route binding
      */
-    public function showLikertDashboard(Organization $organization): Response
+    public function showLikertDashboard(Organization $organization): Response|RedirectResponse
     {
         $this->authorize('viewOrganizationDashboard', $organization);
+
+        $user = request()->user();
+        if ($user?->hasRole('organization')) {
+            $workCenter = $organization->workCenters()
+                ->orderByDesc('is_primary')
+                ->orderBy('name')
+                ->first();
+
+            if ($workCenter !== null) {
+                return redirect()->route('work-centers.dashboard.clima-laboral', $workCenter->id);
+            }
+        }
 
         $data = $this->organizationDataService->getDashboardData($organization, 'likert');
 

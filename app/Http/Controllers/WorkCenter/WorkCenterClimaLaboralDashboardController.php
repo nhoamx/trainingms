@@ -83,43 +83,38 @@ class WorkCenterClimaLaboralDashboardController extends Controller
             ];
         })->values()->all();
 
-        $sectionsQuery = $workCenter->climaSections();
-        if (! $canManageClima) {
-            $sectionsQuery->where('status', WorkCenterClimaSection::STATUS_PUBLISHED);
-        }
-        $sections = $sectionsQuery->get()->keyBy('section_key');
+        $sections = $workCenter->climaSections()->get()->keyBy('section_key');
 
-        $reportsQuery = $workCenter->climaReports()->orderByDesc('is_active')->orderByDesc('created_at');
-        if (! $canManageClima) {
-            $reportsQuery->where('is_published', true);
-        }
-        $reports = $reportsQuery->get()->map(fn ($report): array => [
-            'id' => $report->id,
-            'title' => $report->title,
-            'language' => $report->language,
-            'original_filename' => $report->original_filename,
-            'file_size_human' => $report->file_size_human,
-            'is_published' => $report->is_published,
-            'is_active' => $report->is_active,
-            'published_at' => $report->published_at?->format('Y-m-d H:i'),
-            'created_at' => $report->created_at?->format('Y-m-d H:i'),
-        ])->values()->all();
+        $reports = $workCenter->climaReports()
+            ->orderByDesc('is_active')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn ($report): array => [
+                'id' => $report->id,
+                'title' => $report->title,
+                'language' => $report->language,
+                'original_filename' => $report->original_filename,
+                'file_size_human' => $report->file_size_human,
+                'is_published' => $report->is_published,
+                'is_active' => $report->is_active,
+                'published_at' => $report->published_at?->format('Y-m-d H:i'),
+                'created_at' => $report->created_at?->format('Y-m-d H:i'),
+            ])->values()->all();
 
-        $evidencesQuery = $workCenter->climaEvidences()->orderByDesc('created_at');
-        if (! $canManageClima) {
-            $evidencesQuery->where('is_published', true);
-        }
-        $evidences = $evidencesQuery->get()->map(fn ($evidence): array => [
-            'id' => $evidence->id,
-            'title' => $evidence->title,
-            'description' => $evidence->description,
-            'preview_url' => asset('storage/'.$evidence->storage_path),
-            'original_filename' => $evidence->original_filename,
-            'file_size_human' => $evidence->file_size_human,
-            'is_published' => $evidence->is_published,
-            'published_at' => $evidence->published_at?->format('Y-m-d H:i'),
-            'created_at' => $evidence->created_at?->format('Y-m-d H:i'),
-        ])->values()->all();
+        $evidences = $workCenter->climaEvidences()
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn ($evidence): array => [
+                'id' => $evidence->id,
+                'title' => $evidence->title,
+                'description' => $evidence->description,
+                'preview_url' => asset('storage/'.$evidence->storage_path),
+                'original_filename' => $evidence->original_filename,
+                'file_size_human' => $evidence->file_size_human,
+                'is_published' => $evidence->is_published,
+                'published_at' => $evidence->published_at?->format('Y-m-d H:i'),
+                'created_at' => $evidence->created_at?->format('Y-m-d H:i'),
+            ])->values()->all();
 
         return Inertia::render('WorkCenters/ClimaLaboralDashboard', [
             'title' => 'Clima Laboral - '.$workCenter->name,
@@ -189,12 +184,9 @@ class WorkCenterClimaLaboralDashboardController extends Controller
             ->where('section_key', 'conclusions_config')
             ->first();
 
-        $filesQuery = $workCenter->conclusionsFiles()->orderBy('slot');
-        if (! $canManage) {
-            $filesQuery->where('is_published', true);
-        }
-
-        $files = $filesQuery->get()
+        $files = $workCenter->conclusionsFiles()
+            ->orderBy('slot')
+            ->get()
             ->map(fn (WorkCenterConclusionsFile $file): array => [
                 'id' => $file->id,
                 'slot' => $file->slot,

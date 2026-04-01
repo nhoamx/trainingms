@@ -400,7 +400,7 @@ const colorizeCurrentRow = (): void => {
 }
 
 .rich-editor--readonly {
-  @apply border-transparent shadow-xl;
+  @apply border-transparent;
 }
 
 .rich-editor__toolbar {

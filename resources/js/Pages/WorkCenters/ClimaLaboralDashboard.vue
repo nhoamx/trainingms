@@ -235,7 +235,6 @@
                   <h2 class="text-2xl font-bold text-gray-800">{{ t('Analysis by Department') }}</h2>
                   <span :class="statusClass(climaContent.sections.analysis_department.status)">{{ statusLabel(climaContent.sections.analysis_department.status) }}</span>
                 </div>
-                <p class="text-xs text-gray-500 mb-3">{{ t('Explain findings by departments in clear language for operational leaders.') }}</p>
                 <RichTextEditor
                   v-if="effectiveCanManage"
                   v-model="sectionDrafts.analysis_department"

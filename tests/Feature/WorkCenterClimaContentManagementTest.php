@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\WorkCenter;
+use App\Models\WorkCenterClimaEvidence;
+use App\Models\WorkCenterClimaReport;
 use App\Models\WorkCenterClimaSection;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
@@ -102,7 +104,7 @@ class WorkCenterClimaContentManagementTest extends TestCase
         ]);
     }
 
-    public function test_dashboard_hides_draft_sections_for_organization_user(): void
+    public function test_dashboard_shows_draft_sections_for_organization_user(): void
     {
         $organization = Organization::factory()->create();
         $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
@@ -123,8 +125,54 @@ class WorkCenterClimaContentManagementTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
             ->where('canManageClima', false)
-            ->where('climaContent.sections.recommendations.content', null)
+            ->where('climaContent.sections.recommendations.content', 'Borrador interno')
         );
 
+    }
+
+    public function test_work_center_user_can_download_draft_report_and_evidence(): void
+    {
+        Storage::fake('public');
+
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        Storage::disk('public')->put('reports/draft-report.pdf', 'draft report content');
+        Storage::disk('public')->put('evidences/draft-evidence.jpg', 'draft evidence content');
+
+        $report = WorkCenterClimaReport::query()->create([
+            'work_center_id' => $workCenter->id,
+            'title' => 'Reporte Borrador',
+            'language' => 'es',
+            'storage_path' => 'reports/draft-report.pdf',
+            'original_filename' => 'draft-report.pdf',
+            'mime_type' => 'application/pdf',
+            'file_size' => 1200,
+            'is_published' => false,
+            'is_active' => false,
+        ]);
+
+        $evidence = WorkCenterClimaEvidence::query()->create([
+            'work_center_id' => $workCenter->id,
+            'title' => 'Evidencia Borrador',
+            'description' => 'Solo borrador',
+            'storage_path' => 'evidences/draft-evidence.jpg',
+            'original_filename' => 'draft-evidence.jpg',
+            'mime_type' => 'image/jpeg',
+            'file_size' => 900,
+            'is_published' => false,
+        ]);
+
+        $workCenterUser = User::factory()->create();
+        $workCenterUser->syncRoles(['work_center_user']);
+        $workCenterUser->workCenters()->attach($workCenter);
+
+        $this->actingAs($workCenterUser)
+            ->get(route('work-centers.clima.reports.download', [$workCenter, $report]))
+            ->assertOk();
+
+        $this->actingAs($workCenterUser)
+            ->get(route('work-centers.clima.evidences.download', [$workCenter, $evidence]))
+            ->assertOk();
     }
 }

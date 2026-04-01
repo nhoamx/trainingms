@@ -2,41 +2,43 @@
   <div>
     <!-- Readonly / preview-only mode -->
     <div v-if="readonly">
-      <div v-if="hasConfig" :class="cardClasses.wrapper" class="max-w-lg rounded-xl border p-8 shadow-sm">
-        <div class="mb-6 flex items-start justify-between">
-          <div>
-            <h3 class="mb-1 text-2xl font-bold text-gray-900">{{ displayTitle }}</h3>
-            <p v-if="displaySubtitle" class="text-sm text-gray-600">{{ displaySubtitle }}</p>
-          </div>
-          <svg class="h-9 w-9 flex-shrink-0" :class="cardClasses.icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-          </svg>
-        </div>
-        <ul v-if="displayBullets.length" class="mb-7 space-y-3">
-          <li v-for="(bullet, i) in displayBullets" :key="i" class="flex items-center gap-3 text-gray-700">
-            <svg class="h-5 w-5 flex-shrink-0" :class="cardClasses.icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <div class="flex justify-center">
+        <div v-if="hasConfig" :class="cardClasses.wrapper" class="w-full max-w-lg rounded-xl border p-8 shadow-sm">
+          <div class="mb-6 flex items-start justify-between">
+            <div>
+              <h3 class="mb-1 text-2xl font-bold text-gray-900">{{ displayTitle }}</h3>
+              <p v-if="displaySubtitle" class="text-sm text-gray-600">{{ displaySubtitle }}</p>
+            </div>
+            <svg class="h-9 w-9 flex-shrink-0" :class="cardClasses.icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
             </svg>
-            <span>{{ bullet }}</span>
-          </li>
-        </ul>
-        <a
-          v-if="activeReportForLocale"
-          :href="downloadRoute(activeReportForLocale.id)"
-          :class="cardClasses.button"
-          class="flex w-full items-center justify-center gap-2 rounded-lg py-3 px-6 font-bold text-white transition-colors"
-        >
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          {{ locale === 'es' ? 'Descargar Informe' : 'Download Report' }}
-        </a>
-        <div v-else class="rounded-lg border border-dashed border-gray-300 p-4 text-center text-sm text-gray-400 italic">
-          {{ t('No file uploaded yet for this language.') }}
+          </div>
+          <ul v-if="displayBullets.length" class="mb-7 space-y-3">
+            <li v-for="(bullet, i) in displayBullets" :key="i" class="flex items-center gap-3 text-gray-700">
+              <svg class="h-5 w-5 flex-shrink-0" :class="cardClasses.icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{{ bullet }}</span>
+            </li>
+          </ul>
+          <a
+            v-if="activeReportForLocale"
+            :href="downloadRoute(activeReportForLocale.id)"
+            :class="cardClasses.button"
+            class="flex w-full items-center justify-center gap-2 rounded-lg py-3 px-6 font-bold text-white transition-colors"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            {{ locale === 'es' ? 'Descargar Informe' : 'Download Report' }}
+          </a>
+          <div v-else class="rounded-lg border border-dashed border-gray-300 p-4 text-center text-sm text-gray-400 italic">
+            {{ t('No file uploaded yet for this language.') }}
+          </div>
         </div>
-      </div>
-      <div v-else class="rounded-lg border border-dashed border-gray-300 bg-gray-50 py-12 text-center text-sm text-gray-400 italic">
-        {{ t('No report configured yet.') }}
+        <div v-else class="w-full max-w-lg rounded-lg border border-dashed border-gray-300 bg-gray-50 py-12 text-center text-sm text-gray-400 italic">
+          {{ t('No report configured yet.') }}
+        </div>
       </div>
     </div>
 

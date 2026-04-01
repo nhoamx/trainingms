@@ -75,10 +75,6 @@ class WorkCenterClimaEvidenceController extends Controller
             abort(403, 'No autorizado.');
         }
 
-        if (! request()->user()?->hasRole(['admin', 'super-admin']) && ! $evidence->is_published) {
-            abort(403, 'No autorizado para descargar esta evidencia.');
-        }
-
         return response()->download(Storage::disk('public')->path($evidence->storage_path), $evidence->original_filename);
     }
 
