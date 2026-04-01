@@ -172,7 +172,7 @@
       <Analisis />
     </template>
 
-    <template v-else>
+    <template v-else-if="organization?.id === 'a05bc65b-08cd-45d5-8ae1-f4f9d3eb5238'">
       <AnalisisPlanta1 />
     </template>
 
