@@ -82,8 +82,8 @@
         <!-- General Layer -->
         <div class="mb-8 bg-white rounded-2xl border border-gray-200 shadow-sm">
           <div class="px-6 pt-6 pb-3 border-b border-gray-100">
-            <h2 class="text-xl font-bold text-gray-900">Capa General NOM-035</h2>
-            <p class="mt-1 text-sm text-gray-600">Información compartida para GRI y GRIII antes de entrar a Etapas</p>
+            <h2 class="text-xl font-bold text-gray-900">Capa General</h2>
+            <p class="mt-1 text-sm text-gray-600">Información base compartida antes de entrar a etapas e instrumentos</p>
           </div>
 
           <div class="px-6 pt-4">

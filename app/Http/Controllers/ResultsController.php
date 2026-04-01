@@ -438,6 +438,10 @@ class ResultsController extends Controller
     {
         $this->authorize('view-organization-results', $organization);
 
+        if (! $this->isAdminOrSuperAdmin($request->user())) {
+            abort(403, 'Solo administradores pueden descargar este reporte');
+        }
+
         // Get cached report data
         $reportData = $this->cacheService->rememberLikertReport($organization->id, function () use ($organization) {
             return $this->computeLikertReportData($organization);
@@ -456,14 +460,12 @@ class ResultsController extends Controller
         $gerenteProduccionKey = EvaluationCustomField::labelToKey('Gerente de Producción');
         $gerenteRhKey = EvaluationCustomField::labelToKey('Gerente de RH');
         $supervisorKey = EvaluationCustomField::labelToKey('Supervisor');
-        $comentariosKey = EvaluationCustomField::labelToKey('Comentarios Adicionales');
 
         // Map evaluations to compact format
         $exportData = [];
         foreach ($evaluations as $evaluation) {
             $answers = $evaluation['answers'] ?? [];
             $customFields = $evaluation['customFields'] ?? [];
-            $commentFields = $this->formatCompactCommentFields($evaluation['comments'] ?? []);
             $exportData[] = [
                 $evaluation['personal_folio'] ?? $evaluation['folio'] ?? '',
                 $evaluation['evaluee_name'] ?? '',
@@ -479,8 +481,6 @@ class ResultsController extends Controller
                 $customFields[$gerenteProduccionKey]['value'] ?? '',
                 $customFields[$gerenteRhKey]['value'] ?? '',
                 $customFields[$supervisorKey]['value'] ?? '',
-                $commentFields['comments'] !== '' ? $commentFields['comments'] : ($customFields[$comentariosKey]['value'] ?? ''),
-                $commentFields['factors'],
                 $answers['1'] ?? '',
                 $answers['2'] ?? '',
                 $answers['3'] ?? '',
@@ -513,43 +513,6 @@ class ResultsController extends Controller
             new ClimaLaboralCompactExport($exportData),
             $filename
         );
-    }
-
-    /**
-     * @param  array<int, array{factor?: string|null, comment?: string|null}>  $comments
-     * @return array{comments: string, factors: string}
-     */
-    private function formatCompactCommentFields(array $comments): array
-    {
-        if (empty($comments)) {
-            return [
-                'comments' => '',
-                'factors' => '',
-            ];
-        }
-
-        $commentLines = [];
-        $factorLines = [];
-        foreach ($comments as $entry) {
-            $factor = trim((string) ($entry['factor'] ?? ''));
-            $comment = trim((string) ($entry['comment'] ?? ''));
-
-            if ($factor === '' && $comment === '') {
-                continue;
-            }
-
-            if ($comment === '') {
-                continue;
-            }
-
-            $commentLines[] = $comment;
-            $factorLines[] = $factor;
-        }
-
-        return [
-            'comments' => implode("\n", $commentLines),
-            'factors' => implode("\n", $factorLines),
-        ];
     }
 
     /**

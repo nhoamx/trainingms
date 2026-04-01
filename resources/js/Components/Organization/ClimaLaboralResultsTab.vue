@@ -33,7 +33,7 @@
         />
 
         <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
-          <section class="flex min-h-[190px] flex-col rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+          <section v-if="isAdmin" class="flex min-h-[190px] flex-col rounded-lg border border-slate-200 bg-slate-50/70 p-4">
             <div class="mb-2 h-1 w-12 rounded-full bg-emerald-500/80"></div>
             <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{{ t('Results export') }}</p>
             <p class="mt-1 text-sm text-slate-700">{{ t('Download the consolidated climate report to share or audit.') }}</p>
@@ -424,13 +424,14 @@
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount } from 'vue';
 import axios from 'axios';
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import { ChartBarIcon } from '@heroicons/vue/24/outline';
 import { useTranslations } from '@/composables/useTranslations';
 import EvaluationsTable from './ClimaLaboral/EvaluationsTable.vue';
 import BarChart from './ClimaLaboral/BarChart.vue';
 
 const { t } = useTranslations();
+const page = usePage();
 
 interface DemographicData {
   gender?: string;
@@ -491,6 +492,10 @@ const importFeedback = ref<{ success: boolean; message: string } | null>(null);
 const importStatus = ref<BulkImportStatus | null>(null);
 const activeImportJobId = ref<number | null>(null);
 const pollIntervalId = ref<number | null>(null);
+const isAdmin = computed<boolean>(() => {
+  const roles = (page.props.auth as { user?: { roles?: Array<{ name: string }> } })?.user?.roles ?? [];
+  return roles.some((role) => role.name === 'admin' || role.name === 'super-admin');
+});
 
 const satisfactionLevels: SatisfactionLevel[] = [
   { 

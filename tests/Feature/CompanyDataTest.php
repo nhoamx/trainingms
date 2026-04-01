@@ -63,7 +63,7 @@ class CompanyDataTest extends TestCase
     }
 
     /** @test */
-    public function organization_user_can_update_company_data(): void
+    public function organization_user_cannot_update_company_data(): void
     {
         $updateData = [
             'name' => 'Updated Company Name',
@@ -77,20 +77,11 @@ class CompanyDataTest extends TestCase
         $response = $this->actingAs($this->organizationUser)
             ->post(route('company-data.update', $this->organization), $updateData);
 
-        $response->assertRedirect(route('company-data.edit', $this->organization));
-        $response->assertSessionHas('flash.type', 'success');
-
-        $this->assertDatabaseHas('organizations', [
-            'id' => $this->organization->id,
-            'name' => 'Updated Company Name',
-            'razon_social' => 'Updated Razon Social',
-            'rfc' => 'UPD123456789',
-            'total_trabajadores' => 100,
-        ]);
+        $response->assertForbidden();
     }
 
     /** @test */
-    public function organization_user_can_upload_policy_draft(): void
+    public function organization_user_cannot_upload_policy_draft(): void
     {
         $file = UploadedFile::fake()->create('policy-draft.pdf', 1024);
 
@@ -99,13 +90,7 @@ class CompanyDataTest extends TestCase
                 'policy_draft' => $file,
             ]);
 
-        $response->assertRedirect();
-        $response->assertSessionHas('flash.type', 'success');
-
-        $this->organization->refresh();
-        $this->assertNotNull($this->organization->policy_draft_path);
-
-        Storage::disk('public')->assertExists($this->organization->policy_draft_path);
+        $response->assertForbidden();
     }
 
     /** @test */
@@ -186,9 +171,9 @@ class CompanyDataTest extends TestCase
     }
 
     /** @test */
-    public function validation_requires_name_field(): void
+    public function admin_validation_requires_name_field(): void
     {
-        $response = $this->actingAs($this->organizationUser)
+        $response = $this->actingAs($this->adminUser)
             ->post(route('company-data.update', $this->organization), [
                 'name' => '',
                 'razon_social' => 'Test',
@@ -198,9 +183,9 @@ class CompanyDataTest extends TestCase
     }
 
     /** @test */
-    public function validation_requires_valid_email_formats(): void
+    public function admin_validation_requires_valid_email_formats(): void
     {
-        $response = $this->actingAs($this->organizationUser)
+        $response = $this->actingAs($this->adminUser)
             ->post(route('company-data.update', $this->organization), [
                 'name' => 'Test Company',
                 'contacto_email' => 'invalid-email',
@@ -211,11 +196,11 @@ class CompanyDataTest extends TestCase
     }
 
     /** @test */
-    public function policy_upload_requires_valid_file_type(): void
+    public function admin_policy_upload_requires_valid_file_type(): void
     {
         $file = UploadedFile::fake()->create('policy.txt', 1024);
 
-        $response = $this->actingAs($this->organizationUser)
+        $response = $this->actingAs($this->adminUser)
             ->post(route('company-data.policy.upload-draft', $this->organization), [
                 'policy_draft' => $file,
             ]);

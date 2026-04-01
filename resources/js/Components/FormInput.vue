@@ -12,8 +12,11 @@
                 :id="id"
                 :name="name"
                 :autocomplete="autocomplete"
+                :readonly="readonly"
+                :disabled="disabled"
                 v-model="inputValue"
                 class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                :class="(readonly || disabled) ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''"
             />
             <p v-if="error" class="mt-1 text-xs text-red-500">
                 {{ error }}
@@ -33,7 +36,9 @@ const props = defineProps({
     modelValue: { type: [String, Number], default: '' },
     autocomplete: { type: String, default: '' },
     type: { type: String, default: 'text' },
-    error: { type: String, default: '' }
+    error: { type: String, default: '' },
+    readonly: { type: Boolean, default: false },
+    disabled: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:modelValue'])

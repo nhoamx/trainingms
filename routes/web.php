@@ -355,12 +355,12 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/organizacion/{organization}/datos-empresa', [\App\Http\Controllers\CompanyDataController::class, 'update'])
         ->name('company-data.update')
-        ->middleware('can:view-organization-results,organization');
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
 
     // Policy document routes
     Route::post('/organizacion/{organization}/politica/borrador', [\App\Http\Controllers\CompanyDataController::class, 'uploadPolicyDraft'])
         ->name('company-data.policy.upload-draft')
-        ->middleware('can:view-organization-results,organization');
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
 
     Route::post('/organizacion/{organization}/politica/aprobada', [\App\Http\Controllers\CompanyDataController::class, 'uploadPolicyApproved'])
         ->name('company-data.policy.upload-approved')
@@ -377,11 +377,11 @@ Route::middleware(['auth'])->group(function () {
     // Committee Member routes
     Route::post('/organizacion/{organization}/comite/miembros', [\App\Http\Controllers\CommitteeMemberController::class, 'store'])
         ->name('committee-members.store')
-        ->middleware('can:view-organization-results,organization');
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
 
     Route::delete('/organizacion/{organization}/comite/miembros/{committeeMember}', [\App\Http\Controllers\CommitteeMemberController::class, 'destroy'])
         ->name('committee-members.destroy')
-        ->middleware('can:view-organization-results,organization');
+        ->middleware(['can:view-organization-results,organization', 'role:admin|super-admin']);
 
     Route::post('/organizacion/{organization}/analizar/bloques', [\App\Http\Controllers\Organization\OrganizationAnalysisBlockController::class, 'store'])
         ->name('organization.analysis-blocks.store')
@@ -428,7 +428,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Export Clima Laboral compact (all evaluations in single sheet)
     Route::post('/organizacion/{organization}/clima-laboral/export-compact', [ResultsController::class, 'exportClimaLaboralCompact'])
-        ->name('organization.clima-laboral.export-compact');
+        ->name('organization.clima-laboral.export-compact')
+        ->middleware('role:admin|super-admin');
 
     // Multi-sheet climate export routes (admin only)
     Route::get('/organizacion/{organization}/clima/export-options', [ResultsController::class, 'getClimaExportOptions'])

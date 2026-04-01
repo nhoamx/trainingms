@@ -45,8 +45,6 @@ class ClimaLaboralCompactExport implements FromArray, WithHeadings, WithStrictNu
             'Gerente de Producción',
             'Gerente de RH',
             'Supervisor',
-            'Comentarios Adicionales',
-            'Factor de Comentarios',
             'P1',
             'P2',
             'P3',

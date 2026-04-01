@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue'
-import { useForm, router } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { useForm, router, usePage } from '@inertiajs/vue3'
 import { DocumentArrowUpIcon, DocumentArrowDownIcon, CheckCircleIcon, PlusIcon, TrashIcon, XMarkIcon, UserGroupIcon } from '@heroicons/vue/24/solid'
 import Dashboard from '../../Layouts/Dashboard.vue'
 import Alert from '../../Components/Alert.vue'
@@ -15,6 +15,28 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+})
+
+const page = usePage()
+const isOrganizationView = computed(() => page.props.auth?.user?.roles?.some((role) => role.name === 'organization') ?? false)
+const displayValue = (value) => {
+    if (value === 0) {
+        return '0'
+    }
+
+    return value || 'No especificado'
+}
+const generalTabs = computed(() => {
+    const tabs = [
+        { key: 'empresa', label: 'Empresa' },
+        { key: 'comite', label: 'Comité' },
+    ]
+
+    if (!isOrganizationView.value) {
+        tabs.push({ key: 'politica', label: 'Política' })
+    }
+
+    return tabs
 })
 
 // Form for company data
@@ -185,61 +207,188 @@ const handlePolicyApprovedUpload = (event) => {
             <div class="mb-6">
                 <h1 class="text-2xl font-bold text-gray-900">Datos de la Empresa</h1>
                 <p class="mt-2 text-sm text-gray-600">
-                    Administra la información de tu organización, comité y política.
+                    {{ isOrganizationView
+                        ? 'Consulta la capa general de tu organización y la integración del comité.'
+                        : 'Administra la información de tu organización, comité y política.' }}
                 </p>
             </div>
 
-            <!-- Tabs Navigation -->
-            <div class="border-b border-gray-200 mb-6">
-                <div class="flex overflow-x-auto whitespace-nowrap py-2 space-x-4">
-                    <button 
-                        @click="activeTab = 'empresa'"
-                        class="px-3 py-2 text-sm font-medium rounded-md transition-colors"
-                        :class="activeTab === 'empresa' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700'"
-                    >
-                        Empresa
-                    </button>
-                    <button 
-                        @click="activeTab = 'comite'"
-                        class="px-3 py-2 text-sm font-medium rounded-md transition-colors"
-                        :class="activeTab === 'comite' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700'"
-                    >
-                        Comité
-                    </button>
-                    <button 
-                        @click="activeTab = 'politica'"
-                        class="px-3 py-2 text-sm font-medium rounded-md transition-colors"
-                        :class="activeTab === 'politica' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700'"
-                    >
-                        Política
-                    </button>
+            <div class="mb-8 bg-white rounded-2xl border border-gray-200 shadow-sm">
+                <div class="px-6 pt-6 pb-3 border-b border-gray-100">
+                    <h2 class="text-xl font-bold text-gray-900">Capa General</h2>
+                    <p class="mt-1 text-sm text-gray-600">
+                        {{ isOrganizationView
+                            ? 'Información general de la organización para consulta.'
+                            : 'Información general de la organización para gestión administrativa.' }}
+                    </p>
                 </div>
-            </div>
 
-            <!-- Empresa Tab -->
-            <div v-show="activeTab === 'empresa'" class="space-y-8">
-                <form @submit.prevent="submitCompanyData">
+                <div class="px-6 pt-4">
+                    <nav class="flex flex-wrap gap-2 lg:gap-4" aria-label="Tabs">
+                        <button
+                            v-for="tab in generalTabs"
+                            :key="tab.key"
+                            @click="activeTab = tab.key"
+                            :class="[
+                                'px-4 sm:px-6 py-3 sm:py-4 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200',
+                                activeTab === tab.key
+                                    ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900',
+                            ]"
+                            :aria-current="activeTab === tab.key ? 'page' : undefined"
+                        >
+                            {{ tab.label }}
+                        </button>
+                    </nav>
+                </div>
+
+                <div class="p-6 sm:p-8">
+                    <!-- Empresa Tab -->
+                    <div v-show="activeTab === 'empresa'" class="space-y-8">
+                        <div v-if="isOrganizationView" class="space-y-6">
+                            <section class="rounded-lg border border-slate-200 bg-slate-50/70 p-5">
+                                <div class="mb-2 h-1 w-12 rounded-full bg-blue-500/80"></div>
+                                <h3 class="text-base font-semibold text-slate-900">Información General</h3>
+                                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Nombre comercial</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.name) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Razón social</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.razon_social) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">RFC</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.rfc) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Registro patronal</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.registro_patronal) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Fecha de evaluación</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.fecha_aplicacion) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 sm:col-span-2 lg:col-span-1">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Actividad principal</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.actividad_principal) }}</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="rounded-lg border border-slate-200 bg-slate-50/70 p-5">
+                                <div class="mb-2 h-1 w-12 rounded-full bg-emerald-500/80"></div>
+                                <h3 class="text-base font-semibold text-slate-900">Domicilio</h3>
+                                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 lg:col-span-2">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Calle y número</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.calle_numero) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Código postal</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.codigo_postal) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Colonia</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.colonia) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Municipio</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.municipio) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Estado</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.estado) }}</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="rounded-lg border border-slate-200 bg-slate-50/70 p-5">
+                                <div class="mb-2 h-1 w-12 rounded-full bg-amber-500/80"></div>
+                                <h3 class="text-base font-semibold text-slate-900">Colaboradores y muestra</h3>
+                                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-center">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Total trabajadores</p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ displayValue(form.total_trabajadores) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-center">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Hombres</p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ displayValue(form.total_hombres) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-center">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Mujeres</p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ displayValue(form.total_mujeres) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-center">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Muestra aplicada</p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ displayValue(form.muestra_aplicada) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-center">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Muestra hombres</p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ displayValue(form.muestra_hombres) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-center">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Muestra mujeres</p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ displayValue(form.muestra_mujeres) }}</p>
+                                    </div>
+                                </div>
+                                <div class="mt-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Justificación de muestra</p>
+                                    <p class="mt-1 text-sm text-slate-800">{{ displayValue(form.justificacion_muestra) }}</p>
+                                </div>
+                            </section>
+
+                            <section class="rounded-lg border border-slate-200 bg-slate-50/70 p-5">
+                                <div class="mb-2 h-1 w-12 rounded-full bg-indigo-500/80"></div>
+                                <h3 class="text-base font-semibold text-slate-900">Contacto y responsable</h3>
+                                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Contacto</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.contacto_nombre) }}</p>
+                                        <p class="text-xs text-slate-600">{{ displayValue(form.contacto_puesto) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Email contacto</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900 break-all">{{ displayValue(form.contacto_email) }}</p>
+                                        <p class="text-xs text-slate-600">{{ displayValue(form.contacto_movil) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Responsable</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900">{{ displayValue(form.responsable_nombre) }}</p>
+                                        <p class="text-xs text-slate-600">{{ displayValue(form.responsable_puesto) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Email responsable</p>
+                                        <p class="mt-1 text-sm font-medium text-slate-900 break-all">{{ displayValue(form.responsable_email) }}</p>
+                                        <p class="text-xs text-slate-600">{{ displayValue(form.responsable_movil) }}</p>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <form v-else @submit.prevent="submitCompanyData">
                     <!-- Información General -->
                     <div class="border-b border-gray-900/10 pb-8">
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">Información General</h2>
                         <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                             <div class="sm:col-span-3">
-                                <FormInput v-model="form.name" label="Nombre comercial" :error="form.errors.name" required />
+                                <FormInput v-model="form.name" label="Nombre comercial" :error="form.errors.name" required :disabled="isOrganizationView" />
                             </div>
                             <div class="sm:col-span-3">
-                                <FormInput v-model="form.razon_social" label="Razón social" :error="form.errors.razon_social" />
+                                <FormInput v-model="form.razon_social" label="Razón social" :error="form.errors.razon_social" :disabled="isOrganizationView" />
                             </div>
                             <div class="sm:col-span-2">
-                                <FormInput v-model="form.rfc" label="RFC" :error="form.errors.rfc" maxlength="13" />
+                                <FormInput v-model="form.rfc" label="RFC" :error="form.errors.rfc" maxlength="13" :disabled="isOrganizationView" />
                             </div>
                             <div class="sm:col-span-2">
                                 <FormInput v-model="form.registro_patronal" label="Registro patronal" :error="form.errors.registro_patronal" />
                             </div>
                             <div class="sm:col-span-2">
-                                <FormInput v-model="form.fecha_aplicacion" label="Fecha de evaluación" type="date" :error="form.errors.fecha_aplicacion" />
+                                <FormInput v-model="form.fecha_aplicacion" label="Fecha de evaluación" type="date" :error="form.errors.fecha_aplicacion" :disabled="isOrganizationView" />
                             </div>
                             <div class="sm:col-span-6">
-                                <FormInput v-model="form.actividad_principal" label="Actividad principal" :error="form.errors.actividad_principal" />
+                                <FormInput v-model="form.actividad_principal" label="Actividad principal" :error="form.errors.actividad_principal" :disabled="isOrganizationView" />
                             </div>
                         </div>
                     </div>
@@ -249,19 +398,19 @@ const handlePolicyApprovedUpload = (event) => {
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">Domicilio</h2>
                         <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                             <div class="sm:col-span-4">
-                                <FormInput v-model="form.calle_numero" label="Calle y número" :error="form.errors.calle_numero" />
+                                <FormInput v-model="form.calle_numero" label="Calle y número" :error="form.errors.calle_numero" :disabled="isOrganizationView" />
                             </div>
                             <div class="sm:col-span-2">
-                                <FormInput v-model="form.codigo_postal" label="Código postal" :error="form.errors.codigo_postal" />
+                                <FormInput v-model="form.codigo_postal" label="Código postal" :error="form.errors.codigo_postal" :disabled="isOrganizationView" />
                             </div>
                             <div class="sm:col-span-2">
-                                <FormInput v-model="form.colonia" label="Colonia" :error="form.errors.colonia" />
+                                <FormInput v-model="form.colonia" label="Colonia" :error="form.errors.colonia" :disabled="isOrganizationView" />
                             </div>
                             <div class="sm:col-span-2">
-                                <FormInput v-model="form.municipio" label="Municipio" :error="form.errors.municipio" />
+                                <FormInput v-model="form.municipio" label="Municipio" :error="form.errors.municipio" :disabled="isOrganizationView" />
                             </div>
                             <div class="sm:col-span-2">
-                                <FormInput v-model="form.estado" label="Estado" :error="form.errors.estado" />
+                                <FormInput v-model="form.estado" label="Estado" :error="form.errors.estado" :disabled="isOrganizationView" />
                             </div>
                         </div>
                     </div>
@@ -271,13 +420,13 @@ const handlePolicyApprovedUpload = (event) => {
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">Colaboradores</h2>
                         <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-3">
                             <div>
-                                <FormInput v-model.number="form.total_trabajadores" label="Total de trabajadores" type="number" :error="form.errors.total_trabajadores" />
+                                <FormInput v-model.number="form.total_trabajadores" label="Total de trabajadores" type="number" :error="form.errors.total_trabajadores" :disabled="isOrganizationView" />
                             </div>
                             <div>
-                                <FormInput v-model.number="form.total_hombres" label="Hombres" type="number" :error="form.errors.total_hombres" />
+                                <FormInput v-model.number="form.total_hombres" label="Hombres" type="number" :error="form.errors.total_hombres" :disabled="isOrganizationView" />
                             </div>
                             <div>
-                                <FormInput v-model.number="form.total_mujeres" label="Mujeres" type="number" :error="form.errors.total_mujeres" />
+                                <FormInput v-model.number="form.total_mujeres" label="Mujeres" type="number" :error="form.errors.total_mujeres" :disabled="isOrganizationView" />
                             </div>
                         </div>
                     </div>
@@ -287,13 +436,13 @@ const handlePolicyApprovedUpload = (event) => {
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">Muestra Aplicada</h2>
                         <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-3">
                             <div>
-                                <FormInput v-model.number="form.muestra_aplicada" label="Total" type="number" :error="form.errors.muestra_aplicada" />
+                                <FormInput v-model.number="form.muestra_aplicada" label="Total" type="number" :error="form.errors.muestra_aplicada" :disabled="isOrganizationView" />
                             </div>
                             <div>
-                                <FormInput v-model.number="form.muestra_hombres" label="Hombres" type="number" :error="form.errors.muestra_hombres" />
+                                <FormInput v-model.number="form.muestra_hombres" label="Hombres" type="number" :error="form.errors.muestra_hombres" :disabled="isOrganizationView" />
                             </div>
                             <div>
-                                <FormInput v-model.number="form.muestra_mujeres" label="Mujeres" type="number" :error="form.errors.muestra_mujeres" />
+                                <FormInput v-model.number="form.muestra_mujeres" label="Mujeres" type="number" :error="form.errors.muestra_mujeres" :disabled="isOrganizationView" />
                             </div>
                             <div class="sm:col-span-3">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -302,6 +451,7 @@ const handlePolicyApprovedUpload = (event) => {
                                 <textarea
                                     v-model="form.justificacion_muestra"
                                     rows="3"
+                                    :readonly="isOrganizationView"
                                     class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                     :class="form.errors.justificacion_muestra ? 'border-red-300' : ''"
                                 />
@@ -317,16 +467,16 @@ const handlePolicyApprovedUpload = (event) => {
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">Contacto</h2>
                         <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
                             <div>
-                                <FormInput v-model="form.contacto_nombre" label="Nombre" :error="form.errors.contacto_nombre" />
+                                <FormInput v-model="form.contacto_nombre" label="Nombre" :error="form.errors.contacto_nombre" :disabled="isOrganizationView" />
                             </div>
                             <div>
-                                <FormInput v-model="form.contacto_puesto" label="Puesto" :error="form.errors.contacto_puesto" />
+                                <FormInput v-model="form.contacto_puesto" label="Puesto" :error="form.errors.contacto_puesto" :disabled="isOrganizationView" />
                             </div>
                             <div>
-                                <FormInput v-model="form.contacto_email" label="Email" type="email" :error="form.errors.contacto_email" />
+                                <FormInput v-model="form.contacto_email" label="Email" type="email" :error="form.errors.contacto_email" :disabled="isOrganizationView" />
                             </div>
                             <div>
-                                <FormInput v-model="form.contacto_movil" label="Móvil" :error="form.errors.contacto_movil" />
+                                <FormInput v-model="form.contacto_movil" label="Móvil" :error="form.errors.contacto_movil" :disabled="isOrganizationView" />
                             </div>
                         </div>
                     </div>
@@ -336,149 +486,207 @@ const handlePolicyApprovedUpload = (event) => {
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">Responsable de la Norma</h2>
                         <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
                             <div>
-                                <FormInput v-model="form.responsable_nombre" label="Nombre" :error="form.errors.responsable_nombre" />
+                                <FormInput v-model="form.responsable_nombre" label="Nombre" :error="form.errors.responsable_nombre" :disabled="isOrganizationView" />
                             </div>
                             <div>
-                                <FormInput v-model="form.responsable_puesto" label="Puesto" :error="form.errors.responsable_puesto" />
+                                <FormInput v-model="form.responsable_puesto" label="Puesto" :error="form.errors.responsable_puesto" :disabled="isOrganizationView" />
                             </div>
                             <div>
-                                <FormInput v-model="form.responsable_email" label="Email" type="email" :error="form.errors.responsable_email" />
+                                <FormInput v-model="form.responsable_email" label="Email" type="email" :error="form.errors.responsable_email" :disabled="isOrganizationView" />
                             </div>
                             <div>
-                                <FormInput v-model="form.responsable_movil" label="Móvil" :error="form.errors.responsable_movil" />
+                                <FormInput v-model="form.responsable_movil" label="Móvil" :error="form.errors.responsable_movil" :disabled="isOrganizationView" />
                             </div>
                         </div>
                     </div>
 
-                    <!-- Submit Button -->
-                    <div class="flex justify-end">
-                        <button
-                            type="submit"
-                            :disabled="form.processing"
-                            class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
-                        >
-                            {{ form.processing ? 'Guardando...' : 'Guardar cambios' }}
-                        </button>
+                            <!-- Submit Button -->
+                            <div v-if="!isOrganizationView" class="flex justify-end">
+                                <button
+                                    type="submit"
+                                    :disabled="form.processing"
+                                    class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+                                >
+                                    {{ form.processing ? 'Guardando...' : 'Guardar cambios' }}
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                </form>
-            </div>
 
-            <!-- Comité Tab -->
-            <div v-show="activeTab === 'comite'" class="space-y-8">
-                <form @submit.prevent="submitCompanyData">
-                    <div class="">
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Integrantes del Comité</h2>
-                        <p class="text-sm text-gray-600 mb-6">
-                            Información sobre la composición del comité de seguridad y salud en el trabajo.
-                        </p>
-                        <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-3">
-                            <div>
-                                <FormInput v-model.number="form.comite_integrantes" label="Total de integrantes" type="number" :error="form.errors.comite_integrantes" />
+                    <!-- Comité Tab -->
+                    <div v-show="activeTab === 'comite'" class="space-y-8">
+                        <div v-if="isOrganizationView" class="space-y-6">
+                            <section class="rounded-lg border border-slate-200 bg-slate-50/70 p-5">
+                                <div class="mb-2 h-1 w-12 rounded-full bg-blue-500/80"></div>
+                                <h3 class="text-base font-semibold text-slate-900">Resumen del Comité</h3>
+                                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-center">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Integrantes</p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ displayValue(form.comite_integrantes) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-center">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Hombres</p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ displayValue(form.comite_hombres) }}</p>
+                                    </div>
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-center">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Mujeres</p>
+                                        <p class="mt-1 text-2xl font-bold text-slate-900">{{ displayValue(form.comite_mujeres) }}</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="rounded-lg border border-slate-200 bg-white p-5">
+                                <div class="mb-5">
+                                    <h3 class="text-lg font-semibold text-gray-900">Miembros del Comité</h3>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        Consulta de miembros y responsabilidades del comité.
+                                    </p>
+                                </div>
+
+                                <div v-if="committeeMembers && committeeMembers.length > 0" class="overflow-hidden bg-white shadow ring-1 ring-gray-200 sm:rounded-lg">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puesto</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Factor</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            <tr v-for="member in committeeMembers" :key="member.id" class="hover:bg-gray-50 transition-colors">
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ member.name }}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ member.department_area }}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ member.position }}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ member.factor }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div v-else class="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                                    <UserGroupIcon class="mx-auto h-12 w-12 text-gray-400" />
+                                    <h3 class="mt-2 text-sm font-semibold text-gray-900">No hay miembros registrados</h3>
+                                    <p class="mt-1 text-sm text-gray-500">No existen miembros del comité registrados en este momento.</p>
+                                </div>
+                            </section>
+                        </div>
+
+                        <form v-else @submit.prevent="submitCompanyData">
+                            <div class="">
+                                <h2 class="text-lg font-semibold text-gray-900 mb-4">Integrantes del Comité</h2>
+                                <p class="text-sm text-gray-600 mb-6">
+                                    Información sobre la composición del comité de seguridad y salud en el trabajo.
+                                </p>
+                                <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-3">
+                                    <div>
+                                        <FormInput v-model.number="form.comite_integrantes" label="Total de integrantes" type="number" :error="form.errors.comite_integrantes" :disabled="isOrganizationView" />
+                                    </div>
+                                    <div>
+                                        <FormInput v-model.number="form.comite_hombres" label="Hombres" type="number" :error="form.errors.comite_hombres" :disabled="isOrganizationView" />
+                                    </div>
+                                    <div>
+                                        <FormInput v-model.number="form.comite_mujeres" label="Mujeres" type="number" :error="form.errors.comite_mujeres" :disabled="isOrganizationView" />
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <FormInput v-model.number="form.comite_hombres" label="Hombres" type="number" :error="form.errors.comite_hombres" />
+
+                            <!-- Submit Button -->
+                            <div v-if="!isOrganizationView" class="flex justify-end my-8">
+                                <button
+                                    type="submit"
+                                    :disabled="form.processing"
+                                    class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+                                >
+                                    {{ form.processing ? 'Guardando...' : 'Guardar cambios' }}
+                                </button>
                             </div>
-                            <div>
-                                <FormInput v-model.number="form.comite_mujeres" label="Mujeres" type="number" :error="form.errors.comite_mujeres" />
+                        </form>
+
+                        <!-- Committee Members Section -->
+                        <div class="border-t border-gray-900/10 pt-8">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Miembros del Comité</h3>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        Gestiona los miembros individuales del comité y sus responsabilidades.
+                                    </p>
+                                </div>
+                                <button
+                                    v-if="!isOrganizationView"
+                                    @click="openCommitteeMemberModal"
+                                    type="button"
+                                    class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                                >
+                                    <PlusIcon class="h-5 w-5" />
+                                    Agregar Miembro
+                                </button>
+                            </div>
+
+                            <!-- Committee Members Table -->
+                            <div v-if="committeeMembers && committeeMembers.length > 0" class="overflow-hidden bg-white shadow ring-1 ring-gray-200 sm:rounded-lg">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puesto</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Factor</th>
+                                            <th v-if="!isOrganizationView" scope="col" class="relative px-6 py-3">
+                                                <span class="sr-only">Acciones</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr v-for="member in committeeMembers" :key="member.id" class="hover:bg-gray-50 transition-colors">
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                {{ member.name }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                                {{ member.department_area }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                                {{ member.position }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                                {{ member.factor }}
+                                            </td>
+                                            <td v-if="!isOrganizationView" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button
+                                                    @click="confirmDeleteMember(member)"
+                                                    type="button"
+                                                    class="text-red-600 hover:text-red-900 transition-colors"
+                                                >
+                                                    <TrashIcon class="h-5 w-5" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Empty State -->
+                            <div v-else class="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                                <UserGroupIcon class="mx-auto h-12 w-12 text-gray-400" />
+                                <h3 class="mt-2 text-sm font-semibold text-gray-900">No hay miembros registrados</h3>
+                                <p class="mt-1 text-sm text-gray-500">Comienza agregando un miembro del comité.</p>
+                                <div v-if="!isOrganizationView" class="mt-6">
+                                    <button
+                                        @click="openCommitteeMemberModal"
+                                        type="button"
+                                        class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                                    >
+                                        <PlusIcon class="h-5 w-5" />
+                                        Agregar Primer Miembro
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Submit Button -->
-                    <div class="flex justify-end my-8">
-                        <button
-                            type="submit"
-                            :disabled="form.processing"
-                            class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
-                        >
-                            {{ form.processing ? 'Guardando...' : 'Guardar cambios' }}
-                        </button>
-                    </div>
-                </form>
-
-                <!-- Committee Members Section -->
-                <div class="border-t border-gray-900/10 pt-8">
-                    <div class="flex justify-between items-center mb-6">
+                    <!-- Política Tab -->
+                    <div v-if="!isOrganizationView" v-show="activeTab === 'politica'" class="space-y-8">
                         <div>
-                            <h3 class="text-lg font-semibold text-gray-900">Miembros del Comité</h3>
-                            <p class="text-sm text-gray-600 mt-1">
-                                Gestiona los miembros individuales del comité y sus responsabilidades.
-                            </p>
-                        </div>
-                        <button
-                            @click="openCommitteeMemberModal"
-                            type="button"
-                            class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                        >
-                            <PlusIcon class="h-5 w-5" />
-                            Agregar Miembro
-                        </button>
-                    </div>
-
-                    <!-- Committee Members Table -->
-                    <div v-if="committeeMembers && committeeMembers.length > 0" class="overflow-hidden bg-white shadow ring-1 ring-gray-200 sm:rounded-lg">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puesto</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Factor</th>
-                                    <th scope="col" class="relative px-6 py-3">
-                                        <span class="sr-only">Acciones</span>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="member in committeeMembers" :key="member.id" class="hover:bg-gray-50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {{ member.name }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                        {{ member.department_area }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                        {{ member.position }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                        {{ member.factor }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button
-                                            @click="confirmDeleteMember(member)"
-                                            type="button"
-                                            class="text-red-600 hover:text-red-900 transition-colors"
-                                        >
-                                            <TrashIcon class="h-5 w-5" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Empty State -->
-                    <div v-else class="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                        <UserGroupIcon class="mx-auto h-12 w-12 text-gray-400" />
-                        <h3 class="mt-2 text-sm font-semibold text-gray-900">No hay miembros registrados</h3>
-                        <p class="mt-1 text-sm text-gray-500">Comienza agregando un miembro del comité.</p>
-                        <div class="mt-6">
-                            <button
-                                @click="openCommitteeMemberModal"
-                                type="button"
-                                class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-                            >
-                                <PlusIcon class="h-5 w-5" />
-                                Agregar Primer Miembro
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Política Tab -->
-            <div v-show="activeTab === 'politica'" class="space-y-8">
-                <div>
                     <h2 class="text-lg font-semibold text-gray-900 mb-4">Documentos de Política</h2>
                     <p class="text-sm text-gray-600 mb-6">
                         Sube tu borrador de política para revisión y descarga la versión aprobada.
@@ -558,11 +766,13 @@ const handlePolicyApprovedUpload = (event) => {
                             </p>
                         </div>
                     </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Committee Member Modal -->
-            <div v-if="showCommitteeMemberModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div v-if="!isOrganizationView && showCommitteeMemberModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
                 <div class="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">Agregar Miembro del Comité</h3>
@@ -626,7 +836,7 @@ const handlePolicyApprovedUpload = (event) => {
             </div>
 
             <!-- Delete Confirmation Modal -->
-            <div v-if="showDeleteConfirmModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div v-if="!isOrganizationView && showDeleteConfirmModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
                 <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
                     <div class="sm:flex sm:items-start">
                         <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">

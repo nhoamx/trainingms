@@ -68,7 +68,7 @@ class ClimaLaboralCompactExportTest extends TestCase
         $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
 
-    public function test_export_compact_works_for_organization_user(): void
+    public function test_export_compact_is_forbidden_for_organization_user(): void
     {
         PaperEvaluation::factory()
             ->likert()
@@ -80,8 +80,7 @@ class ClimaLaboralCompactExportTest extends TestCase
         $response = $this->actingAs($this->orgUser)
             ->post(route('organization.clima-laboral.export-compact', $this->organization->id));
 
-        $response->assertStatus(200);
-        $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $response->assertStatus(403);
     }
 
     public function test_export_compact_returns_excel_file(): void
