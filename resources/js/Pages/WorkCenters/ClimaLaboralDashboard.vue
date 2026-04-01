@@ -118,6 +118,14 @@
             </div>
 
             <div v-show="activeTab === 'analysis'" class="animate-fade-in space-y-6">
+              <TopRiskFactorsTab
+                v-if="showLegacyAnalysisFallback"
+                :evaluations="evaluations"
+                :demographic-details="dashboardData.demographic_details"
+                :organization="dashboardData.organization"
+              />
+
+              <template v-else>
               <!-- Top Risk Factors with Demographic Filters -->
               <div class="overflow-hidden rounded-xl border border-gray-200">
                 <div class="border-b border-gray-200 bg-gray-50 p-5">
@@ -270,9 +278,16 @@
                   <button @click="saveSection('analysis_position', 'published')" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">{{ t('Publish') }}</button>
                 </div>
               </section>
+              </template>
             </div>
 
             <div v-show="activeTab === 'recomendaciones'" class="animate-fade-in space-y-4">
+              <template v-if="showLegacyRecommendationsFallback">
+                <RecommendationsTab v-if="isJaropamexPlanta1" :evaluations="evaluations" />
+                <RecommendationsP3Tab v-else :evaluations="evaluations" />
+              </template>
+
+              <template v-else>
               <!-- Structured factors table -->
               <section class="p-5">
                 <div class="mb-4 flex items-start justify-between gap-3">
@@ -312,10 +327,12 @@
                   <button @click="saveSection('recommendations', 'published')" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">{{ t('Publish') }}</button>
                 </div>
               </section>
+              </template>
             </div>
 
             <div v-show="activeTab === 'foda'" class="animate-fade-in">
-              <section class="p-5">
+              <FodaDataTab v-if="showLegacyFodaFallback" />
+              <section v-else class="p-5">
                 <div class="mb-4 flex items-center justify-between gap-3">
                   <h3 class="text-lg font-semibold text-gray-900">{{ t('SWOT') }}</h3>
                   <span :class="statusClass(climaContent.sections.foda.status)">{{ statusLabel(climaContent.sections.foda.status) }}</span>
@@ -343,7 +360,13 @@
             </div>
 
             <div v-show="activeTab === 'report'" class="animate-fade-in">
+              <ReportTab
+                v-if="showLegacyReportFallback"
+                :organization-id="dashboardData.organization.id"
+                :organization-name="dashboardData.organization.name"
+              />
               <ReportCardBuilder
+                v-else
                 v-model="sectionDrafts.report_card_config"
                 :readonly="!effectiveCanManage"
                 :reports="climaContent.reports"
@@ -357,6 +380,9 @@
             </div>
 
             <div v-show="activeTab === 'evidence'" class="animate-fade-in space-y-5">
+              <EvidencesDataTab v-if="showLegacyEvidenceFallback" :organization-info="dashboardData.organization" />
+
+              <template v-else>
               <!-- Upload zone (managers only) -->
               <div v-if="effectiveCanManage" class="rounded-xl border border-gray-200 bg-white p-5">
                 <div class="mb-3 flex items-center justify-between">
@@ -396,6 +422,7 @@
               <div v-else class="rounded-xl border border-dashed border-gray-300 bg-gray-50 py-14 text-center text-sm text-gray-400 italic">
                 {{ t('No photos uploaded yet.') }}
               </div>
+              </template>
             </div>
           </div>
         </div>
@@ -410,6 +437,12 @@ import { Link, router, useForm } from '@inertiajs/vue3';
 import Dashboard from '../../Layouts/Dashboard.vue';
 import DemographicDataTab from '@/Components/Organization/DemographicDataTab.vue';
 import ClimaLaboralResultsTab from '@/Components/Organization/ClimaLaboralResultsTab.vue';
+import TopRiskFactorsTab from '@/Components/Organization/TopRiskFactorsTab.vue';
+import ReportTab from '@/Components/Organization/ReportTab.vue';
+import EvidencesDataTab from '@/Components/Organization/EvidencesDataTab.vue';
+import FodaDataTab from '@/Components/Organization/FodaDataTab.vue';
+import RecommendationsTab from '@/Components/Organization/RecommendationsTab.vue';
+import RecommendationsP3Tab from '@/Components/Organization/RecommendationsP3Tab.vue';
 import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
 import RichTextEditor from '@/Components/RichTextEditor.vue';
 import RecommendationFactorsBuilder from '@/Components/WorkCenter/RecommendationFactorsBuilder.vue';
@@ -561,6 +594,115 @@ const conclusionsDraft = ref<string>(props.conclusionsContent.section.content ??
 
 const isPreviewMode = ref<boolean>(false);
 const effectiveCanManage = computed(() => props.canManageClima && !isPreviewMode.value);
+
+const LEGACY_ORG_PLANTA_1 = 'a05bc65b-08cd-45d5-8ae1-f4f9d3eb5238';
+const LEGACY_ORG_PLANTA_3 = 'a06fe33d-6955-4d24-98d1-a375ecb55645';
+
+const isJaropamexPlanta1 = computed(() => props.dashboardData.organization.id === LEGACY_ORG_PLANTA_1);
+const isLegacyJaropamexOrg = computed(() => [LEGACY_ORG_PLANTA_1, LEGACY_ORG_PLANTA_3].includes(props.dashboardData.organization.id));
+
+const richTextHasContent = (value: string | null | undefined): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  const plain = value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+
+  return plain.length > 0;
+};
+
+const hasRecommendationsFactorsContent = computed(() => {
+  try {
+    const parsed = JSON.parse(sectionDrafts.recommendations_factors || '[]');
+    if (!Array.isArray(parsed)) {
+      return false;
+    }
+
+    return parsed.some((factor: any) => {
+      const hasTitle = String(factor?.title ?? '').trim().length > 0;
+      const hasDescription = String(factor?.description ?? '').trim().length > 0;
+      const hasActions = Array.isArray(factor?.actions) && factor.actions.some((action: string) => String(action).trim().length > 0);
+      const hasDepartments = Array.isArray(factor?.departments) && factor.departments.some((department: string) => String(department).trim().length > 0);
+
+      return hasTitle || hasDescription || hasActions || hasDepartments;
+    });
+  } catch {
+    return false;
+  }
+});
+
+const hasRecommendationsPanelContent = computed(() => {
+  return hasRecommendationsFactorsContent.value || richTextHasContent(sectionDrafts.recommendations);
+});
+
+const hasAnalysisPanelContent = computed(() => {
+  return richTextHasContent(sectionDrafts.analysis_department)
+    || richTextHasContent(sectionDrafts.analysis_position);
+});
+
+const hasReportPanelContent = computed(() => {
+  if (props.climaContent.reports.length > 0) {
+    return true;
+  }
+
+  try {
+    const parsed = JSON.parse(sectionDrafts.report_card_config || '{}');
+    const values = [
+      parsed?.title_es,
+      parsed?.title_en,
+      parsed?.subtitle_es,
+      parsed?.subtitle_en,
+      ...(Array.isArray(parsed?.bullets_es) ? parsed.bullets_es : []),
+      ...(Array.isArray(parsed?.bullets_en) ? parsed.bullets_en : []),
+    ];
+
+    return values.some((entry: string) => String(entry ?? '').trim().length > 0);
+  } catch {
+    return false;
+  }
+});
+
+const hasFodaPanelContent = computed(() => {
+  try {
+    const parsed = JSON.parse(sectionDrafts.foda || '[]');
+    if (!Array.isArray(parsed)) {
+      return false;
+    }
+
+    return parsed.some((row: any) => {
+      const values = [row?.factor, row?.fortaleza, row?.debilidad, row?.oportunidad, row?.amenaza];
+
+      return values.some((entry: string) => String(entry ?? '').trim().length > 0);
+    });
+  } catch {
+    return false;
+  }
+});
+
+const hasEvidencePanelContent = computed(() => props.climaContent.evidences.length > 0);
+
+const showLegacyRecommendationsFallback = computed(() => {
+  return isLegacyJaropamexOrg.value && !effectiveCanManage.value && !hasRecommendationsPanelContent.value;
+});
+
+const showLegacyAnalysisFallback = computed(() => {
+  return isLegacyJaropamexOrg.value && !effectiveCanManage.value && !hasAnalysisPanelContent.value;
+});
+
+const showLegacyReportFallback = computed(() => {
+  return isLegacyJaropamexOrg.value && !effectiveCanManage.value && !hasReportPanelContent.value;
+});
+
+const showLegacyFodaFallback = computed(() => {
+  return isLegacyJaropamexOrg.value && !effectiveCanManage.value && !hasFodaPanelContent.value;
+});
+
+const showLegacyEvidenceFallback = computed(() => {
+  return isLegacyJaropamexOrg.value && !effectiveCanManage.value && !hasEvidencePanelContent.value;
+});
 
 const analysisFilters = reactive({
   gender: '',
