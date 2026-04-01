@@ -349,7 +349,12 @@
             </div>
 
             <div v-show="activeTab === 'conclusions'" class="animate-fade-in">
+              <ConclusionsLegacyTab
+                v-if="showLegacyConclusionsFallback"
+                :organization-id="dashboardData.organization.id"
+              />
               <ConclusionsBuilderTab
+                v-else
                 v-model="conclusionsDraft"
                 :organization-name="dashboardData.organization.name"
                 :work-center-id="workCenter.id"
@@ -450,6 +455,7 @@ import ReportCardBuilder from '@/Components/WorkCenter/ReportCardBuilder.vue';
 import FileDropZone from '@/Components/WorkCenter/FileDropZone.vue';
 import FodaBuilder from '@/Components/WorkCenter/FodaBuilder.vue';
 import ConclusionsBuilderTab from '@/Components/Organization/ConclusionsBuilderTab.vue';
+import ConclusionsLegacyTab from '@/Components/Organization/ConclusionsLegacyTab.vue';
 import { useTranslations } from '@/composables/useTranslations';
 
 const { t, locale } = useTranslations();
@@ -702,6 +708,17 @@ const showLegacyFodaFallback = computed(() => {
 
 const showLegacyEvidenceFallback = computed(() => {
   return isLegacyJaropamexOrg.value && !effectiveCanManage.value && !hasEvidencePanelContent.value;
+});
+
+const hasConclusionsPanelContent = computed(() => {
+  const hasSectionContent = richTextHasContent(conclusionsDraft.value);
+  const hasFiles = Object.keys(props.conclusionsContent.files ?? {}).length > 0;
+
+  return hasSectionContent || hasFiles;
+});
+
+const showLegacyConclusionsFallback = computed(() => {
+  return isLegacyJaropamexOrg.value && !effectiveCanManage.value && !hasConclusionsPanelContent.value;
 });
 
 const analysisFilters = reactive({
