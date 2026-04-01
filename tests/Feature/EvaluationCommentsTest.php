@@ -266,4 +266,88 @@ class EvaluationCommentsTest extends TestCase
             'factor' => 'Liderazgo',
         ]);
     }
+
+    public function test_bulk_comments_import_replaces_comments_only_for_selected_work_center(): void
+    {
+        $organizationA = Organization::factory()->create();
+        $organizationB = Organization::factory()->create();
+
+        $workCenterA1 = WorkCenter::factory()->create(['organization_id' => $organizationA->id]);
+        $workCenterA2 = WorkCenter::factory()->create(['organization_id' => $organizationA->id]);
+        $workCenterB1 = WorkCenter::factory()->create(['organization_id' => $organizationB->id]);
+
+        $evaluationA1 = PaperEvaluation::factory()
+            ->for($organizationA)
+            ->likert()
+            ->create([
+                'work_center_id' => $workCenterA1->id,
+                'personal_folio' => '00001',
+            ]);
+
+        $evaluationA2 = PaperEvaluation::factory()
+            ->for($organizationA)
+            ->likert()
+            ->create([
+                'work_center_id' => $workCenterA2->id,
+                'personal_folio' => '00002',
+            ]);
+
+        $evaluationB1 = PaperEvaluation::factory()
+            ->for($organizationB)
+            ->likert()
+            ->create([
+                'work_center_id' => $workCenterB1->id,
+                'personal_folio' => '00003',
+            ]);
+
+        EvaluationComment::create([
+            'paper_evaluation_id' => $evaluationA1->id,
+            'factor' => 'Liderazgo',
+            'comment' => 'Comentario viejo A1',
+        ]);
+
+        EvaluationComment::create([
+            'paper_evaluation_id' => $evaluationA2->id,
+            'factor' => 'Liderazgo',
+            'comment' => 'Comentario viejo A2',
+        ]);
+
+        EvaluationComment::create([
+            'paper_evaluation_id' => $evaluationB1->id,
+            'factor' => 'Liderazgo',
+            'comment' => 'Comentario viejo B1',
+        ]);
+
+        $import = new \App\Imports\EvaluationBulkCommentsImport($organizationA->id, null, $workCenterA1->id);
+        $import->collection(collect([
+            collect([
+                'folio' => '1',
+                'comentario' => 'Comentario nuevo A1',
+                'factor' => 'Liderazgo',
+            ]),
+        ]));
+
+        $this->assertDatabaseMissing('evaluation_comments', [
+            'paper_evaluation_id' => $evaluationA1->id,
+            'comment' => 'Comentario viejo A1',
+        ]);
+
+        $this->assertDatabaseHas('evaluation_comments', [
+            'paper_evaluation_id' => $evaluationA1->id,
+            'comment' => 'Comentario nuevo A1',
+            'factor' => 'Liderazgo',
+        ]);
+
+        $this->assertDatabaseHas('evaluation_comments', [
+            'paper_evaluation_id' => $evaluationA2->id,
+            'comment' => 'Comentario viejo A2',
+            'factor' => 'Liderazgo',
+        ]);
+
+        $this->assertDatabaseHas('evaluation_comments', [
+            'paper_evaluation_id' => $evaluationB1->id,
+            'comment' => 'Comentario viejo B1',
+            'factor' => 'Liderazgo',
+        ]);
+    }
 }

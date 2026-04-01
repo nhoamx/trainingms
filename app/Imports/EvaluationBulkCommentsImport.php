@@ -56,6 +56,8 @@ class EvaluationBulkCommentsImport implements ToCollection, WithHeadingRow
         Log::info('Total rows to process: '.$rows->count());
         Log::info('Organization ID: '.$this->organizationId);
 
+        $this->clearScopedComments();
+
         if ($rows->isEmpty()) {
             Log::warning('No rows to process');
 
@@ -147,6 +149,28 @@ class EvaluationBulkCommentsImport implements ToCollection, WithHeadingRow
             'updated' => $this->updatedCount,
             'skipped' => $this->skippedCount,
             'errors' => count($this->errors),
+        ]);
+    }
+
+    protected function clearScopedComments(): void
+    {
+        $evaluationIdsQuery = PaperEvaluation::query()
+            ->select('id')
+            ->where('organization_id', $this->organizationId)
+            ->where('evaluation_type', 'likert');
+
+        if ($this->workCenterId !== null) {
+            $evaluationIdsQuery->where('work_center_id', $this->workCenterId);
+        }
+
+        $deletedCount = EvaluationComment::query()
+            ->whereIn('paper_evaluation_id', $evaluationIdsQuery)
+            ->delete();
+
+        Log::info('Cleared scoped comments before bulk comments import', [
+            'organization_id' => $this->organizationId,
+            'work_center_id' => $this->workCenterId,
+            'deleted_comments' => $deletedCount,
         ]);
     }
 
