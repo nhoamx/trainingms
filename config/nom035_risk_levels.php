@@ -212,7 +212,7 @@ return [
                 'muy_alto' => ['min' => 7, 'max' => 999],
             ],
         ],
-        'Carga de trabajo cuantitativa' => [
+        'Cargas cuantitativas' => [
             'domain' => 'Carga de trabajo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 4],
@@ -222,7 +222,7 @@ return [
                 'muy_alto' => ['min' => 13, 'max' => 999],
             ],
         ],
-        'Ritmo de trabajo acelerado' => [
+        'Ritmos de trabajo acelerado' => [
             'domain' => 'Carga de trabajo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 2],
@@ -242,7 +242,7 @@ return [
                 'muy_alto' => ['min' => 17, 'max' => 999],
             ],
         ],
-        'Carga emocional' => [
+        'Cargas psicológicas emocionales' => [
             'domain' => 'Carga de trabajo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 2],
@@ -250,6 +250,16 @@ return [
                 'medio' => ['min' => 6, 'max' => 8],
                 'alto' => ['min' => 9, 'max' => 11],
                 'muy_alto' => ['min' => 12, 'max' => 999],
+            ],
+        ],
+        'Cargas de alta responsabilidad' => [
+            'domain' => 'Carga de trabajo',
+            'levels' => [
+                'nulo' => ['min' => 0, 'max' => 2],
+                'bajo' => ['min' => 3, 'max' => 4],
+                'medio' => ['min' => 5, 'max' => 6],
+                'alto' => ['min' => 7, 'max' => 8],
+                'muy_alto' => ['min' => 9, 'max' => 999],
             ],
         ],
         'Cargas contradictorias o inconsistentes' => [
@@ -302,7 +312,7 @@ return [
                 'muy_alto' => ['min' => 7, 'max' => 999],
             ],
         ],
-        'Jornada de trabajo y rotación de turnos' => [
+        'Jornadas de trabajo extensas' => [
             'domain' => 'Jornada de trabajo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 0],
@@ -312,17 +322,27 @@ return [
                 'muy_alto' => ['min' => 6, 'max' => 999],
             ],
         ],
-        'Interferencia en la relación trabajo-familia' => [
+        'Influencia del trabajo fuera del centro laboral' => [
             'domain' => 'Interferencia en la relación trabajo-familia',
             'levels' => [
-                'nulo' => ['min' => 0, 'max' => 3],
-                'bajo' => ['min' => 4, 'max' => 5],
-                'medio' => ['min' => 6, 'max' => 7],
-                'alto' => ['min' => 8, 'max' => 9],
-                'muy_alto' => ['min' => 10, 'max' => 999],
+                'nulo' => ['min' => 0, 'max' => 1],
+                'bajo' => ['min' => 2, 'max' => 3],
+                'medio' => ['min' => 4, 'max' => 5],
+                'alto' => ['min' => 6, 'max' => 7],
+                'muy_alto' => ['min' => 8, 'max' => 999],
             ],
         ],
-        'Liderazgo negativo' => [
+        'Influencia de las responsabilidades familiares' => [
+            'domain' => 'Interferencia en la relación trabajo-familia',
+            'levels' => [
+                'nulo' => ['min' => 0, 'max' => 1],
+                'bajo' => ['min' => 2, 'max' => 3],
+                'medio' => ['min' => 4, 'max' => 5],
+                'alto' => ['min' => 6, 'max' => 7],
+                'muy_alto' => ['min' => 8, 'max' => 999],
+            ],
+        ],
+        'Características del liderazgo' => [
             'domain' => 'Liderazgo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 3],
@@ -352,7 +372,7 @@ return [
                 'muy_alto' => ['min' => 12, 'max' => 999],
             ],
         ],
-        'Deficiente relación con los trabajadores que supervisa' => [
+        'Deficiente relación con los colaboradores que supervisa' => [
             'domain' => 'Relaciones en el trabajo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 2],
