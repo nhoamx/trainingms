@@ -369,7 +369,24 @@
             <div v-if="analysisViewMode === 'general_report'" class="bg-white rounded-lg p-6 border border-slate-200 space-y-4">
               <div class="flex flex-col gap-1">
                 <h4 class="text-lg font-semibold text-slate-900">Detalle por Categoría, Dominio y Dimensión</h4>
-                <p class="text-sm text-slate-600">Promedio de puntajes por ítem considerando a todas las evaluaciones del centro de trabajo.</p>
+                <p class="text-sm text-slate-600">Niveles NOM calculados con puntajes acumulados por suma. El promedio 0-4 se conserva únicamente en ítems.</p>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Calificación Final</p>
+                  <p class="mt-2 text-2xl font-bold text-slate-900">
+                    {{ formatIntegerScore(props.generalReport?.total_score ?? 0) }} / {{ formatIntegerScore(props.generalReport?.max_score ?? 0) }}
+                  </p>
+                </div>
+                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Porcentaje</p>
+                  <p class="mt-2 text-2xl font-bold text-slate-900">{{ formatScore(props.generalReport?.percentage ?? 0) }}%</p>
+                </div>
+                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Evaluaciones Consideradas</p>
+                  <p class="mt-2 text-2xl font-bold text-slate-900">{{ props.generalReport?.total_evaluations ?? 0 }}</p>
+                </div>
               </div>
 
               <div v-if="props.generalReport && props.generalReport.rows.length > 0" class="overflow-x-auto">
@@ -380,7 +397,7 @@
                       <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Dominio</th>
                       <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Dimensión</th>
                       <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Ítem</th>
-                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Puntaje Promedio</th>
+                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Promedio Ítem (0-4)</th>
                     </tr>
                   </thead>
                   <tbody class="bg-white divide-y divide-slate-200">
@@ -393,7 +410,7 @@
                                 <div class="font-medium text-slate-900">{{ cat.nombre }}</div>
                                 <div class="mt-1">
                                   <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskBadgeClass(cat.nivel_riesgo)]">
-                                    {{ cat.nivel_riesgo }}: {{ formatScore(cat.puntaje) }}
+                                    {{ cat.nivel_riesgo }}: {{ formatIntegerScore(cat.score) }}
                                   </span>
                                 </div>
                               </td>
@@ -402,13 +419,18 @@
                                 <div class="font-medium text-slate-900">{{ dom.nombre }}</div>
                                 <div class="mt-1">
                                   <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskBadgeClass(dom.nivel_riesgo)]">
-                                    {{ dom.nivel_riesgo }}: {{ formatScore(dom.puntaje) }}
+                                    {{ dom.nivel_riesgo }}: {{ formatIntegerScore(dom.score) }}
                                   </span>
                                 </div>
                               </td>
 
                               <td v-if="itemIdx === 0" :rowspan="dim.rowspan" class="px-4 py-3 border border-slate-200 text-center align-middle text-slate-700">
-                                {{ dim.nombre }}
+                                <div class="font-medium text-slate-900">{{ dim.nombre }}</div>
+                                <div class="mt-1">
+                                  <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskBadgeClass(dim.nivel_riesgo)]">
+                                    {{ dim.nivel_riesgo }}: {{ formatIntegerScore(dim.score) }}
+                                  </span>
+                                </div>
                               </td>
 
                               <td class="px-4 py-3 border border-slate-200 text-slate-800">
@@ -1085,15 +1107,19 @@ interface AnalysisData {
 interface GeneralReportRow {
   categoria: {
     nombre: string;
-    puntaje: number;
+    score: number;
     nivel_riesgo: string;
   };
   dominio: {
     nombre: string;
-    puntaje: number;
+    score: number;
     nivel_riesgo: string;
   };
-  dimension: string;
+  dimension: {
+    nombre: string;
+    score: number;
+    nivel_riesgo: string;
+  };
   item: string;
   item_numero: number;
   puntaje: number;
@@ -1102,6 +1128,9 @@ interface GeneralReportRow {
 interface GeneralReport {
   total_evaluations: number;
   average_total_score: number;
+  total_score: number;
+  max_score: number;
+  percentage: number;
   rows: GeneralReportRow[];
 }
 
@@ -1172,7 +1201,7 @@ const props = withDefaults(defineProps<Props>(), {
   dimensionStatistics: () => ({ dimensions: {}, total_evaluations: 0, colors: {}, labels: {} }),
   globalStatistics: () => ({ global: {}, total_evaluations: 0, colors: {}, labels: {} }),
   analysisData: () => ({ evaluations: [], demographics: { generos: [], puestos: [], areas: [], turnos: [] }, colors: {}, labels: {} }),
-  generalReport: () => ({ total_evaluations: 0, average_total_score: 0, rows: [] }),
+  generalReport: () => ({ total_evaluations: 0, average_total_score: 0, total_score: 0, max_score: 0, percentage: 0, rows: [] }),
   violenceLaborStatistics: () => ({
     question_numbers: [],
     labels: {},
@@ -1357,52 +1386,112 @@ const filteredViolenceQuestions = computed(() => {
 });
 
 const groupedGeneralReport = computed(() => {
-  type GroupedDimension = { nombre: string; rowspan: number; items: Array<{ nombre: string; item_numero: number; puntaje: number }> };
-  type GroupedDomain = { nombre: string; puntaje: number; nivel_riesgo: string; rowspan: number; dimensiones: GroupedDimension[] };
-  type GroupedCategory = { nombre: string; puntaje: number; nivel_riesgo: string; rowspan: number; dominios: GroupedDomain[] };
+  type GroupedDimension = { nombre: string; score: number; nivel_riesgo: string; rowspan: number; items: Array<{ nombre: string; item_numero: number; puntaje: number }> };
+  type GroupedDomain = { nombre: string; score: number; nivel_riesgo: string; rowspan: number; dimensiones: GroupedDimension[] };
+  type GroupedCategory = { nombre: string; score: number; nivel_riesgo: string; rowspan: number; dominios: GroupedDomain[] };
 
   const grouped: GroupedCategory[] = [];
   const rows = props.generalReport?.rows ?? [];
 
+  const toSafeNumber = (value: unknown): number => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+  };
+
+  const normalizeRisk = (value: unknown): string => {
+    return typeof value === 'string' && value.trim() !== '' ? value : 'nulo';
+  };
+
+  if (typeof window !== 'undefined' && /localhost|127\.0\.0\.1/.test(window.location.hostname) && rows.length > 0) {
+    console.log(rows[0]);
+  }
+  console.log(rows[0]);
+
   rows.forEach((row) => {
-    let category = grouped.find((item) => item.nombre === row.categoria.nombre);
+    const normalizedCategory = {
+      nombre: row.categoria?.nombre ?? 'Sin categoría',
+      score: Math.max(0, Math.round(toSafeNumber(row.categoria?.score))),
+      nivel_riesgo: normalizeRisk(row.categoria?.nivel_riesgo),
+    };
+
+    const normalizedDomain = {
+      nombre: row.dominio?.nombre ?? 'Sin dominio',
+      score: Math.max(0, Math.round(toSafeNumber(row.dominio?.score))),
+      nivel_riesgo: normalizeRisk(row.dominio?.nivel_riesgo),
+    };
+
+    const dimensionPayload = typeof row.dimension === 'string'
+      ? { nombre: row.dimension, score: 0, nivel_riesgo: 'nulo' }
+      : {
+          nombre: row.dimension?.nombre ?? 'Sin dimensión',
+          score: Math.max(0, Math.round(toSafeNumber(row.dimension?.score))),
+          nivel_riesgo: normalizeRisk(row.dimension?.nivel_riesgo),
+        };
+
+    const itemAverage = toSafeNumber(row.puntaje);
+
+    if (typeof window !== 'undefined' && /localhost|127\.0\.0\.1/.test(window.location.hostname)) {
+      console.log({
+        dimension: row.dimension,
+        score: row.dimension?.score,
+      });
+    }
+
+    let category = grouped.find((item) => item.nombre === normalizedCategory.nombre);
     if (!category) {
       category = {
-        nombre: row.categoria.nombre,
-        puntaje: row.categoria.puntaje,
-        nivel_riesgo: row.categoria.nivel_riesgo,
+        nombre: normalizedCategory.nombre,
+        score: normalizedCategory.score,
+        nivel_riesgo: normalizedCategory.nivel_riesgo,
         rowspan: 0,
         dominios: [],
       };
       grouped.push(category);
+    } else {
+      category.score = Math.max(category.score, normalizedCategory.score);
+      if (category.nivel_riesgo === 'nulo' && normalizedCategory.nivel_riesgo !== 'nulo') {
+        category.nivel_riesgo = normalizedCategory.nivel_riesgo;
+      }
     }
 
-    let domain = category.dominios.find((item) => item.nombre === row.dominio.nombre);
+    let domain = category.dominios.find((item) => item.nombre === normalizedDomain.nombre);
     if (!domain) {
       domain = {
-        nombre: row.dominio.nombre,
-        puntaje: row.dominio.puntaje,
-        nivel_riesgo: row.dominio.nivel_riesgo,
+        nombre: normalizedDomain.nombre,
+        score: normalizedDomain.score,
+        nivel_riesgo: normalizedDomain.nivel_riesgo,
         rowspan: 0,
         dimensiones: [],
       };
       category.dominios.push(domain);
+    } else {
+      domain.score = Math.max(domain.score, normalizedDomain.score);
+      if (domain.nivel_riesgo === 'nulo' && normalizedDomain.nivel_riesgo !== 'nulo') {
+        domain.nivel_riesgo = normalizedDomain.nivel_riesgo;
+      }
     }
 
-    let dimension = domain.dimensiones.find((item) => item.nombre === row.dimension);
+    let dimension = domain.dimensiones.find((item) => item.nombre === dimensionPayload.nombre);
     if (!dimension) {
       dimension = {
-        nombre: row.dimension,
+        nombre: dimensionPayload.nombre,
+        score: dimensionPayload.score,
+        nivel_riesgo: dimensionPayload.nivel_riesgo,
         rowspan: 0,
         items: [],
       };
       domain.dimensiones.push(dimension);
+    } else {
+      dimension.score = Math.max(dimension.score, dimensionPayload.score);
+      if (dimension.nivel_riesgo === 'nulo' && dimensionPayload.nivel_riesgo !== 'nulo') {
+        dimension.nivel_riesgo = dimensionPayload.nivel_riesgo;
+      }
     }
 
     dimension.items.push({
       nombre: row.item,
       item_numero: row.item_numero,
-      puntaje: row.puntaje,
+      puntaje: itemAverage,
     });
   });
 
@@ -1813,14 +1902,24 @@ const getRiskLevelPillClass = (level: string): string => {
 };
 
 const formatScore = (score: number): string => {
-  return Number(score).toFixed(2);
+  const numericScore = Number(score);
+  return Number.isFinite(numericScore) ? numericScore.toFixed(2) : '0.00';
 };
 
-const normalizeRiskLevel = (riskLevel: string): string => {
+const formatIntegerScore = (score: number): string => {
+  const numericScore = Number(score);
+  return Number.isFinite(numericScore) ? String(Math.max(0, Math.round(numericScore))) : '0';
+};
+
+const normalizeRiskLevel = (riskLevel?: string | null): string => {
+  if (!riskLevel || typeof riskLevel !== 'string') {
+    return 'nulo';
+  }
+
   return riskLevel.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/\s+/g, '_');
 };
 
-const getRiskBadgeClass = (riskLevel: string): string => {
+const getRiskBadgeClass = (riskLevel?: string | null): string => {
   const normalizedRiskLevel = normalizeRiskLevel(riskLevel);
 
   const classes: Record<string, string> = {

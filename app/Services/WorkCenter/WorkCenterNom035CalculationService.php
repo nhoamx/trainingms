@@ -481,24 +481,23 @@ class WorkCenterNom035CalculationService
                 $answers = $evaluation->referencia_iii_answers ?? [];
 
                 foreach ($questions as $questionNumber) {
-                    if (isset($answers[$questionNumber])) {
-                        $answer = $answers[$questionNumber];
+                    $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
 
-                        if (is_array($answer)) {
-                            continue;
-                        }
+                    if ($answer === null || is_array($answer)) {
+                        continue;
+                    }
 
-                        $label = $responseLabels[$answer] ?? null;
-                        if ($label) {
-                            $blockStats[$blockNumber]['responses'][$label]++;
-                            $totalResponses++;
+                    $label = $responseLabels[$answer] ?? null;
+                    if ($label) {
+                        $blockStats[$blockNumber]['responses'][$label]++;
+                        $totalResponses++;
 
-                            $answerValues = config('answer_values');
-                            $group = in_array($questionNumber, $answerValues['group1']['questions'])
-                                ? 'group1'
-                                : 'group2';
-                            $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
-                        }
+                        $answerValues = config('answer_values');
+                        $questionKey = $this->normalizeQuestionKey($questionNumber);
+                        $group = in_array($questionKey, $answerValues['group1']['questions'], true)
+                            ? 'group1'
+                            : 'group2';
+                        $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
                     }
                 }
             }
@@ -581,13 +580,13 @@ class WorkCenterNom035CalculationService
             $questionLevels = [];
 
             foreach ($violenceQuestions as $questionNumber) {
-                $answer = $answers[$questionNumber] ?? null;
+                $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
                 if ($answer === null || is_array($answer)) {
                     continue;
                 }
 
-                $questionKey = str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT);
-                $group = in_array($questionKey, $answerValues['group1']['questions'])
+                $questionKey = $this->normalizeQuestionKey($questionNumber);
+                $group = in_array($questionKey, $answerValues['group1']['questions'], true)
                     ? 'group1'
                     : 'group2';
 
@@ -758,10 +757,10 @@ class WorkCenterNom035CalculationService
     /**
      * Build aggregated report rows for category/domain/dimension/item detail table.
      *
-     * The structure mirrors the single-participant detail table but averages scores
-     * across all completed Ref III evaluations in the work center.
+     * Category, domain and dimension use summed scores (NOM-035 ranges are sum-based).
+     * Item keeps average score (0-4) for UI display and coloring only.
      *
-     * @return array{total_evaluations:int, average_total_score:float, rows:array<int, array{categoria:array{nombre:string,puntaje:float,nivel_riesgo:string}, dominio:array{nombre:string,puntaje:float,nivel_riesgo:string}, dimension:string, item:string, item_numero:int, puntaje:float}>}
+     * @return array{total_evaluations:int, average_total_score:float, total_score:int, max_score:int, percentage:float, rows:array<int, array{categoria:array{nombre:string,score:int,nivel_riesgo:string}, dominio:array{nombre:string,score:int,nivel_riesgo:string}, dimension:array{nombre:string,score:int,nivel_riesgo:string}, item:string, item_numero:int, puntaje:float}>}
      */
     public function getGeneralDetailedReport(WorkCenter $workCenter): array
     {
@@ -776,6 +775,9 @@ class WorkCenterNom035CalculationService
             return [
                 'total_evaluations' => 0,
                 'average_total_score' => 0.0,
+                'total_score' => 0,
+                'max_score' => 0,
+                'percentage' => 0.0,
                 'rows' => [],
             ];
         }
@@ -784,100 +786,182 @@ class WorkCenterNom035CalculationService
         $riskLevels = config('nom035_risk_levels');
         $questionsConfig = config('referencia_iii.general', []);
 
-        $categoryTotals = [];
-        $domainTotals = [];
-        $dimensionTotals = [];
-        $itemTotals = [];
+        $questionTotals = [];
+        $questionResponseCounts = [];
+        $questionAverages = [];
+
+        foreach ($domainConfig as $domains) {
+            foreach ($domains as $dimensions) {
+                foreach ($dimensions as $questions) {
+                    foreach ($questions as $questionNumber) {
+                        $questionKey = $this->normalizeQuestionKey($questionNumber);
+                        $questionTotals[$questionKey] = 0.0;
+                        $questionResponseCounts[$questionKey] = 0;
+                    }
+                }
+            }
+        }
+
         $totalScore = 0;
 
         foreach ($evaluations as $evaluation) {
             $answers = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
             $totalScore += $this->calculateTotalScore($evaluation);
 
-            foreach ($domainConfig as $categoryName => $domains) {
-                if (! isset($categoryTotals[$categoryName])) {
-                    $categoryTotals[$categoryName] = 0;
+            foreach ($questionTotals as $questionKey => $_) {
+                $rawAnswer = $this->getAnswerByQuestionNumber($answers, $questionKey);
+
+                if ($rawAnswer === null || is_array($rawAnswer)) {
+                    continue;
                 }
 
-                $categoryScore = 0;
-
-                foreach ($domains as $domainName => $dimensions) {
-                    $domainScore = $this->calculateDomainScore($answers, [$domainName => $dimensions]);
-                    $domainTotals[$domainName] = ($domainTotals[$domainName] ?? 0) + $domainScore;
-                    $categoryScore += $domainScore;
-
-                    foreach ($dimensions as $dimensionName => $questions) {
-                        $dimensionScore = $this->calculateDimensionScore($answers, $questions);
-                        $dimensionTotals[$dimensionName] = ($dimensionTotals[$dimensionName] ?? 0) + $dimensionScore;
-
-                        foreach ($questions as $questionNumber) {
-                            $itemScore = $this->getQuestionScoreFromAnswer($answers, $questionNumber);
-
-                            $itemTotals[$questionNumber] = ($itemTotals[$questionNumber] ?? 0) + $itemScore;
-                        }
-                    }
-                }
-
-                $categoryTotals[$categoryName] += $categoryScore;
+                $questionTotals[$questionKey] += $this->getQuestionScoreFromAnswer($answers, $questionKey);
+                $questionResponseCounts[$questionKey]++;
             }
+        }
+
+        foreach ($questionTotals as $questionKey => $total) {
+            $responses = $questionResponseCounts[$questionKey] ?? 0;
+            $questionAverages[$questionKey] = $responses > 0
+                ? $total / $responses
+                : 0.0;
         }
 
         $totalEvaluations = $evaluations->count();
         $rows = [];
+        $overallScore = 0;
 
         foreach ($domainConfig as $categoryName => $domains) {
-            $categoryAverage = round(($categoryTotals[$categoryName] ?? 0) / $totalEvaluations, 2);
-            $categoryRiskLevel = $this->getCategoryRiskLevel($categoryAverage, $categoryName, $riskLevels);
+            $categoryScore = 0.0;
+            $categoryDimensionMap = [];
 
             foreach ($domains as $domainName => $dimensions) {
-                $domainAverage = round(($domainTotals[$domainName] ?? 0) / $totalEvaluations, 2);
-                $domainRiskLevel = $this->getRiskLevel($domainAverage, $domainName, $riskLevels);
+                $domainScore = 0.0;
+                $domainDimensionMap = [];
 
+                foreach ($dimensions as $dimensionName => $questions) {
+                    $dimensionValues = $this->getValidQuestionTotals($questions, $questionTotals);
+                    $dimensionScore = $dimensionValues === []
+                        ? 0
+                        : (int) round(array_sum($dimensionValues));
+
+                    $dimensionRiskLevel = $this->getDimensionRiskLevel((float) $dimensionScore, $dimensionName, $riskLevels);
+                    if ($dimensionRiskLevel === 'nulo' && $dimensionScore > 0) {
+                        $dimensionRiskLevel = $this->getRiskLevel((float) $dimensionScore, $domainName, $riskLevels);
+                    }
+
+                    $domainDimensionMap[$dimensionName] = [
+                        'score' => $dimensionScore,
+                        'nivel_riesgo' => $dimensionRiskLevel,
+                    ];
+
+                    $domainScore += $dimensionScore;
+                }
+
+                $categoryDimensionMap[$domainName] = [
+                    'score' => (int) $domainScore,
+                    'nivel_riesgo' => $this->getRiskLevel($domainScore, $domainName, $riskLevels),
+                    'dimensions' => $domainDimensionMap,
+                ];
+
+                $categoryScore += $domainScore;
+            }
+
+            $categoryScoreInt = (int) $categoryScore;
+            $overallScore += $categoryScoreInt;
+
+            $categoryRiskLevel = $this->getCategoryRiskLevel((float) $categoryScoreInt, $categoryName, $riskLevels);
+
+            foreach ($domains as $domainName => $dimensions) {
                 foreach ($dimensions as $dimensionName => $questions) {
                     foreach ($questions as $questionNumber) {
                         $rows[] = [
                             'categoria' => [
                                 'nombre' => $categoryName,
-                                'puntaje' => $categoryAverage,
+                                'score' => $categoryScoreInt,
                                 'nivel_riesgo' => $categoryRiskLevel,
                             ],
                             'dominio' => [
                                 'nombre' => $domainName,
-                                'puntaje' => $domainAverage,
-                                'nivel_riesgo' => $domainRiskLevel,
+                                'score' => $categoryDimensionMap[$domainName]['score'] ?? 0,
+                                'nivel_riesgo' => $categoryDimensionMap[$domainName]['nivel_riesgo'] ?? 'nulo',
                             ],
-                            'dimension' => $dimensionName,
+                            'dimension' => [
+                                'nombre' => $dimensionName,
+                                'score' => $categoryDimensionMap[$domainName]['dimensions'][$dimensionName]['score'] ?? 0,
+                                'nivel_riesgo' => $categoryDimensionMap[$domainName]['dimensions'][$dimensionName]['nivel_riesgo'] ?? 'nulo',
+                            ],
                             'item' => $questionsConfig[$questionNumber] ?? "Pregunta {$questionNumber}",
                             'item_numero' => (int) $questionNumber,
-                            'puntaje' => round(($itemTotals[$questionNumber] ?? 0) / $totalEvaluations, 2),
+                            'puntaje' => round($questionAverages[$this->normalizeQuestionKey($questionNumber)] ?? 0.0, 2),
                         ];
                     }
                 }
             }
         }
 
+        $globalMaxScore = (int) (($riskLevels['global']['max_score'] ?? 0) * $totalEvaluations);
+
         return [
             'total_evaluations' => $totalEvaluations,
             'average_total_score' => round($totalScore / $totalEvaluations, 2),
+            'total_score' => $overallScore,
+            'max_score' => $globalMaxScore,
+            'percentage' => $globalMaxScore > 0 ? round(($overallScore / $globalMaxScore) * 100, 2) : 0.0,
             'rows' => $rows,
         ];
     }
 
     private function getQuestionScoreFromAnswer(array $answers, int|string $questionNumber): int
     {
-        $answer = $answers[$questionNumber] ?? null;
+        $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
 
         if ($answer === null || is_array($answer)) {
             return 0;
         }
 
         $answerValues = config('answer_values');
-        $questionKey = str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT);
+        $questionKey = $this->normalizeQuestionKey($questionNumber);
         $group = in_array($questionKey, $answerValues['group1']['questions'], true)
             ? 'group1'
             : 'group2';
 
         return $answerValues[$group]['values'][$answer] ?? 0;
+    }
+
+    /**
+     * @param  array<int, int|string>  $questions
+     * @param  array<string, float|int|string|null>  $questionTotals
+     * @return array<int, float>
+     */
+    private function getValidQuestionTotals(array $questions, array $questionTotals): array
+    {
+        $values = array_map(
+            fn (int|string $questionNumber): mixed => $questionTotals[$this->normalizeQuestionKey($questionNumber)] ?? null,
+            $questions
+        );
+
+        $values = array_values(array_filter(
+            $values,
+            static fn (mixed $value): bool => is_numeric($value) && is_finite((float) $value)
+        ));
+
+        return array_map(static fn (mixed $value): float => (float) $value, $values);
+    }
+
+    private function normalizeQuestionKey(int|string $questionNumber): string
+    {
+        return str_pad((string) ((int) $questionNumber), 2, '0', STR_PAD_LEFT);
+    }
+
+    private function getAnswerByQuestionNumber(array $answers, int|string $questionNumber): mixed
+    {
+        $questionKey = $this->normalizeQuestionKey($questionNumber);
+
+        return $answers[$questionKey]
+            ?? $answers[(string) ((int) $questionNumber)]
+            ?? $answers[(int) $questionNumber]
+            ?? null;
     }
 
     /**
@@ -891,13 +975,14 @@ class WorkCenterNom035CalculationService
         foreach ($categories as $categoryName => $subcategories) {
             foreach ($subcategories as $subcategoryName => $questions) {
                 foreach ($questions as $questionNumber) {
-                    $answer = $answers[$questionNumber] ?? null;
+                    $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
 
                     if ($answer === null) {
                         continue;
                     }
 
-                    $group = in_array(str_pad($questionNumber, 2, '0', STR_PAD_LEFT), $answerValues['group1']['questions'])
+                    $questionKey = $this->normalizeQuestionKey($questionNumber);
+                    $group = in_array($questionKey, $answerValues['group1']['questions'], true)
                         ? 'group1'
                         : 'group2';
 
@@ -919,13 +1004,14 @@ class WorkCenterNom035CalculationService
 
         foreach ($subcategories as $subcategoryName => $questions) {
             foreach ($questions as $questionNumber) {
-                $answer = $answers[$questionNumber] ?? null;
+                $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
 
                 if ($answer === null) {
                     continue;
                 }
 
-                $group = in_array(str_pad($questionNumber, 2, '0', STR_PAD_LEFT), $answerValues['group1']['questions'])
+                $questionKey = $this->normalizeQuestionKey($questionNumber);
+                $group = in_array($questionKey, $answerValues['group1']['questions'], true)
                     ? 'group1'
                     : 'group2';
 
@@ -945,13 +1031,14 @@ class WorkCenterNom035CalculationService
         $answerValues = config('answer_values');
 
         foreach ($questions as $questionNumber) {
-            $answer = $answers[$questionNumber] ?? null;
+            $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
 
             if ($answer === null) {
                 continue;
             }
 
-            $group = in_array(str_pad($questionNumber, 2, '0', STR_PAD_LEFT), $answerValues['group1']['questions'])
+            $questionKey = $this->normalizeQuestionKey($questionNumber);
+            $group = in_array($questionKey, $answerValues['group1']['questions'], true)
                 ? 'group1'
                 : 'group2';
 

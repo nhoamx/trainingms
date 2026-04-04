@@ -213,18 +213,25 @@ interface AnalysisData {
 interface GeneralReport {
   total_evaluations: number;
   average_total_score: number;
+  total_score: number;
+  max_score: number;
+  percentage: number;
   rows: Array<{
     categoria: {
       nombre: string;
-      puntaje: number;
+      score: number;
       nivel_riesgo: string;
     };
     dominio: {
       nombre: string;
-      puntaje: number;
+      score: number;
       nivel_riesgo: string;
     };
-    dimension: string;
+    dimension: {
+      nombre: string;
+      score: number;
+      nivel_riesgo: string;
+    };
     item: string;
     item_numero: number;
     puntaje: number;
