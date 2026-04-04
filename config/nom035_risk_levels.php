@@ -382,7 +382,7 @@ return [
                 'muy_alto' => ['min' => 10, 'max' => 999],
             ],
         ],
-        'Insuficiente reconocimiento y compensación del desempeño' => [
+        'Escaso o nulo reconocimiento y compensación' => [
             'domain' => 'Reconocimiento del desempeño',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 2],

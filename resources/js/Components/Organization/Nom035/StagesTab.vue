@@ -1405,7 +1405,6 @@ const groupedGeneralReport = computed(() => {
   if (typeof window !== 'undefined' && /localhost|127\.0\.0\.1/.test(window.location.hostname) && rows.length > 0) {
     console.log(rows[0]);
   }
-  console.log(rows[0]);
 
   rows.forEach((row) => {
     const normalizedCategory = {

@@ -43,15 +43,15 @@ class WorkCenterNom035GeneralReportCalculationTest extends TestCase
 
         $this->assertSame('Condiciones peligrosas e inseguras', $questionOneRow['dimension']['nombre']);
         $this->assertSame(8, $questionOneRow['dimension']['score']);
-        $this->assertSame('muy_alto', $questionOneRow['dimension']['nivel_riesgo']);
+        $this->assertSame('medio', $questionOneRow['dimension']['nivel_riesgo']);
 
         $this->assertSame('Condiciones en el ambiente de trabajo', $questionOneRow['dominio']['nombre']);
         $this->assertSame(22, $questionOneRow['dominio']['score']);
-        $this->assertSame('muy_alto', $questionOneRow['dominio']['nivel_riesgo']);
+        $this->assertSame('alto', $questionOneRow['dominio']['nivel_riesgo']);
 
         $this->assertSame('Ambiente de trabajo', $questionOneRow['categoria']['nombre']);
         $this->assertSame(22, $questionOneRow['categoria']['score']);
-        $this->assertSame('muy_alto', $questionOneRow['categoria']['nivel_riesgo']);
+        $this->assertSame('alto', $questionOneRow['categoria']['nivel_riesgo']);
 
         $this->assertSame(576, $report['max_score']);
         $this->assertSame(244, $report['total_score']);

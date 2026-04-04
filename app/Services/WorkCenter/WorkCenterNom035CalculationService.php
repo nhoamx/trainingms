@@ -844,11 +844,12 @@ class WorkCenterNom035CalculationService
                     $dimensionScore = $dimensionValues === []
                         ? 0
                         : (int) round(array_sum($dimensionValues));
+                    $normalizedDimensionScore = $this->normalizeOrganizationalScore($dimensionScore, $totalEvaluations);
 
-                    $dimensionRiskLevel = $this->getDimensionRiskLevel((float) $dimensionScore, $dimensionName, $riskLevels);
-                    if ($dimensionRiskLevel === 'nulo' && $dimensionScore > 0) {
-                        $dimensionRiskLevel = $this->getRiskLevel((float) $dimensionScore, $domainName, $riskLevels);
-                    }
+
+
+                    $dimensionRiskLevel = $this->getDimensionRiskLevel($normalizedDimensionScore, $dimensionName, $riskLevels);
+
 
                     $domainDimensionMap[$dimensionName] = [
                         'score' => $dimensionScore,
@@ -860,7 +861,11 @@ class WorkCenterNom035CalculationService
 
                 $categoryDimensionMap[$domainName] = [
                     'score' => (int) $domainScore,
-                    'nivel_riesgo' => $this->getRiskLevel($domainScore, $domainName, $riskLevels),
+                    'nivel_riesgo' => $this->getRiskLevel(
+                        $this->normalizeOrganizationalScore($domainScore, $totalEvaluations),
+                        $domainName,
+                        $riskLevels
+                    ),
                     'dimensions' => $domainDimensionMap,
                 ];
 
@@ -870,7 +875,11 @@ class WorkCenterNom035CalculationService
             $categoryScoreInt = (int) $categoryScore;
             $overallScore += $categoryScoreInt;
 
-            $categoryRiskLevel = $this->getCategoryRiskLevel((float) $categoryScoreInt, $categoryName, $riskLevels);
+            $categoryRiskLevel = $this->getCategoryRiskLevel(
+                $this->normalizeOrganizationalScore($categoryScoreInt, $totalEvaluations),
+                $categoryName,
+                $riskLevels
+            );
 
             foreach ($domains as $domainName => $dimensions) {
                 foreach ($dimensions as $dimensionName => $questions) {
@@ -937,16 +946,16 @@ class WorkCenterNom035CalculationService
     private function getValidQuestionTotals(array $questions, array $questionTotals): array
     {
         $values = array_map(
-            fn (int|string $questionNumber): mixed => $questionTotals[$this->normalizeQuestionKey($questionNumber)] ?? null,
+            fn(int|string $questionNumber): mixed => $questionTotals[$this->normalizeQuestionKey($questionNumber)] ?? null,
             $questions
         );
 
         $values = array_values(array_filter(
             $values,
-            static fn (mixed $value): bool => is_numeric($value) && is_finite((float) $value)
+            static fn(mixed $value): bool => is_numeric($value) && is_finite((float) $value)
         ));
 
-        return array_map(static fn (mixed $value): float => (float) $value, $values);
+        return array_map(static fn(mixed $value): float => (float) $value, $values);
     }
 
     private function normalizeQuestionKey(int|string $questionNumber): string
@@ -962,6 +971,15 @@ class WorkCenterNom035CalculationService
             ?? $answers[(string) ((int) $questionNumber)]
             ?? $answers[(int) $questionNumber]
             ?? null;
+    }
+
+    private function normalizeOrganizationalScore(int|float $score, int $totalEmployees): float
+    {
+        if ($totalEmployees <= 0) {
+            return 0.0;
+        }
+
+        return (float) $score / $totalEmployees;
     }
 
     /**
@@ -1178,11 +1196,20 @@ class WorkCenterNom035CalculationService
      */
     private function getDimensionRiskLevel(float $score, string $dimensionName, array $riskLevels): string
     {
-        if (isset($riskLevels['dimensions'][$dimensionName]['levels'])) {
-            $levels = $riskLevels['dimensions'][$dimensionName]['levels'];
-        } else {
+        $normalizedName = mb_strtolower(trim($dimensionName));
+
+        $dimensions = array_change_key_case(
+            array_map(fn($v) => $v, $riskLevels['dimensions']),
+            CASE_LOWER
+        );
+
+        if (!isset($dimensions[$normalizedName]['levels'])) {
             return 'nulo';
         }
+
+        $levels = $dimensions[$normalizedName]['levels'];
+
+        $score = round($score); // 👈 importante
 
         foreach ($levels as $levelName => $range) {
             if ($score >= $range['min'] && $score <= $range['max']) {
@@ -1192,6 +1219,7 @@ class WorkCenterNom035CalculationService
 
         return 'nulo';
     }
+
 
     /**
      * Obtener nivel de riesgo global
