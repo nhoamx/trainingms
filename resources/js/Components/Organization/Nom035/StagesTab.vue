@@ -374,18 +374,23 @@
 
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Calificación Final</p>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Calificación Final Promedio</p>
                   <p class="mt-2 text-2xl font-bold text-slate-900">
-                    {{ formatIntegerScore(props.generalReport?.total_score ?? 0) }} / {{ formatIntegerScore(props.generalReport?.max_score ?? 0) }}
+                    {{ formatScore(finalGlobalSummary.averageScore) }} / {{ formatIntegerScore(finalGlobalSummary.maxScore) }}
                   </p>
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Porcentaje</p>
-                  <p class="mt-2 text-2xl font-bold text-slate-900">{{ formatScore(props.generalReport?.percentage ?? 0) }}%</p>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Nivel de Riesgo Global</p>
+                  <div class="mt-2 flex items-center gap-2">
+                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wide shadow-sm" :style="getRiskBadgeSolidStyle(finalGlobalSummary.riskLevel)">
+                      {{ finalGlobalSummary.riskLabel }}
+                    </span>
+                    <span class="text-lg font-bold text-slate-900">{{ formatScore(finalGlobalSummary.percentage) }}%</span>
+                  </div>
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
                   <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Evaluaciones Consideradas</p>
-                  <p class="mt-2 text-2xl font-bold text-slate-900">{{ props.generalReport?.total_evaluations ?? 0 }}</p>
+                  <p class="mt-2 text-2xl font-bold text-slate-900">{{ finalGlobalSummary.totalEvaluations }}</p>
                 </div>
               </div>
 
@@ -397,7 +402,6 @@
                       <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Dominio</th>
                       <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Dimensión</th>
                       <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Ítem</th>
-                      <th class="px-4 py-3 text-center border border-slate-200 text-xs font-medium text-slate-500 uppercase">Promedio Ítem (0-4)</th>
                     </tr>
                   </thead>
                   <tbody class="bg-white divide-y divide-slate-200">
@@ -407,41 +411,114 @@
                           <template v-for="(item, itemIdx) in dim.items" :key="`item_${catIdx}_${domIdx}_${dimIdx}_${itemIdx}`">
                             <tr>
                               <td v-if="domIdx === 0 && dimIdx === 0 && itemIdx === 0" :rowspan="cat.rowspan" class="px-4 py-3 border border-slate-200 text-center align-middle bg-slate-50">
-                                <div class="font-medium text-slate-900">{{ cat.nombre }}</div>
-                                <div class="mt-1">
-                                  <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskBadgeClass(cat.nivel_riesgo)]">
-                                    {{ cat.nivel_riesgo }}: {{ formatIntegerScore(cat.score) }}
-                                  </span>
+                                <div class="rounded-lg border px-3 py-2" :style="getRiskContainerStyle(cat.nivel_riesgo)">
+                                  <div class="font-medium text-slate-900">{{ cat.nombre }}</div>
+                                  <div class="mt-2 flex items-center justify-center gap-2">
+                                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wide shadow-sm" :style="getRiskBadgeSolidStyle(cat.nivel_riesgo)">
+                                      {{ getRiskLevelLabel(normalizeRiskLevel(cat.nivel_riesgo)) }}
+                                    </span>
+                                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                      {{ getAverageByEvaluations(cat.score) }}
+                                    </span>
+                                    <div class="relative group">
+                                      <button
+                                        type="button"
+                                        class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-white text-[10px] font-bold text-slate-500 transition-colors hover:text-slate-700"
+                                        :aria-label="`Ver detalle de ${cat.nombre}`"
+                                      >
+                                        ?
+                                      </button>
+                                      <div class="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-56 -translate-x-1/2 rounded-lg border border-slate-200 bg-slate-900 p-3 text-left text-xs text-white shadow-lg group-hover:block group-focus-within:block">
+                                        <p><span class="font-semibold">Suma total:</span> {{ formatIntegerScore(cat.score) }}</p>
+                                        <p><span class="font-semibold"># de evaluaciones:</span> {{ totalEvaluationsForTooltips }}</p>
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                               </td>
 
                               <td v-if="dimIdx === 0 && itemIdx === 0" :rowspan="dom.rowspan" class="px-4 py-3 border border-slate-200 text-center align-middle">
-                                <div class="font-medium text-slate-900">{{ dom.nombre }}</div>
-                                <div class="mt-1">
-                                  <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskBadgeClass(dom.nivel_riesgo)]">
-                                    {{ dom.nivel_riesgo }}: {{ formatIntegerScore(dom.score) }}
-                                  </span>
+                                <div class="rounded-lg border px-3 py-2" :style="getRiskContainerStyle(dom.nivel_riesgo)">
+                                  <div class="font-medium text-slate-900">{{ dom.nombre }}</div>
+                                  <div class="mt-2 flex items-center justify-center gap-2">
+                                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wide shadow-sm" :style="getRiskBadgeSolidStyle(dom.nivel_riesgo)">
+                                      {{ getRiskLevelLabel(normalizeRiskLevel(dom.nivel_riesgo)) }}
+                                    </span>
+                                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                      {{ getAverageByEvaluations(dom.score) }}
+                                    </span>
+                                    <div class="relative group">
+                                      <button
+                                        type="button"
+                                        class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-white text-[10px] font-bold text-slate-500 transition-colors hover:text-slate-700"
+                                        :aria-label="`Ver detalle de ${dom.nombre}`"
+                                      >
+                                        ?
+                                      </button>
+                                      <div class="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-56 -translate-x-1/2 rounded-lg border border-slate-200 bg-slate-900 p-3 text-left text-xs text-white shadow-lg group-hover:block group-focus-within:block">
+                                        <p><span class="font-semibold">Suma total:</span> {{ formatIntegerScore(dom.score) }}</p>
+                                        <p><span class="font-semibold"># de evaluaciones:</span> {{ totalEvaluationsForTooltips }}</p>
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                               </td>
 
                               <td v-if="itemIdx === 0" :rowspan="dim.rowspan" class="px-4 py-3 border border-slate-200 text-center align-middle text-slate-700">
-                                <div class="font-medium text-slate-900">{{ dim.nombre }}</div>
-                                <div class="mt-1">
-                                  <span :class="['text-xs font-semibold px-2 py-1 rounded', getRiskBadgeClass(dim.nivel_riesgo)]">
-                                    {{ dim.nivel_riesgo }}: {{ formatIntegerScore(dim.score) }}
-                                  </span>
+                                <div class="rounded-lg border px-3 py-2" :style="getRiskContainerStyle(dim.nivel_riesgo)">
+                                  <div class="font-medium text-slate-900">{{ dim.nombre }}</div>
+                                  <div class="mt-2 flex items-center justify-center gap-2">
+                                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wide shadow-sm" :style="getRiskBadgeSolidStyle(dim.nivel_riesgo)">
+                                      {{ getRiskLevelLabel(normalizeRiskLevel(dim.nivel_riesgo)) }}
+                                    </span>
+                                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                      {{ getAverageByEvaluations(dim.score) }}
+                                    </span>
+                                    <div class="relative group">
+                                      <button
+                                        type="button"
+                                        class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-white text-[10px] font-bold text-slate-500 transition-colors hover:text-slate-700"
+                                        :aria-label="`Ver detalle de ${dim.nombre}`"
+                                      >
+                                        ?
+                                      </button>
+                                      <div class="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-56 -translate-x-1/2 rounded-lg border border-slate-200 bg-slate-900 p-3 text-left text-xs text-white shadow-lg group-hover:block group-focus-within:block">
+                                        <p><span class="font-semibold">Suma total:</span> {{ formatIntegerScore(dim.score) }}</p>
+                                        <p><span class="font-semibold"># de evaluaciones:</span> {{ totalEvaluationsForTooltips }}</p>
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                               </td>
 
                               <td class="px-4 py-3 border border-slate-200 text-slate-800">
-                                <span class="font-semibold text-indigo-600">{{ item.item_numero }}.</span>
-                                {{ item.nombre }}
-                              </td>
-
-                              <td class="px-4 py-3 border border-slate-200 text-center">
-                                <span class="inline-flex rounded px-2 py-1 font-semibold" :class="getAverageItemScoreClass(item.puntaje)">
-                                  {{ formatScore(item.puntaje) }}
-                                </span>
+                                <div class="flex items-center justify-between gap-3">
+                                  <div class="text-left">
+                                    <span class="font-semibold text-indigo-600">{{ item.item_numero }}.</span>
+                                    {{ item.nombre }}
+                                  </div>
+                                  <div class="flex items-center gap-1.5">
+                                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide" :style="getRiskBadgeSolidStyle(getItemAverageRiskLevel(item.puntaje))">
+                                      {{ getRiskLevelLabel(getItemAverageRiskLevel(item.puntaje)) }}
+                                    </span>
+                                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                                      {{ formatScore(item.puntaje) }}
+                                    </span>
+                                    <div class="relative group shrink-0">
+                                      <button
+                                        type="button"
+                                        class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 bg-white text-[9px] font-bold leading-none text-slate-500 transition-colors hover:text-slate-700"
+                                        :aria-label="`Ver detalle del ítem ${item.item_numero}`"
+                                      >
+                                        ?
+                                      </button>
+                                      <div class="pointer-events-none absolute bottom-full right-0 z-20 mb-2 hidden w-56 rounded-lg border border-slate-200 bg-slate-900 p-3 text-left text-xs text-white shadow-lg group-hover:block group-focus-within:block">
+                                        <p><span class="font-semibold">Suma total:</span> {{ formatIntegerScore(getItemTotalScore(item.puntaje)) }}</p>
+                                        <p><span class="font-semibold"># de evaluaciones:</span> {{ totalEvaluationsForTooltips }}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
                               </td>
                             </tr>
                           </template>
@@ -1131,6 +1208,11 @@ interface GeneralReport {
   total_score: number;
   max_score: number;
   percentage: number;
+  final_average_score?: number;
+  final_max_score?: number;
+  final_percentage?: number;
+  final_risk_level?: string;
+  final_risk_label?: string;
   rows: GeneralReportRow[];
 }
 
@@ -1910,6 +1992,73 @@ const formatIntegerScore = (score: number): string => {
   return Number.isFinite(numericScore) ? String(Math.max(0, Math.round(numericScore))) : '0';
 };
 
+const totalEvaluationsForTooltips = computed(() => {
+  const totalEvaluations = Number(props.generalReport?.total_evaluations ?? 0);
+  return Number.isFinite(totalEvaluations) ? Math.max(0, totalEvaluations) : 0;
+});
+
+const globalLevelsByRisk = computed<Record<string, { min: number; max: number }>>(() => {
+  const globalPayload = props.globalStatistics?.global as Record<string, unknown> | undefined;
+  const levels = globalPayload?.levels;
+
+  if (!levels || typeof levels !== 'object') {
+    return {};
+  }
+
+  return levels as Record<string, { min: number; max: number }>;
+});
+
+const finalGlobalSummary = computed(() => {
+  const totalEvaluations = Number(props.generalReport?.total_evaluations ?? 0);
+  const normalizedEvaluations = Number.isFinite(totalEvaluations) ? Math.max(0, totalEvaluations) : 0;
+
+  const fallbackAverage = normalizedEvaluations > 0
+    ? Number(props.generalReport?.total_score ?? 0) / normalizedEvaluations
+    : 0;
+
+  const averageScore = Number(props.generalReport?.final_average_score ?? fallbackAverage);
+
+  const maxScoreFromConfig = Number((props.globalStatistics?.global as Record<string, unknown> | undefined)?.max_score ?? 288);
+  const maxScore = Number(props.generalReport?.final_max_score ?? maxScoreFromConfig);
+
+  const percentageFallback = maxScore > 0 ? (averageScore / maxScore) * 100 : 0;
+  const percentage = Number(props.generalReport?.final_percentage ?? percentageFallback);
+
+  const riskLevelRaw = props.generalReport?.final_risk_level;
+  const riskLevel = normalizeRiskLevel(typeof riskLevelRaw === 'string' ? riskLevelRaw : getTotalScoreRiskLevel(averageScore));
+
+  const riskLabel = props.generalReport?.final_risk_label ?? getRiskLevelLabel(riskLevel);
+
+  return {
+    averageScore: Number.isFinite(averageScore) ? averageScore : 0,
+    maxScore: Number.isFinite(maxScore) ? maxScore : 288,
+    percentage: Number.isFinite(percentage) ? percentage : 0,
+    riskLevel,
+    riskLabel,
+    totalEvaluations: normalizedEvaluations,
+  };
+});
+
+const getGlobalRiskRangeText = (riskLevel: string): string => {
+  const normalizedRiskLevel = normalizeRiskLevel(riskLevel);
+  const range = globalLevelsByRisk.value[normalizedRiskLevel];
+
+  if (!range) {
+    return 'N/A';
+  }
+
+  return `${range.min} - ${range.max}`;
+};
+
+const getAverageByEvaluations = (totalScore: number): string => {
+  const evaluations = totalEvaluationsForTooltips.value;
+  if (evaluations <= 0) {
+    return '0';
+  }
+
+  return formatIntegerScore(totalScore / evaluations);
+};
+
 const normalizeRiskLevel = (riskLevel?: string | null): string => {
   if (!riskLevel || typeof riskLevel !== 'string') {
     return 'nulo';
@@ -1918,34 +2067,89 @@ const normalizeRiskLevel = (riskLevel?: string | null): string => {
   return riskLevel.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/\s+/g, '_');
 };
 
-const getRiskBadgeClass = (riskLevel?: string | null): string => {
-  const normalizedRiskLevel = normalizeRiskLevel(riskLevel);
-
-  const classes: Record<string, string> = {
-    nulo: 'bg-blue-100 text-blue-700',
-    bajo: 'bg-green-100 text-green-700',
-    medio: 'bg-amber-100 text-amber-700',
-    alto: 'bg-orange-100 text-orange-700',
-    muy_alto: 'bg-red-100 text-red-700',
-  };
-
-  return classes[normalizedRiskLevel] ?? 'bg-slate-100 text-slate-700';
+const nomRiskColors: Record<string, string> = {
+  nulo: '#3B82F6',
+  bajo: '#10B981',
+  medio: '#F59E0B',
+  alto: '#F97316',
+  muy_alto: '#EF4444',
 };
 
-const getAverageItemScoreClass = (score: number): string => {
-  if (score <= 1) {
-    return 'bg-emerald-50 text-emerald-700';
+const getRiskColorHex = (riskLevel?: string | null): string => {
+  const normalizedRiskLevel = normalizeRiskLevel(riskLevel);
+  return nomRiskColors[normalizedRiskLevel] ?? '#64748B';
+};
+
+const hexToRgba = (hex: string, alpha: number): string => {
+  const normalizedHex = hex.replace('#', '');
+  const validHex = normalizedHex.length === 3
+    ? normalizedHex.split('').map((char) => char + char).join('')
+    : normalizedHex;
+
+  const red = parseInt(validHex.substring(0, 2), 16);
+  const green = parseInt(validHex.substring(2, 4), 16);
+  const blue = parseInt(validHex.substring(4, 6), 16);
+
+  if (Number.isNaN(red) || Number.isNaN(green) || Number.isNaN(blue)) {
+    return `rgba(100, 116, 139, ${alpha})`;
   }
 
-  if (score <= 2) {
-    return 'bg-lime-100 text-lime-800';
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};
+
+const getRiskForegroundColor = (riskLevel?: string | null): string => {
+  const normalizedRiskLevel = normalizeRiskLevel(riskLevel);
+
+  if (normalizedRiskLevel === 'medio') {
+    return '#111827';
   }
 
-  if (score <= 3) {
-    return 'bg-amber-100 text-amber-800';
+  return '#FFFFFF';
+};
+
+const getRiskBadgeSolidStyle = (riskLevel?: string | null): Record<string, string> => {
+  const color = getRiskColorHex(riskLevel);
+
+  return {
+    backgroundColor: color,
+    borderColor: color,
+    color: getRiskForegroundColor(riskLevel),
+  };
+};
+
+const getRiskContainerStyle = (riskLevel?: string | null): Record<string, string> => {
+  const color = getRiskColorHex(riskLevel);
+
+  return {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#CBD5E1',
+    borderLeftWidth: '5px',
+    borderLeftColor: color,
+  };
+};
+
+const getItemAverageRiskLevel = (score: number): string => {
+  if (score <= 0.8) {
+    return 'nulo';
   }
 
-  return 'bg-rose-100 text-rose-800';
+  if (score <= 1.6) {
+    return 'bajo';
+  }
+
+  if (score <= 2.4) {
+    return 'medio';
+  }
+
+  if (score <= 3.2) {
+    return 'alto';
+  }
+
+  return 'muy_alto';
+};
+
+const getItemTotalScore = (average: number): number => {
+  return average * totalEvaluationsForTooltips.value;
 };
 
 const subTabs = [

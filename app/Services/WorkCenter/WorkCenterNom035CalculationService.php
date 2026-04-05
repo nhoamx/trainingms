@@ -293,6 +293,7 @@ class WorkCenterNom035CalculationService
                 'percentage' => $maxScore > 0 ? round(($average / $maxScore) * 100, 2) : 0,
                 'risk_level' => $averageLevel,
                 'risk_level_label' => $riskLevels['labels'][$averageLevel],
+                'levels' => $riskLevels['global']['levels'] ?? [],
                 'distribution' => $globalDistribution,
                 'total_evaluations' => count($globalScores),
             ],
@@ -760,7 +761,7 @@ class WorkCenterNom035CalculationService
      * Category, domain and dimension use summed scores (NOM-035 ranges are sum-based).
      * Item keeps average score (0-4) for UI display and coloring only.
      *
-     * @return array{total_evaluations:int, average_total_score:float, total_score:int, max_score:int, percentage:float, rows:array<int, array{categoria:array{nombre:string,score:int,nivel_riesgo:string}, dominio:array{nombre:string,score:int,nivel_riesgo:string}, dimension:array{nombre:string,score:int,nivel_riesgo:string}, item:string, item_numero:int, puntaje:float}>}
+     * @return array{total_evaluations:int, average_total_score:float, total_score:int, max_score:int, percentage:float, final_average_score:float, final_max_score:int, final_percentage:float, final_risk_level:string, final_risk_label:string, rows:array<int, array{categoria:array{nombre:string,score:int,nivel_riesgo:string}, dominio:array{nombre:string,score:int,nivel_riesgo:string}, dimension:array{nombre:string,score:int,nivel_riesgo:string}, item:string, item_numero:int, puntaje:float}>}
      */
     public function getGeneralDetailedReport(WorkCenter $workCenter): array
     {
@@ -778,6 +779,11 @@ class WorkCenterNom035CalculationService
                 'total_score' => 0,
                 'max_score' => 0,
                 'percentage' => 0.0,
+                'final_average_score' => 0.0,
+                'final_max_score' => 0,
+                'final_percentage' => 0.0,
+                'final_risk_level' => 'nulo',
+                'final_risk_label' => 'Nulo',
                 'rows' => [],
             ];
         }
@@ -846,10 +852,7 @@ class WorkCenterNom035CalculationService
                         : (int) round(array_sum($dimensionValues));
                     $normalizedDimensionScore = $this->normalizeOrganizationalScore($dimensionScore, $totalEvaluations);
 
-
-
                     $dimensionRiskLevel = $this->getDimensionRiskLevel($normalizedDimensionScore, $dimensionName, $riskLevels);
-
 
                     $domainDimensionMap[$dimensionName] = [
                         'score' => $dimensionScore,
@@ -909,7 +912,10 @@ class WorkCenterNom035CalculationService
             }
         }
 
-        $globalMaxScore = (int) (($riskLevels['global']['max_score'] ?? 0) * $totalEvaluations);
+        $globalMaxPerEvaluation = (int) ($riskLevels['global']['max_score'] ?? 0);
+        $globalMaxScore = $globalMaxPerEvaluation * $totalEvaluations;
+        $finalAverageScore = $this->normalizeOrganizationalScore($overallScore, $totalEvaluations);
+        $finalRiskLevel = $this->getGlobalRiskLevel($finalAverageScore, $riskLevels);
 
         return [
             'total_evaluations' => $totalEvaluations,
@@ -917,6 +923,11 @@ class WorkCenterNom035CalculationService
             'total_score' => $overallScore,
             'max_score' => $globalMaxScore,
             'percentage' => $globalMaxScore > 0 ? round(($overallScore / $globalMaxScore) * 100, 2) : 0.0,
+            'final_average_score' => round($finalAverageScore, 2),
+            'final_max_score' => $globalMaxPerEvaluation,
+            'final_percentage' => $globalMaxPerEvaluation > 0 ? round(($finalAverageScore / $globalMaxPerEvaluation) * 100, 2) : 0.0,
+            'final_risk_level' => $finalRiskLevel,
+            'final_risk_label' => $riskLevels['labels'][$finalRiskLevel] ?? 'Nulo',
             'rows' => $rows,
         ];
     }
@@ -946,16 +957,16 @@ class WorkCenterNom035CalculationService
     private function getValidQuestionTotals(array $questions, array $questionTotals): array
     {
         $values = array_map(
-            fn(int|string $questionNumber): mixed => $questionTotals[$this->normalizeQuestionKey($questionNumber)] ?? null,
+            fn (int|string $questionNumber): mixed => $questionTotals[$this->normalizeQuestionKey($questionNumber)] ?? null,
             $questions
         );
 
         $values = array_values(array_filter(
             $values,
-            static fn(mixed $value): bool => is_numeric($value) && is_finite((float) $value)
+            static fn (mixed $value): bool => is_numeric($value) && is_finite((float) $value)
         ));
 
-        return array_map(static fn(mixed $value): float => (float) $value, $values);
+        return array_map(static fn (mixed $value): float => (float) $value, $values);
     }
 
     private function normalizeQuestionKey(int|string $questionNumber): string
@@ -1136,6 +1147,7 @@ class WorkCenterNom035CalculationService
     private function getRiskLevel(float $score, string $domainName, array $riskLevels): string
     {
         $levels = $riskLevels['domains'][$domainName]['levels'];
+        $score = round($score);
 
         foreach ($levels as $levelName => $range) {
             if ($score >= $range['min'] && $score <= $range['max']) {
@@ -1156,6 +1168,8 @@ class WorkCenterNom035CalculationService
         } else {
             $levels = $riskLevels['domains'][$categoryName]['levels'] ?? [];
         }
+
+        $score = round($score);
 
         foreach ($levels as $levelName => $range) {
             if ($score >= $range['min'] && $score <= $range['max']) {
@@ -1199,11 +1213,11 @@ class WorkCenterNom035CalculationService
         $normalizedName = mb_strtolower(trim($dimensionName));
 
         $dimensions = array_change_key_case(
-            array_map(fn($v) => $v, $riskLevels['dimensions']),
+            array_map(fn ($v) => $v, $riskLevels['dimensions']),
             CASE_LOWER
         );
 
-        if (!isset($dimensions[$normalizedName]['levels'])) {
+        if (! isset($dimensions[$normalizedName]['levels'])) {
             return 'nulo';
         }
 
@@ -1219,7 +1233,6 @@ class WorkCenterNom035CalculationService
 
         return 'nulo';
     }
-
 
     /**
      * Obtener nivel de riesgo global
@@ -1387,6 +1400,7 @@ class WorkCenterNom035CalculationService
                 'percentage' => 0,
                 'risk_level' => 'nulo',
                 'risk_level_label' => $riskLevels['labels']['nulo'],
+                'levels' => $riskLevels['global']['levels'] ?? [],
                 'distribution' => [
                     'nulo' => 0,
                     'bajo' => 0,
