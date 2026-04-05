@@ -417,10 +417,10 @@
                                     <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wide shadow-sm" :style="getRiskBadgeSolidStyle(cat.nivel_riesgo)">
                                       {{ getRiskLevelLabel(normalizeRiskLevel(cat.nivel_riesgo)) }}
                                     </span>
-                                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                    <!-- <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
                                       {{ getAverageByEvaluations(cat.score) }}
-                                    </span>
-                                    <div class="relative group">
+                                    </span> -->
+                                    <!-- <div class="relative group">
                                       <button
                                         type="button"
                                         class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-white text-[10px] font-bold text-slate-500 transition-colors hover:text-slate-700"
@@ -432,7 +432,7 @@
                                         <p><span class="font-semibold">Suma total:</span> {{ formatIntegerScore(cat.score) }}</p>
                                         <p><span class="font-semibold"># de evaluaciones:</span> {{ totalEvaluationsForTooltips }}</p>
                                       </div>
-                                    </div>
+                                    </div> -->
                                   </div>
                                 </div>
                               </td>
@@ -444,10 +444,10 @@
                                     <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wide shadow-sm" :style="getRiskBadgeSolidStyle(dom.nivel_riesgo)">
                                       {{ getRiskLevelLabel(normalizeRiskLevel(dom.nivel_riesgo)) }}
                                     </span>
-                                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                    <!-- <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
                                       {{ getAverageByEvaluations(dom.score) }}
-                                    </span>
-                                    <div class="relative group">
+                                    </span> -->
+                                    <!-- <div class="relative group">
                                       <button
                                         type="button"
                                         class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-white text-[10px] font-bold text-slate-500 transition-colors hover:text-slate-700"
@@ -459,7 +459,7 @@
                                         <p><span class="font-semibold">Suma total:</span> {{ formatIntegerScore(dom.score) }}</p>
                                         <p><span class="font-semibold"># de evaluaciones:</span> {{ totalEvaluationsForTooltips }}</p>
                                       </div>
-                                    </div>
+                                    </div> -->
                                   </div>
                                 </div>
                               </td>
@@ -471,10 +471,10 @@
                                     <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wide shadow-sm" :style="getRiskBadgeSolidStyle(dim.nivel_riesgo)">
                                       {{ getRiskLevelLabel(normalizeRiskLevel(dim.nivel_riesgo)) }}
                                     </span>
-                                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                    <!-- <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
                                       {{ getAverageByEvaluations(dim.score) }}
-                                    </span>
-                                    <div class="relative group">
+                                    </span> -->
+                                    <!-- <div class="relative group">
                                       <button
                                         type="button"
                                         class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-white text-[10px] font-bold text-slate-500 transition-colors hover:text-slate-700"
@@ -486,7 +486,7 @@
                                         <p><span class="font-semibold">Suma total:</span> {{ formatIntegerScore(dim.score) }}</p>
                                         <p><span class="font-semibold"># de evaluaciones:</span> {{ totalEvaluationsForTooltips }}</p>
                                       </div>
-                                    </div>
+                                    </div> -->
                                   </div>
                                 </div>
                               </td>
@@ -501,10 +501,10 @@
                                     <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide" :style="getRiskBadgeSolidStyle(getItemAverageRiskLevel(item.puntaje))">
                                       {{ getRiskLevelLabel(getItemAverageRiskLevel(item.puntaje)) }}
                                     </span>
-                                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                                    <!-- <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700">
                                       {{ formatIntegerScore(item.puntaje) }}
-                                    </span>
-                                    <div class="relative group shrink-0">
+                                    </span> -->
+                                    <!-- <div class="relative group shrink-0">
                                       <button
                                         type="button"
                                         class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 bg-white text-[9px] font-bold leading-none text-slate-500 transition-colors hover:text-slate-700"
@@ -516,7 +516,7 @@
                                         <p><span class="font-semibold">Suma total:</span> {{ formatIntegerScore(getItemTotalScore(item.puntaje)) }}</p>
                                         <p><span class="font-semibold"># de evaluaciones:</span> {{ totalEvaluationsForTooltips }}</p>
                                       </div>
-                                    </div>
+                                    </div> -->
                                   </div>
                                 </div>
                               </td>
