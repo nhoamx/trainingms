@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DemographicData;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\User;
@@ -230,6 +231,54 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->where('violenceLaborStatistics.question_numbers', [57, 58, 59, 60, 61, 62, 63, 64])
             ->where('violenceLaborStatistics.total_evaluated', 1)
             ->has('violenceLaborStatistics.questions', 8)
+        );
+    }
+
+    public function test_dashboard_filters_general_report_by_demographic_query_params(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        $maleEvaluation = PaperEvaluation::factory()->referenciaIII()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+        ]);
+
+        DemographicData::query()->create([
+            'paper_evaluation_id' => $maleEvaluation->id,
+            'gender' => 'Masculino',
+            'position' => 'Operador',
+            'department' => 'Produccion',
+            'work_schedule' => 'Matutino',
+        ]);
+
+        $femaleEvaluation = PaperEvaluation::factory()->referenciaIII()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+        ]);
+
+        DemographicData::query()->create([
+            'paper_evaluation_id' => $femaleEvaluation->id,
+            'gender' => 'Femenino',
+            'position' => 'Supervisora',
+            'department' => 'Calidad',
+            'work_schedule' => 'Vespertino',
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035', [
+                'workCenter' => $workCenter,
+                'genero' => 'Masculino',
+            ]));
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIIIDashboard')
+            ->where('generalReport.total_evaluations', 1)
         );
     }
 }

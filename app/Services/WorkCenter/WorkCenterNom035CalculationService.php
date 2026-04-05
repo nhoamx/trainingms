@@ -4,6 +4,7 @@ namespace App\Services\WorkCenter;
 
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
+use Illuminate\Database\Eloquent\Builder;
 
 class WorkCenterNom035CalculationService
 {
@@ -316,7 +317,7 @@ class WorkCenterNom035CalculationService
             return $this->getEmptyQuestionStatistics();
         }
 
-        $questionsConfig = config('referencia_iii.general');
+        $questionsConfig = $this->getReferenciaIIIQuestionTexts();
         $domainConfig = config('question_dimensions');
         $answerValues = config('answer_values');
 
@@ -551,7 +552,7 @@ class WorkCenterNom035CalculationService
 
         $riskLevels = config('nom035_risk_levels');
         $answerValues = config('answer_values');
-        $questionsConfig = config('referencia_iii.general', []);
+        $questionsConfig = $this->getReferenciaIIIQuestionTexts();
 
         $totalByLevel = [
             'nulo' => 0,
@@ -763,14 +764,22 @@ class WorkCenterNom035CalculationService
      *
      * @return array{total_evaluations:int, average_total_score:float, total_score:int, max_score:int, percentage:float, final_average_score:float, final_max_score:int, final_percentage:float, final_risk_level:string, final_risk_label:string, rows:array<int, array{categoria:array{nombre:string,score:int,nivel_riesgo:string}, dominio:array{nombre:string,score:int,nivel_riesgo:string}, dimension:array{nombre:string,score:int,nivel_riesgo:string}, item:string, item_numero:int, puntaje:float}>}
      */
-    public function getGeneralDetailedReport(WorkCenter $workCenter): array
+    /**
+     * @param  array{genero?:string,puesto?:string,area?:string,turno?:string}|null  $demographicFilters
+     */
+    public function getGeneralDetailedReport(WorkCenter $workCenter, ?array $demographicFilters = null): array
     {
-        $evaluations = PaperEvaluation::query()
+        $evaluationsQuery = PaperEvaluation::query()
             ->where('work_center_id', $workCenter->id)
             ->where('processing_status', 'completed')
             ->whereNotNull('referencia_iii_answers')
-            ->select(['id', 'referencia_iii_answers', 'referencia_iii_conditional'])
-            ->get();
+            ->select(['id', 'referencia_iii_answers', 'referencia_iii_conditional']);
+
+        if (is_array($demographicFilters) && $demographicFilters !== []) {
+            $this->applyDemographicFilters($evaluationsQuery, $demographicFilters);
+        }
+
+        $evaluations = $evaluationsQuery->get();
 
         if ($evaluations->isEmpty()) {
             return [
@@ -790,7 +799,7 @@ class WorkCenterNom035CalculationService
 
         $domainConfig = config('question_dimensions');
         $riskLevels = config('nom035_risk_levels');
-        $questionsConfig = config('referencia_iii.general', []);
+        $questionsConfig = $this->getReferenciaIIIQuestionTexts();
 
         $questionTotals = [];
         $questionResponseCounts = [];
@@ -811,7 +820,7 @@ class WorkCenterNom035CalculationService
         $totalScore = 0;
 
         foreach ($evaluations as $evaluation) {
-            $answers = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
+            $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
             $totalScore += $this->calculateTotalScore($evaluation);
 
             foreach ($questionTotals as $questionKey => $_) {
@@ -833,6 +842,11 @@ class WorkCenterNom035CalculationService
                 : 0.0;
         }
 
+        $questionNormalizedScores = array_map(
+            static fn (float $average): int => (int) round($average),
+            $questionAverages
+        );
+
         $totalEvaluations = $evaluations->count();
         $rows = [];
         $overallScore = 0;
@@ -846,13 +860,12 @@ class WorkCenterNom035CalculationService
                 $domainDimensionMap = [];
 
                 foreach ($dimensions as $dimensionName => $questions) {
-                    $dimensionValues = $this->getValidQuestionTotals($questions, $questionTotals);
-                    $dimensionScore = $dimensionValues === []
-                        ? 0
-                        : (int) round(array_sum($dimensionValues));
-                    $normalizedDimensionScore = $this->normalizeOrganizationalScore($dimensionScore, $totalEvaluations);
+                    $dimensionScore = array_sum(array_map(
+                        fn (int|string $questionNumber): int => $questionNormalizedScores[$this->normalizeQuestionKey($questionNumber)] ?? 0,
+                        $questions
+                    ));
 
-                    $dimensionRiskLevel = $this->getDimensionRiskLevel($normalizedDimensionScore, $dimensionName, $riskLevels);
+                    $dimensionRiskLevel = $this->getDimensionRiskLevel($dimensionScore, $dimensionName, $riskLevels);
 
                     $domainDimensionMap[$dimensionName] = [
                         'score' => $dimensionScore,
@@ -865,7 +878,7 @@ class WorkCenterNom035CalculationService
                 $categoryDimensionMap[$domainName] = [
                     'score' => (int) $domainScore,
                     'nivel_riesgo' => $this->getRiskLevel(
-                        $this->normalizeOrganizationalScore($domainScore, $totalEvaluations),
+                        $domainScore,
                         $domainName,
                         $riskLevels
                     ),
@@ -879,7 +892,7 @@ class WorkCenterNom035CalculationService
             $overallScore += $categoryScoreInt;
 
             $categoryRiskLevel = $this->getCategoryRiskLevel(
-                $this->normalizeOrganizationalScore($categoryScoreInt, $totalEvaluations),
+                $categoryScoreInt,
                 $categoryName,
                 $riskLevels
             );
@@ -913,8 +926,8 @@ class WorkCenterNom035CalculationService
         }
 
         $globalMaxPerEvaluation = (int) ($riskLevels['global']['max_score'] ?? 0);
-        $globalMaxScore = $globalMaxPerEvaluation * $totalEvaluations;
-        $finalAverageScore = $this->normalizeOrganizationalScore($overallScore, $totalEvaluations);
+        $globalMaxScore = $globalMaxPerEvaluation;
+        $finalAverageScore = (float) $overallScore;
         $finalRiskLevel = $this->getGlobalRiskLevel($finalAverageScore, $riskLevels);
 
         return [
@@ -930,6 +943,63 @@ class WorkCenterNom035CalculationService
             'final_risk_label' => $riskLevels['labels'][$finalRiskLevel] ?? 'Nulo',
             'rows' => $rows,
         ];
+    }
+
+    /**
+     * Merge base Referencia III answers with conditional management answers (65-72) when applicable.
+     *
+     * @return array<int|string, mixed>
+     */
+    private function getMergedReferenciaIIIAnswers(PaperEvaluation $evaluation): array
+    {
+        $answers = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
+        $conditionalAnswers = is_array($evaluation->referencia_iii_conditional) ? $evaluation->referencia_iii_conditional : [];
+
+        foreach ($this->getEnabledConditionalQuestionAnswers($conditionalAnswers) as $questionNumber => $answer) {
+            if ($answer === null || is_array($answer)) {
+                continue;
+            }
+
+            $answers[$this->normalizeQuestionKey($questionNumber)] = $answer;
+        }
+
+        return $answers;
+    }
+
+    /**
+     * @param  array{genero?:string,puesto?:string,area?:string,turno?:string}  $filters
+     */
+    private function applyDemographicFilters(Builder $evaluationsQuery, array $filters): void
+    {
+        $filterMap = [
+            'genero' => 'gender',
+            'puesto' => 'position',
+            'area' => 'department',
+            'turno' => 'work_schedule',
+        ];
+
+        foreach ($filterMap as $filterKey => $column) {
+            $value = $filters[$filterKey] ?? null;
+            if (! is_string($value) || trim($value) === '') {
+                continue;
+            }
+
+            $normalizedValue = trim($value);
+
+            $evaluationsQuery->whereHas('demographicData', function (Builder $query) use ($column, $normalizedValue): void {
+                if ($normalizedValue === 'No especificado') {
+                    $query->where(function (Builder $nestedQuery) use ($column): void {
+                        $nestedQuery
+                            ->whereNull($column)
+                            ->orWhere($column, '');
+                    });
+
+                    return;
+                }
+
+                $query->where($column, $normalizedValue);
+            });
+        }
     }
 
     private function getQuestionScoreFromAnswer(array $answers, int|string $questionNumber): int
@@ -1083,24 +1153,18 @@ class WorkCenterNom035CalculationService
     private function calculateTotalScore(PaperEvaluation $evaluation): int
     {
         $answers = $evaluation->referencia_iii_answers ?? [];
-        $conditionalAnswers = $evaluation->referencia_iii_conditional ?? [];
+        $conditionalAnswers = is_array($evaluation->referencia_iii_conditional) ? $evaluation->referencia_iii_conditional : [];
         $answerValues = config('answer_values');
         $totalScore = 0;
 
-        $isManager = isset($conditionalAnswers['management']['condition'])
-            && $conditionalAnswers['management']['condition'] === 'SI';
-
-        $managementQuestions = [];
-        if ($isManager && isset($conditionalAnswers['management']['questions'])) {
-            $managementQuestions = $conditionalAnswers['management']['questions'];
-        }
+        $enabledConditionalQuestions = $this->getEnabledConditionalQuestionAnswers($conditionalAnswers);
 
         foreach ($answers as $questionNumber => $answer) {
             if ($answer === null || is_array($answer)) {
                 continue;
             }
 
-            if (in_array($questionNumber, [69, 70, 71, 72])) {
+            if (in_array($questionNumber, [65, 66, 67, 68, 69, 70, 71, 72], true)) {
                 continue;
             }
 
@@ -1112,8 +1176,8 @@ class WorkCenterNom035CalculationService
             $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
         }
 
-        if ($isManager && ! empty($managementQuestions)) {
-            foreach ($managementQuestions as $questionNumber => $answer) {
+        if ($enabledConditionalQuestions !== []) {
+            foreach ($enabledConditionalQuestions as $questionNumber => $answer) {
                 if ($answer === null || is_array($answer)) {
                     continue;
                 }
@@ -1128,6 +1192,72 @@ class WorkCenterNom035CalculationService
         }
 
         return $totalScore;
+    }
+
+    /**
+     * @param  array<string, mixed>  $conditionalAnswers
+     * @return array<int|string, mixed>
+     */
+    private function getEnabledConditionalQuestionAnswers(array $conditionalAnswers): array
+    {
+        $enabledQuestions = [];
+
+        foreach ($conditionalAnswers as $section) {
+            if (! is_array($section)) {
+                continue;
+            }
+
+            $isEnabled = isset($section['condition']) && $section['condition'] === 'SI';
+            $questions = $section['questions'] ?? null;
+
+            if (! $isEnabled || ! is_array($questions)) {
+                continue;
+            }
+
+            foreach ($questions as $questionNumber => $answer) {
+                $enabledQuestions[$questionNumber] = $answer;
+            }
+        }
+
+        return $enabledQuestions;
+    }
+
+    /**
+     * @return array<int|string, string>
+     */
+    private function getReferenciaIIIQuestionTexts(): array
+    {
+        $generalQuestions = config('referencia_iii.general', []);
+        $conditionalSections = config('referencia_iii.conditional_sections', []);
+
+        if (! is_array($generalQuestions)) {
+            $generalQuestions = [];
+        }
+
+        if (! is_array($conditionalSections)) {
+            return $generalQuestions;
+        }
+
+        $questionTexts = $generalQuestions;
+
+        foreach ($conditionalSections as $section) {
+            if (! is_array($section)) {
+                continue;
+            }
+
+            $questions = $section['questions'] ?? null;
+            if (! is_array($questions)) {
+                continue;
+            }
+
+            foreach ($questions as $questionNumber => $questionText) {
+                if (is_string($questionText) && trim($questionText) !== '') {
+                    $questionTexts[(int) $questionNumber] = $questionText;
+                }
+            }
+        }
+
+        return $questionTexts;
     }
 
     private function mapScoreToRiskLevel(int $score): string

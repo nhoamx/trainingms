@@ -502,7 +502,7 @@
                                       {{ getRiskLevelLabel(getItemAverageRiskLevel(item.puntaje)) }}
                                     </span>
                                     <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                                      {{ formatScore(item.puntaje) }}
+                                      {{ formatIntegerScore(item.puntaje) }}
                                     </span>
                                     <div class="relative group shrink-0">
                                       <button
@@ -1089,7 +1089,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import DomainCharts from './Charts/DomainCharts.vue';
 import CategoryCharts from './Charts/CategoryCharts.vue';
@@ -1375,6 +1375,38 @@ const analysisFilters = ref({
   area: '',
   turno: '',
 });
+
+let generalReportReloadTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(
+  analysisFilters,
+  (filters) => {
+    if (!props.workCenterId) {
+      return;
+    }
+
+    if (generalReportReloadTimer) {
+      clearTimeout(generalReportReloadTimer);
+    }
+
+    generalReportReloadTimer = setTimeout(() => {
+      router.visit(window.location.pathname, {
+        method: 'get',
+        only: ['generalReport'],
+        data: {
+          genero: filters.genero || undefined,
+          puesto: filters.puesto || undefined,
+          area: filters.area || undefined,
+          turno: filters.turno || undefined,
+        },
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+      });
+    }, 150);
+  },
+  { deep: true }
+);
 
 // Modal state for risk details
 const showRiskModal = ref(false);
@@ -2051,12 +2083,7 @@ const getGlobalRiskRangeText = (riskLevel: string): string => {
 };
 
 const getAverageByEvaluations = (totalScore: number): string => {
-  const evaluations = totalEvaluationsForTooltips.value;
-  if (evaluations <= 0) {
-    return '0';
-  }
-
-  return formatIntegerScore(totalScore / evaluations);
+  return formatIntegerScore(totalScore);
 };
 
 const normalizeRiskLevel = (riskLevel?: string | null): string => {
@@ -2129,19 +2156,21 @@ const getRiskContainerStyle = (riskLevel?: string | null): Record<string, string
 };
 
 const getItemAverageRiskLevel = (score: number): string => {
-  if (score <= 0.8) {
+  const normalizedScore = Math.max(0, Math.round(Number(score)));
+
+  if (normalizedScore === 0) {
     return 'nulo';
   }
 
-  if (score <= 1.6) {
+  if (normalizedScore === 1) {
     return 'bajo';
   }
 
-  if (score <= 2.4) {
+  if (normalizedScore === 2) {
     return 'medio';
   }
 
-  if (score <= 3.2) {
+  if (normalizedScore === 3) {
     return 'alto';
   }
 
