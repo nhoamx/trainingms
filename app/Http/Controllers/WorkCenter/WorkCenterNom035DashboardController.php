@@ -9,6 +9,7 @@ use App\Models\WorkCenter;
 use App\Services\OrganizationReportCacheService;
 use App\Services\WorkCenter\WorkCenterNom035CalculationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,7 +34,7 @@ class WorkCenterNom035DashboardController extends Controller
     /**
      * Muestra el dashboard NOM-035 para un centro de trabajo
      */
-    public function show(WorkCenter $workCenter): Response
+    public function show(Request $request, WorkCenter $workCenter): Response
     {
         $this->authorize('viewWorkCenterDashboard', $workCenter);
 
@@ -73,10 +74,19 @@ class WorkCenterNom035DashboardController extends Controller
 
         $analysisData = $this->calculationService->getEvaluationsWithDemographicsAndScores($workCenter);
 
-        $generalReport = Cache::rememberForever(
-            $this->cacheService->getWcNom035GeneralReportCacheKey($workCenter->id),
-            fn () => $this->calculationService->getGeneralDetailedReport($workCenter)
-        );
+        $demographicFilters = array_filter([
+            'genero' => $request->string('genero')->toString(),
+            'puesto' => $request->string('puesto')->toString(),
+            'area' => $request->string('area')->toString(),
+            'turno' => $request->string('turno')->toString(),
+        ], static fn (string $value): bool => trim($value) !== '');
+
+        $generalReport = $demographicFilters === []
+            ? Cache::rememberForever(
+                $this->cacheService->getWcNom035GeneralReportCacheKey($workCenter->id),
+                fn () => $this->calculationService->getGeneralDetailedReport($workCenter)
+            )
+            : $this->calculationService->getGeneralDetailedReport($workCenter, $demographicFilters);
 
         $violenceLaborStatistics = Cache::rememberForever(
             $this->cacheService->getWcNom035ViolenceCacheKey($workCenter->id),

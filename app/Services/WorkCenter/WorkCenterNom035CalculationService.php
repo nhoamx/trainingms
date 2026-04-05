@@ -4,6 +4,7 @@ namespace App\Services\WorkCenter;
 
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
+use Illuminate\Database\Eloquent\Builder;
 
 class WorkCenterNom035CalculationService
 {
@@ -293,6 +294,7 @@ class WorkCenterNom035CalculationService
                 'percentage' => $maxScore > 0 ? round(($average / $maxScore) * 100, 2) : 0,
                 'risk_level' => $averageLevel,
                 'risk_level_label' => $riskLevels['labels'][$averageLevel],
+                'levels' => $riskLevels['global']['levels'] ?? [],
                 'distribution' => $globalDistribution,
                 'total_evaluations' => count($globalScores),
             ],
@@ -315,7 +317,7 @@ class WorkCenterNom035CalculationService
             return $this->getEmptyQuestionStatistics();
         }
 
-        $questionsConfig = config('referencia_iii.general');
+        $questionsConfig = $this->getReferenciaIIIQuestionTexts();
         $domainConfig = config('question_dimensions');
         $answerValues = config('answer_values');
 
@@ -481,24 +483,23 @@ class WorkCenterNom035CalculationService
                 $answers = $evaluation->referencia_iii_answers ?? [];
 
                 foreach ($questions as $questionNumber) {
-                    if (isset($answers[$questionNumber])) {
-                        $answer = $answers[$questionNumber];
+                    $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
 
-                        if (is_array($answer)) {
-                            continue;
-                        }
+                    if ($answer === null || is_array($answer)) {
+                        continue;
+                    }
 
-                        $label = $responseLabels[$answer] ?? null;
-                        if ($label) {
-                            $blockStats[$blockNumber]['responses'][$label]++;
-                            $totalResponses++;
+                    $label = $responseLabels[$answer] ?? null;
+                    if ($label) {
+                        $blockStats[$blockNumber]['responses'][$label]++;
+                        $totalResponses++;
 
-                            $answerValues = config('answer_values');
-                            $group = in_array($questionNumber, $answerValues['group1']['questions'])
-                                ? 'group1'
-                                : 'group2';
-                            $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
-                        }
+                        $answerValues = config('answer_values');
+                        $questionKey = $this->normalizeQuestionKey($questionNumber);
+                        $group = in_array($questionKey, $answerValues['group1']['questions'], true)
+                            ? 'group1'
+                            : 'group2';
+                        $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
                     }
                 }
             }
@@ -551,7 +552,7 @@ class WorkCenterNom035CalculationService
 
         $riskLevels = config('nom035_risk_levels');
         $answerValues = config('answer_values');
-        $questionsConfig = config('referencia_iii.general', []);
+        $questionsConfig = $this->getReferenciaIIIQuestionTexts();
 
         $totalByLevel = [
             'nulo' => 0,
@@ -581,13 +582,13 @@ class WorkCenterNom035CalculationService
             $questionLevels = [];
 
             foreach ($violenceQuestions as $questionNumber) {
-                $answer = $answers[$questionNumber] ?? null;
+                $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
                 if ($answer === null || is_array($answer)) {
                     continue;
                 }
 
-                $questionKey = str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT);
-                $group = in_array($questionKey, $answerValues['group1']['questions'])
+                $questionKey = $this->normalizeQuestionKey($questionNumber);
+                $group = in_array($questionKey, $answerValues['group1']['questions'], true)
                     ? 'group1'
                     : 'group2';
 
@@ -758,126 +759,308 @@ class WorkCenterNom035CalculationService
     /**
      * Build aggregated report rows for category/domain/dimension/item detail table.
      *
-     * The structure mirrors the single-participant detail table but averages scores
-     * across all completed Ref III evaluations in the work center.
+     * Category, domain and dimension use summed scores (NOM-035 ranges are sum-based).
+     * Item keeps average score (0-4) for UI display and coloring only.
      *
-     * @return array{total_evaluations:int, average_total_score:float, rows:array<int, array{categoria:array{nombre:string,puntaje:float,nivel_riesgo:string}, dominio:array{nombre:string,puntaje:float,nivel_riesgo:string}, dimension:string, item:string, item_numero:int, puntaje:float}>}
+     * @return array{total_evaluations:int, average_total_score:float, total_score:int, max_score:int, percentage:float, final_average_score:float, final_max_score:int, final_percentage:float, final_risk_level:string, final_risk_label:string, rows:array<int, array{categoria:array{nombre:string,score:int,nivel_riesgo:string}, dominio:array{nombre:string,score:int,nivel_riesgo:string}, dimension:array{nombre:string,score:int,nivel_riesgo:string}, item:string, item_numero:int, puntaje:float}>}
      */
-    public function getGeneralDetailedReport(WorkCenter $workCenter): array
+    /**
+     * @param  array{genero?:string,puesto?:string,area?:string,turno?:string}|null  $demographicFilters
+     */
+    public function getGeneralDetailedReport(WorkCenter $workCenter, ?array $demographicFilters = null): array
     {
-        $evaluations = PaperEvaluation::query()
+        $evaluationsQuery = PaperEvaluation::query()
             ->where('work_center_id', $workCenter->id)
             ->where('processing_status', 'completed')
             ->whereNotNull('referencia_iii_answers')
-            ->select(['id', 'referencia_iii_answers', 'referencia_iii_conditional'])
-            ->get();
+            ->select(['id', 'referencia_iii_answers', 'referencia_iii_conditional']);
+
+        if (is_array($demographicFilters) && $demographicFilters !== []) {
+            $this->applyDemographicFilters($evaluationsQuery, $demographicFilters);
+        }
+
+        $evaluations = $evaluationsQuery->get();
 
         if ($evaluations->isEmpty()) {
             return [
                 'total_evaluations' => 0,
                 'average_total_score' => 0.0,
+                'total_score' => 0,
+                'max_score' => 0,
+                'percentage' => 0.0,
+                'final_average_score' => 0.0,
+                'final_max_score' => 0,
+                'final_percentage' => 0.0,
+                'final_risk_level' => 'nulo',
+                'final_risk_label' => 'Nulo',
                 'rows' => [],
             ];
         }
 
         $domainConfig = config('question_dimensions');
         $riskLevels = config('nom035_risk_levels');
-        $questionsConfig = config('referencia_iii.general', []);
+        $questionsConfig = $this->getReferenciaIIIQuestionTexts();
 
-        $categoryTotals = [];
-        $domainTotals = [];
-        $dimensionTotals = [];
-        $itemTotals = [];
-        $totalScore = 0;
+        $questionTotals = [];
+        $questionResponseCounts = [];
+        $questionAverages = [];
 
-        foreach ($evaluations as $evaluation) {
-            $answers = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
-            $totalScore += $this->calculateTotalScore($evaluation);
-
-            foreach ($domainConfig as $categoryName => $domains) {
-                if (! isset($categoryTotals[$categoryName])) {
-                    $categoryTotals[$categoryName] = 0;
-                }
-
-                $categoryScore = 0;
-
-                foreach ($domains as $domainName => $dimensions) {
-                    $domainScore = $this->calculateDomainScore($answers, [$domainName => $dimensions]);
-                    $domainTotals[$domainName] = ($domainTotals[$domainName] ?? 0) + $domainScore;
-                    $categoryScore += $domainScore;
-
-                    foreach ($dimensions as $dimensionName => $questions) {
-                        $dimensionScore = $this->calculateDimensionScore($answers, $questions);
-                        $dimensionTotals[$dimensionName] = ($dimensionTotals[$dimensionName] ?? 0) + $dimensionScore;
-
-                        foreach ($questions as $questionNumber) {
-                            $itemScore = $this->getQuestionScoreFromAnswer($answers, $questionNumber);
-
-                            $itemTotals[$questionNumber] = ($itemTotals[$questionNumber] ?? 0) + $itemScore;
-                        }
+        foreach ($domainConfig as $domains) {
+            foreach ($domains as $dimensions) {
+                foreach ($dimensions as $questions) {
+                    foreach ($questions as $questionNumber) {
+                        $questionKey = $this->normalizeQuestionKey($questionNumber);
+                        $questionTotals[$questionKey] = 0.0;
+                        $questionResponseCounts[$questionKey] = 0;
                     }
                 }
-
-                $categoryTotals[$categoryName] += $categoryScore;
             }
         }
 
+        $totalScore = 0;
+
+        foreach ($evaluations as $evaluation) {
+            $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
+            $totalScore += $this->calculateTotalScore($evaluation);
+
+            foreach ($questionTotals as $questionKey => $_) {
+                $rawAnswer = $this->getAnswerByQuestionNumber($answers, $questionKey);
+
+                if ($rawAnswer === null || is_array($rawAnswer)) {
+                    continue;
+                }
+
+                $questionTotals[$questionKey] += $this->getQuestionScoreFromAnswer($answers, $questionKey);
+                $questionResponseCounts[$questionKey]++;
+            }
+        }
+
+        foreach ($questionTotals as $questionKey => $total) {
+            $responses = $questionResponseCounts[$questionKey] ?? 0;
+            $questionAverages[$questionKey] = $responses > 0
+                ? $total / $responses
+                : 0.0;
+        }
+
+        $questionNormalizedScores = array_map(
+            static fn (float $average): int => (int) round($average),
+            $questionAverages
+        );
+
         $totalEvaluations = $evaluations->count();
         $rows = [];
+        $overallScore = 0;
 
         foreach ($domainConfig as $categoryName => $domains) {
-            $categoryAverage = round(($categoryTotals[$categoryName] ?? 0) / $totalEvaluations, 2);
-            $categoryRiskLevel = $this->getCategoryRiskLevel($categoryAverage, $categoryName, $riskLevels);
+            $categoryScore = 0.0;
+            $categoryDimensionMap = [];
 
             foreach ($domains as $domainName => $dimensions) {
-                $domainAverage = round(($domainTotals[$domainName] ?? 0) / $totalEvaluations, 2);
-                $domainRiskLevel = $this->getRiskLevel($domainAverage, $domainName, $riskLevels);
+                $domainScore = 0.0;
+                $domainDimensionMap = [];
 
+                foreach ($dimensions as $dimensionName => $questions) {
+                    $dimensionScore = array_sum(array_map(
+                        fn (int|string $questionNumber): int => $questionNormalizedScores[$this->normalizeQuestionKey($questionNumber)] ?? 0,
+                        $questions
+                    ));
+
+                    $dimensionRiskLevel = $this->getDimensionRiskLevel($dimensionScore, $dimensionName, $riskLevels);
+
+                    $domainDimensionMap[$dimensionName] = [
+                        'score' => $dimensionScore,
+                        'nivel_riesgo' => $dimensionRiskLevel,
+                    ];
+
+                    $domainScore += $dimensionScore;
+                }
+
+                $categoryDimensionMap[$domainName] = [
+                    'score' => (int) $domainScore,
+                    'nivel_riesgo' => $this->getRiskLevel(
+                        $domainScore,
+                        $domainName,
+                        $riskLevels
+                    ),
+                    'dimensions' => $domainDimensionMap,
+                ];
+
+                $categoryScore += $domainScore;
+            }
+
+            $categoryScoreInt = (int) $categoryScore;
+            $overallScore += $categoryScoreInt;
+
+            $categoryRiskLevel = $this->getCategoryRiskLevel(
+                $categoryScoreInt,
+                $categoryName,
+                $riskLevels
+            );
+
+            foreach ($domains as $domainName => $dimensions) {
                 foreach ($dimensions as $dimensionName => $questions) {
                     foreach ($questions as $questionNumber) {
                         $rows[] = [
                             'categoria' => [
                                 'nombre' => $categoryName,
-                                'puntaje' => $categoryAverage,
+                                'score' => $categoryScoreInt,
                                 'nivel_riesgo' => $categoryRiskLevel,
                             ],
                             'dominio' => [
                                 'nombre' => $domainName,
-                                'puntaje' => $domainAverage,
-                                'nivel_riesgo' => $domainRiskLevel,
+                                'score' => $categoryDimensionMap[$domainName]['score'] ?? 0,
+                                'nivel_riesgo' => $categoryDimensionMap[$domainName]['nivel_riesgo'] ?? 'nulo',
                             ],
-                            'dimension' => $dimensionName,
+                            'dimension' => [
+                                'nombre' => $dimensionName,
+                                'score' => $categoryDimensionMap[$domainName]['dimensions'][$dimensionName]['score'] ?? 0,
+                                'nivel_riesgo' => $categoryDimensionMap[$domainName]['dimensions'][$dimensionName]['nivel_riesgo'] ?? 'nulo',
+                            ],
                             'item' => $questionsConfig[$questionNumber] ?? "Pregunta {$questionNumber}",
                             'item_numero' => (int) $questionNumber,
-                            'puntaje' => round(($itemTotals[$questionNumber] ?? 0) / $totalEvaluations, 2),
+                            'puntaje' => round($questionAverages[$this->normalizeQuestionKey($questionNumber)] ?? 0.0, 2),
                         ];
                     }
                 }
             }
         }
 
+        $globalMaxPerEvaluation = (int) ($riskLevels['global']['max_score'] ?? 0);
+        $globalMaxScore = $globalMaxPerEvaluation;
+        $finalAverageScore = (float) $overallScore;
+        $finalRiskLevel = $this->getGlobalRiskLevel($finalAverageScore, $riskLevels);
+
         return [
             'total_evaluations' => $totalEvaluations,
             'average_total_score' => round($totalScore / $totalEvaluations, 2),
+            'total_score' => $overallScore,
+            'max_score' => $globalMaxScore,
+            'percentage' => $globalMaxScore > 0 ? round(($overallScore / $globalMaxScore) * 100, 2) : 0.0,
+            'final_average_score' => round($finalAverageScore, 2),
+            'final_max_score' => $globalMaxPerEvaluation,
+            'final_percentage' => $globalMaxPerEvaluation > 0 ? round(($finalAverageScore / $globalMaxPerEvaluation) * 100, 2) : 0.0,
+            'final_risk_level' => $finalRiskLevel,
+            'final_risk_label' => $riskLevels['labels'][$finalRiskLevel] ?? 'Nulo',
             'rows' => $rows,
         ];
     }
 
+    /**
+     * Merge base Referencia III answers with conditional management answers (65-72) when applicable.
+     *
+     * @return array<int|string, mixed>
+     */
+    private function getMergedReferenciaIIIAnswers(PaperEvaluation $evaluation): array
+    {
+        $answers = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
+        $conditionalAnswers = is_array($evaluation->referencia_iii_conditional) ? $evaluation->referencia_iii_conditional : [];
+
+        foreach ($this->getEnabledConditionalQuestionAnswers($conditionalAnswers) as $questionNumber => $answer) {
+            if ($answer === null || is_array($answer)) {
+                continue;
+            }
+
+            $answers[$this->normalizeQuestionKey($questionNumber)] = $answer;
+        }
+
+        return $answers;
+    }
+
+    /**
+     * @param  array{genero?:string,puesto?:string,area?:string,turno?:string}  $filters
+     */
+    private function applyDemographicFilters(Builder $evaluationsQuery, array $filters): void
+    {
+        $filterMap = [
+            'genero' => 'gender',
+            'puesto' => 'position',
+            'area' => 'department',
+            'turno' => 'work_schedule',
+        ];
+
+        foreach ($filterMap as $filterKey => $column) {
+            $value = $filters[$filterKey] ?? null;
+            if (! is_string($value) || trim($value) === '') {
+                continue;
+            }
+
+            $normalizedValue = trim($value);
+
+            $evaluationsQuery->whereHas('demographicData', function (Builder $query) use ($column, $normalizedValue): void {
+                if ($normalizedValue === 'No especificado') {
+                    $query->where(function (Builder $nestedQuery) use ($column): void {
+                        $nestedQuery
+                            ->whereNull($column)
+                            ->orWhere($column, '');
+                    });
+
+                    return;
+                }
+
+                $query->where($column, $normalizedValue);
+            });
+        }
+    }
+
     private function getQuestionScoreFromAnswer(array $answers, int|string $questionNumber): int
     {
-        $answer = $answers[$questionNumber] ?? null;
+        $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
 
         if ($answer === null || is_array($answer)) {
             return 0;
         }
 
         $answerValues = config('answer_values');
-        $questionKey = str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT);
+        $questionKey = $this->normalizeQuestionKey($questionNumber);
         $group = in_array($questionKey, $answerValues['group1']['questions'], true)
             ? 'group1'
             : 'group2';
 
         return $answerValues[$group]['values'][$answer] ?? 0;
+    }
+
+    /**
+     * @param  array<int, int|string>  $questions
+     * @param  array<string, float|int|string|null>  $questionTotals
+     * @return array<int, float>
+     */
+    private function getValidQuestionTotals(array $questions, array $questionTotals): array
+    {
+        $values = array_map(
+            fn (int|string $questionNumber): mixed => $questionTotals[$this->normalizeQuestionKey($questionNumber)] ?? null,
+            $questions
+        );
+
+        $values = array_values(array_filter(
+            $values,
+            static fn (mixed $value): bool => is_numeric($value) && is_finite((float) $value)
+        ));
+
+        return array_map(static fn (mixed $value): float => (float) $value, $values);
+    }
+
+    private function normalizeQuestionKey(int|string $questionNumber): string
+    {
+        return str_pad((string) ((int) $questionNumber), 2, '0', STR_PAD_LEFT);
+    }
+
+    private function getAnswerByQuestionNumber(array $answers, int|string $questionNumber): mixed
+    {
+        $questionKey = $this->normalizeQuestionKey($questionNumber);
+
+        return $answers[$questionKey]
+            ?? $answers[(string) ((int) $questionNumber)]
+            ?? $answers[(int) $questionNumber]
+            ?? null;
+    }
+
+    private function normalizeOrganizationalScore(int|float $score, int $totalEmployees): float
+    {
+        if ($totalEmployees <= 0) {
+            return 0.0;
+        }
+
+        return (float) $score / $totalEmployees;
     }
 
     /**
@@ -891,13 +1074,14 @@ class WorkCenterNom035CalculationService
         foreach ($categories as $categoryName => $subcategories) {
             foreach ($subcategories as $subcategoryName => $questions) {
                 foreach ($questions as $questionNumber) {
-                    $answer = $answers[$questionNumber] ?? null;
+                    $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
 
                     if ($answer === null) {
                         continue;
                     }
 
-                    $group = in_array(str_pad($questionNumber, 2, '0', STR_PAD_LEFT), $answerValues['group1']['questions'])
+                    $questionKey = $this->normalizeQuestionKey($questionNumber);
+                    $group = in_array($questionKey, $answerValues['group1']['questions'], true)
                         ? 'group1'
                         : 'group2';
 
@@ -919,13 +1103,14 @@ class WorkCenterNom035CalculationService
 
         foreach ($subcategories as $subcategoryName => $questions) {
             foreach ($questions as $questionNumber) {
-                $answer = $answers[$questionNumber] ?? null;
+                $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
 
                 if ($answer === null) {
                     continue;
                 }
 
-                $group = in_array(str_pad($questionNumber, 2, '0', STR_PAD_LEFT), $answerValues['group1']['questions'])
+                $questionKey = $this->normalizeQuestionKey($questionNumber);
+                $group = in_array($questionKey, $answerValues['group1']['questions'], true)
                     ? 'group1'
                     : 'group2';
 
@@ -945,13 +1130,14 @@ class WorkCenterNom035CalculationService
         $answerValues = config('answer_values');
 
         foreach ($questions as $questionNumber) {
-            $answer = $answers[$questionNumber] ?? null;
+            $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
 
             if ($answer === null) {
                 continue;
             }
 
-            $group = in_array(str_pad($questionNumber, 2, '0', STR_PAD_LEFT), $answerValues['group1']['questions'])
+            $questionKey = $this->normalizeQuestionKey($questionNumber);
+            $group = in_array($questionKey, $answerValues['group1']['questions'], true)
                 ? 'group1'
                 : 'group2';
 
@@ -967,24 +1153,18 @@ class WorkCenterNom035CalculationService
     private function calculateTotalScore(PaperEvaluation $evaluation): int
     {
         $answers = $evaluation->referencia_iii_answers ?? [];
-        $conditionalAnswers = $evaluation->referencia_iii_conditional ?? [];
+        $conditionalAnswers = is_array($evaluation->referencia_iii_conditional) ? $evaluation->referencia_iii_conditional : [];
         $answerValues = config('answer_values');
         $totalScore = 0;
 
-        $isManager = isset($conditionalAnswers['management']['condition'])
-            && $conditionalAnswers['management']['condition'] === 'SI';
-
-        $managementQuestions = [];
-        if ($isManager && isset($conditionalAnswers['management']['questions'])) {
-            $managementQuestions = $conditionalAnswers['management']['questions'];
-        }
+        $enabledConditionalQuestions = $this->getEnabledConditionalQuestionAnswers($conditionalAnswers);
 
         foreach ($answers as $questionNumber => $answer) {
             if ($answer === null || is_array($answer)) {
                 continue;
             }
 
-            if (in_array($questionNumber, [69, 70, 71, 72])) {
+            if (in_array($questionNumber, [65, 66, 67, 68, 69, 70, 71, 72], true)) {
                 continue;
             }
 
@@ -996,8 +1176,8 @@ class WorkCenterNom035CalculationService
             $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
         }
 
-        if ($isManager && ! empty($managementQuestions)) {
-            foreach ($managementQuestions as $questionNumber => $answer) {
+        if ($enabledConditionalQuestions !== []) {
+            foreach ($enabledConditionalQuestions as $questionNumber => $answer) {
                 if ($answer === null || is_array($answer)) {
                     continue;
                 }
@@ -1012,6 +1192,72 @@ class WorkCenterNom035CalculationService
         }
 
         return $totalScore;
+    }
+
+    /**
+     * @param  array<string, mixed>  $conditionalAnswers
+     * @return array<int|string, mixed>
+     */
+    private function getEnabledConditionalQuestionAnswers(array $conditionalAnswers): array
+    {
+        $enabledQuestions = [];
+
+        foreach ($conditionalAnswers as $section) {
+            if (! is_array($section)) {
+                continue;
+            }
+
+            $isEnabled = isset($section['condition']) && $section['condition'] === 'SI';
+            $questions = $section['questions'] ?? null;
+
+            if (! $isEnabled || ! is_array($questions)) {
+                continue;
+            }
+
+            foreach ($questions as $questionNumber => $answer) {
+                $enabledQuestions[$questionNumber] = $answer;
+            }
+        }
+
+        return $enabledQuestions;
+    }
+
+    /**
+     * @return array<int|string, string>
+     */
+    private function getReferenciaIIIQuestionTexts(): array
+    {
+        $generalQuestions = config('referencia_iii.general', []);
+        $conditionalSections = config('referencia_iii.conditional_sections', []);
+
+        if (! is_array($generalQuestions)) {
+            $generalQuestions = [];
+        }
+
+        if (! is_array($conditionalSections)) {
+            return $generalQuestions;
+        }
+
+        $questionTexts = $generalQuestions;
+
+        foreach ($conditionalSections as $section) {
+            if (! is_array($section)) {
+                continue;
+            }
+
+            $questions = $section['questions'] ?? null;
+            if (! is_array($questions)) {
+                continue;
+            }
+
+            foreach ($questions as $questionNumber => $questionText) {
+                if (is_string($questionText) && trim($questionText) !== '') {
+                    $questionTexts[(int) $questionNumber] = $questionText;
+                }
+            }
+        }
+
+        return $questionTexts;
     }
 
     private function mapScoreToRiskLevel(int $score): string
@@ -1031,6 +1277,7 @@ class WorkCenterNom035CalculationService
     private function getRiskLevel(float $score, string $domainName, array $riskLevels): string
     {
         $levels = $riskLevels['domains'][$domainName]['levels'];
+        $score = round($score);
 
         foreach ($levels as $levelName => $range) {
             if ($score >= $range['min'] && $score <= $range['max']) {
@@ -1051,6 +1298,8 @@ class WorkCenterNom035CalculationService
         } else {
             $levels = $riskLevels['domains'][$categoryName]['levels'] ?? [];
         }
+
+        $score = round($score);
 
         foreach ($levels as $levelName => $range) {
             if ($score >= $range['min'] && $score <= $range['max']) {
@@ -1091,11 +1340,20 @@ class WorkCenterNom035CalculationService
      */
     private function getDimensionRiskLevel(float $score, string $dimensionName, array $riskLevels): string
     {
-        if (isset($riskLevels['dimensions'][$dimensionName]['levels'])) {
-            $levels = $riskLevels['dimensions'][$dimensionName]['levels'];
-        } else {
+        $normalizedName = mb_strtolower(trim($dimensionName));
+
+        $dimensions = array_change_key_case(
+            array_map(fn ($v) => $v, $riskLevels['dimensions']),
+            CASE_LOWER
+        );
+
+        if (! isset($dimensions[$normalizedName]['levels'])) {
             return 'nulo';
         }
+
+        $levels = $dimensions[$normalizedName]['levels'];
+
+        $score = round($score); // 👈 importante
 
         foreach ($levels as $levelName => $range) {
             if ($score >= $range['min'] && $score <= $range['max']) {
@@ -1272,6 +1530,7 @@ class WorkCenterNom035CalculationService
                 'percentage' => 0,
                 'risk_level' => 'nulo',
                 'risk_level_label' => $riskLevels['labels']['nulo'],
+                'levels' => $riskLevels['global']['levels'] ?? [],
                 'distribution' => [
                     'nulo' => 0,
                     'bajo' => 0,

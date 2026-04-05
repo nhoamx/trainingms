@@ -212,7 +212,7 @@ return [
                 'muy_alto' => ['min' => 7, 'max' => 999],
             ],
         ],
-        'Carga de trabajo cuantitativa' => [
+        'Cargas cuantitativas' => [
             'domain' => 'Carga de trabajo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 4],
@@ -222,7 +222,7 @@ return [
                 'muy_alto' => ['min' => 13, 'max' => 999],
             ],
         ],
-        'Ritmo de trabajo acelerado' => [
+        'Ritmos de trabajo acelerado' => [
             'domain' => 'Carga de trabajo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 2],
@@ -242,7 +242,7 @@ return [
                 'muy_alto' => ['min' => 17, 'max' => 999],
             ],
         ],
-        'Carga emocional' => [
+        'Cargas psicológicas emocionales' => [
             'domain' => 'Carga de trabajo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 2],
@@ -250,6 +250,16 @@ return [
                 'medio' => ['min' => 6, 'max' => 8],
                 'alto' => ['min' => 9, 'max' => 11],
                 'muy_alto' => ['min' => 12, 'max' => 999],
+            ],
+        ],
+        'Cargas de alta responsabilidad' => [
+            'domain' => 'Carga de trabajo',
+            'levels' => [
+                'nulo' => ['min' => 0, 'max' => 2],
+                'bajo' => ['min' => 3, 'max' => 4],
+                'medio' => ['min' => 5, 'max' => 6],
+                'alto' => ['min' => 7, 'max' => 8],
+                'muy_alto' => ['min' => 9, 'max' => 999],
             ],
         ],
         'Cargas contradictorias o inconsistentes' => [
@@ -302,7 +312,7 @@ return [
                 'muy_alto' => ['min' => 7, 'max' => 999],
             ],
         ],
-        'Jornada de trabajo y rotación de turnos' => [
+        'Jornadas de trabajo extensas' => [
             'domain' => 'Jornada de trabajo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 0],
@@ -312,17 +322,27 @@ return [
                 'muy_alto' => ['min' => 6, 'max' => 999],
             ],
         ],
-        'Interferencia en la relación trabajo-familia' => [
+        'Influencia del trabajo fuera del centro laboral' => [
             'domain' => 'Interferencia en la relación trabajo-familia',
             'levels' => [
-                'nulo' => ['min' => 0, 'max' => 3],
-                'bajo' => ['min' => 4, 'max' => 5],
-                'medio' => ['min' => 6, 'max' => 7],
-                'alto' => ['min' => 8, 'max' => 9],
-                'muy_alto' => ['min' => 10, 'max' => 999],
+                'nulo' => ['min' => 0, 'max' => 1],
+                'bajo' => ['min' => 2, 'max' => 3],
+                'medio' => ['min' => 4, 'max' => 5],
+                'alto' => ['min' => 6, 'max' => 7],
+                'muy_alto' => ['min' => 8, 'max' => 999],
             ],
         ],
-        'Liderazgo negativo' => [
+        'Influencia de las responsabilidades familiares' => [
+            'domain' => 'Interferencia en la relación trabajo-familia',
+            'levels' => [
+                'nulo' => ['min' => 0, 'max' => 1],
+                'bajo' => ['min' => 2, 'max' => 3],
+                'medio' => ['min' => 4, 'max' => 5],
+                'alto' => ['min' => 6, 'max' => 7],
+                'muy_alto' => ['min' => 8, 'max' => 999],
+            ],
+        ],
+        'Características del liderazgo' => [
             'domain' => 'Liderazgo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 3],
@@ -352,7 +372,7 @@ return [
                 'muy_alto' => ['min' => 12, 'max' => 999],
             ],
         ],
-        'Deficiente relación con los trabajadores que supervisa' => [
+        'Deficiente relación con los colaboradores que supervisa' => [
             'domain' => 'Relaciones en el trabajo',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 2],
@@ -382,7 +402,7 @@ return [
                 'muy_alto' => ['min' => 10, 'max' => 999],
             ],
         ],
-        'Insuficiente reconocimiento y compensación del desempeño' => [
+        'Escaso o nulo reconocimiento y compensación' => [
             'domain' => 'Reconocimiento del desempeño',
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 2],
@@ -414,63 +434,9 @@ return [
         ],
     ],
 
-    // DEPRECATED: Rangos antiguos de dominio (mantener por compatibilidad)
-    'domains_deprecated' => [
-        'Ambiente de trabajo' => [
-            'max_score' => 20, // 5 preguntas * 4 puntos máximo
-            'levels' => [
-                'nulo' => ['min' => 0, 'max' => 3],
-                'bajo' => ['min' => 4, 'max' => 6],
-                'medio' => ['min' => 7, 'max' => 9],
-                'alto' => ['min' => 10, 'max' => 12],
-                'muy_alto' => ['min' => 13, 'max' => 20],
-            ],
-        ],
-        'Factores propios de la actividad' => [
-            'max_score' => 60, // 15 preguntas base + 4 condicionales
-            'levels' => [
-                'nulo' => ['min' => 0, 'max' => 9],
-                'bajo' => ['min' => 10, 'max' => 18],
-                'medio' => ['min' => 19, 'max' => 27],
-                'alto' => ['min' => 28, 'max' => 36],
-                'muy_alto' => ['min' => 37, 'max' => 60],
-            ],
-        ],
-        'Organización del tiempo de trabajo' => [
-            'max_score' => 24, // 6 preguntas * 4 puntos máximo
-            'levels' => [
-                'nulo' => ['min' => 0, 'max' => 3],
-                'bajo' => ['min' => 4, 'max' => 7],
-                'medio' => ['min' => 8, 'max' => 11],
-                'alto' => ['min' => 12, 'max' => 15],
-                'muy_alto' => ['min' => 16, 'max' => 24],
-            ],
-        ],
-        'Liderazgo y relaciones en el trabajo' => [
-            'max_score' => 76, // 19 preguntas base + 4 condicionales
-            'levels' => [
-                'nulo' => ['min' => 0, 'max' => 11],
-                'bajo' => ['min' => 12, 'max' => 23],
-                'medio' => ['min' => 24, 'max' => 35],
-                'alto' => ['min' => 36, 'max' => 47],
-                'muy_alto' => ['min' => 48, 'max' => 76],
-            ],
-        ],
-        'Entorno organizacional' => [
-            'max_score' => 32, // 8 preguntas * 4 puntos máximo
-            'levels' => [
-                'nulo' => ['min' => 0, 'max' => 4],
-                'bajo' => ['min' => 5, 'max' => 10],
-                'medio' => ['min' => 11, 'max' => 15],
-                'alto' => ['min' => 16, 'max' => 21],
-                'muy_alto' => ['min' => 22, 'max' => 32],
-            ],
-        ],
-    ],
-
     // Calificación final global
     'global' => [
-        'max_score' => 288, // Suma de todos los dominios
+        'max_score' => 288, // Suma de todas las categorias
         'levels' => [
             'nulo' => ['min' => 0, 'max' => 49],
             'bajo' => ['min' => 50, 'max' => 74],

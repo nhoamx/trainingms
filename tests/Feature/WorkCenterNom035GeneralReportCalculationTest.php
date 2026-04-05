@@ -1,0 +1,122 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Organization;
+use App\Models\PaperEvaluation;
+use App\Models\WorkCenter;
+use App\Services\WorkCenter\WorkCenterNom035CalculationService;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\TestCase;
+
+class WorkCenterNom035GeneralReportCalculationTest extends TestCase
+{
+    use DatabaseTransactions;
+
+    public function test_general_report_uses_sum_of_normalized_item_scores_for_nom_levels(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => $this->buildAnswers('A'),
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => $this->buildAnswers('C'),
+        ]);
+
+        $service = new WorkCenterNom035CalculationService;
+        $report = $service->getGeneralDetailedReport($workCenter);
+
+        $questionOneRow = collect($report['rows'])
+            ->first(fn (array $row): bool => $row['item_numero'] === 1);
+
+        $this->assertNotNull($questionOneRow);
+        $this->assertSame(1.0, $questionOneRow['puntaje']);
+
+        $this->assertSame('Condiciones peligrosas e inseguras', $questionOneRow['dimension']['nombre']);
+        $this->assertSame(4, $questionOneRow['dimension']['score']);
+        $this->assertSame('medio', $questionOneRow['dimension']['nivel_riesgo']);
+
+        $this->assertSame('Condiciones en el ambiente de trabajo', $questionOneRow['dominio']['nombre']);
+        $this->assertSame(11, $questionOneRow['dominio']['score']);
+        $this->assertSame('alto', $questionOneRow['dominio']['nivel_riesgo']);
+
+        $this->assertSame('Ambiente de trabajo', $questionOneRow['categoria']['nombre']);
+        $this->assertSame(11, $questionOneRow['categoria']['score']);
+        $this->assertSame('alto', $questionOneRow['categoria']['nivel_riesgo']);
+
+        $this->assertSame(288, $report['max_score']);
+        $this->assertSame(122, $report['total_score']);
+
+        foreach ($report['rows'] as $row) {
+            $this->assertGreaterThanOrEqual(0, $row['puntaje']);
+            $this->assertLessThanOrEqual(4, $row['puntaje']);
+        }
+    }
+
+    public function test_general_report_includes_customer_service_conditional_questions_when_enabled(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => $this->buildAnswers('A'),
+            'referencia_iii_conditional' => [
+                'customer_service' => [
+                    'condition' => 'SI',
+                    'questions' => [
+                        65 => 'D',
+                        66 => 'E',
+                        67 => 'D',
+                        68 => 'E',
+                    ],
+                ],
+                'management' => [
+                    'condition' => 'NO',
+                    'questions' => [
+                        69 => null,
+                        70 => null,
+                        71 => null,
+                        72 => null,
+                    ],
+                ],
+            ],
+        ]);
+
+        $service = new WorkCenterNom035CalculationService;
+        $report = $service->getGeneralDetailedReport($workCenter);
+
+        $question65Row = collect($report['rows'])
+            ->first(fn (array $row): bool => $row['item_numero'] === 65);
+
+        $this->assertNotNull($question65Row);
+        $this->assertSame(1.0, $question65Row['puntaje']);
+        $this->assertSame('Cargas psicológicas emocionales', $question65Row['dimension']['nombre']);
+        $this->assertSame(2, $question65Row['dimension']['score']);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function buildAnswers(string $answer): array
+    {
+        $answers = [];
+
+        for ($questionNumber = 1; $questionNumber <= 64; $questionNumber++) {
+            $answers[$questionNumber] = $answer;
+        }
+
+        return $answers;
+    }
+}
