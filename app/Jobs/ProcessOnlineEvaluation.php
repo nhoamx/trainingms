@@ -329,41 +329,104 @@ class ProcessOnlineEvaluation implements ShouldQueue
         $referenciaIII = $dataSnapshot['referencia_iii'];
         $conditionals = [];
 
-        // Extract customer service conditional (65-68) - ONLY if exists
-        if (isset($referenciaIII['customer_service']) && isset($referenciaIII['customer_service']['condition'])) {
-            $customerService = $referenciaIII['customer_service'];
-            $conditionals['customer_service'] = [
-                'condition' => $customerService['condition'],
-            ];
+        $customerCondition = $this->normalizeYesNoValue($this->firstNonNull([
+            $this->extractScalarValue($referenciaIII['customer_service']['condition'] ?? null),
+            $this->extractScalarValue($referenciaIII['condition_customer_service'] ?? null),
+            $this->extractScalarValue($dataSnapshot['customer_service_conditional']['condition'] ?? null),
+        ]));
 
-            // Add questions 65-68 if condition is true
-            if ($customerService['condition'] === true) {
-                for ($i = 65; $i <= 68; $i++) {
-                    if (isset($customerService[$i])) {
-                        $conditionals['customer_service'][$i] = $customerService[$i];
-                    }
-                }
-            }
+        if ($customerCondition !== null) {
+            $conditionals['customer_service'] = [
+                'condition' => $customerCondition ? 'SI' : 'NO',
+                'questions' => $customerCondition
+                    ? $this->extractConditionalQuestions($referenciaIII, $dataSnapshot, 'customer_service', 'customer_service_questions', 65, 68)
+                    : [],
+            ];
         }
 
-        // Extract management conditional (69-72) - ONLY if exists
-        if (isset($referenciaIII['management']) && isset($referenciaIII['management']['condition'])) {
-            $management = $referenciaIII['management'];
-            $conditionals['management'] = [
-                'condition' => $management['condition'],
-            ];
+        $managementCondition = $this->normalizeYesNoValue($this->firstNonNull([
+            $this->extractScalarValue($referenciaIII['management']['condition'] ?? null),
+            $this->extractScalarValue($referenciaIII['condition_management'] ?? null),
+            $this->extractScalarValue($dataSnapshot['conditional_management']['condition'] ?? null),
+        ]));
 
-            // Add questions 69-72 if condition is true
-            if ($management['condition'] === true) {
-                for ($i = 69; $i <= 72; $i++) {
-                    if (isset($management[$i])) {
-                        $conditionals['management'][$i] = $management[$i];
-                    }
-                }
-            }
+        if ($managementCondition !== null) {
+            $conditionals['management'] = [
+                'condition' => $managementCondition ? 'SI' : 'NO',
+                'questions' => $managementCondition
+                    ? $this->extractConditionalQuestions($referenciaIII, $dataSnapshot, 'management', 'management_questions', 69, 72)
+                    : [],
+            ];
         }
 
         return ! empty($conditionals) ? $conditionals : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $referenciaIII
+     * @param  array<string, mixed>  $dataSnapshot
+     * @return array<string, mixed>
+     */
+    private function extractConditionalQuestions(
+        array $referenciaIII,
+        array $dataSnapshot,
+        string $nestedSection,
+        string $snapshotTopLevelSection,
+        int $start,
+        int $end
+    ): array {
+        $questions = [];
+
+        $nestedQuestions = isset($referenciaIII[$nestedSection]['questions']) && is_array($referenciaIII[$nestedSection]['questions'])
+            ? $referenciaIII[$nestedSection]['questions']
+            : [];
+
+        $snapshotQuestions = isset($dataSnapshot[$snapshotTopLevelSection]) && is_array($dataSnapshot[$snapshotTopLevelSection])
+            ? $dataSnapshot[$snapshotTopLevelSection]
+            : [];
+
+        for ($number = $start; $number <= $end; $number++) {
+            $key = (string) $number;
+
+            $answer = $this->firstNonNull([
+                $this->extractScalarValue($referenciaIII[$number] ?? null),
+                $this->extractScalarValue($referenciaIII[$key] ?? null),
+                $this->extractScalarValue($referenciaIII[$nestedSection][$number] ?? null),
+                $this->extractScalarValue($referenciaIII[$nestedSection][$key] ?? null),
+                $this->extractScalarValue($nestedQuestions[$number] ?? null),
+                $this->extractScalarValue($nestedQuestions[$key] ?? null),
+                $this->extractScalarValue($snapshotQuestions[$number] ?? null),
+                $this->extractScalarValue($snapshotQuestions[$key] ?? null),
+            ]);
+
+            if ($answer === null || $answer === '') {
+                continue;
+            }
+
+            $questions[$key] = $answer;
+        }
+
+        return $questions;
+    }
+
+    private function extractScalarValue(mixed $value): mixed
+    {
+        if (is_array($value) && array_key_exists('value', $value)) {
+            return $value['value'];
+        }
+
+        return $value;
+    }
+
+    private function firstNonNull(array $values): mixed
+    {
+        foreach ($values as $value) {
+            if ($value !== null) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     /**

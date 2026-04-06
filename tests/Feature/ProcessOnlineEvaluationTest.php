@@ -182,11 +182,11 @@ class ProcessOnlineEvaluationTest extends TestCase
         $this->assertArrayHasKey('customer_service', $paperEvaluation->referencia_iii_conditional);
         $customerService = $paperEvaluation->referencia_iii_conditional['customer_service'];
 
-        $this->assertEquals(true, $customerService['condition']);
-        $this->assertEquals('A', $customerService['65']);
-        $this->assertEquals('B', $customerService['66']);
-        $this->assertEquals('C', $customerService['67']);
-        $this->assertEquals('D', $customerService['68']);
+        $this->assertEquals('SI', $customerService['condition']);
+        $this->assertEquals('A', $customerService['questions']['65']);
+        $this->assertEquals('B', $customerService['questions']['66']);
+        $this->assertEquals('C', $customerService['questions']['67']);
+        $this->assertEquals('D', $customerService['questions']['68']);
     }
 
     public function test_extracts_management_conditional_with_false_condition(): void
@@ -219,11 +219,47 @@ class ProcessOnlineEvaluationTest extends TestCase
         $this->assertArrayHasKey('management', $paperEvaluation->referencia_iii_conditional);
         $management = $paperEvaluation->referencia_iii_conditional['management'];
 
-        $this->assertEquals(false, $management['condition']);
-        $this->assertArrayNotHasKey('69', $management);
-        $this->assertArrayNotHasKey('70', $management);
-        $this->assertArrayNotHasKey('71', $management);
-        $this->assertArrayNotHasKey('72', $management);
+        $this->assertEquals('NO', $management['condition']);
+        $this->assertEquals([], $management['questions']);
+    }
+
+    public function test_extracts_conditionals_from_legacy_online_payload_shape(): void
+    {
+        $submissionStatus = SubmissionStatus::create([
+            'folio' => '020010113',
+            'personal_id' => '0113',
+            'organization_id' => $this->organization->id,
+            'quiz_id' => $this->quiz->id,
+            'status' => SubmissionStatus::STATUS_PENDING,
+            'data_snapshot' => [
+                'evaluation_type' => 'referencia_v',
+                'referencia_v' => ['sexo' => 'Masculino', 'edad' => '40'],
+                'referencia_iii' => [
+                    '1' => 'A',
+                    '65' => 'B',
+                    '66' => 'C',
+                    '67' => 'D',
+                    '68' => 'E',
+                    '69' => 'A',
+                    '70' => 'B',
+                    '71' => 'C',
+                    '72' => 'D',
+                    'condition_customer_service' => true,
+                    'condition_management' => false,
+                ],
+            ],
+        ]);
+
+        ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
+
+        $paperEvaluation = PaperEvaluation::where('folio', '020010113')->first();
+        $this->assertNotNull($paperEvaluation);
+        $this->assertNotNull($paperEvaluation->referencia_iii_conditional);
+
+        $this->assertEquals('SI', $paperEvaluation->referencia_iii_conditional['customer_service']['condition']);
+        $this->assertEquals('B', $paperEvaluation->referencia_iii_conditional['customer_service']['questions']['65']);
+        $this->assertEquals('NO', $paperEvaluation->referencia_iii_conditional['management']['condition']);
+        $this->assertEquals([], $paperEvaluation->referencia_iii_conditional['management']['questions']);
     }
 
     public function test_does_not_store_conditionals_when_not_present(): void
