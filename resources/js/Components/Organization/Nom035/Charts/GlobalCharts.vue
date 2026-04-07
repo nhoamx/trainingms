@@ -7,8 +7,8 @@
           <h3 class="text-xl font-bold text-slate-900">Estadística Global de la Organización</h3>
           <p class="text-sm text-slate-600 mt-1">Resumen agregado de todas las evaluaciones (72 preguntas)</p>
         </div>
-        <div class="px-4 py-2 rounded-full text-sm font-semibold" :style="{ backgroundColor: getRiskLevelBgColor(globalStatistics.global.risk_level), color: getRiskLevelTextColor(globalStatistics.global.risk_level) }">
-          {{ globalStatistics.global.risk_level_label }}
+        <div class="px-4 py-2 rounded-full text-sm font-semibold" :style="{ backgroundColor: getRiskLevelBgColor(summaryRiskLevel), color: getRiskLevelTextColor(summaryRiskLevel) }">
+          {{ summaryRiskLabel }}
         </div>
       </div>
 
@@ -18,7 +18,7 @@
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-slate-600">Total de Evaluaciones</p>
-              <p class="text-3xl font-bold text-slate-900 mt-1">{{ globalStatistics.total_evaluations }}</p>
+              <p class="text-3xl font-bold text-slate-900 mt-1">{{ summaryTotalEvaluations }}</p>
             </div>
             <DocumentTextIcon class="w-10 h-10 text-slate-400" />
           </div>
@@ -28,8 +28,8 @@
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-slate-600">Puntuación Promedio</p>
-              <p class="text-3xl font-bold text-slate-900 mt-1">{{ globalStatistics.global.average_score }}</p>
-              <p class="text-xs text-slate-500 mt-1">de {{ globalStatistics.global.max_score }} puntos</p>
+              <p class="text-3xl font-bold text-slate-900 mt-1">{{ summaryAverageScore }} / {{ summaryMaxScore }}</p>
+              <p class="text-xs text-slate-500 mt-1">Resultado: {{ summaryPercentage }}%</p>
             </div>
             <ChartBarIcon class="w-10 h-10 text-slate-400" />
           </div>
@@ -39,10 +39,10 @@
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-slate-600">Porcentaje</p>
-              <p class="text-3xl font-bold text-slate-900 mt-1">{{ globalStatistics.global.percentage }}%</p>
+              <p class="text-3xl font-bold text-slate-900 mt-1">{{ summaryPercentage }}%</p>
               <p class="text-xs text-slate-500 mt-1">respecto al máximo</p>
             </div>
-            <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold" :style="{ backgroundColor: getLevelColor(globalStatistics.global.risk_level, 0.2), color: getLevelColor(globalStatistics.global.risk_level, 1) }">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold" :style="{ backgroundColor: getLevelColor(summaryRiskLevel, 0.2), color: getLevelColor(summaryRiskLevel, 1) }">
               %
             </div>
           </div>
@@ -80,19 +80,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from 'vue';
+import { computed, ref, onMounted, nextTick, watch } from 'vue';
 import { Chart, registerables } from 'chart.js';
 import { DocumentTextIcon, ChartBarIcon } from '@heroicons/vue/24/outline';
 
 Chart.register(...registerables);
 
 interface GlobalData {
-  average_score: number;
-  max_score: number;
-  percentage: number;
-  risk_level: string;
-  risk_level_label: string;
-  distribution: Record<string, number>;
+  average_score?: number;
+  max_score?: number;
+  percentage?: number;
+  risk_level?: string;
+  risk_level_label?: string;
+  distribution?: Record<string, number>;
+  [key: string]: unknown;
 }
 
 interface Props {
@@ -101,6 +102,14 @@ interface Props {
     total_evaluations: number;
     colors: Record<string, string>;
     labels: Record<string, string>;
+  };
+  generalReport?: {
+    total_evaluations: number;
+    final_average_score?: number;
+    final_max_score?: number;
+    final_percentage?: number;
+    final_risk_level?: string;
+    final_risk_label?: string;
   };
 }
 
@@ -124,6 +133,42 @@ const labels = props.globalStatistics?.labels || {
   alto: 'Alto',
   muy_alto: 'Muy Alto'
 };
+
+const normalizeRiskLevel = (riskLevel?: string | null): string => {
+  if (!riskLevel || typeof riskLevel !== 'string') {
+    return 'nulo';
+  }
+
+  return riskLevel.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/\s+/g, '_');
+};
+
+const getRiskLabel = (level: string): string => {
+  return labels[level] ?? level;
+};
+
+const summaryTotalEvaluations = computed(() => {
+  const total = Number(props.generalReport?.total_evaluations ?? props.globalStatistics?.total_evaluations ?? 0);
+  return Number.isFinite(total) ? Math.max(0, Math.round(total)) : 0;
+});
+
+const summaryAverageScore = computed(() => {
+  const average = Number(props.generalReport?.final_average_score ?? props.globalStatistics?.global?.average_score ?? 0);
+  return Number.isFinite(average) ? Math.max(0, Math.round(average)) : 0;
+});
+
+const summaryMaxScore = computed(() => {
+  const max = Number(props.generalReport?.final_max_score ?? props.globalStatistics?.global?.max_score ?? 288);
+  return Number.isFinite(max) ? Math.max(0, Math.round(max)) : 288;
+});
+
+const summaryPercentage = computed(() => {
+  const fallback = summaryMaxScore.value > 0 ? (summaryAverageScore.value / summaryMaxScore.value) * 100 : 0;
+  const percentage = Number(props.generalReport?.final_percentage ?? props.globalStatistics?.global?.percentage ?? fallback);
+  return Number.isFinite(percentage) ? percentage.toFixed(2) : '0.00';
+});
+
+const summaryRiskLevel = computed(() => normalizeRiskLevel(props.generalReport?.final_risk_level ?? props.globalStatistics?.global?.risk_level ?? 'nulo'));
+const summaryRiskLabel = computed(() => props.generalReport?.final_risk_label ?? props.globalStatistics?.global?.risk_level_label ?? getRiskLabel(summaryRiskLevel.value));
 
 // Helper para obtener color con opacidad
 const getLevelColor = (level: string, opacity: number): string => {
