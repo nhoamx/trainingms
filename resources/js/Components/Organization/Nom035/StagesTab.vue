@@ -121,7 +121,8 @@
             <!-- Vista Global -->
             <div v-if="identificarViewMode === 'global'" class="bg-white rounded-lg p-6">
               <GlobalCharts 
-                :globalStatistics="props.globalStatistics"
+                :globalStatistics="globalChartsStatistics"
+                :general-report="globalChartsGeneralReport"
               />
             </div>
 
@@ -376,20 +377,16 @@
                 <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
                   <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Calificación Final Promedio</p>
                   <p class="mt-2 text-2xl font-bold text-slate-900">
-                    {{ formatScore(finalGlobalSummary.averageScore) }} / {{ formatIntegerScore(finalGlobalSummary.maxScore) }}
+                    {{ formatIntegerScore(finalGlobalSummary.averageScore) }} / {{ formatIntegerScore(finalGlobalSummary.maxScore) }}
                   </p>
+                  <p class="mt-1 text-sm font-semibold text-slate-600">Resultado: {{ formatScore(finalGlobalSummary.percentage) }}%</p>
                 </div>
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div class="rounded-lg border p-4" :style="getRiskContainerStyle(finalGlobalSummary.riskLevel)">
                   <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Nivel de Riesgo Global</p>
-                  <div class="mt-2 flex items-center gap-2">
-                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wide shadow-sm" :style="getRiskBadgeSolidStyle(finalGlobalSummary.riskLevel)">
-                      {{ finalGlobalSummary.riskLabel }}
-                    </span>
-                    <span class="text-lg font-bold text-slate-900">{{ formatScore(finalGlobalSummary.percentage) }}%</span>
-                  </div>
+                  <p class="mt-2 text-2xl font-bold text-slate-900">{{ finalGlobalSummary.riskLabel }}</p>
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Evaluaciones Consideradas</p>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Evaluaciones</p>
                   <p class="mt-2 text-2xl font-bold text-slate-900">{{ finalGlobalSummary.totalEvaluations }}</p>
                 </div>
               </div>
@@ -2085,6 +2082,9 @@ const getGlobalRiskRangeText = (riskLevel: string): string => {
 const getAverageByEvaluations = (totalScore: number): string => {
   return formatIntegerScore(totalScore);
 };
+
+const globalChartsStatistics = computed(() => props.globalStatistics as any);
+const globalChartsGeneralReport = computed(() => props.generalReport as any);
 
 const normalizeRiskLevel = (riskLevel?: string | null): string => {
   if (!riskLevel || typeof riskLevel !== 'string') {
