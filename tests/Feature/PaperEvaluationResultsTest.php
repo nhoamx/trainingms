@@ -148,6 +148,7 @@ class PaperEvaluationResultsTest extends TestCase
             ->component('Results/Detail')
             ->has('evaluation')
             ->has('guideIIIResults')
+            ->has('results.0.dimension.nombre')
         );
     }
 
