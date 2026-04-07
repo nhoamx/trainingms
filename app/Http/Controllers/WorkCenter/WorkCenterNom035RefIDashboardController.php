@@ -116,7 +116,11 @@ class WorkCenterNom035RefIDashboardController extends Controller
             return null;
         }
 
-        return in_array($source, ['online', 'paper'], true) ? $source : null;
+        if (! in_array($source, ['online', 'paper', 'all'], true)) {
+            return null;
+        }
+
+        return $source === 'all' ? null : $source;
     }
 
     /**

@@ -96,7 +96,7 @@ class WorkCenterNom035IndexController extends Controller
     {
         $source = (string) $request->query('source', 'online');
 
-        if (in_array($source, ['online', 'paper'], true)) {
+        if (in_array($source, ['online', 'paper', 'all'], true)) {
             return $source;
         }
 
@@ -113,7 +113,7 @@ class WorkCenterNom035IndexController extends Controller
             ->where('processing_status', 'completed')
             ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'cisneros', 'likert']);
 
-        if ($source !== null) {
+        if (in_array($source, ['online', 'paper'], true)) {
             $query->where('source', $source);
         }
 
@@ -264,7 +264,11 @@ class WorkCenterNom035IndexController extends Controller
 
             $definition['online_count'] = $onlineCount;
             $definition['paper_count'] = $paperCount;
-            $definition['count'] = $selectedSource === 'paper' ? $paperCount : $onlineCount;
+            $definition['count'] = match ($selectedSource) {
+                'paper' => $paperCount,
+                'all' => $paperCount + $onlineCount,
+                default => $onlineCount,
+            };
 
             return $definition;
         }, $definitions);
@@ -283,9 +287,15 @@ class WorkCenterNom035IndexController extends Controller
             ->where('processing_status', 'completed')
             ->with(['demographicData', 'comments']);
 
-        if ($source !== null) {
+        if (in_array($source, ['online', 'paper'], true)) {
             $query->where('source', $source);
+        } else {
+            $query->whereIn('source', ['paper', 'online']);
         }
+
+        $query->orderByRaw("CASE WHEN source = 'paper' THEN 0 ELSE 1 END")
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
 
         return $query
             ->get()
@@ -318,8 +328,10 @@ class WorkCenterNom035IndexController extends Controller
             ->where('work_center_id', $workCenter->id)
             ->where('processing_status', 'completed');
 
-        if ($source !== null) {
+        if (in_array($source, ['online', 'paper'], true)) {
             $query->where('source', $source);
+        } else {
+            $query->whereIn('source', ['paper', 'online']);
         }
 
         $evaluationTypes = $query

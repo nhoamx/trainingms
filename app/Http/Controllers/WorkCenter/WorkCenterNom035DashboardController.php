@@ -39,40 +39,41 @@ class WorkCenterNom035DashboardController extends Controller
         $this->authorize('viewWorkCenterDashboard', $workCenter);
 
         $workCenter->load('organization');
+        $source = $this->resolveSourceFilter($request);
 
         $dashboardData = $this->buildDashboardData($workCenter);
 
         $domainStatistics = Cache::rememberForever(
-            $this->cacheService->getWcNom035DomainsCacheKey($workCenter->id),
-            fn () => $this->calculationService->calculateDomainStatistics($workCenter)
+            $this->cacheService->getWcNom035DomainsCacheKey($workCenter->id, $source),
+            fn () => $this->calculationService->calculateDomainStatistics($workCenter, $source)
         );
 
         $categoryStatistics = Cache::rememberForever(
-            $this->cacheService->getWcNom035CategoriesCacheKey($workCenter->id),
-            fn () => $this->calculationService->calculateCategoryStatistics($workCenter)
+            $this->cacheService->getWcNom035CategoriesCacheKey($workCenter->id, $source),
+            fn () => $this->calculationService->calculateCategoryStatistics($workCenter, $source)
         );
 
         $dimensionStatistics = Cache::rememberForever(
-            $this->cacheService->getWcNom035DimensionsCacheKey($workCenter->id),
-            fn () => $this->calculationService->calculateDimensionStatistics($workCenter)
+            $this->cacheService->getWcNom035DimensionsCacheKey($workCenter->id, $source),
+            fn () => $this->calculationService->calculateDimensionStatistics($workCenter, $source)
         );
 
         $questionStatistics = Cache::rememberForever(
-            $this->cacheService->getWcNom035QuestionsCacheKey($workCenter->id),
-            fn () => $this->calculationService->calculateQuestionStatistics($workCenter)
+            $this->cacheService->getWcNom035QuestionsCacheKey($workCenter->id, $source),
+            fn () => $this->calculationService->calculateQuestionStatistics($workCenter, $source)
         );
 
         $blockStatistics = Cache::rememberForever(
-            $this->cacheService->getWcNom035BlocksCacheKey($workCenter->id),
-            fn () => $this->calculationService->calculateBlockStatistics($workCenter)
+            $this->cacheService->getWcNom035BlocksCacheKey($workCenter->id, $source),
+            fn () => $this->calculationService->calculateBlockStatistics($workCenter, $source)
         );
 
         $globalStatistics = Cache::rememberForever(
-            $this->cacheService->getWcNom035GlobalCacheKey($workCenter->id),
-            fn () => $this->calculationService->calculateGlobalStatistics($workCenter)
+            $this->cacheService->getWcNom035GlobalCacheKey($workCenter->id, $source),
+            fn () => $this->calculationService->calculateGlobalStatistics($workCenter, $source)
         );
 
-        $analysisData = $this->calculationService->getEvaluationsWithDemographicsAndScores($workCenter);
+        $analysisData = $this->calculationService->getEvaluationsWithDemographicsAndScores($workCenter, $source);
 
         $demographicFilters = array_filter([
             'genero' => $request->string('genero')->toString(),
@@ -83,26 +84,33 @@ class WorkCenterNom035DashboardController extends Controller
 
         $generalReport = $demographicFilters === []
             ? Cache::rememberForever(
-                $this->cacheService->getWcNom035GeneralReportCacheKey($workCenter->id),
-                fn () => $this->calculationService->getGeneralDetailedReport($workCenter)
+                $this->cacheService->getWcNom035GeneralReportCacheKey($workCenter->id, $source),
+                fn () => $this->calculationService->getGeneralDetailedReport($workCenter, null, $source)
             )
-            : $this->calculationService->getGeneralDetailedReport($workCenter, $demographicFilters);
+            : $this->calculationService->getGeneralDetailedReport($workCenter, $demographicFilters, $source);
 
         $violenceLaborStatistics = Cache::rememberForever(
-            $this->cacheService->getWcNom035ViolenceCacheKey($workCenter->id),
-            fn () => $this->calculationService->calculateViolenceLaborStatistics($workCenter)
+            $this->cacheService->getWcNom035ViolenceCacheKey($workCenter->id, $source),
+            fn () => $this->calculationService->calculateViolenceLaborStatistics($workCenter, $source)
         );
 
-        $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
+        $evaluations = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
             ->whereIn('evaluation_type', ['referencia_i', 'referencia_iii', 'referencia_v', 'cisneros'])
             ->where('processing_status', 'completed')
             ->with(['demographicData', 'comments'])
+            ->when(
+                in_array($source, ['online', 'paper'], true),
+                fn ($query) => $query->where('source', $source),
+                fn ($query) => $query->whereIn('source', ['paper', 'online'])
+            )
             ->get()
             ->map(function ($evaluation) {
                 return [
                     'id' => $evaluation->id,
                     'evaluation_type' => $evaluation->evaluation_type,
                     'personal_folio' => $evaluation->personal_folio,
+                    'source' => $evaluation->source,
                     'demographicData' => $evaluation->demographicData ? [
                         'gender' => $evaluation->demographicData->gender,
                         'contract_type' => $evaluation->demographicData->contract_type,
@@ -113,7 +121,7 @@ class WorkCenterNom035DashboardController extends Controller
                 ];
             });
 
-        $availableEvaluationTypes = $this->getAvailableEvaluationTypes($workCenter);
+        $availableEvaluationTypes = $this->getAvailableEvaluationTypes($workCenter, $source);
 
         $analysisBlocks = OrganizationAnalysisBlock::query()
             ->where('organization_id', $workCenter->organization_id)
@@ -133,6 +141,7 @@ class WorkCenterNom035DashboardController extends Controller
 
         return Inertia::render('WorkCenters/Nom035RefIIIDashboard', [
             'title' => 'NOM-035-STPS-2018 - '.$workCenter->name,
+            'selectedSource' => $source,
             'dashboardData' => $dashboardData,
             'domainStatistics' => $domainStatistics,
             'categoryStatistics' => $categoryStatistics,
@@ -252,10 +261,16 @@ class WorkCenterNom035DashboardController extends Controller
      *
      * @return array<int, array{key: string, label: string, description: string, badge: string, color: string, icon: string}>
      */
-    private function getAvailableEvaluationTypes(WorkCenter $workCenter): array
+    private function getAvailableEvaluationTypes(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluationTypes = PaperEvaluation::where('work_center_id', $workCenter->id)
+        $evaluationTypes = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
             ->where('processing_status', 'completed')
+            ->when(
+                in_array($source, ['online', 'paper'], true),
+                fn ($query) => $query->where('source', $source),
+                fn ($query) => $query->whereIn('source', ['paper', 'online'])
+            )
             ->distinct()
             ->pluck('evaluation_type')
             ->toArray();
@@ -303,5 +318,16 @@ class WorkCenterNom035DashboardController extends Controller
         }
 
         return $availableTypes;
+    }
+
+    private function resolveSourceFilter(Request $request): ?string
+    {
+        $source = $request->query('source');
+
+        if (! is_string($source) || ! in_array($source, ['online', 'paper', 'all'], true)) {
+            return null;
+        }
+
+        return $source === 'all' ? null : $source;
     }
 }

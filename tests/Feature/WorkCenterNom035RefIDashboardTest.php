@@ -320,6 +320,13 @@ class WorkCenterNom035RefIDashboardTest extends TestCase
                 ->where('aggregatedStats.total_participants', 2)
                 ->where('selectedSource', null)
             );
+
+        $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-ref-i', ['workCenter' => $workCenter, 'source' => 'all']))
+            ->assertInertia(fn ($page) => $page
+                ->where('aggregatedStats.total_participants', 2)
+                ->where('selectedSource', null)
+            );
     }
 
     public function test_ref_i_dashboard_supports_paper_ocr_answer_payloads(): void

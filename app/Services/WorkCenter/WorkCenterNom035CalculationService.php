@@ -8,14 +8,34 @@ use Illuminate\Database\Eloquent\Builder;
 
 class WorkCenterNom035CalculationService
 {
+    private function baseRefIIIQuery(WorkCenter $workCenter, ?string $source = null): Builder
+    {
+        $query = PaperEvaluation::query()
+            ->where('work_center_id', $workCenter->id)
+            ->where('processing_status', 'completed')
+            ->where('evaluation_type', 'referencia_iii')
+            ->where(function (Builder $builder): void {
+                $builder
+                    ->whereNotNull('referencia_iii_answers')
+                    ->orWhereNotNull('referencia_iii_conditional')
+                    ->orWhereNotNull('raw_data');
+            });
+
+        if (in_array($source, ['online', 'paper'], true)) {
+            $query->where('source', $source);
+        } else {
+            $query->whereIn('source', ['paper', 'online']);
+        }
+
+        return $query;
+    }
+
     /**
      * Calcular estadísticas de dominios NOM-035 para un centro de trabajo
      */
-    public function calculateDomainStatistics(WorkCenter $workCenter): array
+    public function calculateDomainStatistics(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
-            ->whereNotNull('referencia_iii_answers')
-            ->get();
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
 
         if ($evaluations->isEmpty()) {
             return $this->getEmptyStatistics();
@@ -41,7 +61,7 @@ class WorkCenterNom035CalculationService
         }
 
         foreach ($evaluations as $evaluation) {
-            $answers = $evaluation->referencia_iii_answers ?? [];
+            $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
 
             foreach ($domainConfig as $categoryName => $domains) {
                 foreach ($domains as $domainName => $dimensions) {
@@ -83,11 +103,9 @@ class WorkCenterNom035CalculationService
      * Calcular estadísticas de categorías NOM-035 para un centro de trabajo
      * NOTA: Calcula las 5 CATEGORÍAS REALES (Nivel 1) de NOM-035
      */
-    public function calculateCategoryStatistics(WorkCenter $workCenter): array
+    public function calculateCategoryStatistics(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
-            ->whereNotNull('referencia_iii_answers')
-            ->get();
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
 
         if ($evaluations->isEmpty()) {
             return $this->getEmptyCategoryStatistics();
@@ -115,7 +133,7 @@ class WorkCenterNom035CalculationService
 
         // Calcular puntajes por evaluación
         foreach ($evaluations as $evaluation) {
-            $answers = $evaluation->referencia_iii_answers ?? [];
+            $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
 
             // Iterar por cada CATEGORÍA REAL (las 5)
             foreach ($domainConfig as $categoryName => $domains) {
@@ -167,11 +185,9 @@ class WorkCenterNom035CalculationService
     /**
      * Calcular estadísticas de dimensiones NOM-035 para un centro de trabajo
      */
-    public function calculateDimensionStatistics(WorkCenter $workCenter): array
+    public function calculateDimensionStatistics(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
-            ->whereNotNull('referencia_iii_answers')
-            ->get();
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
 
         if ($evaluations->isEmpty()) {
             return $this->getEmptyDimensionStatistics();
@@ -203,7 +219,7 @@ class WorkCenterNom035CalculationService
         }
 
         foreach ($evaluations as $evaluation) {
-            $answers = $evaluation->referencia_iii_answers ?? [];
+            $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
 
             foreach ($domainConfig as $categoryName => $domains) {
                 foreach ($domains as $domainName => $dimensions) {
@@ -255,11 +271,9 @@ class WorkCenterNom035CalculationService
     /**
      * Calcular estadísticas globales NOM-035 para un centro de trabajo
      */
-    public function calculateGlobalStatistics(WorkCenter $workCenter): array
+    public function calculateGlobalStatistics(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
-            ->whereNotNull('referencia_iii_answers')
-            ->get();
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
 
         if ($evaluations->isEmpty()) {
             return $this->getEmptyGlobalStatistics();
@@ -307,11 +321,9 @@ class WorkCenterNom035CalculationService
     /**
      * Calcular estadísticas por pregunta individual NOM-035 para un centro de trabajo
      */
-    public function calculateQuestionStatistics(WorkCenter $workCenter): array
+    public function calculateQuestionStatistics(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
-            ->whereNotNull('referencia_iii_answers')
-            ->get();
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
 
         if ($evaluations->isEmpty()) {
             return $this->getEmptyQuestionStatistics();
@@ -363,7 +375,7 @@ class WorkCenterNom035CalculationService
         }
 
         foreach ($evaluations as $evaluation) {
-            $answers = $evaluation->referencia_iii_answers ?? [];
+            $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
 
             foreach ($answers as $questionNumber => $answer) {
                 if (is_array($answer)) {
@@ -433,11 +445,9 @@ class WorkCenterNom035CalculationService
     /**
      * Calculate statistics for each question block from referencia_iii config
      */
-    public function calculateBlockStatistics(WorkCenter $workCenter): array
+    public function calculateBlockStatistics(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
-            ->whereNotNull('referencia_iii_answers')
-            ->get();
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
 
         if ($evaluations->isEmpty()) {
             return $this->getEmptyBlockStatistics();
@@ -480,7 +490,7 @@ class WorkCenterNom035CalculationService
             $totalResponses = 0;
 
             foreach ($evaluations as $evaluation) {
-                $answers = $evaluation->referencia_iii_answers ?? [];
+                $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
 
                 foreach ($questions as $questionNumber) {
                     $answer = $this->getAnswerByQuestionNumber($answers, $questionNumber);
@@ -539,13 +549,10 @@ class WorkCenterNom035CalculationService
     /**
      * Calculate violence labor statistics for questions 57-64.
      */
-    public function calculateViolenceLaborStatistics(WorkCenter $workCenter): array
+    public function calculateViolenceLaborStatistics(WorkCenter $workCenter, ?string $source = null): array
     {
         $violenceQuestions = [57, 58, 59, 60, 61, 62, 63, 64];
-        $evaluations = PaperEvaluation::query()
-            ->where('work_center_id', $workCenter->id)
-            ->where('processing_status', 'completed')
-            ->whereNotNull('referencia_iii_answers')
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)
             ->with(['demographicData:id,paper_evaluation_id,gender,position,department,work_schedule'])
             ->select(['id', 'personal_folio', 'referencia_iii_answers'])
             ->get();
@@ -576,7 +583,7 @@ class WorkCenterNom035CalculationService
         $participants = [];
 
         foreach ($evaluations as $evaluation) {
-            $answers = $evaluation->referencia_iii_answers ?? [];
+            $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
             $violenceScore = 0;
             $answeredQuestions = 0;
             $questionLevels = [];
@@ -650,13 +657,11 @@ class WorkCenterNom035CalculationService
     /**
      * Get evaluations with demographics and scores for analysis
      */
-    public function getEvaluationsWithDemographicsAndScores(WorkCenter $workCenter): array
+    public function getEvaluationsWithDemographicsAndScores(WorkCenter $workCenter, ?string $source = null): array
     {
-        $evaluations = PaperEvaluation::where('work_center_id', $workCenter->id)
-            ->whereNotNull('referencia_iii_answers')
-            ->where('processing_status', 'completed')
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)
             ->with(['demographicData:id,paper_evaluation_id,gender,position,department,work_schedule,contract_type'])
-            ->select(['id', 'folio', 'personal_folio', 'evaluee_name', 'referencia_iii_answers', 'referencia_iii_conditional', 'organization_id'])
+            ->select(['id', 'folio', 'personal_folio', 'evaluee_name', 'referencia_iii_answers', 'referencia_iii_conditional', 'raw_data', 'organization_id'])
             ->get();
 
         $evaluationsData = [];
@@ -671,6 +676,8 @@ class WorkCenterNom035CalculationService
         $riskLevels = config('nom035_risk_levels');
 
         foreach ($evaluations as $evaluation) {
+            $mergedAnswers = $this->getMergedReferenciaIIIAnswers($evaluation);
+
             $demographics = [
                 'genero' => $evaluation->demographicData->gender ?? 'No especificado',
                 'puesto' => $evaluation->demographicData->position ?? 'No especificado',
@@ -695,7 +702,7 @@ class WorkCenterNom035CalculationService
             foreach ($domainConfig as $categoryName => $domains) {
                 foreach ($domains as $domainName => $dimensions) {
                     $score = $this->calculateDomainScore(
-                        $evaluation->referencia_iii_answers,
+                        $mergedAnswers,
                         [$domainName => $dimensions]
                     );
                     $riskLevel = $this->getRiskLevel($score, $domainName, $riskLevels);
@@ -716,7 +723,7 @@ class WorkCenterNom035CalculationService
                 }
 
                 $score = $this->calculateCategoryScore(
-                    $evaluation->referencia_iii_answers,
+                    $mergedAnswers,
                     $categoryDimensions
                 );
 
@@ -767,13 +774,10 @@ class WorkCenterNom035CalculationService
     /**
      * @param  array{genero?:string,puesto?:string,area?:string,turno?:string}|null  $demographicFilters
      */
-    public function getGeneralDetailedReport(WorkCenter $workCenter, ?array $demographicFilters = null): array
+    public function getGeneralDetailedReport(WorkCenter $workCenter, ?array $demographicFilters = null, ?string $source = null): array
     {
-        $evaluationsQuery = PaperEvaluation::query()
-            ->where('work_center_id', $workCenter->id)
-            ->where('processing_status', 'completed')
-            ->whereNotNull('referencia_iii_answers')
-            ->select(['id', 'referencia_iii_answers', 'referencia_iii_conditional']);
+        $evaluationsQuery = $this->baseRefIIIQuery($workCenter, $source)
+            ->select(['id', 'referencia_iii_answers', 'referencia_iii_conditional', 'raw_data']);
 
         if (is_array($demographicFilters) && $demographicFilters !== []) {
             $this->applyDemographicFilters($evaluationsQuery, $demographicFilters);
@@ -953,7 +957,12 @@ class WorkCenterNom035CalculationService
     private function getMergedReferenciaIIIAnswers(PaperEvaluation $evaluation): array
     {
         $answers = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
+        $rawAnswers = $this->getRawReferenciaIIIAnswers($evaluation);
         $conditionalAnswers = is_array($evaluation->referencia_iii_conditional) ? $evaluation->referencia_iii_conditional : [];
+
+        if ($answers === [] && $rawAnswers !== []) {
+            $answers = $rawAnswers;
+        }
 
         foreach ($this->getEnabledConditionalQuestionAnswers($conditionalAnswers) as $questionNumber => $answer) {
             if ($answer === null || is_array($answer)) {
@@ -961,6 +970,45 @@ class WorkCenterNom035CalculationService
             }
 
             $answers[$this->normalizeQuestionKey($questionNumber)] = $answer;
+        }
+
+        return $answers;
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    private function getRawReferenciaIIIAnswers(PaperEvaluation $evaluation): array
+    {
+        if (! is_array($evaluation->raw_data)) {
+            return [];
+        }
+
+        $answers = [];
+
+        foreach ($evaluation->raw_data as $questionNumber => $answer) {
+            if (! is_numeric((string) $questionNumber)) {
+                continue;
+            }
+
+            $answerValue = null;
+
+            if (is_string($answer)) {
+                $answerValue = $answer;
+            } elseif (is_array($answer) && is_string($answer['value'] ?? null)) {
+                $answerValue = $answer['value'];
+            }
+
+            if (! is_string($answerValue)) {
+                continue;
+            }
+
+            $normalizedAnswer = strtoupper(trim($answerValue));
+            if (! in_array($normalizedAnswer, ['A', 'B', 'C', 'D', 'E'], true)) {
+                continue;
+            }
+
+            $answers[$this->normalizeQuestionKey($questionNumber)] = $normalizedAnswer;
         }
 
         return $answers;
@@ -1152,43 +1200,21 @@ class WorkCenterNom035CalculationService
      */
     private function calculateTotalScore(PaperEvaluation $evaluation): int
     {
-        $answers = $evaluation->referencia_iii_answers ?? [];
-        $conditionalAnswers = is_array($evaluation->referencia_iii_conditional) ? $evaluation->referencia_iii_conditional : [];
+        $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
         $answerValues = config('answer_values');
         $totalScore = 0;
-
-        $enabledConditionalQuestions = $this->getEnabledConditionalQuestionAnswers($conditionalAnswers);
 
         foreach ($answers as $questionNumber => $answer) {
             if ($answer === null || is_array($answer)) {
                 continue;
             }
 
-            if (in_array($questionNumber, [65, 66, 67, 68, 69, 70, 71, 72], true)) {
-                continue;
-            }
-
             $questionKey = str_pad($questionNumber, 2, '0', STR_PAD_LEFT);
-            $group = in_array($questionKey, $answerValues['group1']['questions'])
+            $group = in_array($questionKey, $answerValues['group1']['questions'], true)
                 ? 'group1'
                 : 'group2';
 
             $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
-        }
-
-        if ($enabledConditionalQuestions !== []) {
-            foreach ($enabledConditionalQuestions as $questionNumber => $answer) {
-                if ($answer === null || is_array($answer)) {
-                    continue;
-                }
-
-                $questionKey = str_pad($questionNumber, 2, '0', STR_PAD_LEFT);
-                $group = in_array($questionKey, $answerValues['group1']['questions'])
-                    ? 'group1'
-                    : 'group2';
-
-                $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
-            }
         }
 
         return $totalScore;

@@ -54,7 +54,7 @@
 
           <div class="mt-6 rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm">
             <p class="text-xs font-semibold uppercase tracking-[0.14em] text-blue-100">Fuente de datos</p>
-            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <Link
                 v-for="option in sourceOptions"
                 :key="option.key"
@@ -70,7 +70,7 @@
                     <p class="text-xs" :class="selectedSource === option.key ? 'text-slate-600' : 'text-blue-100'">{{ option.caption }}</p>
                   </div>
                   <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="selectedSource === option.key ? option.chipClass : 'bg-white/20 text-white'">
-                    {{ option.key === 'online' ? sourceSummary.online : sourceSummary.paper }}
+                    {{ sourceCount(option.key) }}
                   </span>
                 </div>
               </Link>
@@ -492,7 +492,7 @@ const props = withDefaults(defineProps<{
   dashboardData: DashboardData;
   instruments: Instrument[];
   totalEvaluations: number;
-  selectedSource?: 'online' | 'paper';
+  selectedSource?: 'online' | 'paper' | 'all';
   sourceSummary?: SourceSummary;
   evaluations?: Evaluation[];
   availableEvaluationTypes?: EvaluationType[];
@@ -544,7 +544,7 @@ const generalTabs = [
 
 const activeGeneralTab = ref('empresa');
 
-const sourceOptions: Array<{ key: 'online' | 'paper'; label: string; caption: string; chipClass: string }> = [
+const sourceOptions: Array<{ key: 'online' | 'paper' | 'all'; label: string; caption: string; chipClass: string }> = [
   {
     key: 'online',
     label: 'Online',
@@ -557,19 +557,45 @@ const sourceOptions: Array<{ key: 'online' | 'paper'; label: string; caption: st
     caption: 'Captura OMR en papel',
     chipClass: 'bg-amber-100 text-amber-800',
   },
+  {
+    key: 'all',
+    label: 'Ambos',
+    caption: 'Online y presencial',
+    chipClass: 'bg-emerald-100 text-emerald-800',
+  },
 ];
 
+const sourceCount = (source: 'online' | 'paper' | 'all'): number => {
+  if (source === 'all') {
+    return props.sourceSummary.online + props.sourceSummary.paper;
+  }
+
+  return source === 'online' ? props.sourceSummary.online : props.sourceSummary.paper;
+};
+
 const selectedSourceLabel = computed(() => {
-  return props.selectedSource === 'paper' ? 'Presencial' : 'Online';
+  if (props.selectedSource === 'paper') {
+    return 'Presencial';
+  }
+
+  if (props.selectedSource === 'all') {
+    return 'Online y Presencial';
+  }
+
+  return 'Online';
 });
 
 const sourceDescription = computed(() => {
+  if (props.selectedSource === 'all') {
+    return 'Mostrando evaluaciones capturadas desde formularios en línea y formularios físicos (OMR).';
+  }
+
   return props.selectedSource === 'paper'
     ? 'Mostrando evaluaciones capturadas desde formularios físicos (OMR).'
     : 'Mostrando evaluaciones capturadas desde formularios en línea.';
 });
 
-const sourceHref = (source: 'online' | 'paper'): string => {
+const sourceHref = (source: 'online' | 'paper' | 'all'): string => {
   return route('work-centers.dashboard.nom-035-index', {
     workCenter: props.workCenter.id,
     source,
