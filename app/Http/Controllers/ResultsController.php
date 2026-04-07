@@ -1218,7 +1218,50 @@ class ResultsController extends Controller
             $detailedResults = $this->scoreService->getDetailedResults($referenciaIII);
             $scores = $this->scoreService->calculateReferenciaIIIScores($referenciaIII);
             $totalScore = $scores['total_score'];
-            $results = $detailedResults;
+
+            $results = collect($detailedResults)
+                ->map(function (array $row) use ($scores): array {
+                    $categoryName = (string) data_get($row, 'categoria.nombre', 'Sin categoría');
+                    $domainName = (string) data_get($row, 'dominio.nombre', 'Sin dominio');
+                    $dimensionName = (string) ($row['dimension'] ?? 'Sin dimensión');
+                    $dimensionKey = $categoryName.'|'.$domainName.'|'.$dimensionName;
+
+                    $categoryScore = (int) data_get($row, 'categoria.puntaje', 0);
+                    $categoryRisk = (string) data_get($row, 'categoria.nivel_riesgo', 'Nulo');
+
+                    $domainScore = (int) data_get($row, 'dominio.puntaje', 0);
+                    $domainRisk = (string) data_get($row, 'dominio.nivel_riesgo', 'Nulo');
+
+                    $dimensionScore = (int) data_get($scores, 'dimensions.'.$dimensionKey.'.score', 0);
+                    $dimensionRisk = $this->resolveDimensionRiskLevel($dimensionName, $dimensionScore);
+
+                    return [
+                        'categoria' => [
+                            'nombre' => $categoryName,
+                            'score' => $categoryScore,
+                            'puntaje' => $categoryScore,
+                            'nivel_riesgo' => $categoryRisk,
+                        ],
+                        'dominio' => [
+                            'nombre' => $domainName,
+                            'score' => $domainScore,
+                            'puntaje' => $domainScore,
+                            'nivel_riesgo' => $domainRisk,
+                        ],
+                        'dimension' => [
+                            'nombre' => $dimensionName,
+                            'score' => $dimensionScore,
+                            'puntaje' => $dimensionScore,
+                            'nivel_riesgo' => $dimensionRisk,
+                        ],
+                        'item' => (string) ($row['item'] ?? ''),
+                        'item_numero' => (int) ($row['item_numero'] ?? 0),
+                        'respuesta' => (string) ($row['respuesta'] ?? ''),
+                        'puntaje' => (int) ($row['puntaje'] ?? 0),
+                    ];
+                })
+                ->values()
+                ->all();
         }
 
         // Format Guide I results
@@ -1567,6 +1610,30 @@ class ResultsController extends Controller
         $values = config('likert-value.valorOpciones');
 
         return $values[$answer] ?? null;
+    }
+
+    private function resolveDimensionRiskLevel(string $dimensionName, int $score): string
+    {
+        $dimensions = config('nom035_risk_levels.dimensions', []);
+        $normalizedName = mb_strtolower(trim($dimensionName));
+
+        foreach ($dimensions as $name => $configuration) {
+            if (mb_strtolower(trim((string) $name)) !== $normalizedName) {
+                continue;
+            }
+
+            $levels = $configuration['levels'] ?? [];
+            foreach ($levels as $levelName => $range) {
+                $min = (int) ($range['min'] ?? 0);
+                $max = (int) ($range['max'] ?? 0);
+
+                if ($score >= $min && $score <= $max) {
+                    return (string) config('nom035_risk_levels.labels.'.$levelName, ucfirst((string) $levelName));
+                }
+            }
+        }
+
+        return 'Nulo';
     }
 
     /**
