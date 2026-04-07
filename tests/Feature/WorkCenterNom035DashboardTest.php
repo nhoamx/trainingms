@@ -281,4 +281,48 @@ class WorkCenterNom035DashboardTest extends TestCase
             ->where('generalReport.total_evaluations', 1)
         );
     }
+
+    public function test_dashboard_ref_iii_filters_by_source_parameter(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->referenciaIII()->online()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'online',
+            'processing_status' => 'completed',
+        ]);
+
+        PaperEvaluation::factory()->referenciaIII()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'paper',
+            'processing_status' => 'completed',
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035', ['workCenter' => $workCenter, 'source' => 'online']))
+            ->assertInertia(fn ($page) => $page
+                ->where('domainStatistics.total_evaluations', 1)
+                ->where('selectedSource', 'online')
+            );
+
+        $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035', ['workCenter' => $workCenter, 'source' => 'paper']))
+            ->assertInertia(fn ($page) => $page
+                ->where('domainStatistics.total_evaluations', 1)
+                ->where('selectedSource', 'paper')
+            );
+
+        $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035', ['workCenter' => $workCenter, 'source' => 'all']))
+            ->assertInertia(fn ($page) => $page
+                ->where('domainStatistics.total_evaluations', 2)
+                ->where('selectedSource', null)
+            );
+    }
 }

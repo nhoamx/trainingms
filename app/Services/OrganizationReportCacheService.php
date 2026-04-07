@@ -261,65 +261,81 @@ class OrganizationReportCacheService
     /**
      * Get the cache key for WorkCenter NOM-035 domain statistics
      */
-    public function getWcNom035DomainsCacheKey(int|string $workCenterId): string
+    public function getWcNom035DomainsCacheKey(int|string $workCenterId, ?string $source = null): string
     {
-        return self::WC_PREFIX."_nom035_domains_{$workCenterId}";
+        $sourceSegment = in_array($source, ['online', 'paper'], true) ? $source : 'all';
+
+        return self::WC_PREFIX."_nom035_domains_{$workCenterId}_{$sourceSegment}";
     }
 
     /**
      * Get the cache key for WorkCenter NOM-035 category statistics
      */
-    public function getWcNom035CategoriesCacheKey(int|string $workCenterId): string
+    public function getWcNom035CategoriesCacheKey(int|string $workCenterId, ?string $source = null): string
     {
-        return self::WC_PREFIX."_nom035_categories_{$workCenterId}";
+        $sourceSegment = in_array($source, ['online', 'paper'], true) ? $source : 'all';
+
+        return self::WC_PREFIX."_nom035_categories_{$workCenterId}_{$sourceSegment}";
     }
 
     /**
      * Get the cache key for WorkCenter NOM-035 dimension statistics
      */
-    public function getWcNom035DimensionsCacheKey(int|string $workCenterId): string
+    public function getWcNom035DimensionsCacheKey(int|string $workCenterId, ?string $source = null): string
     {
-        return self::WC_PREFIX."_nom035_dimensions_{$workCenterId}";
+        $sourceSegment = in_array($source, ['online', 'paper'], true) ? $source : 'all';
+
+        return self::WC_PREFIX."_nom035_dimensions_{$workCenterId}_{$sourceSegment}";
     }
 
     /**
      * Get the cache key for WorkCenter NOM-035 question statistics
      */
-    public function getWcNom035QuestionsCacheKey(int|string $workCenterId): string
+    public function getWcNom035QuestionsCacheKey(int|string $workCenterId, ?string $source = null): string
     {
-        return self::WC_PREFIX."_nom035_questions_{$workCenterId}";
+        $sourceSegment = in_array($source, ['online', 'paper'], true) ? $source : 'all';
+
+        return self::WC_PREFIX."_nom035_questions_{$workCenterId}_{$sourceSegment}";
     }
 
     /**
      * Get the cache key for WorkCenter NOM-035 block statistics
      */
-    public function getWcNom035BlocksCacheKey(int|string $workCenterId): string
+    public function getWcNom035BlocksCacheKey(int|string $workCenterId, ?string $source = null): string
     {
-        return self::WC_PREFIX."_nom035_blocks_{$workCenterId}";
+        $sourceSegment = in_array($source, ['online', 'paper'], true) ? $source : 'all';
+
+        return self::WC_PREFIX."_nom035_blocks_{$workCenterId}_{$sourceSegment}";
     }
 
     /**
      * Get the cache key for WorkCenter NOM-035 global statistics
      */
-    public function getWcNom035GlobalCacheKey(int|string $workCenterId): string
+    public function getWcNom035GlobalCacheKey(int|string $workCenterId, ?string $source = null): string
     {
-        return self::WC_PREFIX."_nom035_global_{$workCenterId}";
+        $sourceSegment = in_array($source, ['online', 'paper'], true) ? $source : 'all';
+
+        return self::WC_PREFIX."_nom035_global_{$workCenterId}_{$sourceSegment}";
     }
 
     /**
      * Get the cache key for WorkCenter NOM-035 violence labor statistics
      */
-    public function getWcNom035ViolenceCacheKey(int|string $workCenterId): string
+    public function getWcNom035ViolenceCacheKey(int|string $workCenterId, ?string $source = null): string
     {
-        return self::WC_PREFIX."_nom035_violence_{$workCenterId}";
+        $sourceSegment = in_array($source, ['online', 'paper'], true) ? $source : 'all';
+
+        return self::WC_PREFIX."_nom035_violence_{$workCenterId}_{$sourceSegment}";
     }
 
     /**
      * Get the cache key for WorkCenter NOM-035 general report table
      */
-    public function getWcNom035GeneralReportCacheKey(int|string $workCenterId): string
+    public function getWcNom035GeneralReportCacheKey(int|string $workCenterId, ?string $source = null): string
     {
-        return self::WC_PREFIX."_nom035_general_report_{$workCenterId}";
+        $sourceSegment = in_array($source, ['online', 'paper'], true) ? $source : 'all';
+
+        return self::WC_PREFIX."_nom035_general_report_{$workCenterId}_{$sourceSegment}";
     }
 
     /**
@@ -338,13 +354,29 @@ class OrganizationReportCacheService
     public function forgetWorkCenterCaches(int|string $workCenterId): void
     {
         Cache::forget($this->getWcNom035DomainsCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035DomainsCacheKey($workCenterId, 'online'));
+        Cache::forget($this->getWcNom035DomainsCacheKey($workCenterId, 'paper'));
         Cache::forget($this->getWcNom035CategoriesCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035CategoriesCacheKey($workCenterId, 'online'));
+        Cache::forget($this->getWcNom035CategoriesCacheKey($workCenterId, 'paper'));
         Cache::forget($this->getWcNom035DimensionsCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035DimensionsCacheKey($workCenterId, 'online'));
+        Cache::forget($this->getWcNom035DimensionsCacheKey($workCenterId, 'paper'));
         Cache::forget($this->getWcNom035QuestionsCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035QuestionsCacheKey($workCenterId, 'online'));
+        Cache::forget($this->getWcNom035QuestionsCacheKey($workCenterId, 'paper'));
         Cache::forget($this->getWcNom035BlocksCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035BlocksCacheKey($workCenterId, 'online'));
+        Cache::forget($this->getWcNom035BlocksCacheKey($workCenterId, 'paper'));
         Cache::forget($this->getWcNom035GlobalCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035GlobalCacheKey($workCenterId, 'online'));
+        Cache::forget($this->getWcNom035GlobalCacheKey($workCenterId, 'paper'));
         Cache::forget($this->getWcNom035ViolenceCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035ViolenceCacheKey($workCenterId, 'online'));
+        Cache::forget($this->getWcNom035ViolenceCacheKey($workCenterId, 'paper'));
         Cache::forget($this->getWcNom035GeneralReportCacheKey($workCenterId));
+        Cache::forget($this->getWcNom035GeneralReportCacheKey($workCenterId, 'online'));
+        Cache::forget($this->getWcNom035GeneralReportCacheKey($workCenterId, 'paper'));
         Cache::forget($this->getWcNom035RefIStatsCacheKey($workCenterId));
         Cache::forget($this->getWcNom035RefIStatsCacheKey($workCenterId, 'online'));
         Cache::forget($this->getWcNom035RefIStatsCacheKey($workCenterId, 'paper'));

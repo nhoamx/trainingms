@@ -300,4 +300,82 @@ class WorkCenterNom035IndexTest extends TestCase
             ->where('instruments.1.count', 1)
         );
     }
+
+    public function test_index_page_supports_all_source_with_mixed_online_and_paper_results(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        $paperEvaluation = PaperEvaluation::factory()->referenciaIII()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'paper',
+            'personal_folio' => '0001',
+            'processing_status' => 'completed',
+        ]);
+
+        PaperEvaluation::factory()->referenciaIII()->online()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'online',
+            'personal_folio' => '0001',
+            'folio' => $paperEvaluation->folio,
+            'processing_status' => 'completed',
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-index', [
+                'workCenter' => $workCenter,
+                'source' => 'all',
+            ]));
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035DashboardIndex')
+            ->where('selectedSource', 'all')
+            ->where('sourceSummary.paper', 1)
+            ->where('sourceSummary.online', 1)
+            ->where('totalEvaluations', 1)
+            ->where('instruments.0.key', 'referencia_iii')
+            ->where('instruments.0.count', 2)
+            ->has('evaluations', 2)
+            ->where('evaluations.0.source', 'paper')
+            ->where('evaluations.1.source', 'online')
+        );
+    }
+
+    public function test_index_page_defaults_to_online_when_source_is_invalid(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->referenciaIII()->online()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+        ]);
+
+        PaperEvaluation::factory()->referenciaIII()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035-index', [
+                'workCenter' => $workCenter,
+                'source' => 'otro',
+            ]));
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035DashboardIndex')
+            ->where('selectedSource', 'online')
+            ->where('totalEvaluations', 1)
+        );
+    }
 }
