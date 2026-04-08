@@ -730,10 +730,7 @@
                       </div>
                       <div>
                         <Link
-                          :href="route('organization.results.detail', {
-                            organization: organizationId,
-                            personalFolio: item.personal_folio
-                          })"
+                          :href="buildResultsDetailHref(item.personal_folio)"
                           class="text-indigo-600 hover:text-indigo-800 text-sm font-medium hover:underline"
                         >
                           Ver detalles →
@@ -847,10 +844,7 @@
                   class="hover:bg-slate-50 transition-colors duration-150 p-0"
                 >
                   <Link
-                    :href="route('organization.results.detail', {
-                      organization: organizationId,
-                      personalFolio: participant.personal_folio
-                    })"
+                    :href="buildResultsDetailHref(participant.personal_folio)"
                     target="_blank"
                     class="flex justify-between items-center p-4 w-full h-full no-underline text-inherit hover:no-underline"
                   >
@@ -1307,6 +1301,35 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);
+
+const currentSource = computed<'paper' | 'online' | null>(() => {
+  const source = new URLSearchParams(window.location.search).get('source');
+
+  if (source === 'paper' || source === 'online') {
+    return source;
+  }
+
+  return null;
+});
+
+const buildResultsDetailHref = (personalFolio: string): string => {
+  const returnTo = `${window.location.pathname}${window.location.search}`;
+
+  if (props.workCenterId) {
+    return route('work-centers.results.detail', {
+      workCenter: props.workCenterId,
+      personalFolio,
+      source: currentSource.value ?? undefined,
+      return_to: returnTo,
+    });
+  }
+
+  return route('organization.results.detail', {
+    organization: props.organizationId,
+    personalFolio,
+    return_to: returnTo,
+  });
+};
 
 const preventionForm = useForm({
   instrument_type: 'referencia_iii',

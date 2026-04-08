@@ -18,11 +18,14 @@ use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\Question;
 use App\Models\User;
+use App\Models\WorkCenter;
 use App\Services\LikertScoreService;
 use App\Services\OrganizationReportCacheService;
 use App\Services\PaperEvaluationScoreService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -1188,20 +1191,72 @@ class ResultsController extends Controller
         return Excel::download(new GapFoliosExport($missingFolios), $filename);
     }
 
-    public function showDetailedResults(Organization $organization, string $personalFolio)
+    public function showDetailedResults(Organization $organization, string $personalFolio, Request $request)
     {
         $this->authorize('view-organization-results', $organization);
 
-        // Get all evaluations for this personal folio (include both paper and online sources)
-        $evaluations = PaperEvaluation::where('organization_id', $organization->id)
-            ->where('personal_folio', $personalFolio)
-            ->whereIn('source', ['paper', 'online'])
-            ->where('processing_status', 'completed')
-            ->get();
+        $source = $this->resolveSourceFilter($request->query('source'));
+
+        $evaluations = $this->buildDetailedResultsQuery(
+            $organization->id,
+            $personalFolio,
+            null,
+            $source
+        )->get();
 
         if ($evaluations->isEmpty()) {
             abort(404, 'No se encontraron evaluaciones para este folio personal');
         }
+
+        return $this->renderDetailedResultsPage($organization, $personalFolio, $evaluations);
+    }
+
+    public function showWorkCenterDetailedResults(WorkCenter $workCenter, string $personalFolio, Request $request)
+    {
+        $this->authorize('viewWorkCenterDashboard', $workCenter);
+
+        $source = $this->resolveSourceFilter($request->query('source'));
+
+        $evaluations = $this->buildDetailedResultsQuery(
+            $workCenter->organization_id,
+            $personalFolio,
+            $workCenter->id,
+            $source
+        )->get();
+
+        if ($evaluations->isEmpty()) {
+            abort(404, 'No se encontraron evaluaciones para este folio personal');
+        }
+
+        return $this->renderDetailedResultsPage($workCenter->organization, $personalFolio, $evaluations);
+    }
+
+    private function buildDetailedResultsQuery(string $organizationId, string $personalFolio, ?string $workCenterId = null, ?string $source = null): Builder
+    {
+        $query = PaperEvaluation::where('organization_id', $organizationId)
+            ->where('personal_folio', $personalFolio)
+            ->where('processing_status', 'completed');
+
+        if ($workCenterId !== null) {
+            $query->where('work_center_id', $workCenterId);
+        }
+
+        if ($source !== null) {
+            $query->where('source', $source);
+        } else {
+            $query->whereIn('source', ['paper', 'online']);
+        }
+
+        return $query;
+    }
+
+    private function resolveSourceFilter(mixed $source): ?string
+    {
+        return in_array($source, ['paper', 'online'], true) ? $source : null;
+    }
+
+    private function renderDetailedResultsPage(Organization $organization, string $personalFolio, Collection $evaluations)
+    {
 
         // Get individual evaluations by type
         $referenciaI = $evaluations->firstWhere('evaluation_type', 'referencia_i');
@@ -1215,6 +1270,11 @@ class ResultsController extends Controller
         $totalScore = 0;
 
         if ($referenciaIII) {
+            $referenciaIiiAnswers = $this->getReferenciaIiiAnswers($referenciaIII);
+            if (! empty($referenciaIiiAnswers)) {
+                $referenciaIII->setAttribute('referencia_iii_answers', $referenciaIiiAnswers);
+            }
+
             $detailedResults = $this->scoreService->getDetailedResults($referenciaIII);
             $scores = $this->scoreService->calculateReferenciaIIIScores($referenciaIII);
             $totalScore = $scores['total_score'];
@@ -1267,13 +1327,8 @@ class ResultsController extends Controller
         // Format Guide I results
         $guideIResults = null;
         if ($referenciaI) {
-            $questions = config('guide_i_questions');
-            $answers = $referenciaI->referencia_i_answers ?? [];
-            $mappedAnswers = [];
-            foreach ($answers as $key => $value) {
-                $label = $questions[$key] ?? $key;
-                $mappedAnswers[$label] = $value;
-            }
+            $mappedAnswers = $this->getGuideIAnswers($referenciaI);
+
             $guideIResults = [
                 'id' => $referenciaI->id,
                 'folio' => $referenciaI->folio,
@@ -1286,48 +1341,17 @@ class ResultsController extends Controller
         $guideIIIResults = null;
         if ($referenciaIII) {
             $questions = config('referencia_iii.general');
-            $conditionalSections = config('referencia_iii.conditional_sections');
-            $acontecimientos = config('referencia_iii.acontecimientos_traumaticos');
-            $answers = $referenciaIII->referencia_iii_answers ?? [];
+            $answers = $this->getReferenciaIiiAnswers($referenciaIII);
             $mappedAnswers = [];
             foreach ($answers as $key => $value) {
                 $num = (int) ltrim($key, '0');
                 $label = $questions[$num] ?? $key;
                 $mappedAnswers[$label] = $value;
             }
-            // Condicionales: incluir la condición y mapear cada pregunta
-            $conditional = $referenciaIII->referencia_iii_conditional ?? [];
-            $mappedConditional = [];
-            foreach ($conditionalSections as $sectionKey => $section) {
-                if (isset($conditional[$sectionKey])) {
-                    $sectionData = $conditional[$sectionKey];
-                    $conditionValue = $sectionData['condition'] ?? null;
-                    $questionsData = $sectionData['questions'] ?? [];
-                    $sectionLabel = $section['condition'];
-                    $mappedQuestions = [];
-                    foreach ($questionsData as $qKey => $qValue) {
-                        $qNum = (int) ltrim($qKey, '0');
-                        $qLabel = $section['questions'][$qNum] ?? $qKey;
-                        $mappedQuestions[$qLabel] = $qValue;
-                    }
-                    $mappedConditional[] = [
-                        'section' => $sectionLabel,
-                        'condition' => $conditionValue,
-                        'questions' => $mappedQuestions,
-                    ];
-                }
-            }
-            // CITSATS: usar el bloque de acontecimientos_traumaticos
-            $citsats = $referenciaIII->citsats_s1 ?? [];
-            $mappedCitsats = [];
-            if (! empty($citsats)) {
-                $citsatsQuestions = $acontecimientos['questions'] ?? [];
-                foreach ($citsats as $key => $value) {
-                    $num = (int) ltrim($key, '0');
-                    $label = $citsatsQuestions[$num] ?? $key;
-                    $mappedCitsats[$label] = $value;
-                }
-            }
+
+            $mappedConditional = $this->getReferenciaIiiConditional($referenciaIII);
+            $mappedCitsats = $this->getCitsatsAnswers($referenciaIII);
+
             $guideIIIResults = [
                 'id' => $referenciaIII->id,
                 'folio' => $referenciaIII->folio,
@@ -1341,88 +1365,14 @@ class ResultsController extends Controller
         // Format Guide V results
         $guideVResults = null;
         if ($referenciaV) {
-            $demographic = $referenciaV->demographic_data ?? [];
-            $labels = [
-                'sexo' => 'Sexo',
-                'edad' => 'Edad',
-                'estado_civil' => 'Estado Civil',
-                'nivel_estudios' => 'Nivel de Estudios',
-                'ocupacion_puesto' => 'Ocupación/Puesto',
-                'departamento_seccion_area' => 'Departamento/Sección/Área',
-                'tipo_puesto' => 'Tipo de Puesto',
-                'tipo_contratacion' => 'Tipo de Contratación',
-                'tipo_personal' => 'Tipo de Personal',
-                'tipo_jornada' => 'Tipo de Jornada',
-                'rotacion_turnos' => 'Rotación de Turnos',
-                'tiempo_puesto_actual' => 'Tiempo en el Puesto Actual',
-                'tiempo_experiencia_laboral' => 'Tiempo de Experiencia Laboral',
-            ];
-            $configV = config('referencia_v');
-            $mappedDemographic = [];
-            foreach ($demographic as $key => $value) {
-                $label = $labels[$key] ?? $key;
-                $displayValue = '';
-                // Edad: puede venir como array { decenas, unidades }
-                if ($key === 'edad' && is_array($value) && isset($value['decenas'], $value['unidades'])) {
-                    $displayValue = $value['decenas'].$value['unidades'];
-                }
-                // Sexo
-                elseif ($key === 'sexo' && is_string($value)) {
-                    $displayValue = strtolower($value) === 'femenino' ? 'Femenino' : (strtolower($value) === 'masculino' ? 'Masculino' : ucfirst($value));
-                }
-                // Estado civil
-                elseif ($key === 'estado_civil' && is_string($value)) {
-                    $map = ['union_libre' => 'Unión libre', 'casado' => 'Casado', 'soltero' => 'Soltero', 'divorciado' => 'Divorciado', 'viudo' => 'Viudo'];
-                    $displayValue = $map[$value] ?? ucfirst($value);
-                }
-                // Nivel de estudios
-                elseif ($key === 'nivel_estudios' && is_array($value)) {
-                    foreach ($value as $nivel => $datos) {
-                        if (is_array($datos) && ! empty($datos['seleccionado'])) {
-                            $labelNivel = ucfirst(str_replace('_', ' ', $nivel));
-                            if (! empty($datos['completado'])) {
-                                $labelNivel .= $datos['completado'] === 'completo' ? ' (Terminada)' : ' (Incompleta)';
-                            }
-                            $displayValue = $labelNivel;
-                            break;
-                        }
-                    }
-                }
-                // Ocupación/Puesto y Departamento
-                elseif (($key === 'ocupacion_puesto' || $key === 'departamento_seccion_area' || $key === 'ocupacion' || $key === 'departamento') && is_array($value)) {
-                    $vals = array_filter(array_values($value), fn ($v) => ! is_null($v) && $v !== '');
-                    $displayValue = $vals ? implode(' ', $vals) : 'Sin respuesta';
-                }
-                // Tipo de puesto, contratación, personal, jornada, rotación, etc.
-                elseif (in_array($key, ['tipo_puesto', 'tipo_contratacion', 'tipo_personal', 'tipo_jornada', 'rotacion_turnos'])) {
-                    $displayValue = is_string($value) ? ucwords(str_replace(['_', '-'], [' ', ' '], $value)) : '';
-                }
-                // Experiencia laboral y tiempo en el puesto actual - usar mapeo correcto
-                elseif (in_array($key, ['tiempo_puesto_actual', 'experiencia_laboral', 'tiempo_experiencia_laboral'])) {
-                    if (is_string($value)) {
-                        // Reemplazar guiones bajos y "anos" por "años"
-                        $displayValue = str_replace('_', ' ', $value);
-                        $displayValue = str_replace('anos', 'años', $displayValue);
-                        // Capitalizar correctamente
-                        $displayValue = ucfirst($displayValue);
-                        // Reemplazar "a" por "a" en rangos (Entre 5 a 9 años)
-                        $displayValue = preg_replace('/\s+a\s+(\d)/', ' a $1', $displayValue);
-                    } else {
-                        $displayValue = '';
-                    }
-                }
-                // Si no, mostrar como string
-                else {
-                    $displayValue = is_array($value) ? json_encode($value) : (string) $value;
-                }
-                $mappedDemographic[$label] = $displayValue;
-            }
+            $mappedDemographic = $this->getGuideVDemographicData($referenciaV);
+
             $guideVResults = [
                 'id' => $referenciaV->id,
                 'folio' => $referenciaV->folio,
                 'created_at' => $referenciaV->created_at->format('Y-m-d H:i:s'),
                 'demographic_data' => $mappedDemographic,
-                'raw_demographic_data' => $demographic, // Para edición
+                'raw_demographic_data' => (is_array($referenciaV->demographic_data) ? $referenciaV->demographic_data : []),
             ];
         }
 
@@ -1478,6 +1428,416 @@ class ResultsController extends Controller
             'occupationPositions' => $organization->occupationPositions()->get(['id', 'name'])->toArray(),
             'departmentAreas' => $organization->departmentAreas()->get(['id', 'name'])->toArray(),
         ]);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function getReferenciaIiiAnswers(PaperEvaluation $evaluation): array
+    {
+        $answers = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
+
+        if (! empty($answers)) {
+            return $this->normalizeTwoDigitAnswerKeys($answers);
+        }
+
+        $rawData = is_array($evaluation->raw_data) ? $evaluation->raw_data : [];
+        $fromRawData = $this->extractFlatQuestionValues($rawData, 1, 64);
+
+        return $this->normalizeTwoDigitAnswerKeys($fromRawData);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function getGuideIAnswers(PaperEvaluation $evaluation): array
+    {
+        $questions = config('guide_i_questions', []);
+        $answers = is_array($evaluation->referencia_i_answers) ? $evaluation->referencia_i_answers : [];
+
+        if (is_array($answers['referencia_i'] ?? null)) {
+            $answers = $answers['referencia_i'];
+        }
+
+        if (empty($answers)) {
+            $rawData = is_array($evaluation->raw_data) ? $evaluation->raw_data : [];
+            $fromRawData = is_array($rawData['referencia_i'] ?? null) ? $rawData['referencia_i'] : [];
+            if (! empty($fromRawData)) {
+                $answers = $fromRawData;
+            }
+        }
+
+        if (empty($answers)) {
+            $rawData = is_array($evaluation->raw_data) ? $evaluation->raw_data : [];
+            $answers = $this->extractFlatQuestionValues($rawData, 65, 78);
+        }
+
+        $normalizedAnswers = $this->normalizeTwoDigitAnswerKeys(is_array($answers) ? $answers : []);
+        $mappedAnswers = [];
+
+        foreach (range(1, 14) as $questionNumber) {
+            $questionKey = 'pregunta_'.$questionNumber;
+            $answerKey = str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT);
+            $answer = $normalizedAnswers[$answerKey] ?? null;
+
+            if ($answer === null || $answer === '') {
+                continue;
+            }
+
+            $mappedAnswers[$questions[$questionKey] ?? $questionKey] = $answer;
+        }
+
+        if (! empty($mappedAnswers)) {
+            return $mappedAnswers;
+        }
+
+        $citsats = $this->getCitsatsAnswers($evaluation);
+
+        return $citsats;
+    }
+
+    /**
+     * @return array<int, array{section: string, condition: string|null, questions: array<string, string>}>
+     */
+    private function getReferenciaIiiConditional(PaperEvaluation $evaluation): array
+    {
+        $conditionalSections = config('referencia_iii.conditional_sections', []);
+        $conditional = is_array($evaluation->referencia_iii_conditional) ? $evaluation->referencia_iii_conditional : [];
+
+        $mappedConditional = [];
+
+        foreach ($conditionalSections as $sectionKey => $section) {
+            if (! isset($conditional[$sectionKey]) || ! is_array($conditional[$sectionKey])) {
+                continue;
+            }
+
+            $sectionData = $conditional[$sectionKey];
+            $conditionValue = $this->unwrapRawAnswerValue($sectionData['condition'] ?? null);
+            $questionsData = is_array($sectionData['questions'] ?? null) ? $sectionData['questions'] : [];
+            $mappedQuestions = [];
+
+            foreach ($questionsData as $qKey => $qValue) {
+                $qNum = (int) ltrim((string) $qKey, '0');
+                if ($qNum <= 0) {
+                    continue;
+                }
+
+                $qLabel = $section['questions'][$qNum] ?? (string) $qKey;
+                $answerValue = $this->unwrapRawAnswerValue($qValue);
+
+                if ($answerValue === null || $answerValue === '') {
+                    continue;
+                }
+
+                $mappedQuestions[$qLabel] = $answerValue;
+            }
+
+            if ($conditionValue === null && empty($mappedQuestions)) {
+                continue;
+            }
+
+            $mappedConditional[] = [
+                'section' => (string) ($section['condition'] ?? $sectionKey),
+                'condition' => $conditionValue,
+                'questions' => $mappedQuestions,
+            ];
+        }
+
+        if (! empty($mappedConditional)) {
+            return $mappedConditional;
+        }
+
+        $rawData = is_array($evaluation->raw_data) ? $evaluation->raw_data : [];
+        $flatConditional = $this->normalizeTwoDigitAnswerKeys($this->extractFlatQuestionValues($rawData, 65, 72));
+
+        if (empty($flatConditional)) {
+            return [];
+        }
+
+        $fallbackSections = [
+            'customer_service' => [
+                'condition_key' => '65',
+                'question_keys' => ['66', '67', '68'],
+            ],
+            'management' => [
+                'condition_key' => '69',
+                'question_keys' => ['70', '71', '72'],
+            ],
+        ];
+
+        foreach ($fallbackSections as $sectionKey => $meta) {
+            $sectionConfig = $conditionalSections[$sectionKey] ?? null;
+            if (! is_array($sectionConfig)) {
+                continue;
+            }
+
+            $conditionValue = $flatConditional[$meta['condition_key']] ?? null;
+            $mappedQuestions = [];
+
+            foreach ($meta['question_keys'] as $questionKey) {
+                $answerValue = $flatConditional[$questionKey] ?? null;
+                if ($answerValue === null || $answerValue === '') {
+                    continue;
+                }
+
+                $questionNumber = (int) $questionKey;
+                $questionLabel = $sectionConfig['questions'][$questionNumber] ?? $questionKey;
+                $mappedQuestions[$questionLabel] = $answerValue;
+            }
+
+            if ($conditionValue === null && empty($mappedQuestions)) {
+                continue;
+            }
+
+            $mappedConditional[] = [
+                'section' => (string) ($sectionConfig['condition'] ?? $sectionKey),
+                'condition' => $conditionValue,
+                'questions' => $mappedQuestions,
+            ];
+        }
+
+        return $mappedConditional;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function getCitsatsAnswers(PaperEvaluation $evaluation): array
+    {
+        $citsats = is_array($evaluation->citsats_s1) ? $evaluation->citsats_s1 : [];
+
+        if (empty($citsats)) {
+            $rawData = is_array($evaluation->raw_data) ? $evaluation->raw_data : [];
+            $citsats = $this->extractCitsatsFromFlatRawData($rawData);
+        }
+
+        if (empty($citsats)) {
+            return [];
+        }
+
+        $questions = config('referencia_iii.acontecimientos_traumaticos.questions', []);
+        $mapped = [];
+
+        foreach (array_values($citsats) as $index => $answer) {
+            $answerValue = $this->unwrapRawAnswerValue($answer);
+            if ($answerValue === null || $answerValue === '') {
+                continue;
+            }
+
+            $label = $questions[$index] ?? ('Pregunta '.($index + 1));
+            $mapped[$label] = $answerValue;
+        }
+
+        return $mapped;
+    }
+
+    /**
+     * @param  array<string, mixed>  $rawData
+     * @return array<string, mixed>
+     */
+    private function extractCitsatsFromFlatRawData(array $rawData): array
+    {
+        $atsEntries = [];
+
+        foreach ($rawData as $rawKey => $rawAnswer) {
+            if (! is_array($rawAnswer)) {
+                continue;
+            }
+
+            if (($rawAnswer['mapping_section'] ?? null) !== 'ats') {
+                continue;
+            }
+
+            if (! is_numeric((string) $rawKey)) {
+                continue;
+            }
+
+            $atsEntries[(int) $rawKey] = $rawAnswer;
+        }
+
+        if (empty($atsEntries)) {
+            return [];
+        }
+
+        ksort($atsEntries);
+        $citsats = [];
+        $index = 1;
+
+        foreach ($atsEntries as $entry) {
+            if ($index > 6) {
+                break;
+            }
+
+            $citsats[(string) $index] = $entry['value'] ?? null;
+            $index++;
+        }
+
+        return $citsats;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function getGuideVDemographicData(PaperEvaluation $evaluation): array
+    {
+        $demographicData = is_array($evaluation->demographic_data) ? $evaluation->demographic_data : [];
+        $rawData = is_array($evaluation->raw_data) ? $evaluation->raw_data : [];
+
+        if (empty($demographicData)) {
+            $demographicData = is_array($rawData['referencia_v'] ?? null) ? $rawData['referencia_v'] : [];
+        }
+
+        if (empty($demographicData)) {
+            $demographicData = $rawData;
+        }
+
+        $result = [];
+
+        $mappedFields = [
+            'Sexo' => ['sexo', 'gender'],
+            'Edad' => ['edad', 'age'],
+            'Estado Civil' => ['estado_civil', 'marital_status'],
+            'Nivel de Estudios' => ['nivel_estudios', 'education_level'],
+            'Ocupación/Puesto' => ['ocupacion_puesto', 'datos_laborales.ocupacion_puesto', 'position'],
+            'Departamento/Sección/Área' => ['departamento_seccion_area', 'datos_laborales.departamento_seccion_area', 'department'],
+            'Tipo de Puesto' => ['tipo_puesto', 'datos_laborales.tipo_puesto', 'position_type'],
+            'Tipo de Contratación' => ['tipo_contratacion', 'datos_laborales.tipo_contratacion', 'contract_type'],
+            'Tipo de Personal' => ['tipo_personal', 'datos_laborales.tipo_personal', 'personnel_type'],
+            'Tipo de Jornada' => ['tipo_jornada', 'datos_laborales.tipo_jornada', 'work_schedule'],
+            'Rotación de Turnos' => ['rotacion_turnos', 'datos_laborales.rotacion_turnos', 'shift_rotation'],
+            'Tiempo en el Puesto Actual' => ['tiempo_puesto_actual', 'datos_laborales.experiencia.tiempo_puesto_actual', 'time_in_current_position'],
+            'Tiempo de Experiencia Laboral' => ['tiempo_experiencia_laboral', 'datos_laborales.experiencia.tiempo_experiencia_laboral', 'work_experience'],
+        ];
+
+        foreach ($mappedFields as $label => $paths) {
+            $displayValue = $this->extractDemographicValue($demographicData, $paths);
+            if ($displayValue === null || $displayValue === '') {
+                continue;
+            }
+
+            $result[$label] = $displayValue;
+        }
+
+        if (! empty($result)) {
+            return $result;
+        }
+
+        foreach ($demographicData as $key => $value) {
+            $displayValue = $this->unwrapRawAnswerValue($value);
+            if ($displayValue === null || $displayValue === '') {
+                continue;
+            }
+
+            $result[(string) $key] = $displayValue;
+        }
+
+        return $result;
+    }
+
+    private function extractDemographicValue(array $demographicData, array $paths): ?string
+    {
+        foreach ($paths as $path) {
+            $rawValue = data_get($demographicData, $path);
+            if ($rawValue === null) {
+                continue;
+            }
+
+            if (is_array($rawValue) && array_key_exists('value', $rawValue)) {
+                $unwrapped = $this->unwrapRawAnswerValue($rawValue['value']);
+                if ($unwrapped !== null && $unwrapped !== '') {
+                    return $this->formatDemographicValue($unwrapped);
+                }
+
+                continue;
+            }
+
+            if (is_array($rawValue) && isset($rawValue['decenas'], $rawValue['unidades'])) {
+                return (string) ($rawValue['decenas'].$rawValue['unidades']);
+            }
+
+            $unwrapped = $this->unwrapRawAnswerValue($rawValue);
+            if ($unwrapped !== null && $unwrapped !== '') {
+                return $this->formatDemographicValue($unwrapped);
+            }
+        }
+
+        return null;
+    }
+
+    private function formatDemographicValue(string $value): string
+    {
+        $normalized = str_replace('_', ' ', trim($value));
+        $normalized = str_replace('anos', 'años', $normalized);
+
+        return ucfirst($normalized);
+    }
+
+    /**
+     * @param  array<string|int, mixed>  $source
+     * @return array<string, string>
+     */
+    private function extractFlatQuestionValues(array $source, int $start, int $end): array
+    {
+        $result = [];
+
+        foreach (range($start, $end) as $questionNumber) {
+            $stringKey = (string) $questionNumber;
+
+            if (! array_key_exists($stringKey, $source) && ! array_key_exists($questionNumber, $source)) {
+                continue;
+            }
+
+            $rawValue = $source[$stringKey] ?? $source[$questionNumber] ?? null;
+            $value = $this->unwrapRawAnswerValue($rawValue);
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $result[$stringKey] = $value;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<string, mixed>  $answers
+     * @return array<string, string>
+     */
+    private function normalizeTwoDigitAnswerKeys(array $answers): array
+    {
+        $normalized = [];
+
+        foreach ($answers as $key => $value) {
+            $questionNumber = (int) ltrim((string) $key, '0');
+            if ($questionNumber <= 0) {
+                continue;
+            }
+
+            $unwrappedValue = $this->unwrapRawAnswerValue($value);
+            if ($unwrappedValue === null || $unwrappedValue === '') {
+                continue;
+            }
+
+            $normalized[str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT)] = $unwrappedValue;
+        }
+
+        return $normalized;
+    }
+
+    private function unwrapRawAnswerValue(mixed $rawValue): ?string
+    {
+        if (is_array($rawValue)) {
+            $candidate = $rawValue['value'] ?? null;
+
+            return is_scalar($candidate) ? (string) $candidate : null;
+        }
+
+        if (is_scalar($rawValue)) {
+            return (string) $rawValue;
+        }
+
+        return null;
     }
 
     /**
