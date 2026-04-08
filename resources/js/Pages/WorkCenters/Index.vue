@@ -1,7 +1,7 @@
 <script setup>
 import Dashboard from '../../Layouts/Dashboard.vue';
-import { Link } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const props = defineProps({
   title: {
@@ -22,6 +22,16 @@ const searchQuery = ref('');
 const sortBy = ref('default');
 const clinicalFilter = ref('all');
 const isDownloadingMetrics = ref(false);
+const isDownloadingResponses = ref(false);
+const reportMenuOpen = ref(false);
+const reportMenuRef = ref(null);
+const page = usePage();
+
+const isAdmin = computed(() => {
+  const roles = page.props.auth?.user?.roles ?? [];
+
+  return roles.some((role) => role.name === 'admin' || role.name === 'super-admin');
+});
 
 const sortChips = [
   { key: 'default', label: 'Predeterminado' },
@@ -119,6 +129,29 @@ const getFilterChipClass = (isActive) => {
   return 'inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50';
 };
 
+const isDownloadingAnyReport = computed(() => isDownloadingMetrics.value || isDownloadingResponses.value);
+
+const reportDownloadOptions = computed(() => {
+  const options = [
+    {
+      key: 'metrics',
+      label: 'Resumen de metricas por centro',
+      description: 'Métricas de evaluaciones por centro',
+      loading: isDownloadingMetrics.value,
+      visible: true,
+    },
+    {
+      key: 'responses',
+      label: 'Respuestas por centro',
+      description: 'Libro con pestañas y respuestas completas',
+      loading: isDownloadingResponses.value,
+      visible: isAdmin.value,
+    },
+  ];
+
+  return options.filter((option) => option.visible);
+});
+
 const getDownloadFilename = (contentDisposition) => {
   if (!contentDisposition) {
     return 'reporte_centros.xlsx';
@@ -174,51 +207,168 @@ const downloadMetricsExcel = async () => {
     isDownloadingMetrics.value = false;
   }
 };
+
+const downloadOrganizationResponses = async () => {
+  if (isDownloadingResponses.value) {
+    return;
+  }
+
+  isDownloadingResponses.value = true;
+
+  try {
+    const response = await fetch(route('organizations.report.download', {
+      organization: props.organization.id,
+      reportType: 'respuestas',
+    }), {
+      method: 'GET',
+      headers: {
+        Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('No se pudo generar el reporte de respuestas.');
+    }
+
+    const blob = await response.blob();
+    const filename = getDownloadFilename(response.headers.get('content-disposition'));
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isDownloadingResponses.value = false;
+  }
+};
+
+const toggleReportMenu = () => {
+  reportMenuOpen.value = !reportMenuOpen.value;
+};
+
+const closeReportMenu = () => {
+  reportMenuOpen.value = false;
+};
+
+const handleReportDownload = async (key) => {
+  if (key === 'metrics') {
+    await downloadMetricsExcel();
+    closeReportMenu();
+
+    return;
+  }
+
+  if (key === 'responses') {
+    await downloadOrganizationResponses();
+    closeReportMenu();
+  }
+};
+
+const handleGlobalClick = (event) => {
+  const menuElement = reportMenuRef.value;
+
+  if (! menuElement || !(event.target instanceof Node)) {
+    return;
+  }
+
+  if (! menuElement.contains(event.target)) {
+    closeReportMenu();
+  }
+};
+
+const handleGlobalKeydown = (event) => {
+  if (event.key === 'Escape') {
+    closeReportMenu();
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('mousedown', handleGlobalClick);
+  document.addEventListener('keydown', handleGlobalKeydown);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleGlobalClick);
+  document.removeEventListener('keydown', handleGlobalKeydown);
+});
 </script>
 
 <template>
   <Dashboard :title="title">
     <div class="space-y-6">
       <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 class="text-2xl font-bold text-gray-900">Centros de trabajo</h1>
             <p class="mt-1 text-sm text-gray-600">Organización: {{ organization.name }}</p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:justify-end">
             <Link
               :href="route('dashboard')"
-              class="inline-flex items-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+              class="inline-flex w-full items-center justify-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 sm:w-auto"
             >
               Regresar
             </Link>
             <Link
               :href="route('organizations.work-centers.create', { organization: organization.id })"
-              class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              class="inline-flex w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 sm:w-auto"
             >
               Nuevo centro
             </Link>
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-70"
-              :disabled="isDownloadingMetrics"
-              @click="downloadMetricsExcel"
-            >
-              <svg v-if="isDownloadingMetrics" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-              </svg>
-              <svg v-else class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path d="M10 2a.75.75 0 01.75.75v7.19l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V2.75A.75.75 0 0110 2z" />
-                <path d="M3.5 13.5a.75.75 0 01.75.75v1a1 1 0 001 1h8.5a1 1 0 001-1v-1a.75.75 0 011.5 0v1a2.5 2.5 0 01-2.5 2.5h-8.5a2.5 2.5 0 01-2.5-2.5v-1a.75.75 0 01.75-.75z" />
-              </svg>
-              {{ isDownloadingMetrics ? 'Generando Excel...' : 'Descargar Excel' }}
-            </button>
+            <div ref="reportMenuRef" class="relative w-full sm:w-auto">
+              <button
+                type="button"
+                class="inline-flex w-full items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:min-w-60"
+                :disabled="isDownloadingAnyReport"
+                @click="toggleReportMenu"
+              >
+                <span class="inline-flex items-center gap-2">
+                  <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M10 2a.75.75 0 01.75.75v7.19l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V2.75A.75.75 0 0110 2z" />
+                    <path d="M3.5 13.5a.75.75 0 01.75.75v1a1 1 0 001 1h8.5a1 1 0 001-1v-1a.75.75 0 011.5 0v1a2.5 2.5 0 01-2.5 2.5h-8.5a2.5 2.5 0 01-2.5-2.5v-1a.75.75 0 01.75-.75z" />
+                  </svg>
+                  Descargar reportes
+                </span>
+                <svg class="h-4 w-4 transition-transform" :class="reportMenuOpen ? 'rotate-180' : 'rotate-0'" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                </svg>
+              </button>
+
+              <div
+                v-if="reportMenuOpen"
+                class="absolute right-0 z-30 mt-2 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl sm:w-80"
+              >
+                <button
+                  v-for="option in reportDownloadOptions"
+                  :key="option.key"
+                  type="button"
+                  class="flex w-full items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                  :disabled="option.loading || isDownloadingAnyReport"
+                  @click="handleReportDownload(option.key)"
+                >
+                  <span>
+                    <span class="block text-sm font-semibold text-slate-800">{{ option.label }}</span>
+                    <span class="mt-0.5 block text-xs text-slate-500">{{ option.description }}</span>
+                  </span>
+                  <svg v-if="option.loading" class="mt-0.5 h-4 w-4 animate-spin text-emerald-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
           <p class="text-xs uppercase tracking-wide text-blue-700">Total centros de trabajo</p>
           <p class="mt-1 text-2xl font-bold text-blue-900">{{ visibleWorkCenters.length }}</p>
