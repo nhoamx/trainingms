@@ -570,6 +570,11 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/import', [\App\Http\Controllers\WorkCenterController::class, 'import'])->name('import');
         });
 
+        Route::get('/organizaciones/{organization}/reporte/{reportType}', [\App\Http\Controllers\WorkCenter\WorkCenterOrganizationReportController::class, 'download'])
+            ->whereIn('reportType', ['respuestas'])
+            ->middleware('role:admin|super-admin')
+            ->name('organizations.report.download');
+
         // Rutas para puestos de ocupación
         Route::post('/occupation-positions', [\App\Http\Controllers\OccupationPositionController::class, 'store'])
             ->name('occupation-positions.store');
