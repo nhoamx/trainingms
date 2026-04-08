@@ -19,11 +19,12 @@ class WorkCenterResponsesSheetExportTest extends TestCase
 
         $headings = $sheet->headings();
 
-        $this->assertSame('Folio', $headings[0]);
-        $this->assertSame('Nombre evaluado', $headings[1]);
-        $this->assertSame('Origen', $headings[2]);
-        $this->assertSame('Edad', $headings[3]);
-        $this->assertSame('Guia III - Pregunta 1', $headings[16]);
+        $this->assertSame('Folio personal', $headings[0]);
+        $this->assertSame('Folios de evaluacion', $headings[1]);
+        $this->assertSame('Nombre evaluado', $headings[2]);
+        $this->assertSame('Origen', $headings[3]);
+        $this->assertSame('Edad', $headings[4]);
+        $this->assertSame('Guia III - Pregunta 1', $headings[17]);
         $this->assertContains('Guia III - Pregunta 1', $headings);
         $this->assertContains('Acontecimiento traumatico 1', $headings);
         $this->assertContains('Guia I - Pregunta 1', $headings);
@@ -41,6 +42,7 @@ class WorkCenterResponsesSheetExportTest extends TestCase
             'evaluations' => [
                 [
                     'folio' => '0003',
+                    'personal_folio' => '0123',
                     'evaluee_name' => 'Juan Perez',
                     'source' => 'paper',
                     'referencia_iii' => ['pregunta_1' => 'si'],
@@ -50,6 +52,7 @@ class WorkCenterResponsesSheetExportTest extends TestCase
                 ],
                 [
                     'folio' => '0002',
+                    'personal_folio' => '0001',
                     'evaluee_name' => 'Ana Lopez',
                     'source' => 'online',
                     'referencia_iii' => ['pregunta_1' => 'no'],
@@ -59,7 +62,8 @@ class WorkCenterResponsesSheetExportTest extends TestCase
                 ],
                 [
                     'folio' => '0001',
-                    'evaluee_name' => 'Carlos Ruiz',
+                    'personal_folio' => '0001',
+                    'evaluee_name' => 'Ana Lopez',
                     'source' => 'online',
                     'referencia_iii' => ['pregunta_1' => 'si'],
                     'referencia_i_acontecimientos_traumaticos' => null,
@@ -72,15 +76,15 @@ class WorkCenterResponsesSheetExportTest extends TestCase
         $sheet = new WorkCenterResponsesSheetExport($workCenter);
         $rows = $sheet->array();
 
-        $this->assertCount(3, $rows);
+        $this->assertCount(2, $rows);
         $this->assertSame('0001', $rows[0][0]);
-        $this->assertSame('Carlos Ruiz', $rows[0][1]);
-        $this->assertSame('online', $rows[0][2]);
-        $this->assertSame('0002', $rows[1][0]);
-        $this->assertSame('Ana Lopez', $rows[1][1]);
-        $this->assertSame('online', $rows[1][2]);
-        $this->assertSame('0003', $rows[2][0]);
-        $this->assertSame('Juan Perez', $rows[2][1]);
-        $this->assertSame('paper', $rows[2][2]);
+        $this->assertSame('0001, 0002', $rows[0][1]);
+        $this->assertSame('Ana Lopez', $rows[0][2]);
+        $this->assertSame('En línea', $rows[0][3]);
+
+        $this->assertSame('0123', $rows[1][0]);
+        $this->assertSame('0003', $rows[1][1]);
+        $this->assertSame('Juan Perez', $rows[1][2]);
+        $this->assertSame('Presencial', $rows[1][3]);
     }
 }

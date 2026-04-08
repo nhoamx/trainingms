@@ -10,7 +10,7 @@ use Illuminate\Support\Collection;
 class WorkCenterOrganizationReportService
 {
     /**
-     * @return Collection<int, array{id: string, code: string, name: string, is_primary: bool, evaluations: array<int, array{folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>}>
+     * @return Collection<int, array{id: string, code: string, name: string, is_primary: bool, evaluations: array<int, array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>}>
      */
     public function getOrganizationWorkCenters(Organization $organization): Collection
     {
@@ -36,14 +36,25 @@ class WorkCenterOrganizationReportService
 
     /**
      * @param  Collection<int, WorkCenter>  $workCenters
-     * @return Collection<string, array<int, array{folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>>
+     * @return Collection<string, array<int, array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>>
      */
     private function getEvaluationsByWorkCenter(Organization $organization, Collection $workCenters): Collection
     {
         return PaperEvaluation::query()
             ->where('organization_id', $organization->id)
             ->whereIn('work_center_id', $workCenters->pluck('id'))
-            ->select(['work_center_id', 'folio', 'evaluee_name', 'source', 'raw_data'])
+            ->select([
+                'work_center_id',
+                'folio',
+                'personal_folio',
+                'evaluee_name',
+                'source',
+                'raw_data',
+                'demographic_data',
+                'referencia_i_answers',
+                'referencia_iii_answers',
+                'citsats_s1',
+            ])
             ->orderBy('folio')
             ->get()
             ->groupBy('work_center_id')
@@ -56,8 +67,8 @@ class WorkCenterOrganizationReportService
     }
 
     /**
-     * @param  Collection<string, array<int, array{folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>>  $evaluationsByWorkCenter
-     * @return array{id: string, code: string, name: string, is_primary: bool, evaluations: array<int, array{folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>}
+     * @param  Collection<string, array<int, array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>>  $evaluationsByWorkCenter
+     * @return array{id: string, code: string, name: string, is_primary: bool, evaluations: array<int, array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>}
      */
     private function mapWorkCenter(WorkCenter $workCenter, Collection $evaluationsByWorkCenter): array
     {
@@ -71,16 +82,27 @@ class WorkCenterOrganizationReportService
     }
 
     /**
-     * @return array{folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}
+     * @return array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}
      */
     private function mapEvaluation(PaperEvaluation $evaluation): array
     {
         $rawData = is_array($evaluation->raw_data) ? $evaluation->raw_data : [];
-        $referenciaI = is_array($rawData['referencia_i'] ?? null) ? $rawData['referencia_i'] : null;
-        $referenciaV = is_array($rawData['referencia_v'] ?? null) ? $rawData['referencia_v'] : null;
+
+        $referenciaIii = $this->extractReferenciaIii($rawData, $evaluation);
+        $referenciaI = $this->normalizeAnswerMap($this->extractReferenciaI($rawData, $evaluation));
+        $referenciaV = $this->extractReferenciaV($rawData, $evaluation);
         $acontecimientosTraumaticos = is_array($referenciaI)
             ? ($referenciaI['acontecimientos_traumaticos'] ?? null)
             : null;
+
+        if (! is_array($acontecimientosTraumaticos)) {
+            $columnAts = is_array($evaluation->citsats_s1) ? $evaluation->citsats_s1 : [];
+            $acontecimientosTraumaticos = $columnAts;
+        }
+
+        if (is_array($acontecimientosTraumaticos)) {
+            $acontecimientosTraumaticos = $this->normalizeAnswerMap($acontecimientosTraumaticos);
+        }
 
         if (is_array($referenciaI)) {
             unset($referenciaI['acontecimientos_traumaticos']);
@@ -88,13 +110,67 @@ class WorkCenterOrganizationReportService
 
         return [
             'folio' => (string) $evaluation->folio,
+            'personal_folio' => (string) ($evaluation->personal_folio ?? ''),
             'evaluee_name' => (string) ($evaluation->evaluee_name ?? ''),
             'source' => (string) $evaluation->source,
-            'referencia_iii' => $this->mapReferenciaIii($rawData['referencia_iii'] ?? []),
+            'referencia_iii' => $this->mapReferenciaIii($referenciaIii),
             'referencia_i_acontecimientos_traumaticos' => $acontecimientosTraumaticos,
             'referencia_i' => $referenciaI,
             'referencia_v' => $this->mapReferenciaV($referenciaV),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $rawData
+     * @return array<string, mixed>
+     */
+    private function extractReferenciaIii(array $rawData, PaperEvaluation $evaluation): array
+    {
+        $fromRawData = $rawData['referencia_iii'] ?? null;
+        if (is_array($fromRawData)) {
+            return $fromRawData;
+        }
+
+        $fromRawFlat = $this->extractFlatQuestionValues($rawData, 1, 72);
+        if (count($fromRawFlat) > 0) {
+            return $fromRawFlat;
+        }
+
+        $fromColumn = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
+
+        if (is_array($fromColumn['referencia_iii'] ?? null)) {
+            return $fromColumn['referencia_iii'];
+        }
+
+        return $fromColumn;
+    }
+
+    /**
+     * @param  array<string, mixed>  $rawData
+     * @return array<string, mixed>
+     */
+    private function extractReferenciaI(array $rawData, PaperEvaluation $evaluation): array
+    {
+        $fromRawData = $rawData['referencia_i'] ?? null;
+        if (is_array($fromRawData)) {
+            return $fromRawData;
+        }
+
+        return is_array($evaluation->referencia_i_answers) ? $evaluation->referencia_i_answers : [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $rawData
+     * @return array<string, mixed>
+     */
+    private function extractReferenciaV(array $rawData, PaperEvaluation $evaluation): array
+    {
+        $fromRawData = $rawData['referencia_v'] ?? null;
+        if (is_array($fromRawData)) {
+            return $fromRawData;
+        }
+
+        return is_array($evaluation->demographic_data) ? $evaluation->demographic_data : [];
     }
 
     /**
@@ -131,21 +207,114 @@ class WorkCenterOrganizationReportService
      */
     private function mapReferenciaV($referencia): array
     {
+        $edad = $this->extractEdad($referencia);
+
         return [
-            'edad' => $referencia['edad'] ?? '',
-            'sexo' => $referencia['sexo'] ?? '',
-            'estado_civil' => $referencia['estado_civil'] ?? '',
-            'nivel_estudios' => $referencia['nivel_estudios'] ?? '',
-            'tiempo_puesto_actual' => $referencia['datos_laborales']['experiencia']['tiempo_puesto_actual'] ?? '',
-            'tiempo_experiencia_laboral' => $referencia['datos_laborales']['experiencia']['tiempo_experiencia_laboral'] ?? '',
-            'tipo_de_puesto' => $referencia['datos_laborales']['tipo_puesto'] ?? '',
-            'tipo_jornada' => $referencia['datos_laborales']['tipo_jornada'] ?? '',
-            'tipo_personal' => $referencia['datos_laborales']['tipo_personal'] ?? '',
-            'rotacion_turnos' => $referencia['datos_laborales']['rotacion_turnos'] ?? '',
-            'ocupacion_puesto' => $referencia['datos_laborales']['ocupacion_puesto'] ?? '',
-            'tipo_contratacion' => $referencia['datos_laborales']['tipo_contratacion'] ?? '',
-            'departamento_seccion_area' => $referencia['datos_laborales']['departamento_seccion_area'] ?? '',
+            'edad' => $edad,
+            'sexo' => $this->extractScalarValue($referencia, ['sexo', 'gender']),
+            'estado_civil' => $this->extractScalarValue($referencia, ['estado_civil', 'marital_status']),
+            'nivel_estudios' => $this->extractScalarValue($referencia, ['nivel_estudios', 'education_level']),
+            'tiempo_puesto_actual' => $this->extractScalarValue($referencia, ['datos_laborales.experiencia.tiempo_puesto_actual', 'time_in_current_position']),
+            'tiempo_experiencia_laboral' => $this->extractScalarValue($referencia, ['datos_laborales.experiencia.tiempo_experiencia_laboral', 'work_experience']),
+            'tipo_de_puesto' => $this->extractScalarValue($referencia, ['datos_laborales.tipo_puesto', 'position_type']),
+            'tipo_jornada' => $this->extractScalarValue($referencia, ['datos_laborales.tipo_jornada', 'work_schedule']),
+            'tipo_personal' => $this->extractScalarValue($referencia, ['datos_laborales.tipo_personal', 'personnel_type']),
+            'rotacion_turnos' => $this->extractScalarValue($referencia, ['datos_laborales.rotacion_turnos', 'shift_rotation']),
+            'ocupacion_puesto' => $this->extractScalarValue($referencia, ['datos_laborales.ocupacion_puesto']),
+            'tipo_contratacion' => $this->extractScalarValue($referencia, ['datos_laborales.tipo_contratacion', 'contract_type']),
+            'departamento_seccion_area' => $this->extractScalarValue($referencia, ['datos_laborales.departamento_seccion_area']),
 
         ];
+    }
+
+    /**
+     * @param  array<string|int, mixed>  $source
+     * @return array<string, mixed>
+     */
+    private function extractFlatQuestionValues(array $source, int $start, int $end): array
+    {
+        $result = [];
+
+        foreach (range($start, $end) as $questionNumber) {
+            $key = (string) $questionNumber;
+
+            if (! array_key_exists($key, $source) && ! array_key_exists($questionNumber, $source)) {
+                continue;
+            }
+
+            $rawValue = $source[$key] ?? $source[$questionNumber] ?? null;
+            $value = $this->unwrapValue($rawValue);
+
+            if ($value === '' || $value === null) {
+                continue;
+            }
+
+            $result[$key] = $value;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<string, mixed>  $referencia
+     */
+    private function extractEdad(array $referencia): string
+    {
+        $edad = $referencia['edad'] ?? $referencia['age'] ?? '';
+
+        if (is_array($edad)) {
+            if (array_key_exists('value', $edad)) {
+                return (string) $this->unwrapValue($edad['value']);
+            }
+
+            $decenas = (string) ($edad['decenas'] ?? $edad['tens'] ?? '');
+            $unidades = (string) ($edad['unidades'] ?? $edad['units'] ?? '');
+
+            return trim($decenas.$unidades);
+        }
+
+        return (string) $edad;
+    }
+
+    /**
+     * @param  array<string, mixed>  $source
+     * @param  array<int, string>  $paths
+     */
+    private function extractScalarValue(array $source, array $paths): string
+    {
+        foreach ($paths as $path) {
+            $value = data_get($source, $path);
+            $unwrapped = $this->unwrapValue($value);
+
+            if ($unwrapped !== '' && $unwrapped !== null) {
+                return (string) $unwrapped;
+            }
+        }
+
+        return '';
+    }
+
+    private function unwrapValue(mixed $value): mixed
+    {
+        if (is_array($value) && array_key_exists('value', $value)) {
+            return $value['value'];
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  array<string, mixed>  $answers
+     * @return array<string, mixed>
+     */
+    private function normalizeAnswerMap(array $answers): array
+    {
+        $normalized = [];
+
+        foreach ($answers as $key => $value) {
+            $normalized[(string) $key] = $this->unwrapValue($value);
+        }
+
+        return $normalized;
     }
 }

@@ -45,7 +45,7 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
     ];
 
     /**
-     * @param  array{id: string, code: string, name: string, is_primary: bool, evaluations: array<int, array{folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>}  $workCenter
+     * @param  array{id: string, code: string, name: string, is_primary: bool, evaluations: array<int, array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>}  $workCenter
      */
     public function __construct(
         private readonly array $workCenter,
@@ -88,7 +88,8 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
         ];
 
         return array_merge([
-            'Folio',
+            'Folio personal',
+            'Folios de evaluacion',
             'Nombre evaluado',
             'Origen',
         ], $referenceVHeadings, $referenceIiiHeadings, $atsHeadings, $referenceIHeadings);
@@ -99,14 +100,17 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
      */
     public function array(): array
     {
-        $evaluations = collect($this->workCenter['evaluations'] ?? [])
+        $groupedEvaluations = collect($this->workCenter['evaluations'] ?? [])
+            ->groupBy(fn (array $evaluation): string => $this->buildPersonSourceKey($evaluation))
+            ->map(fn ($group): array => $this->mergePersonEvaluations($group->all()))
             ->sortBy([
                 ['source', 'asc'],
-                ['folio', 'asc'],
+                ['personal_folio', 'asc'],
+                ['folios_label', 'asc'],
             ])
             ->values();
 
-        return $evaluations
+        return $groupedEvaluations
             ->map(function (array $evaluation): array {
                 $referenceIii = is_array($evaluation['referencia_iii'] ?? null) ? $evaluation['referencia_iii'] : [];
                 $ats = is_array($evaluation['referencia_i_acontecimientos_traumaticos'] ?? null)
@@ -139,9 +143,10 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
                 }
 
                 return array_merge([
-                    $evaluation['folio'] ?? '',
+                    $evaluation['personal_folio'] ?? '',
+                    $evaluation['folios_label'] ?? '',
                     $evaluation['evaluee_name'] ?? '',
-                    $evaluation['source'] ?? '',
+                    $this->mapSourceLabel((string) ($evaluation['source'] ?? '')),
                 ], $referenceVValues, $referenceIiiValues, $atsValues, $referenceIValues);
             })
             ->all();
@@ -193,11 +198,11 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
         ]);
 
         // Header color blocks by section: base, Referencia V, Guia III, ATS, Guia I.
-        $this->applyHeaderSectionColor($sheet, 1, 3, '1D4ED8');
-        $this->applyHeaderSectionColor($sheet, 4, 16, '047857');
-        $this->applyHeaderSectionColor($sheet, 17, 88, '2563EB');
-        $this->applyHeaderSectionColor($sheet, 89, 94, 'B45309');
-        $this->applyHeaderSectionColor($sheet, 95, 108, '7C3AED');
+        $this->applyHeaderSectionColor($sheet, 1, 4, '1D4ED8');
+        $this->applyHeaderSectionColor($sheet, 5, 17, '047857');
+        $this->applyHeaderSectionColor($sheet, 18, 89, '2563EB');
+        $this->applyHeaderSectionColor($sheet, 90, 95, 'B45309');
+        $this->applyHeaderSectionColor($sheet, 96, 109, '7C3AED');
 
         if ($lastRow >= 2) {
             $contentRange = "A2:{$lastColumn}{$lastRow}";
@@ -230,5 +235,123 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
             ->setFillType(Fill::FILL_SOLID)
             ->getStartColor()
             ->setRGB($color);
+    }
+
+    /**
+     * @param  array{folio?: mixed, personal_folio?: mixed, source?: mixed}  $evaluation
+     */
+    private function buildPersonSourceKey(array $evaluation): string
+    {
+        $personalFolio = trim((string) ($evaluation['personal_folio'] ?? ''));
+        $folio = trim((string) ($evaluation['folio'] ?? ''));
+        $source = trim((string) ($evaluation['source'] ?? ''));
+
+        return ($personalFolio !== '' ? $personalFolio : $folio).'|'.$source;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $evaluations
+     * @return array{personal_folio: string, folios_label: string, evaluee_name: string, source: string, referencia_iii: array<string, mixed>, referencia_i_acontecimientos_traumaticos: array<string, mixed>, referencia_i: array<string, mixed>, referencia_v: array<string, mixed>}
+     */
+    private function mergePersonEvaluations(array $evaluations): array
+    {
+        $personalFolio = '';
+        $evalueeName = '';
+        $source = '';
+        $referenciaIii = [];
+        $ats = [];
+        $referenciaI = [];
+        $referenciaV = [];
+        $folios = [];
+
+        foreach ($evaluations as $evaluation) {
+            $folio = trim((string) ($evaluation['folio'] ?? ''));
+            if ($folio !== '') {
+                $folios[] = $folio;
+            }
+
+            if ($personalFolio === '') {
+                $personalFolio = trim((string) ($evaluation['personal_folio'] ?? ''));
+            }
+
+            if ($evalueeName === '') {
+                $evalueeName = trim((string) ($evaluation['evaluee_name'] ?? ''));
+            }
+
+            if ($source === '') {
+                $source = trim((string) ($evaluation['source'] ?? ''));
+            }
+
+            $referenciaIii = $this->mergeNonEmptyValues(
+                $referenciaIii,
+                is_array($evaluation['referencia_iii'] ?? null) ? $evaluation['referencia_iii'] : []
+            );
+
+            $ats = $this->mergeNonEmptyValues(
+                $ats,
+                is_array($evaluation['referencia_i_acontecimientos_traumaticos'] ?? null) ? $evaluation['referencia_i_acontecimientos_traumaticos'] : []
+            );
+
+            $referenciaI = $this->mergeNonEmptyValues(
+                $referenciaI,
+                is_array($evaluation['referencia_i'] ?? null) ? $evaluation['referencia_i'] : []
+            );
+
+            $referenciaV = $this->mergeNonEmptyValues(
+                $referenciaV,
+                is_array($evaluation['referencia_v'] ?? null) ? $evaluation['referencia_v'] : []
+            );
+        }
+
+        $folios = array_values(array_unique($folios));
+        sort($folios);
+
+        if ($personalFolio === '' && count($folios) > 0) {
+            $personalFolio = $folios[0];
+        }
+
+        return [
+            'personal_folio' => $personalFolio,
+            'folios_label' => implode(', ', $folios),
+            'evaluee_name' => $evalueeName,
+            'source' => $source,
+            'referencia_iii' => $referenciaIii,
+            'referencia_i_acontecimientos_traumaticos' => $ats,
+            'referencia_i' => $referenciaI,
+            'referencia_v' => $referenciaV,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $current
+     * @param  array<string, mixed>  $incoming
+     * @return array<string, mixed>
+     */
+    private function mergeNonEmptyValues(array $current, array $incoming): array
+    {
+        foreach ($incoming as $key => $value) {
+            $alreadyHasValue = array_key_exists($key, $current) && $current[$key] !== '' && $current[$key] !== null;
+
+            if ($alreadyHasValue) {
+                continue;
+            }
+
+            if ($value === '' || $value === null) {
+                continue;
+            }
+
+            $current[$key] = $value;
+        }
+
+        return $current;
+    }
+
+    private function mapSourceLabel(string $source): string
+    {
+        return match (mb_strtolower(trim($source))) {
+            'paper' => 'Presencial',
+            'online' => 'En línea',
+            default => $source,
+        };
     }
 }
