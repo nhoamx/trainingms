@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\User;
+use App\Models\WorkCenter;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -252,6 +253,192 @@ class PaperEvaluationResultsTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
             ->has('evaluationGroups', 1)
+        );
+    }
+
+    public function test_work_center_detail_route_filters_by_source(): void
+    {
+        $personalFolio = '0009';
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => $personalFolio,
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'online',
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => ['01' => 'A'],
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => $personalFolio,
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => ['01' => 'B'],
+        ]);
+
+        $response = $this->actingAs($this->orgUser)
+            ->get(route('work-centers.results.detail', [
+                'workCenter' => $workCenter->id,
+                'personalFolio' => $personalFolio,
+                'source' => 'paper',
+            ]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Results/Detail')
+            ->where('personalFolio', $personalFolio)
+            ->has('guideIIIResults')
+        );
+    }
+
+    public function test_work_center_detail_route_returns_404_when_source_does_not_match(): void
+    {
+        $personalFolio = '0010';
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => $personalFolio,
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'online',
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => ['01' => 'A'],
+        ]);
+
+        $this->actingAs($this->orgUser)
+            ->get(route('work-centers.results.detail', [
+                'workCenter' => $workCenter->id,
+                'personalFolio' => $personalFolio,
+                'source' => 'paper',
+            ]))
+            ->assertStatus(404);
+    }
+
+    public function test_work_center_detail_uses_raw_data_when_referencia_iii_answers_are_empty(): void
+    {
+        $personalFolio = '0011';
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $rawData = [];
+        foreach (range(1, 72) as $questionNumber) {
+            $rawData[(string) $questionNumber] = [
+                'value' => 'A',
+            ];
+        }
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => $personalFolio,
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => null,
+            'raw_data' => $rawData,
+        ]);
+
+        $response = $this->actingAs($this->orgUser)
+            ->get(route('work-centers.results.detail', [
+                'workCenter' => $workCenter->id,
+                'personalFolio' => $personalFolio,
+                'source' => 'paper',
+            ]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Results/Detail')
+            ->where('evaluation.has_guide_iii', true)
+            ->has('guideIIIResults.answers')
+            ->has('results.0.item')
+        );
+    }
+
+    public function test_work_center_detail_uses_flat_raw_data_for_guide_i_answers(): void
+    {
+        $personalFolio = '0012';
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $rawData = [];
+        foreach (range(65, 78) as $questionNumber) {
+            $rawData[(string) $questionNumber] = [
+                'value' => 'A',
+            ];
+        }
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => $personalFolio,
+            'evaluation_type' => 'referencia_i',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'referencia_i_answers' => null,
+            'raw_data' => $rawData,
+        ]);
+
+        $response = $this->actingAs($this->orgUser)
+            ->get(route('work-centers.results.detail', [
+                'workCenter' => $workCenter->id,
+                'personalFolio' => $personalFolio,
+                'source' => 'paper',
+            ]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Results/Detail')
+            ->where('evaluation.has_guide_i', true)
+            ->has('guideIResults.answers')
+        );
+    }
+
+    public function test_work_center_detail_formats_guide_v_demographic_values_from_omr_objects(): void
+    {
+        $personalFolio = '0013';
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => $personalFolio,
+            'evaluation_type' => 'referencia_v',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'demographic_data' => [
+                'age' => ['value' => '38'],
+                'gender' => ['value' => 'Masculino'],
+                'position_type' => ['value' => 'Operativo'],
+            ],
+        ]);
+
+        $response = $this->actingAs($this->orgUser)
+            ->get(route('work-centers.results.detail', [
+                'workCenter' => $workCenter->id,
+                'personalFolio' => $personalFolio,
+                'source' => 'paper',
+            ]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Results/Detail')
+            ->where('guideVResults.demographic_data.Edad', '38')
+            ->where('guideVResults.demographic_data.Sexo', 'Masculino')
+            ->where('guideVResults.demographic_data.Tipo de Puesto', 'Operativo')
         );
     }
 }

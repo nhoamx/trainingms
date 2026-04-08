@@ -21,6 +21,7 @@ const props = defineProps({
 const searchQuery = ref('');
 const sortBy = ref('default');
 const clinicalFilter = ref('all');
+const sourceView = ref('all');
 const isDownloadingMetrics = ref(false);
 const isDownloadingResponses = ref(false);
 const reportMenuOpen = ref(false);
@@ -44,6 +45,12 @@ const clinicalFilterChips = [
   { key: 'requires_clinical', label: 'Con atención clínica' },
 ];
 
+const sourceViewSwitches = [
+  { key: 'all', label: 'Todos' },
+  { key: 'online', label: 'En línea' },
+  { key: 'paper', label: 'Presencial' },
+];
+
 const filteredWorkCenters = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
 
@@ -59,6 +66,14 @@ const filteredWorkCenters = computed(() => {
 
     if (clinicalFilter.value === 'requires_clinical') {
       return Number(workCenter.requires_clinical_attention_count ?? 0) > 0;
+    }
+
+    if (sourceView.value === 'online') {
+      return Number(workCenter.online_evaluated_people_count ?? 0) > 0;
+    }
+
+    if (sourceView.value === 'paper') {
+      return Number(workCenter.paper_evaluated_people_count ?? 0) > 0;
     }
 
     return true;
@@ -127,6 +142,34 @@ const getFilterChipClass = (isActive) => {
   }
 
   return 'inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50';
+};
+
+const getSourceSwitchClass = (isActive) => {
+  if (isActive) {
+    return 'inline-flex items-center justify-center rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-sm';
+  }
+
+  return 'inline-flex items-center justify-center rounded-lg bg-transparent px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100';
+};
+
+const dashboardActionLabel = computed(() => {
+  if (sourceView.value === 'online') {
+    return 'Ver dashboard en línea';
+  }
+
+  if (sourceView.value === 'paper') {
+    return 'Ver dashboard presencial';
+  }
+
+  return 'Ver dashboard general';
+});
+
+const getDashboardRouteParams = (workCenterId) => {
+  if (sourceView.value === 'online' || sourceView.value === 'paper') {
+    return { workCenter: workCenterId, source: sourceView.value };
+  }
+
+  return { workCenter: workCenterId };
 };
 
 const isDownloadingAnyReport = computed(() => isDownloadingMetrics.value || isDownloadingResponses.value);
@@ -392,8 +435,8 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div class="space-y-3">
-          <div>
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div class="lg:col-span-2">
             <label for="work-center-search" class="mb-2 block text-sm font-medium text-gray-700">Buscar centro de trabajo</label>
             <div class="relative rounded-xl border border-slate-200 bg-slate-50/80 p-1 transition-colors focus-within:border-blue-400 focus-within:bg-white">
               <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
@@ -420,6 +463,21 @@ onBeforeUnmount(() => {
           </div>
 
           <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700">Vista de dashboard</label>
+            <div class="grid grid-cols-3 gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+              <button
+                v-for="item in sourceViewSwitches"
+                :key="item.key"
+                type="button"
+                :class="getSourceSwitchClass(sourceView === item.key)"
+                @click="sourceView = item.key"
+              >
+                {{ item.label }}
+              </button>
+            </div>
+          </div>
+
+          <div>
             <label class="mb-2 block text-sm font-medium text-gray-700">Ordenar por</label>
             <div class="flex flex-wrap gap-2">
               <button
@@ -435,7 +493,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div>
+          <div class="lg:col-span-2">
             <label class="mb-2 block text-sm font-medium text-gray-700">Filtro de atención clínica</label>
             <div class="flex flex-wrap gap-2">
               <button
@@ -461,81 +519,58 @@ onBeforeUnmount(() => {
           </p>
         </div>
 
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-[980px] w-full table-fixed divide-y divide-slate-200 text-sm">
-            <thead class="bg-slate-50">
-              <tr>
-                <th class="w-[40%] px-5 py-3 text-left font-semibold text-slate-700">Centro de trabajo</th>
-                <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-700">Presentaron</th>
-                <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-700">Hombres</th>
-                <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-700">Mujeres</th>
-                <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-700">Atención clínica</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 bg-white">
-              <tr v-for="workCenter in visibleWorkCenters" :key="workCenter.id" class="hover:bg-slate-50">
-                <td class="px-5 py-4 align-middle">
-                  <p class="font-medium text-slate-900">{{ workCenter.name }}</p>
-                  <p class="mt-1 text-xs text-slate-500">Código: {{ workCenter.code }}</p>
-                  <div class="mt-1 flex flex-wrap gap-1.5">
-                    <span v-if="workCenter.is_primary" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">Principal</span>
-                    <span class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
-                      Online: {{ workCenter.online_evaluated_people_count ?? 0 }}
-                    </span>
-                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                      Presencial: {{ workCenter.paper_evaluated_people_count ?? 0 }}
-                    </span>
-                    <span
-                      v-if="Number(workCenter.requires_clinical_attention_count ?? 0) > 0"
-                      class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700"
-                    >
-                      Requieren atención clínica: {{ workCenter.requires_clinical_attention_count ?? 0 }}
-                    </span>
-                  </div>
-                  <div class="mt-3 flex flex-wrap gap-2">
-                    <Link
-                      :href="route('work-centers.dashboard.nom-035-index', { workCenter: workCenter.id, source: 'online' })"
-                      class="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-sky-700 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
-                    >
-                      <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M11.03 3.47a.75.75 0 011.06 0l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 11-1.06-1.06l3.97-3.97H3.5a.75.75 0 010-1.5h11.5l-3.97-3.97a.75.75 0 010-1.06z" />
-                      </svg>
-                      Ver Online
-                    </Link>
-                    <Link
-                      :href="route('work-centers.dashboard.nom-035-index', { workCenter: workCenter.id, source: 'paper' })"
-                      class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-amber-700 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
-                    >
-                      <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M11.03 3.47a.75.75 0 011.06 0l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 11-1.06-1.06l3.97-3.97H3.5a.75.75 0 010-1.5h11.5l-3.97-3.97a.75.75 0 010-1.06z" />
-                      </svg>
-                      Ver Presencial
-                    </Link>
-                  </div>
-                </td>
-                <td class="px-4 py-4 text-center align-middle">
-                  <span :class="getEvaluatedPeopleBadgeClass(workCenter.evaluated_people_count)" class="inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold">
-                    {{ workCenter.evaluated_people_count ?? 0 }}
-                  </span>
-                </td>
-                <td class="px-4 py-4 text-center align-middle">
-                  <span :class="getEvaluatedPeopleBadgeClass(workCenter.men_count)" class="inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold">
-                    {{ workCenter.men_count ?? 0 }}
-                  </span>
-                </td>
-                <td class="px-4 py-4 text-center align-middle">
-                  <span :class="getEvaluatedPeopleBadgeClass(workCenter.women_count)" class="inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold">
-                    {{ workCenter.women_count ?? 0 }}
-                  </span>
-                </td>
-                <td class="px-4 py-4 text-center align-middle">
-                  <span :class="getClinicalBadgeClass(workCenter.requires_clinical_attention_count)" class="inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold">
-                    {{ workCenter.requires_clinical_attention_count ?? 0 }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-else class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+          <article
+            v-for="workCenter in visibleWorkCenters"
+            :key="workCenter.id"
+            class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-base font-semibold text-slate-900">{{ workCenter.name }}</p>
+                <p class="mt-1 text-xs text-slate-500">Código: {{ workCenter.code }}</p>
+              </div>
+              <span v-if="workCenter.is_primary" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">Principal</span>
+            </div>
+
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                <p class="text-[11px] font-medium text-slate-500">Presentaron</p>
+                <p class="mt-1 text-lg font-bold text-slate-900">{{ workCenter.evaluated_people_count ?? 0 }}</p>
+              </div>
+              <div class="rounded-lg border border-rose-200 bg-rose-50 p-2.5">
+                <p class="text-[11px] font-medium text-rose-600">Atención clínica</p>
+                <p class="mt-1 text-lg font-bold text-rose-700">{{ workCenter.requires_clinical_attention_count ?? 0 }}</p>
+              </div>
+              <div class="rounded-lg border border-sky-200 bg-sky-50 p-2.5">
+                <p class="text-[11px] font-medium text-sky-600">Hombres</p>
+                <p class="mt-1 text-lg font-bold text-sky-700">{{ workCenter.men_count ?? 0 }}</p>
+              </div>
+              <div class="rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-2.5">
+                <p class="text-[11px] font-medium text-fuchsia-600">Mujeres</p>
+                <p class="mt-1 text-lg font-bold text-fuchsia-700">{{ workCenter.women_count ?? 0 }}</p>
+              </div>
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-1.5">
+              <span class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
+                En línea: {{ workCenter.online_evaluated_people_count ?? 0 }}
+              </span>
+              <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                Presencial: {{ workCenter.paper_evaluated_people_count ?? 0 }}
+              </span>
+            </div>
+
+            <Link
+              :href="route('work-centers.dashboard.nom-035-index', getDashboardRouteParams(workCenter.id))"
+              class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+            >
+              <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M11.03 3.47a.75.75 0 011.06 0l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 11-1.06-1.06l3.97-3.97H3.5a.75.75 0 010-1.5h11.5l-3.97-3.97a.75.75 0 010-1.06z" />
+              </svg>
+              {{ dashboardActionLabel }}
+            </Link>
+          </article>
         </div>
       </div>
     </div>

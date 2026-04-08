@@ -36,46 +36,67 @@
         </div>
 
         <!-- Summary Banner -->
-        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 mb-8 text-white shadow-lg">
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h2 class="text-2xl font-bold">Dashboard NOM-035-STPS-2018</h2>
-              <p class="mt-1 text-blue-100">
-                Selecciona la fuente de evaluación y después el instrumento a consultar
+        <div class="mb-8 overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 p-4 text-white shadow-lg sm:p-6 lg:p-7">
+          <div class="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-center">
+            <div class="lg:col-span-2">
+              <h2 class="text-xl font-bold leading-tight sm:text-2xl">Dashboard NOM-035-STPS-2018</h2>
+              <p class="mt-1 text-sm leading-relaxed text-blue-100 sm:text-base">
+                Elige una fuente para enfocar métricas e instrumentos sin perder contexto general.
               </p>
             </div>
-            <div class="flex items-center gap-3">
-              <div class="bg-white/20 backdrop-blur-sm rounded-xl px-5 py-3 text-center">
-                <p class="text-3xl font-bold">{{ totalEvaluations }}</p>
-                <p class="text-xs text-blue-100 mt-0.5">Participantes {{ selectedSourceLabel }}</p>
+
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+              <div class="rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 backdrop-blur-sm sm:text-center lg:text-left xl:text-center">
+                <div class="flex items-center justify-between gap-2 sm:block">
+                  <p class="text-[11px] font-semibold uppercase tracking-wide text-blue-100">Total</p>
+                  <p class="text-2xl font-bold sm:mt-1">{{ sourceCount('all') }}</p>
+                </div>
+              </div>
+              <div class="rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 backdrop-blur-sm sm:text-center lg:text-left xl:text-center">
+                <div class="flex items-center justify-between gap-2 sm:block">
+                  <p class="text-[11px] font-semibold uppercase tracking-wide text-blue-100">En línea</p>
+                  <p class="text-2xl font-bold sm:mt-1">{{ sourceCount('online') }}</p>
+                </div>
+              </div>
+              <div class="rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 backdrop-blur-sm sm:text-center lg:text-left xl:text-center">
+                <div class="flex items-center justify-between gap-2 sm:block">
+                  <p class="text-[11px] font-semibold uppercase tracking-wide text-blue-100">Presencial</p>
+                  <p class="text-2xl font-bold sm:mt-1">{{ sourceCount('paper') }}</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="mt-6 rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm">
-            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-blue-100">Fuente de datos</p>
+          <div class="mt-5 rounded-xl border border-white/25 bg-white/10 p-3 backdrop-blur-sm sm:p-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-blue-100">Fuente de datos</p>
+              <p class="text-xs leading-relaxed text-blue-100 sm:max-w-sm sm:text-right">{{ sourceDescription }}</p>
+            </div>
+
             <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <Link
                 v-for="option in sourceOptions"
                 :key="option.key"
                 :href="sourceHref(option.key)"
-                class="rounded-lg border px-4 py-3 text-left transition-all"
+                class="group rounded-xl border px-3 py-3 transition-all sm:px-4"
                 :class="selectedSource === option.key
-                  ? 'border-white bg-white text-slate-900 shadow-sm'
-                  : 'border-white/30 bg-transparent text-white hover:bg-white/15'"
+                  ? 'border-white bg-white text-slate-900 shadow-md'
+                  : 'border-white/30 bg-transparent text-white hover:border-white/60 hover:bg-white/15'"
               >
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-3">
                   <div>
-                    <p class="text-sm font-semibold">{{ option.label }}</p>
-                    <p class="text-xs" :class="selectedSource === option.key ? 'text-slate-600' : 'text-blue-100'">{{ option.caption }}</p>
+                    <p class="text-sm font-semibold leading-tight">{{ option.label }}</p>
+                    <p class="mt-0.5 text-xs" :class="selectedSource === option.key ? 'text-slate-600' : 'text-blue-100'">{{ option.caption }}</p>
                   </div>
-                  <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="selectedSource === option.key ? option.chipClass : 'bg-white/20 text-white'">
+                  <span
+                    class="inline-flex min-w-8 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                    :class="selectedSource === option.key ? option.chipClass : 'bg-white/20 text-white'"
+                  >
                     {{ sourceCount(option.key) }}
                   </span>
                 </div>
               </Link>
             </div>
-            <p class="mt-3 text-xs text-blue-100">{{ sourceDescription }}</p>
           </div>
         </div>
 

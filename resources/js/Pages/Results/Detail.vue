@@ -6,7 +6,7 @@
                 <div class="flex justify-between items-center">
                     <div class="flex items-center space-x-4">
                         <Link
-                            :href="route('organization.results.list', { organization: organization.id })"
+                            :href="backToListHref"
                             class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 flex items-center"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -550,6 +550,41 @@ const props = withDefaults(defineProps<Props>(), {
     isAdmin: false
 });
 
+const backToListHref = computed<string>(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const returnTo = queryParams.get('return_to');
+
+    if (returnTo && isSafeInternalReturnPath(returnTo)) {
+        return returnTo;
+    }
+
+    const pathname = window.location.pathname;
+    const workCenterMatch = pathname.match(/^\/centro-trabajo\/([^/]+)\/resultados\//);
+
+    if (workCenterMatch && workCenterMatch[1]) {
+        const source = new URLSearchParams(window.location.search).get('source');
+
+        return route('work-centers.dashboard.nom-035', {
+            workCenter: workCenterMatch[1],
+            source: source === 'paper' || source === 'online' ? source : undefined,
+        });
+    }
+
+    return route('organization.results.list', { organization: props.organization.id });
+});
+
+const isSafeInternalReturnPath = (path: string): boolean => {
+    if (!path.startsWith('/')) {
+        return false;
+    }
+
+    if (path.startsWith('//')) {
+        return false;
+    }
+
+    return path.startsWith('/centro-trabajo/') || path.startsWith('/organizacion/');
+};
+
 // Modal states
 const showEditNameModal = ref(false);
 const showEditFolioModal = ref(false);
@@ -958,6 +993,11 @@ const questionNumberMap: Record<string, number> = {
 
 // Función para obtener el número de pregunta a partir del texto
 const getQuestionNumber = (questionText: string): number => {
+    const parsedNumber = Number(questionText);
+    if (!Number.isNaN(parsedNumber) && Number.isInteger(parsedNumber) && parsedNumber > 0) {
+        return parsedNumber;
+    }
+
     return questionNumberMap[questionText] || 0;
 };
 
