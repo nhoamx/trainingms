@@ -312,9 +312,20 @@ class WorkCenterOrganizationReportService
         $normalized = [];
 
         foreach ($answers as $key => $value) {
-            $normalized[(string) $key] = $this->unwrapValue($value);
+            $normalized[$this->normalizeAnswerKey($key)] = $this->unwrapValue($value);
         }
 
         return $normalized;
+    }
+
+    private function normalizeAnswerKey(string|int $key): string
+    {
+        $normalizedKey = (string) $key;
+
+        if (preg_match('/^(?:pregunta|question)_?(\d+)$/i', $normalizedKey, $matches) === 1) {
+            return (string) ((int) $matches[1]);
+        }
+
+        return $normalizedKey;
     }
 }
