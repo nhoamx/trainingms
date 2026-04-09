@@ -227,7 +227,7 @@ class WorkCenterNom035IndexController extends Controller
                 'description' => 'Identificación y análisis de los factores de riesgo psicosocial en el entorno de trabajo, incluyendo dominios, categorías y dimensiones.',
                 'color' => 'blue',
                 'icon' => 'chart-bar',
-                'route' => 'work-centers.dashboard.nom-035',
+                'route' => 'work-centers.dashboard.nom-035-by-source',
             ],
             [
                 'key' => 'referencia_i',

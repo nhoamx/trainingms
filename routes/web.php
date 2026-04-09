@@ -95,6 +95,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035', [\App\Http\Controllers\WorkCenter\WorkCenterNom035IndexController::class, 'show'])
         ->name('work-centers.dashboard.nom-035-index');
 
+    Route::get('/centro-trabajo/{workCenter}/{source}/dashboard/nom-035/ref-iii', [\App\Http\Controllers\WorkCenter\WorkCenterNom035DashboardController::class, 'show'])
+        ->whereIn('source', ['online', 'paper', 'all'])
+        ->name('work-centers.dashboard.nom-035-by-source');
+
     Route::get('/centro-trabajo/{workCenter}/dashboard/nom-035/ref-iii', [\App\Http\Controllers\WorkCenter\WorkCenterNom035DashboardController::class, 'show'])
         ->name('work-centers.dashboard.nom-035');
 

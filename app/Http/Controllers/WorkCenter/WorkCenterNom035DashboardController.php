@@ -34,12 +34,12 @@ class WorkCenterNom035DashboardController extends Controller
     /**
      * Muestra el dashboard NOM-035 para un centro de trabajo
      */
-    public function show(Request $request, WorkCenter $workCenter): Response
+    public function show(Request $request, WorkCenter $workCenter, ?string $source = null): Response
     {
         $this->authorize('viewWorkCenterDashboard', $workCenter);
 
         $workCenter->load('organization');
-        $source = $this->resolveSourceFilter($request);
+        $source = $this->resolveSourceFilter($request, $source);
 
         $dashboardData = $this->buildDashboardData($workCenter);
 
@@ -320,9 +320,13 @@ class WorkCenterNom035DashboardController extends Controller
         return $availableTypes;
     }
 
-    private function resolveSourceFilter(Request $request): ?string
+    private function resolveSourceFilter(Request $request, ?string $routeSource = null): ?string
     {
-        $source = $request->query('source');
+        $source = $routeSource;
+
+        if (! is_string($source) || ! in_array($source, ['online', 'paper', 'all'], true)) {
+            $source = $request->query('source');
+        }
 
         if (! is_string($source) || ! in_array($source, ['online', 'paper', 'all'], true)) {
             return null;

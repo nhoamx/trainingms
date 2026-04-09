@@ -563,11 +563,19 @@ const backToListHref = computed<string>(() => {
             ?? pathname.match(/^\/centro-trabajo\/([^/]+)\/resultados\//);
 
     if (workCenterMatch && workCenterMatch[1]) {
-        const source = new URLSearchParams(window.location.search).get('source');
+        const sourceFromPath = pathname.match(/^\/centro-trabajo\/[^/]+\/(online|paper|all)\//)?.[1] ?? null;
+        const sourceFromQuery = new URLSearchParams(window.location.search).get('source');
+        const source = sourceFromPath ?? sourceFromQuery;
+
+        if (source === 'paper' || source === 'online' || source === 'all') {
+            return route('work-centers.dashboard.nom-035-by-source', {
+                workCenter: workCenterMatch[1],
+                source,
+            });
+        }
 
         return route('work-centers.dashboard.nom-035', {
             workCenter: workCenterMatch[1],
-            source: source === 'paper' || source === 'online' ? source : undefined,
         });
     }
 
