@@ -153,4 +153,40 @@ class WorkCenterOrganizationReportServiceTest extends TestCase
         $this->assertSame('Soltero', $evaluation['referencia_v']['estado_civil']);
         $this->assertSame('Sin formacion', $evaluation['referencia_v']['nivel_estudios']);
     }
+
+    public function test_it_normalizes_question_prefixed_keys_for_referencia_i_answers(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'online',
+            'evaluee_name' => 'Persona Online',
+            'raw_data' => [
+                'referencia_i' => [
+                    'question_1' => ['value' => 'SI'],
+                    'pregunta_2' => ['value' => 'NO'],
+                    'question_14' => ['value' => 'SI'],
+                ],
+            ],
+            'referencia_i_answers' => null,
+            'citsats_s1' => null,
+        ]);
+
+        $service = app(WorkCenterOrganizationReportService::class);
+        $result = $service->getOrganizationWorkCenters($organization);
+
+        $this->assertCount(1, $result);
+        $this->assertCount(1, $result[0]['evaluations']);
+
+        $evaluation = $result[0]['evaluations'][0];
+
+        $this->assertSame('SI', $evaluation['referencia_i']['1']);
+        $this->assertSame('NO', $evaluation['referencia_i']['2']);
+        $this->assertSame('SI', $evaluation['referencia_i']['14']);
+    }
 }
