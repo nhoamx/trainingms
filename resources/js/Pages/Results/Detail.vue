@@ -558,8 +558,9 @@ const backToListHref = computed<string>(() => {
         return returnTo;
     }
 
-    const pathname = window.location.pathname;
-    const workCenterMatch = pathname.match(/^\/centro-trabajo\/([^/]+)\/resultados\//);
+        const pathname = window.location.pathname;
+        const workCenterMatch = pathname.match(/^\/centro-trabajo\/([^/]+)\/(?:online|paper)\/resultados\//)
+            ?? pathname.match(/^\/centro-trabajo\/([^/]+)\/resultados\//);
 
     if (workCenterMatch && workCenterMatch[1]) {
         const source = new URLSearchParams(window.location.search).get('source');

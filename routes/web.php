@@ -408,8 +408,13 @@ Route::middleware(['auth'])->group(function () {
         ->name('organization.results.detail')
         ->middleware('can:view-organization-results,organization');
 
-    Route::get('/centro-trabajo/{workCenter}/resultados/{personalFolio}', [ResultsController::class, 'showWorkCenterDetailedResults'])
+    Route::get('/centro-trabajo/{workCenter}/{source}/resultados/{personalFolio}', [ResultsController::class, 'showWorkCenterDetailedResultsBySource'])
+        ->whereIn('source', ['paper', 'online'])
         ->name('work-centers.results.detail')
+        ->middleware('can:viewWorkCenterDashboard,workCenter');
+
+    Route::get('/centro-trabajo/{workCenter}/resultados/{personalFolio}', [ResultsController::class, 'showWorkCenterDetailedResults'])
+        ->name('work-centers.results.detail.legacy')
         ->middleware('can:viewWorkCenterDashboard,workCenter');
 
     Route::get('/organizacion/{organization}/resultados/{personalFolio}/likert', [ResultsController::class, 'showLikertDetails'])

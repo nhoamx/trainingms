@@ -1231,6 +1231,30 @@ class ResultsController extends Controller
         return $this->renderDetailedResultsPage($workCenter->organization, $personalFolio, $evaluations);
     }
 
+    public function showWorkCenterDetailedResultsBySource(WorkCenter $workCenter, string $source, string $personalFolio, Request $request)
+    {
+        $this->authorize('viewWorkCenterDashboard', $workCenter);
+
+        $resolvedSource = $this->resolveSourceFilter($source);
+
+        if ($resolvedSource === null) {
+            abort(404, 'Fuente de evaluación inválida');
+        }
+
+        $evaluations = $this->buildDetailedResultsQuery(
+            $workCenter->organization_id,
+            $personalFolio,
+            $workCenter->id,
+            $resolvedSource
+        )->get();
+
+        if ($evaluations->isEmpty()) {
+            abort(404, 'No se encontraron evaluaciones para este folio personal');
+        }
+
+        return $this->renderDetailedResultsPage($workCenter->organization, $personalFolio, $evaluations);
+    }
+
     private function buildDetailedResultsQuery(string $organizationId, string $personalFolio, ?string $workCenterId = null, ?string $source = null): Builder
     {
         $query = PaperEvaluation::where('organization_id', $organizationId)

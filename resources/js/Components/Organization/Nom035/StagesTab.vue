@@ -718,19 +718,22 @@
                 <div class="divide-y divide-slate-200 max-h-96 overflow-y-auto">
                   <div
                     v-for="item in filteredRiskPersonal"
-                    :key="item.personal_folio"
+                    :key="`${item.personal_folio}-${item.source ?? 'na'}-${item.score}`"
                     class="px-4 py-3 hover:bg-slate-50 transition-colors"
                   >
                     <div class="grid grid-cols-3 gap-4 items-center">
-                      <div class="text-sm font-medium text-slate-900">
-                        {{ item.personal_folio }}
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-slate-900">{{ item.personal_folio }}</span>
+                        <span :class="getSourceBadgeClass(item.source)" class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
+                          {{ getSourceLabel(item.source) }}
+                        </span>
                       </div>
                       <div class="text-sm text-slate-600">
                         {{ item.score }} pts
                       </div>
                       <div>
                         <Link
-                          :href="buildResultsDetailHref(item.personal_folio)"
+                          :href="buildResultsDetailHref(item.personal_folio, item.source)"
                           class="text-indigo-600 hover:text-indigo-800 text-sm font-medium hover:underline"
                         >
                           Ver detalles →
@@ -840,11 +843,11 @@
               <ul v-else class="divide-y divide-slate-200">
                 <li
                   v-for="(participant, index) in filteredParticipants"
-                  :key="participant.personal_folio"
+                  :key="`${participant.personal_folio}-${participant.source ?? 'na'}-${index}`"
                   class="hover:bg-slate-50 transition-colors duration-150 p-0"
                 >
                   <Link
-                    :href="buildResultsDetailHref(participant.personal_folio)"
+                    :href="buildResultsDetailHref(participant.personal_folio, participant.source)"
                     target="_blank"
                     class="flex justify-between items-center p-4 w-full h-full no-underline text-inherit hover:no-underline"
                   >
@@ -853,6 +856,9 @@
                         {{ index + 1 }}
                       </div>
                       <span class="font-medium text-slate-900">Folio {{ participant.personal_folio }}</span>
+                      <span :class="getSourceBadgeClass(participant.source)" class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
+                        {{ getSourceLabel(participant.source) }}
+                      </span>
                     </div>
                     <div class="flex items-center gap-4">
                       <span
@@ -1149,6 +1155,7 @@ interface Evaluation {
   id: string;
   folio: string;
   personal_folio: string;
+  source?: 'online' | 'paper' | null;
   evaluee_name: string;
   demographics: {
     genero: string;
@@ -1217,6 +1224,7 @@ interface ViolenceLaborQuestion {
 
 interface ViolenceLaborParticipant {
   personal_folio: string;
+  source?: 'online' | 'paper' | null;
   demographics: {
     genero: string;
     puesto: string;
@@ -1312,14 +1320,33 @@ const currentSource = computed<'paper' | 'online' | null>(() => {
   return null;
 });
 
-const buildResultsDetailHref = (personalFolio: string): string => {
+const normalizeSource = (source: unknown): 'online' | 'paper' | null => {
+  if (source === 'online' || source === 'paper') {
+    return source;
+  }
+
+  return null;
+};
+
+const getSourceLabel = (source: unknown): string => {
+  return normalizeSource(source) === 'paper' ? 'Presencial' : 'Online';
+};
+
+const getSourceBadgeClass = (source: unknown): string => {
+  return normalizeSource(source) === 'paper'
+    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+    : 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+};
+
+const buildResultsDetailHref = (personalFolio: string, sourceOverride?: unknown): string => {
   const returnTo = `${window.location.pathname}${window.location.search}`;
+  const resolvedSource = normalizeSource(sourceOverride) ?? currentSource.value ?? 'online';
 
   if (props.workCenterId) {
     return route('work-centers.results.detail', {
       workCenter: props.workCenterId,
+      source: resolvedSource,
       personalFolio,
-      source: currentSource.value ?? undefined,
       return_to: returnTo,
     });
   }
@@ -1866,6 +1893,7 @@ const showRiskDetailsModal = (level: string) => {
     if (evaluationRiskLevel === level) {
       matchingPersonal.push({
         personal_folio: evaluation.personal_folio,
+        source: evaluation.source ?? null,
         score: score,
       });
     }
@@ -1882,6 +1910,7 @@ const showViolenceRiskDetailsModal = (level: string): void => {
     .filter((participant) => participant.risk_level === level)
     .map((participant) => ({
       personal_folio: participant.personal_folio,
+      source: participant.source ?? null,
       score: participant.violence_score,
     }));
 
@@ -1915,7 +1944,11 @@ const participantsWithScores = computed(() => {
   }
 
   const violenceByFolio = new Map(
-    (props.violenceLaborStatistics.participants ?? []).map((participant) => [participant.personal_folio, participant.risk_level])
+    (props.violenceLaborStatistics.participants ?? []).map((participant) => {
+      const source = normalizeSource(participant.source) ?? 'online';
+
+      return [`${participant.personal_folio}|${source}`, participant.risk_level] as const;
+    })
   );
 
   const participants = props.analysisData.evaluations.map((evaluation: any) => {
@@ -1927,9 +1960,10 @@ const participantsWithScores = computed(() => {
 
     return {
       personal_folio: evaluation.personal_folio,
+      source: evaluation.source ?? null,
       score: score,
       risk_level: riskLevel,
-      violence_risk_level: violenceByFolio.get(evaluation.personal_folio) ?? 'nulo',
+      violence_risk_level: violenceByFolio.get(`${evaluation.personal_folio}|${normalizeSource(evaluation.source) ?? 'online'}`) ?? 'nulo',
     };
   });
 

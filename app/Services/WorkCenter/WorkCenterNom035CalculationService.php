@@ -554,7 +554,7 @@ class WorkCenterNom035CalculationService
         $violenceQuestions = [57, 58, 59, 60, 61, 62, 63, 64];
         $evaluations = $this->baseRefIIIQuery($workCenter, $source)
             ->with(['demographicData:id,paper_evaluation_id,gender,position,department,work_schedule'])
-            ->select(['id', 'personal_folio', 'referencia_iii_answers'])
+            ->select(['id', 'personal_folio', 'referencia_iii_answers', 'source'])
             ->get();
 
         $riskLevels = config('nom035_risk_levels');
@@ -617,6 +617,7 @@ class WorkCenterNom035CalculationService
 
             $participants[] = [
                 'personal_folio' => (string) ($evaluation->personal_folio ?? ''),
+                'source' => in_array($evaluation->source, ['online', 'paper'], true) ? $evaluation->source : null,
                 'demographics' => [
                     'genero' => $evaluation->demographicData->gender ?? 'No especificado',
                     'puesto' => $evaluation->demographicData->position ?? 'No especificado',
@@ -661,7 +662,7 @@ class WorkCenterNom035CalculationService
     {
         $evaluations = $this->baseRefIIIQuery($workCenter, $source)
             ->with(['demographicData:id,paper_evaluation_id,gender,position,department,work_schedule,contract_type'])
-            ->select(['id', 'folio', 'personal_folio', 'evaluee_name', 'referencia_iii_answers', 'referencia_iii_conditional', 'raw_data', 'organization_id'])
+            ->select(['id', 'folio', 'personal_folio', 'evaluee_name', 'referencia_iii_answers', 'referencia_iii_conditional', 'raw_data', 'organization_id', 'source'])
             ->get();
 
         $evaluationsData = [];
@@ -742,6 +743,7 @@ class WorkCenterNom035CalculationService
                 'id' => $evaluation->id,
                 'folio' => $evaluation->folio,
                 'personal_folio' => $evaluation->personal_folio,
+                'source' => in_array($evaluation->source, ['online', 'paper'], true) ? $evaluation->source : null,
                 'evaluee_name' => $evaluation->evaluee_name,
                 'demographics' => $demographics,
                 'domain_scores' => $domainScores,
@@ -962,6 +964,18 @@ class WorkCenterNom035CalculationService
 
         if ($answers === [] && $rawAnswers !== []) {
             $answers = $rawAnswers;
+        } elseif ($rawAnswers !== []) {
+            foreach ($rawAnswers as $questionNumber => $answer) {
+                $key = $this->normalizeQuestionKey($questionNumber);
+                $current = $answers[$key]
+                    ?? $answers[(string) ((int) $questionNumber)]
+                    ?? $answers[(int) $questionNumber]
+                    ?? null;
+
+                if ($current === null || $current === '') {
+                    $answers[$key] = $answer;
+                }
+            }
         }
 
         foreach ($this->getEnabledConditionalQuestionAnswers($conditionalAnswers) as $questionNumber => $answer) {
@@ -972,7 +986,33 @@ class WorkCenterNom035CalculationService
             $answers[$this->normalizeQuestionKey($questionNumber)] = $answer;
         }
 
+        $this->removeDisabledConditionalQuestions($answers, $conditionalAnswers);
+
         return $answers;
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $answers
+     * @param  array<string, mixed>  $conditionalAnswers
+     */
+    private function removeDisabledConditionalQuestions(array &$answers, array $conditionalAnswers): void
+    {
+        $conditionalRanges = [
+            'customer_service' => [65, 68],
+            'management' => [69, 72],
+        ];
+
+        foreach ($conditionalRanges as $section => [$start, $end]) {
+            $condition = $conditionalAnswers[$section]['condition'] ?? null;
+
+            if (! is_string($condition) || strtoupper(trim($condition)) !== 'NO') {
+                continue;
+            }
+
+            for ($questionNumber = $start; $questionNumber <= $end; $questionNumber++) {
+                unset($answers[$this->normalizeQuestionKey($questionNumber)]);
+            }
+        }
     }
 
     /**
@@ -984,31 +1024,45 @@ class WorkCenterNom035CalculationService
             return [];
         }
 
+        $rawData = $evaluation->raw_data;
+        $sources = [$rawData];
+
+        if (is_array($rawData['referencia_iii'] ?? null)) {
+            $sources[] = $rawData['referencia_iii'];
+        }
+
         $answers = [];
 
-        foreach ($evaluation->raw_data as $questionNumber => $answer) {
-            if (! is_numeric((string) $questionNumber)) {
-                continue;
+        foreach ($sources as $source) {
+            foreach ($source as $questionNumber => $answer) {
+                if (! is_numeric((string) $questionNumber)) {
+                    continue;
+                }
+
+                $numericQuestion = (int) $questionNumber;
+                if ($numericQuestion < 1 || $numericQuestion > 72) {
+                    continue;
+                }
+
+                $answerValue = null;
+
+                if (is_string($answer)) {
+                    $answerValue = $answer;
+                } elseif (is_array($answer) && is_string($answer['value'] ?? null)) {
+                    $answerValue = $answer['value'];
+                }
+
+                if (! is_string($answerValue)) {
+                    continue;
+                }
+
+                $normalizedAnswer = strtoupper(trim($answerValue));
+                if (! in_array($normalizedAnswer, ['A', 'B', 'C', 'D', 'E'], true)) {
+                    continue;
+                }
+
+                $answers[$this->normalizeQuestionKey($numericQuestion)] = $normalizedAnswer;
             }
-
-            $answerValue = null;
-
-            if (is_string($answer)) {
-                $answerValue = $answer;
-            } elseif (is_array($answer) && is_string($answer['value'] ?? null)) {
-                $answerValue = $answer['value'];
-            }
-
-            if (! is_string($answerValue)) {
-                continue;
-            }
-
-            $normalizedAnswer = strtoupper(trim($answerValue));
-            if (! in_array($normalizedAnswer, ['A', 'B', 'C', 'D', 'E'], true)) {
-                continue;
-            }
-
-            $answers[$this->normalizeQuestionKey($questionNumber)] = $normalizedAnswer;
         }
 
         return $answers;

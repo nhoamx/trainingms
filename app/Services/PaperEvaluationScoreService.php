@@ -20,20 +20,26 @@ class PaperEvaluationScoreService
             ];
         }
 
-        $answers = $evaluation->referencia_iii_answers ?? [];
-        $conditionalAnswers = $evaluation->referencia_iii_conditional ?? [];
+        $answers = $this->normalizeAnswers($evaluation->referencia_iii_answers ?? []);
+        $conditionalAnswers = is_array($evaluation->referencia_iii_conditional) ? $evaluation->referencia_iii_conditional : [];
+        $rawReferenciaIII = $this->normalizeAnswers($evaluation->raw_data['referencia_iii'] ?? []);
         $answerValues = config('answer_values');
         $questionDimensions = config('question_dimensions');
 
-        // Check if person is a manager (answered "SI" to management question)
-        $isManager = isset($conditionalAnswers['management']['condition'])
-            && $conditionalAnswers['management']['condition'] === 'SI';
+        $customerServiceSection = $this->extractConditionalSection($conditionalAnswers, 'customer_service');
+        $managementSection = $this->extractConditionalSection($conditionalAnswers, 'management');
 
-        // Get management questions if applicable
-        $managementQuestions = [];
-        if ($isManager && isset($conditionalAnswers['management']['questions'])) {
-            $managementQuestions = $conditionalAnswers['management']['questions'];
-        }
+        $customerServiceCondition = $this->normalizeYesNo($customerServiceSection['condition'] ?? null);
+        $managementCondition = $this->normalizeYesNo($managementSection['condition'] ?? null);
+
+        $shouldIncludeCustomerService = $customerServiceCondition === true
+            || ($customerServiceCondition === null && $this->hasAnyAnswersInRange($rawReferenciaIII, 65, 68));
+
+        $shouldIncludeManagement = $managementCondition === true
+            || ($managementCondition === null && $this->hasAnyAnswersInRange($rawReferenciaIII, 69, 72));
+
+        $customerServiceQuestions = $this->normalizeAnswers($customerServiceSection['questions'] ?? []);
+        $managementQuestions = $this->normalizeAnswers($managementSection['questions'] ?? []);
 
         $categoryScores = [];
         $domainScores = [];
@@ -58,20 +64,30 @@ class PaperEvaluationScoreService
                     $dimensionItems = [];
 
                     foreach ($questions as $questionNumber) {
-                        // Skip management questions (69-72) if person is not a manager
-                        if (in_array($questionNumber, [69, 70, 71, 72]) && ! $isManager) {
-                            continue;
-                        }
+                        if (in_array($questionNumber, [65, 66, 67, 68], true)) {
+                            if (! $shouldIncludeCustomerService) {
+                                continue;
+                            }
 
-                        // For management questions (69-72), get answer from conditional data
-                        if (in_array($questionNumber, [69, 70, 71, 72]) && $isManager) {
-                            $answer = $managementQuestions[$questionNumber] ?? null;
+                            $answer = $this->resolveAnswer(
+                                $questionNumber,
+                                $customerServiceQuestions,
+                                $answers,
+                                $rawReferenciaIII
+                            );
+                        } elseif (in_array($questionNumber, [69, 70, 71, 72], true)) {
+                            if (! $shouldIncludeManagement) {
+                                continue;
+                            }
+
+                            $answer = $this->resolveAnswer(
+                                $questionNumber,
+                                $managementQuestions,
+                                $answers,
+                                $rawReferenciaIII
+                            );
                         } else {
-                            // Regular questions from referencia_iii_answers
-                            $answer = $answers[$questionNumber]
-                                ?? $answers[sprintf('%02d', $questionNumber)]
-                                ?? $answers[(string) $questionNumber]
-                                ?? null;
+                            $answer = $this->resolveAnswer($questionNumber, $answers, $rawReferenciaIII);
                         }
 
                         if ($answer) {
@@ -140,7 +156,7 @@ class PaperEvaluationScoreService
     {
         $scores = $this->calculateReferenciaIIIScores($evaluation);
         $questionDimensions = config('question_dimensions');
-        $referenciaIIIQuestions = config('referencia_iii.general');
+        $referenciaIIIQuestions = $this->getReferenciaIIIQuestionTexts();
 
         $detailedResults = [];
 
@@ -184,6 +200,130 @@ class PaperEvaluationScoreService
         }
 
         return $detailedResults;
+    }
+
+    /**
+     * @param  array<string, mixed>  $answers
+     * @return array<string, mixed>
+     */
+    private function normalizeAnswers(array $answers): array
+    {
+        if (isset($answers['referencia_iii']) && is_array($answers['referencia_iii'])) {
+            $answers = $answers['referencia_iii'];
+        }
+
+        $normalized = [];
+
+        foreach ($answers as $key => $value) {
+            if (is_array($value) && array_key_exists('value', $value)) {
+                $value = $value['value'];
+            }
+
+            if (is_numeric((string) $key)) {
+                $normalized[(string) (int) $key] = $value;
+
+                continue;
+            }
+
+            $normalized[(string) $key] = $value;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  array<string, mixed>  $conditionalAnswers
+     * @return array{condition: mixed, questions: array<string, mixed>}
+     */
+    private function extractConditionalSection(array $conditionalAnswers, string $section): array
+    {
+        $sectionData = is_array($conditionalAnswers[$section] ?? null) ? $conditionalAnswers[$section] : [];
+
+        return [
+            'condition' => $sectionData['condition'] ?? null,
+            'questions' => is_array($sectionData['questions'] ?? null) ? $sectionData['questions'] : [],
+        ];
+    }
+
+    private function normalizeYesNo(mixed $value): ?bool
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $normalized = strtoupper(trim($value));
+
+        if (in_array($normalized, ['SI', 'S', 'YES', 'Y', 'TRUE', '1'], true)) {
+            return true;
+        }
+
+        if (in_array($normalized, ['NO', 'N', 'FALSE', '0'], true)) {
+            return false;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $answers
+     */
+    private function hasAnyAnswersInRange(array $answers, int $start, int $end): bool
+    {
+        for ($number = $start; $number <= $end; $number++) {
+            $value = $answers[(string) $number] ?? null;
+            if ($value !== null && $value !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  ...$sources
+     */
+    private function resolveAnswer(int $questionNumber, array ...$sources): mixed
+    {
+        $key = (string) $questionNumber;
+
+        foreach ($sources as $source) {
+            if (! is_array($source)) {
+                continue;
+            }
+
+            $value = $source[$key] ?? null;
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            return $value;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getReferenciaIIIQuestionTexts(): array
+    {
+        $questions = config('referencia_iii.general', []);
+        $conditionalSections = config('referencia_iii.conditional_sections', []);
+
+        foreach ($conditionalSections as $section) {
+            if (! is_array($section) || ! is_array($section['questions'] ?? null)) {
+                continue;
+            }
+
+            foreach ($section['questions'] as $number => $text) {
+                if (is_numeric((string) $number) && is_string($text)) {
+                    $questions[(int) $number] = $text;
+                }
+            }
+        }
+
+        return $questions;
     }
 
     /**
