@@ -33,10 +33,10 @@ class PaperEvaluationScoreService
         $managementCondition = $this->normalizeYesNo($managementSection['condition'] ?? null);
 
         $shouldIncludeCustomerService = $customerServiceCondition === true
-            || ($customerServiceCondition === null && $this->hasAnyAnswersInRange($rawReferenciaIII, 65, 68));
+            || ($customerServiceCondition === null && $this->hasAnyDeclaredQuestionsInRange($rawReferenciaIII, 65, 68));
 
         $shouldIncludeManagement = $managementCondition === true
-            || ($managementCondition === null && $this->hasAnyAnswersInRange($rawReferenciaIII, 69, 72));
+            || ($managementCondition === null && $this->hasAnyDeclaredQuestionsInRange($rawReferenciaIII, 69, 72));
 
         $customerServiceQuestions = $this->normalizeAnswers($customerServiceSection['questions'] ?? []);
         $managementQuestions = $this->normalizeAnswers($managementSection['questions'] ?? []);
@@ -64,12 +64,14 @@ class PaperEvaluationScoreService
                     $dimensionItems = [];
 
                     foreach ($questions as $questionNumber) {
+                        $resolvedAnswer = null;
+
                         if (in_array($questionNumber, [65, 66, 67, 68], true)) {
                             if (! $shouldIncludeCustomerService) {
                                 continue;
                             }
 
-                            $answer = $this->resolveAnswer(
+                            $resolvedAnswer = $this->resolveAnswerWithPresence(
                                 $questionNumber,
                                 $customerServiceQuestions,
                                 $answers,
@@ -80,25 +82,28 @@ class PaperEvaluationScoreService
                                 continue;
                             }
 
-                            $answer = $this->resolveAnswer(
+                            $resolvedAnswer = $this->resolveAnswerWithPresence(
                                 $questionNumber,
                                 $managementQuestions,
                                 $answers,
                                 $rawReferenciaIII
                             );
                         } else {
-                            $answer = $this->resolveAnswer($questionNumber, $answers, $rawReferenciaIII);
+                            $resolvedAnswer = $this->resolveAnswerWithPresence($questionNumber, $answers, $rawReferenciaIII);
                         }
 
-                        if ($answer) {
-                            $score = $this->getAnswerValue($questionNumber, $answer, $answerValues);
+                        if ($resolvedAnswer['found']) {
+                            $answer = $resolvedAnswer['answer'];
+                            $score = is_string($answer)
+                                ? $this->getAnswerValue($questionNumber, $answer, $answerValues)
+                                : 0;
                             $dimensionScore += $score;
                             $totalScore += $score;
 
                             $dimensionItems[] = [
                                 'question_number' => $questionNumber,
                                 'question_key' => sprintf('%02d', $questionNumber),
-                                'answer' => $answer,
+                                'answer' => $answer ?? '0',
                                 'score' => $score,
                             ];
                         }
@@ -267,11 +272,10 @@ class PaperEvaluationScoreService
     /**
      * @param  array<string, mixed>  $answers
      */
-    private function hasAnyAnswersInRange(array $answers, int $start, int $end): bool
+    private function hasAnyDeclaredQuestionsInRange(array $answers, int $start, int $end): bool
     {
         for ($number = $start; $number <= $end; $number++) {
-            $value = $answers[(string) $number] ?? null;
-            if ($value !== null && $value !== '') {
+            if (array_key_exists((string) $number, $answers)) {
                 return true;
             }
         }
@@ -282,7 +286,7 @@ class PaperEvaluationScoreService
     /**
      * @param  array<string, mixed>  ...$sources
      */
-    private function resolveAnswer(int $questionNumber, array ...$sources): mixed
+    private function resolveAnswerWithPresence(int $questionNumber, array ...$sources): array
     {
         $key = (string) $questionNumber;
 
@@ -291,16 +295,24 @@ class PaperEvaluationScoreService
                 continue;
             }
 
-            $value = $source[$key] ?? null;
-
-            if ($value === null || $value === '') {
+            if (! array_key_exists($key, $source)) {
                 continue;
             }
 
-            return $value;
+            $value = $source[$key];
+
+            if ($value === null || $value === '') {
+                return ['found' => true, 'answer' => null];
+            }
+
+            if (! is_string($value)) {
+                return ['found' => true, 'answer' => null];
+            }
+
+            return ['found' => true, 'answer' => $value];
         }
 
-        return null;
+        return ['found' => false, 'answer' => null];
     }
 
     /**

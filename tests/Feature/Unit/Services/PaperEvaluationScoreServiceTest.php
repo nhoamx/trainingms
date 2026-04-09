@@ -116,4 +116,41 @@ class PaperEvaluationScoreServiceTest extends TestCase
         $dimensionKey = 'Liderazgo y relaciones en el trabajo|Relaciones en el trabajo|Deficiente relación con los colaboradores que supervisa';
         $this->assertSame(0, $scores['dimensions'][$dimensionKey]['score']);
     }
+
+    public function test_it_displays_management_questions_with_zero_score_when_declared_but_null(): void
+    {
+        $service = app(PaperEvaluationScoreService::class);
+
+        $evaluation = new PaperEvaluation([
+            'evaluation_type' => 'referencia_iii',
+            'referencia_iii_answers' => [
+                '42' => 'A',
+            ],
+            'referencia_iii_conditional' => null,
+            'raw_data' => [
+                'referencia_iii' => [
+                    '69' => null,
+                    '70' => null,
+                    '71' => null,
+                    '72' => null,
+                ],
+            ],
+        ]);
+
+        $results = collect($service->getDetailedResults($evaluation));
+
+        $this->assertSame([69, 70, 71, 72], $results
+            ->whereIn('item_numero', [69, 70, 71, 72])
+            ->pluck('item_numero')
+            ->values()
+            ->all());
+
+        foreach ([69, 70, 71, 72] as $questionNumber) {
+            $item = $results->firstWhere('item_numero', $questionNumber);
+
+            $this->assertNotNull($item);
+            $this->assertSame(0, $item['puntaje']);
+            $this->assertSame('0', $item['respuesta']);
+        }
+    }
 }
