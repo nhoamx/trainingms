@@ -234,6 +234,166 @@ class WorkCenterNom035DashboardTest extends TestCase
         );
     }
 
+    public function test_dashboard_ignores_out_of_range_raw_answers_when_calculating_participant_total_score(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'personal_folio' => '00001',
+            'referencia_iii_answers' => null,
+            'raw_data' => [
+                1 => ['value' => 'E'],
+                73 => ['value' => 'A'],
+            ],
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035', [
+                'workCenter' => $workCenter,
+                'source' => 'all',
+            ]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIIIDashboard')
+            ->where('analysisData.evaluations.0.total_score', 4)
+        );
+    }
+
+    public function test_dashboard_excludes_management_conditional_answers_when_condition_is_no(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'personal_folio' => '00001',
+            'referencia_iii_answers' => null,
+            'referencia_iii_conditional' => [
+                'management' => [
+                    'condition' => 'NO',
+                    'questions' => [],
+                ],
+            ],
+            'raw_data' => [
+                1 => ['value' => 'E'],
+                71 => ['value' => 'C'],
+                72 => ['value' => 'C'],
+            ],
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035', [
+                'workCenter' => $workCenter,
+                'source' => 'all',
+            ]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIIIDashboard')
+            ->where('analysisData.evaluations.0.total_score', 4)
+        );
+    }
+
+    public function test_dashboard_includes_online_nested_raw_conditional_questions_when_condition_is_missing(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'online',
+            'processing_status' => 'completed',
+            'personal_folio' => '00001',
+            'referencia_iii_answers' => null,
+            'referencia_iii_conditional' => null,
+            'raw_data' => [
+                'referencia_iii' => [
+                    '1' => 'A',
+                    '65' => 'D',
+                    '66' => 'E',
+                    '67' => 'E',
+                    '68' => 'C',
+                ],
+            ],
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035', [
+                'workCenter' => $workCenter,
+                'source' => 'all',
+            ]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIIIDashboard')
+            ->where('analysisData.evaluations.0.total_score', 3)
+        );
+    }
+
+    public function test_dashboard_merges_missing_conditional_answers_from_raw_when_base_answers_exist(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'online',
+            'processing_status' => 'completed',
+            'personal_folio' => '00001',
+            'referencia_iii_answers' => [
+                1 => 'A',
+            ],
+            'referencia_iii_conditional' => null,
+            'raw_data' => [
+                'referencia_iii' => [
+                    '65' => 'D',
+                    '66' => 'E',
+                    '67' => 'E',
+                    '68' => 'C',
+                ],
+            ],
+        ]);
+
+        $user = User::factory()->create();
+        $user->syncRoles(['admin']);
+
+        $response = $this->actingAs($user)
+            ->get(route('work-centers.dashboard.nom-035', [
+                'workCenter' => $workCenter,
+                'source' => 'all',
+            ]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('WorkCenters/Nom035RefIIIDashboard')
+            ->where('analysisData.evaluations.0.total_score', 3)
+        );
+    }
+
     public function test_dashboard_filters_general_report_by_demographic_query_params(): void
     {
         $organization = Organization::factory()->create();
