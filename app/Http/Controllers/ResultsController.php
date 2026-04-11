@@ -1259,7 +1259,12 @@ class ResultsController extends Controller
     {
         $query = PaperEvaluation::where('organization_id', $organizationId)
             ->where('personal_folio', $personalFolio)
-            ->where('processing_status', 'completed');
+            ->where('processing_status', 'completed')
+            ->with([
+                'evaluationAnswers' => function ($query) {
+                    $query->select(['paper_evaluation_id', 'instrument', 'question_key', 'answer_value']);
+                },
+            ]);
 
         if ($workCenterId !== null) {
             $query->where('work_center_id', $workCenterId);
@@ -1281,6 +1286,9 @@ class ResultsController extends Controller
 
     private function renderDetailedResultsPage(Organization $organization, string $personalFolio, Collection $evaluations)
     {
+        $evaluations = $evaluations->map(
+            fn (PaperEvaluation $evaluation): PaperEvaluation => $this->hydrateDetailedResultsEvaluation($evaluation)
+        );
 
         // Get individual evaluations by type
         $referenciaI = $evaluations->firstWhere('evaluation_type', 'referencia_i');
@@ -1352,12 +1360,14 @@ class ResultsController extends Controller
         $guideIResults = null;
         if ($referenciaI) {
             $mappedAnswers = $this->getGuideIAnswers($referenciaI);
+            $mappedCitsats = $referenciaIII ? $this->getCitsatsAnswers($referenciaIII) : $this->getCitsatsAnswers($referenciaI);
 
             $guideIResults = [
                 'id' => $referenciaI->id,
                 'folio' => $referenciaI->folio,
                 'created_at' => $referenciaI->created_at->format('Y-m-d H:i:s'),
                 'answers' => $mappedAnswers,
+                'citsats_s1' => $mappedCitsats,
             ];
         }
 
@@ -1374,7 +1384,6 @@ class ResultsController extends Controller
             }
 
             $mappedConditional = $this->getReferenciaIiiConditional($referenciaIII);
-            $mappedCitsats = $this->getCitsatsAnswers($referenciaIII);
 
             $guideIIIResults = [
                 'id' => $referenciaIII->id,
@@ -1382,7 +1391,6 @@ class ResultsController extends Controller
                 'created_at' => $referenciaIII->created_at->format('Y-m-d H:i:s'),
                 'answers' => $mappedAnswers,
                 'conditional' => $mappedConditional,
-                'citsats_s1' => $mappedCitsats,
             ];
         }
 
@@ -1452,6 +1460,178 @@ class ResultsController extends Controller
             'occupationPositions' => $organization->occupationPositions()->get(['id', 'name'])->toArray(),
             'departmentAreas' => $organization->departmentAreas()->get(['id', 'name'])->toArray(),
         ]);
+    }
+
+    private function hydrateDetailedResultsEvaluation(PaperEvaluation $evaluation): PaperEvaluation
+    {
+        if (! $evaluation->relationLoaded('evaluationAnswers')) {
+            $evaluation->load([
+                'evaluationAnswers' => function ($query) {
+                    $query->select(['paper_evaluation_id', 'instrument', 'question_key', 'answer_value']);
+                },
+            ]);
+        }
+
+        if ($evaluation->evaluationAnswers->isEmpty()) {
+            return $evaluation;
+        }
+
+        $answersByInstrument = $this->indexNormalizedAnswersByInstrument($evaluation);
+
+        if ($evaluation->evaluation_type === 'referencia_i') {
+            $referenciaIAnswers = $this->extractNumericAnswerRange($answersByInstrument['referencia_i'] ?? [], 1, 14);
+
+            if (! empty($referenciaIAnswers)) {
+                $evaluation->setAttribute('referencia_i_answers', $referenciaIAnswers);
+            }
+
+            return $evaluation;
+        }
+
+        if ($evaluation->evaluation_type === 'referencia_iii') {
+            $referenciaIiiAnswers = $this->extractNumericAnswerRange($answersByInstrument['referencia_iii'] ?? [], 1, 64);
+            $conditionalSections = $this->buildNormalizedConditionalSections($answersByInstrument['referencia_iii'] ?? []);
+            $citsatsAnswers = $this->extractNumericAnswerRange($answersByInstrument['referencia_i'] ?? [], 1, 6);
+
+            if (! empty($referenciaIiiAnswers)) {
+                $evaluation->setAttribute('referencia_iii_answers', $referenciaIiiAnswers);
+            }
+
+            if (! empty($conditionalSections)) {
+                $evaluation->setAttribute('referencia_iii_conditional', $conditionalSections);
+            }
+
+            if (! empty($citsatsAnswers)) {
+                $evaluation->setAttribute('citsats_s1', $citsatsAnswers);
+            }
+
+            return $evaluation;
+        }
+
+        if ($evaluation->evaluation_type === 'cisneros') {
+            $cisnerosAnswers = $this->extractNumericAnswerRange($answersByInstrument['cisneros'] ?? [], 1, 999);
+
+            if (! empty($cisnerosAnswers)) {
+                $evaluation->setAttribute('cisneros_answers', $cisnerosAnswers);
+            }
+        }
+
+        return $evaluation;
+    }
+
+    /**
+     * @return array<string, array<string, string|null>>
+     */
+    private function indexNormalizedAnswersByInstrument(PaperEvaluation $evaluation): array
+    {
+        $indexed = [];
+
+        foreach ($evaluation->evaluationAnswers as $answer) {
+            $instrument = is_object($answer->instrument) && property_exists($answer->instrument, 'value')
+                ? (string) $answer->instrument->value
+                : (string) $answer->instrument;
+            $questionKey = $this->normalizeNormalizedQuestionKey($answer->question_key);
+
+            if (! isset($indexed[$instrument])) {
+                $indexed[$instrument] = [];
+            }
+
+            $indexed[$instrument][$questionKey] = $this->normalizeScalarAnswerValue($answer->answer_value);
+        }
+
+        return $indexed;
+    }
+
+    /**
+     * @param  array<string, string|null>  $answers
+     * @return array<string, string>
+     */
+    private function extractNumericAnswerRange(array $answers, int $start, int $end): array
+    {
+        $result = [];
+
+        foreach ($answers as $key => $value) {
+            if (! ctype_digit((string) $key)) {
+                continue;
+            }
+
+            $questionNumber = (int) $key;
+            if ($questionNumber < $start || $questionNumber > $end) {
+                continue;
+            }
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $result[str_pad((string) $questionNumber, 2, '0', STR_PAD_LEFT)] = $value;
+        }
+
+        ksort($result);
+
+        return $result;
+    }
+
+    /**
+     * @param  array<string, string|null>  $answers
+     * @return array<string, array{condition: string|null, questions: array<string, string>}>
+     */
+    private function buildNormalizedConditionalSections(array $answers): array
+    {
+        $sections = [];
+
+        $customerServiceQuestions = $this->extractNumericAnswerRange($answers, 65, 68);
+        $managementQuestions = $this->extractNumericAnswerRange($answers, 69, 72);
+        $customerServiceCondition = $this->normalizeScalarAnswerValue($answers['condition_cs'] ?? null);
+        $managementCondition = $this->normalizeScalarAnswerValue($answers['condition_mgmt'] ?? null);
+
+        if ($customerServiceCondition !== null || ! empty($customerServiceQuestions)) {
+            $sections['customer_service'] = [
+                'condition' => $customerServiceCondition,
+                'questions' => $customerServiceQuestions,
+            ];
+        }
+
+        if ($managementCondition !== null || ! empty($managementQuestions)) {
+            $sections['management'] = [
+                'condition' => $managementCondition,
+                'questions' => $managementQuestions,
+            ];
+        }
+
+        return $sections;
+    }
+
+    private function normalizeNormalizedQuestionKey(string|int $key): string
+    {
+        $normalizedKey = (string) $key;
+
+        if (preg_match('/^(?:pregunta|question)_?(\d+)$/i', $normalizedKey, $matches) === 1) {
+            return (string) ((int) $matches[1]);
+        }
+
+        if (ctype_digit($normalizedKey)) {
+            return (string) ((int) $normalizedKey);
+        }
+
+        return $normalizedKey;
+    }
+
+    private function normalizeScalarAnswerValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'SI' : 'NO';
+        }
+
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        return $this->normalizeBooleanDisplayString((string) $value);
     }
 
     /**
@@ -1854,14 +2034,27 @@ class ResultsController extends Controller
         if (is_array($rawValue)) {
             $candidate = $rawValue['value'] ?? null;
 
-            return is_scalar($candidate) ? (string) $candidate : null;
+            return is_scalar($candidate) ? $this->normalizeBooleanDisplayString((string) $candidate) : null;
+        }
+
+        if (is_bool($rawValue)) {
+            return $rawValue ? 'SI' : 'NO';
         }
 
         if (is_scalar($rawValue)) {
-            return (string) $rawValue;
+            return $this->normalizeBooleanDisplayString((string) $rawValue);
         }
 
         return null;
+    }
+
+    private function normalizeBooleanDisplayString(string $value): string
+    {
+        return match (strtolower(trim($value))) {
+            'true' => 'SI',
+            'false' => 'NO',
+            default => $value,
+        };
     }
 
     /**

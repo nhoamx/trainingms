@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessOnlineEvaluation;
+use App\Models\EvaluationAnswer;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\Quiz;
@@ -410,5 +411,58 @@ class ProcessOnlineEvaluationTest extends TestCase
         $this->assertSame('Paper Name', $paperRecord->evaluee_name);
         $this->assertEquals(['1' => 'A'], $paperRecord->referencia_iii_answers);
         $this->assertEquals('B', $onlineRecord->referencia_iii_answers['1']);
+    }
+
+    public function test_online_processing_syncs_normalized_answers(): void
+    {
+        $submissionStatus = SubmissionStatus::create([
+            'folio' => '020010199',
+            'personal_id' => '0199',
+            'organization_id' => $this->organization->id,
+            'quiz_id' => $this->quiz->id,
+            'status' => SubmissionStatus::STATUS_PENDING,
+            'data_snapshot' => [
+                'evaluation_type' => 'referencia_v',
+                'referencia_v' => ['sexo' => 'Femenino', 'edad' => '29'],
+                'referencia_i' => [
+                    '1' => true,
+                    '2' => false,
+                ],
+                'referencia_iii' => [
+                    '1' => 'A',
+                    '2' => 'B',
+                    'condition_customer_service' => true,
+                    '65' => 'C',
+                ],
+            ],
+        ]);
+
+        ProcessOnlineEvaluation::dispatchSync($submissionStatus->id);
+
+        $onlineEvaluation = PaperEvaluation::query()
+            ->where('folio', '020010199')
+            ->where('source', 'online')
+            ->where('evaluation_type', 'referencia_iii')
+            ->first();
+
+        $this->assertNotNull($onlineEvaluation);
+
+        $answerCount = EvaluationAnswer::query()
+            ->where('paper_evaluation_id', $onlineEvaluation->id)
+            ->count();
+
+        $this->assertGreaterThan(0, $answerCount);
+        $this->assertDatabaseHas('evaluation_answers', [
+            'paper_evaluation_id' => $onlineEvaluation->id,
+            'instrument' => 'referencia_iii',
+            'question_key' => '1',
+            'answer_value' => 'A',
+        ]);
+        $this->assertDatabaseHas('evaluation_answers', [
+            'paper_evaluation_id' => $onlineEvaluation->id,
+            'instrument' => 'referencia_iii',
+            'question_key' => 'condition_cs',
+            'answer_value' => 'true',
+        ]);
     }
 }

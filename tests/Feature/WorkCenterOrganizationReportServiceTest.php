@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\EvaluationAnswer;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
@@ -12,6 +13,58 @@ use Tests\TestCase;
 class WorkCenterOrganizationReportServiceTest extends TestCase
 {
     use DatabaseTransactions;
+
+    public function test_parallel_normalized_method_uses_evaluation_answers_when_json_columns_are_empty(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
+        $evaluation = PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'online',
+            'evaluation_type' => 'referencia_iii',
+            'raw_data' => null,
+            'referencia_iii_answers' => null,
+            'referencia_i_answers' => null,
+            'citsats_s1' => null,
+            'demographic_data' => [
+                'edad' => '34',
+                'sexo' => 'Masculino',
+            ],
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_iii',
+            'question_key' => '1',
+            'answer_value' => 'B',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_i',
+            'question_key' => '1',
+            'answer_value' => 'true',
+            'answer_meta' => null,
+        ]);
+
+        $service = app(WorkCenterOrganizationReportService::class);
+        $result = $service->getOrganizationWorkCentersFromNormalizedAnswers($organization);
+
+        $this->assertCount(1, $result);
+        $this->assertCount(1, $result[0]['evaluations']);
+
+        $mappedEvaluation = $result[0]['evaluations'][0];
+        $this->assertSame('B', $mappedEvaluation['referencia_iii']['1']);
+        $this->assertSame('SI', $mappedEvaluation['referencia_i']['1']);
+        $this->assertSame('SI', $mappedEvaluation['referencia_i_acontecimientos_traumaticos']['1']);
+        $this->assertSame('34', $mappedEvaluation['referencia_v']['edad']);
+        $this->assertSame('Masculino', $mappedEvaluation['referencia_v']['sexo']);
+    }
 
     public function test_it_uses_paper_columns_when_raw_data_is_empty(): void
     {
@@ -72,7 +125,8 @@ class WorkCenterOrganizationReportServiceTest extends TestCase
         $this->assertSame('Persona Presencial', $evaluation['evaluee_name']);
         $this->assertSame('A', $evaluation['referencia_iii']['1']);
         $this->assertSame('SI', $evaluation['referencia_i']['1']);
-        $this->assertTrue($evaluation['referencia_i_acontecimientos_traumaticos']['1']);
+        $this->assertSame('SI', $evaluation['referencia_i_acontecimientos_traumaticos']['1']);
+        $this->assertSame('NO', $evaluation['referencia_i_acontecimientos_traumaticos']['2']);
         $this->assertSame('39', $evaluation['referencia_v']['edad']);
         $this->assertSame('Masculino', $evaluation['referencia_v']['sexo']);
     }

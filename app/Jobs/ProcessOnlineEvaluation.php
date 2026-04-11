@@ -7,6 +7,7 @@ use App\Models\SubmissionStatus;
 use App\Models\User;
 use App\Notifications\EvaluationCompletedNotification;
 use App\Services\DemographicDataService;
+use App\Services\EvaluationAnswerSyncService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -38,7 +39,7 @@ class ProcessOnlineEvaluation implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(DemographicDataService $demographicService): void
+    public function handle(DemographicDataService $demographicService, EvaluationAnswerSyncService $answerSyncService): void
     {
         $submissionStatus = null;
 
@@ -76,6 +77,18 @@ class ProcessOnlineEvaluation implements ShouldQueue
                             $submissionStatus->data_snapshot
                         );
                     }
+                }
+            }
+
+            $answerSyncService->sync($paperEvaluation);
+
+            if ($paperEvaluation->related_evaluation_folio) {
+                $relatedEvaluation = PaperEvaluation::where('folio', $paperEvaluation->related_evaluation_folio)
+                    ->where('source', 'online')
+                    ->first();
+
+                if ($relatedEvaluation) {
+                    $answerSyncService->sync($relatedEvaluation);
                 }
             }
 

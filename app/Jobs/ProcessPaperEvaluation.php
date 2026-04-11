@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
 use App\Services\DemographicDataNormalizationService;
+use App\Services\EvaluationAnswerSyncService;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -205,6 +206,15 @@ class ProcessPaperEvaluation implements ShouldQueue
                     'raw_data' => $rawData,
                 ]
             );
+
+            try {
+                app(EvaluationAnswerSyncService::class)->sync($paperEvaluation);
+            } catch (\Throwable $syncException) {
+                Log::warning('Failed to sync normalized answers for paper evaluation', [
+                    'folio' => $folio,
+                    'error' => $syncException->getMessage(),
+                ]);
+            }
 
             // Save demographic data if present (from Referencia V or Likert)
             if (isset($structuredData['demographic_data']) && ! empty($structuredData['demographic_data'])) {

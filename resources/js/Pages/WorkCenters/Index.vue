@@ -262,6 +262,7 @@ const downloadOrganizationResponses = async () => {
     const response = await fetch(route('organizations.report.download', {
       organization: props.organization.id,
       reportType: 'respuestas',
+      source: 'normalized',
     }), {
       method: 'GET',
       headers: {
