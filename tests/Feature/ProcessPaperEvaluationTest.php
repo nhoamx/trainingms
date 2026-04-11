@@ -274,6 +274,19 @@ class ProcessPaperEvaluationTest extends TestCase
             'processing_status' => 'completed',
         ]);
 
+        $createdEvaluation = PaperEvaluation::query()
+            ->where('folio', '019530001')
+            ->where('source', 'paper')
+            ->first();
+
+        $this->assertNotNull($createdEvaluation);
+        $this->assertDatabaseHas('evaluation_answers', [
+            'paper_evaluation_id' => $createdEvaluation->id,
+            'instrument' => 'referencia_i',
+            'question_key' => '1',
+            'answer_value' => 'SI',
+        ]);
+
         @unlink($tmpFile);
     }
 

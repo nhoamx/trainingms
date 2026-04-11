@@ -3,8 +3,10 @@
 namespace App\Jobs;
 
 use App\Models\OnlineAnswer;
+use App\Models\PaperEvaluation;
 use App\Models\Quiz;
 use App\Models\SubmissionStatus;
+use App\Services\EvaluationAnswerSyncService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -103,6 +105,8 @@ class ProcessQuizSubmission implements ShouldQueue
                 $answers,
                 $ineImages
             );
+
+            $this->syncHybridNormalizedAnswers($submissionStatus, $answers);
 
             // Create virtual folio
             $this->createVirtualFolio($submissionStatus->organization_id, $submissionStatus->folio);
@@ -329,5 +333,27 @@ class ProcessQuizSubmission implements ShouldQueue
             ]);
             // Don't fail the entire job for virtual folio creation issues
         }
+    }
+
+    private function syncHybridNormalizedAnswers(SubmissionStatus $submissionStatus, array $answers): void
+    {
+        $paperEvaluationId = $submissionStatus->data_snapshot['paper_evaluation_id'] ?? null;
+
+        if (! $paperEvaluationId) {
+            return;
+        }
+
+        $paperEvaluation = PaperEvaluation::query()->find($paperEvaluationId);
+
+        if (! $paperEvaluation) {
+            Log::warning('Hybrid sync skipped: paper evaluation not found', [
+                'submission_id' => $submissionStatus->id,
+                'paper_evaluation_id' => $paperEvaluationId,
+            ]);
+
+            return;
+        }
+
+        app(EvaluationAnswerSyncService::class)->syncOnlinePayload($paperEvaluation, $answers);
     }
 }
