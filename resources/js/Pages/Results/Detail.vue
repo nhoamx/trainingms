@@ -179,12 +179,44 @@
                     <div v-else-if="currentTab === 'guideI'">
                         <div v-if="guideIResults" class="space-y-4">
                             <h3 class="text-lg font-semibold text-gray-900">{{ t('Guide Reference I - Severe Traumatic Events') }}</h3>
-                            <div class="bg-gray-50 p-6 rounded-lg">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div v-for="(answer, question) in guideIResults.answers" :key="question" class="bg-white p-4 rounded shadow-sm">
-                                        <p class="font-medium text-gray-700">{{ question }}</p>
-                                        <p class="text-gray-900 mt-2">{{ answer }}</p>
-                                    </div>
+                            <div class="overflow-hidden rounded-xl border border-slate-200">
+                                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                                    <thead class="bg-slate-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">N°</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ t('Question') }}</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ t('Answer') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-200 bg-white">
+                                        <tr v-for="(entry, index) in guideIAnswerEntries" :key="entry.question" class="align-top">
+                                            <td class="px-4 py-3 font-semibold text-indigo-600">{{ index + 1 }}</td>
+                                            <td class="px-4 py-3 text-slate-800">{{ entry.question }}</td>
+                                            <td class="px-4 py-3 text-slate-700">{{ entry.answer }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div v-if="guideICitsatsEntries.length > 0" class="space-y-3 pt-2">
+                                <h4 class="text-base font-semibold text-slate-900">{{ t('Traumatic Events (CITSATS-S1)') }}</h4>
+                                <div class="overflow-hidden rounded-xl border border-slate-200">
+                                    <table class="min-w-full divide-y divide-slate-200 text-sm">
+                                        <thead class="bg-slate-50">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">N°</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ t('Question') }}</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ t('Answer') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-200 bg-white">
+                                            <tr v-for="entry in guideICitsatsEntries" :key="entry.number" class="align-top">
+                                                <td class="px-4 py-3 font-semibold text-indigo-600">{{ entry.number }}</td>
+                                                <td class="px-4 py-3 text-slate-800">{{ entry.question }}</td>
+                                                <td class="px-4 py-3 text-slate-700">{{ entry.answer }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -241,31 +273,6 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                </div>
-                            </div>
-
-                            <!-- CITSATS-S1 -->
-                            <div v-if="guideIIIResults.citsats_s1 && Object.keys(guideIIIResults.citsats_s1).length > 0">
-                                <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('Traumatic Events (CITSATS-S1)') }}</h3>
-                                <div class="overflow-x-auto">
-                                    <table class="min-w-full divide-y divide-gray-200">
-                                        <thead class="bg-gray-50">
-                                            <tr>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N°</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Question') }}</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ t('Answer') }}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="bg-white divide-y divide-gray-200">
-                                            <tr v-for="(answer, idx) in Object.values(guideIIIResults.citsats_s1)" :key="idx">
-                                                <td class="px-6 py-4 text-sm font-semibold text-indigo-600">{{ idx + 73 }}</td>
-                                                <td class="px-6 py-4 text-sm text-gray-700">
-                                                    <span v-if="citsatsQuestions[idx + 73]">{{ citsatsQuestions[idx + 73] }}</span>
-                                                </td>
-                                                <td class="px-6 py-4 text-sm text-gray-700">{{ answer }}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -548,6 +555,33 @@ const props = withDefaults(defineProps<Props>(), {
     occupationPositions: () => [],
     departmentAreas: () => [],
     isAdmin: false
+});
+
+const guideIAnswerEntries = computed(() => {
+    if (!props.guideIResults?.answers) {
+        return [];
+    }
+
+    return Object.entries(props.guideIResults.answers).map(([question, answer]) => ({
+        question,
+        answer,
+    }));
+});
+
+const guideICitsatsEntries = computed(() => {
+    if (!props.guideIResults?.citsats_s1) {
+        return [];
+    }
+
+    return Object.values(props.guideIResults.citsats_s1).map((answer, index) => {
+        const number = index + 73;
+
+        return {
+            number,
+            question: citsatsQuestions[number] ?? `Pregunta ${number}`,
+            answer,
+        };
+    });
 });
 
 const backToListHref = computed<string>(() => {

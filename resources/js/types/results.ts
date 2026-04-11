@@ -50,6 +50,7 @@ export interface GuideIResults {
     folio: string;
     created_at: string;
     answers: Record<string, string>;
+    citsats_s1: Record<string, string>;
 }
 
 export interface ConditionalSection {
@@ -64,7 +65,6 @@ export interface GuideIIIResults {
     created_at: string;
     answers: Record<string, string>;
     conditional: ConditionalSection[];
-    citsats_s1: Record<string, string>;
 }
 
 export interface GuideVResults {

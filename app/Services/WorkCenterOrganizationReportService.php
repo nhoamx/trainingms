@@ -10,12 +10,35 @@ use Illuminate\Support\Collection;
 class WorkCenterOrganizationReportService
 {
     /**
+     * @var array<int, string>
+     */
+    private const ATS_KEYS = ['1', '2', '3', '4', '5', '6'];
+
+    /**
      * @return Collection<int, array{id: string, code: string, name: string, is_primary: bool, evaluations: array<int, array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>}>
      */
     public function getOrganizationWorkCenters(Organization $organization): Collection
     {
         $workCenters = $this->getWorkCenters($organization);
         $evaluationsByWorkCenter = $this->getEvaluationsByWorkCenter($organization, $workCenters);
+
+        return $workCenters
+            ->map(fn (WorkCenter $workCenter): array => $this->mapWorkCenter($workCenter, $evaluationsByWorkCenter))
+            ->values();
+    }
+
+    /**
+     * Parallel normalized implementation for comparison/migration.
+     *
+     * Returns the same output shape as getOrganizationWorkCenters(), but builds
+     * answer maps from evaluation_answers instead of raw_data JSON columns.
+     *
+     * @return Collection<int, array{id: string, code: string, name: string, is_primary: bool, evaluations: array<int, array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>}>
+     */
+    public function getOrganizationWorkCentersFromNormalizedAnswers(Organization $organization): Collection
+    {
+        $workCenters = $this->getWorkCenters($organization);
+        $evaluationsByWorkCenter = $this->getNormalizedEvaluationsByWorkCenter($organization, $workCenters);
 
         return $workCenters
             ->map(fn (WorkCenter $workCenter): array => $this->mapWorkCenter($workCenter, $evaluationsByWorkCenter))
@@ -61,6 +84,43 @@ class WorkCenterOrganizationReportService
             ->map(function (Collection $evaluations): array {
                 return $evaluations
                     ->map(fn (PaperEvaluation $evaluation): array => $this->mapEvaluation($evaluation))
+                    ->values()
+                    ->all();
+            });
+    }
+
+    /**
+     * @param  Collection<int, WorkCenter>  $workCenters
+     * @return Collection<string, array<int, array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>>
+     */
+    private function getNormalizedEvaluationsByWorkCenter(Organization $organization, Collection $workCenters): Collection
+    {
+        return PaperEvaluation::query()
+            ->where('organization_id', $organization->id)
+            ->whereIn('work_center_id', $workCenters->pluck('id'))
+            ->select([
+                'id',
+                'work_center_id',
+                'folio',
+                'personal_folio',
+                'evaluee_name',
+                'source',
+                'raw_data',
+                'demographic_data',
+                'citsats_s1',
+                'evaluation_type',
+            ])
+            ->with([
+                'evaluationAnswers' => function ($query) {
+                    $query->select(['paper_evaluation_id', 'instrument', 'question_key', 'answer_value']);
+                },
+            ])
+            ->orderBy('folio')
+            ->get()
+            ->groupBy('work_center_id')
+            ->map(function (Collection $evaluations): array {
+                return $evaluations
+                    ->map(fn (PaperEvaluation $evaluation): array => $this->mapNormalizedEvaluation($evaluation))
                     ->values()
                     ->all();
             });
@@ -118,6 +178,65 @@ class WorkCenterOrganizationReportService
             'referencia_i' => $referenciaI,
             'referencia_v' => $this->mapReferenciaV($referenciaV),
         ];
+    }
+
+    /**
+     * @return array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}
+     */
+    private function mapNormalizedEvaluation(PaperEvaluation $evaluation): array
+    {
+        $answersByInstrument = $this->indexAnswersByInstrument($evaluation);
+
+        $referenciaIii = $this->mapReferenciaIii($answersByInstrument['referencia_iii'] ?? []);
+        $referenciaI = $this->normalizeAnswerMap($answersByInstrument['referencia_i'] ?? []);
+
+        $atsFromNormalized = [];
+        foreach (self::ATS_KEYS as $key) {
+            if (array_key_exists($key, $referenciaI) && $referenciaI[$key] !== null && $referenciaI[$key] !== '') {
+                $atsFromNormalized[$key] = $referenciaI[$key];
+            }
+        }
+
+        $ats = ! empty($atsFromNormalized)
+            ? $atsFromNormalized
+            : (is_array($evaluation->citsats_s1) ? $this->normalizeAnswerMap($evaluation->citsats_s1) : []);
+
+        $rawData = is_array($evaluation->raw_data) ? $evaluation->raw_data : [];
+        $referenciaV = $this->extractReferenciaV($rawData, $evaluation);
+
+        return [
+            'folio' => (string) $evaluation->folio,
+            'personal_folio' => (string) ($evaluation->personal_folio ?? ''),
+            'evaluee_name' => (string) ($evaluation->evaluee_name ?? ''),
+            'source' => (string) $evaluation->source,
+            'referencia_iii' => $referenciaIii,
+            'referencia_i_acontecimientos_traumaticos' => $ats,
+            'referencia_i' => $referenciaI,
+            'referencia_v' => $this->mapReferenciaV($referenciaV),
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function indexAnswersByInstrument(PaperEvaluation $evaluation): array
+    {
+        $indexed = [];
+
+        foreach ($evaluation->evaluationAnswers as $answer) {
+            $instrument = is_object($answer->instrument) && property_exists($answer->instrument, 'value')
+                ? (string) $answer->instrument->value
+                : (string) $answer->instrument;
+            $questionKey = $this->normalizeAnswerKey($answer->question_key);
+
+            if (! isset($indexed[$instrument])) {
+                $indexed[$instrument] = [];
+            }
+
+            $indexed[$instrument][$questionKey] = $answer->answer_value;
+        }
+
+        return $indexed;
     }
 
     /**
@@ -312,10 +431,31 @@ class WorkCenterOrganizationReportService
         $normalized = [];
 
         foreach ($answers as $key => $value) {
-            $normalized[$this->normalizeAnswerKey($key)] = $this->unwrapValue($value);
+            $normalized[$this->normalizeAnswerKey($key)] = $this->normalizeAnswerDisplayValue(
+                $this->unwrapValue($value)
+            );
         }
 
         return $normalized;
+    }
+
+    private function normalizeAnswerDisplayValue(mixed $value): mixed
+    {
+        if (is_bool($value)) {
+            return $value ? 'SI' : 'NO';
+        }
+
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $normalizedValue = strtolower(trim($value));
+
+        return match ($normalizedValue) {
+            'true', '1' => 'SI',
+            'false', '0' => 'NO',
+            default => $value,
+        };
     }
 
     private function normalizeAnswerKey(string|int $key): string

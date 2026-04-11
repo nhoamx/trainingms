@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\EvaluationAnswer;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\User;
@@ -360,6 +361,111 @@ class PaperEvaluationResultsTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('Results/Detail')
             ->where('evaluation.has_guide_iii', true)
+            ->has('guideIIIResults.answers')
+            ->has('results.0.item')
+        );
+    }
+
+    public function test_work_center_detail_uses_normalized_answers_when_legacy_columns_are_empty(): void
+    {
+        $personalFolio = '00115';
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $guideI = PaperEvaluation::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => $personalFolio,
+            'evaluation_type' => 'referencia_i',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'referencia_i_answers' => null,
+            'raw_data' => null,
+        ]);
+
+        $guideIII = PaperEvaluation::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => $personalFolio,
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'referencia_iii_answers' => null,
+            'referencia_iii_conditional' => null,
+            'citsats_s1' => null,
+            'raw_data' => null,
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $this->organization->id,
+            'work_center_id' => $workCenter->id,
+            'personal_folio' => $personalFolio,
+            'evaluation_type' => 'referencia_v',
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'demographic_data' => [
+                'age' => ['value' => '41'],
+                'gender' => ['value' => 'Femenino'],
+            ],
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $guideI->id,
+            'instrument' => 'referencia_i',
+            'question_key' => '1',
+            'answer_value' => 'true',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $guideIII->id,
+            'instrument' => 'referencia_iii',
+            'question_key' => '1',
+            'answer_value' => 'A',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $guideIII->id,
+            'instrument' => 'referencia_iii',
+            'question_key' => 'condition_cs',
+            'answer_value' => 'true',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $guideIII->id,
+            'instrument' => 'referencia_iii',
+            'question_key' => '65',
+            'answer_value' => 'B',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $guideIII->id,
+            'instrument' => 'referencia_i',
+            'question_key' => '1',
+            'answer_value' => 'false',
+            'answer_meta' => null,
+        ]);
+
+        $response = $this->actingAs($this->orgUser)
+            ->get(route('work-centers.results.detail', [
+                'workCenter' => $workCenter->id,
+                'personalFolio' => $personalFolio,
+                'source' => 'paper',
+            ]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Results/Detail')
+            ->where('evaluation.has_guide_i', true)
+            ->where('evaluation.has_guide_iii', true)
+            ->where('guideIIIResults.conditional.0.condition', 'SI')
+            ->where('guideVResults.demographic_data.Edad', '41')
+            ->has('guideIResults.answers')
+            ->has('guideIResults.citsats_s1', 1)
             ->has('guideIIIResults.answers')
             ->has('results.0.item')
         );

@@ -98,6 +98,37 @@ class WorkCenterOrganizationReportControllerTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_admin_can_request_parallel_normalized_work_center_report(): void
+    {
+        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        Excel::fake();
+        Carbon::setTestNow('2026-04-10 16:30:00');
+
+        /** @var User $admin */
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $organization = Organization::factory()->create([
+            'name' => 'Organizacion Normalizada',
+        ]);
+
+        WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('organizations.report.download', [
+                'organization' => $organization->id,
+                'reportType' => 'respuestas',
+                'source' => 'normalized',
+            ]));
+
+        $response->assertOk();
+        Excel::assertDownloaded('respuestas_organizacion_organizacion-normalizada_20260410_163000.xlsx');
+
+        Carbon::setTestNow();
+    }
+
     public function test_old_report_type_names_no_longer_match_this_endpoint(): void
     {
         Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
