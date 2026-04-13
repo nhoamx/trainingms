@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\WorkCenterType;
 use App\Exports\WorkCenterMetricsExport;
+use App\Exports\WorkCenterPersonalFoliosExport;
 use App\Exports\WorkCentersExport;
+use App\Http\Requests\ImportWorkCenterPersonalFoliosRequest;
 use App\Imports\WorkCentersImport;
+use App\Jobs\ProcessPersonalFoliosImport;
+use App\Models\BulkImportJob;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
@@ -460,6 +464,20 @@ class WorkCenterController extends Controller
     }
 
     /**
+     * Descargar folios personales de todos los centros de trabajo en Excel
+     */
+    public function downloadPersonalFolios(Request $request, Organization $organization)
+    {
+        $workCenterInput = (string) $request->input('work_center_id', 'all');
+        $workCenterId = $workCenterInput === '' || $workCenterInput === 'all' ? null : $workCenterInput;
+
+        $organizationSlug = Str::slug($organization->name);
+        $filename = 'folios-personales-'.$organizationSlug.'-'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(new WorkCenterPersonalFoliosExport($organization, $workCenterId), $filename);
+    }
+
+    /**
      * Importar centros de trabajo desde archivo Excel
      */
     public function import(Request $request, Organization $organization)
@@ -497,6 +515,63 @@ class WorkCenterController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+            return back()->with([
+                'flash' => [
+                    'type' => 'error',
+                    'title' => 'Error en la importación',
+                    'message' => 'No se pudo procesar el archivo: '.$e->getMessage(),
+                ],
+            ]);
+        }
+    }
+
+    /**
+     * Importar nombres para folios personales por centro de trabajo
+     */
+    public function importPersonalFolios(ImportWorkCenterPersonalFoliosRequest $request, Organization $organization)
+    {
+        try {
+            $workCenterInput = (string) $request->input('work_center_id', 'all');
+            $workCenterId = $workCenterInput === '' || $workCenterInput === 'all' ? null : $workCenterInput;
+
+            $file = $request->file('file');
+            $filePath = $file->store('bulk-imports', 'local');
+
+            $bulkImportJob = BulkImportJob::create([
+                'organization_id' => $organization->id,
+                'work_center_id' => $workCenterId,
+                'user_id' => $request->user()->id,
+                'file_name' => $file->getClientOriginalName(),
+                'file_path' => $filePath,
+                'source' => null,
+                'status' => 'pending',
+            ]);
+
+            ProcessPersonalFoliosImport::dispatch($bulkImportJob);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Actualizando nombres de evaluados.',
+                    'bulk_import_job_id' => $bulkImportJob->id,
+                ]);
+            }
+
+            return back()->with([
+                'flash' => [
+                    'type' => 'processing',
+                    'title' => 'Actualizando nombres de evaluados',
+                    'message' => 'El archivo se está procesando en segundo plano.',
+                ],
+            ]);
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo iniciar la importación: '.$e->getMessage(),
+                ], 500);
+            }
+
             return back()->with([
                 'flash' => [
                     'type' => 'error',

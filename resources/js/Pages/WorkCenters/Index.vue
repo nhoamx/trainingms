@@ -1,4 +1,5 @@
 <script setup>
+import axios from 'axios';
 import Dashboard from '../../Layouts/Dashboard.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
@@ -24,6 +25,17 @@ const clinicalFilter = ref('all');
 const sourceView = ref('all');
 const isDownloadingMetrics = ref(false);
 const isDownloadingResponses = ref(false);
+const isDownloadingPersonalFolios = ref(false);
+const showPersonalFoliosImportModal = ref(false);
+const isUploadingPersonalFolios = ref(false);
+const personalFoliosUploadError = ref('');
+const personalFoliosProcessingMessage = ref('');
+const personalFoliosSuccessMessage = ref('');
+const personalFoliosModalStep = ref('form');
+const personalFoliosFile = ref(null);
+const selectedWorkCenterId = ref('all');
+const activePersonalFoliosJobId = ref(null);
+const personalFoliosPollingIntervalId = ref(null);
 const reportMenuOpen = ref(false);
 const reportMenuRef = ref(null);
 const page = usePage();
@@ -172,7 +184,9 @@ const getDashboardRouteParams = (workCenterId) => {
   return { workCenter: workCenterId };
 };
 
-const isDownloadingAnyReport = computed(() => isDownloadingMetrics.value || isDownloadingResponses.value);
+const isDownloadingAnyReport = computed(() => {
+  return isDownloadingMetrics.value || isDownloadingResponses.value || isDownloadingPersonalFolios.value;
+});
 
 const reportDownloadOptions = computed(() => {
   const options = [
@@ -190,9 +204,30 @@ const reportDownloadOptions = computed(() => {
       loading: isDownloadingResponses.value,
       visible: isAdmin.value,
     },
+    {
+      key: 'assign_evaluee_names',
+      label: 'Asignar nombres de evaluados',
+      description: 'Descarga base, edita nombres y súbelo desde el asistente',
+      loading: false,
+      visible: true,
+    },
   ];
 
   return options.filter((option) => option.visible);
+});
+
+const workCenterOptions = computed(() => {
+  const sortedCenters = [...props.workCenters].sort((left, right) => {
+    return String(left.name ?? '').localeCompare(String(right.name ?? ''), 'es');
+  });
+
+  return [
+    { id: 'all', label: 'Todos los centros de trabajo' },
+    ...sortedCenters.map((workCenter) => ({
+      id: workCenter.id,
+      label: `${workCenter.name} (${workCenter.code})`,
+    })),
+  ];
 });
 
 const getDownloadFilename = (contentDisposition) => {
@@ -293,6 +328,47 @@ const downloadOrganizationResponses = async () => {
   }
 };
 
+const downloadPersonalFolios = async () => {
+  if (isDownloadingPersonalFolios.value) {
+    return;
+  }
+
+  isDownloadingPersonalFolios.value = true;
+
+  try {
+    const response = await fetch(route('organizations.work-centers.personal-folios.download', {
+      organization: props.organization.id,
+      work_center_id: selectedWorkCenterId.value,
+    }), {
+      method: 'GET',
+      headers: {
+        Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('No se pudo generar el archivo de folios personales.');
+    }
+
+    const blob = await response.blob();
+    const filename = getDownloadFilename(response.headers.get('content-disposition'));
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isDownloadingPersonalFolios.value = false;
+  }
+};
+
 const toggleReportMenu = () => {
   reportMenuOpen.value = !reportMenuOpen.value;
 };
@@ -312,7 +388,173 @@ const handleReportDownload = async (key) => {
   if (key === 'responses') {
     await downloadOrganizationResponses();
     closeReportMenu();
+
+    return;
   }
+
+  if (key === 'assign_evaluee_names') {
+    resetPersonalFoliosImportFlow();
+    showPersonalFoliosImportModal.value = true;
+    closeReportMenu();
+  }
+};
+
+const resetPersonalFoliosImportFlow = () => {
+  personalFoliosModalStep.value = 'form';
+  personalFoliosUploadError.value = '';
+  personalFoliosProcessingMessage.value = '';
+  personalFoliosSuccessMessage.value = '';
+  personalFoliosFile.value = null;
+};
+
+const stopPersonalFoliosPolling = () => {
+  if (personalFoliosPollingIntervalId.value !== null) {
+    window.clearInterval(personalFoliosPollingIntervalId.value);
+    personalFoliosPollingIntervalId.value = null;
+  }
+};
+
+const refreshPersonalFoliosImportStatus = async (jobId) => {
+  try {
+    const response = await axios.get(route('bulk-import.status', jobId));
+    const status = response.data?.status;
+
+    if (status === 'completed') {
+      stopPersonalFoliosPolling();
+      activePersonalFoliosJobId.value = null;
+      personalFoliosProcessingMessage.value = '';
+      personalFoliosSuccessMessage.value = `Se actualizaron ${response.data.updated_count ?? 0} cantidad de nombres.`;
+      personalFoliosModalStep.value = 'success';
+
+      return;
+    }
+
+    if (status === 'failed') {
+      stopPersonalFoliosPolling();
+      activePersonalFoliosJobId.value = null;
+      personalFoliosProcessingMessage.value = '';
+      personalFoliosUploadError.value = response.data?.error_message || 'No se pudo completar la actualización de nombres.';
+      personalFoliosModalStep.value = 'form';
+    }
+  } catch (error) {
+    stopPersonalFoliosPolling();
+    activePersonalFoliosJobId.value = null;
+    personalFoliosProcessingMessage.value = '';
+    personalFoliosUploadError.value = 'No se pudo consultar el progreso de la actualización.';
+    personalFoliosModalStep.value = 'form';
+  }
+};
+
+const startPersonalFoliosPolling = (jobId) => {
+  stopPersonalFoliosPolling();
+  activePersonalFoliosJobId.value = jobId;
+
+  void refreshPersonalFoliosImportStatus(jobId);
+
+  personalFoliosPollingIntervalId.value = window.setInterval(() => {
+    if (activePersonalFoliosJobId.value !== null) {
+      void refreshPersonalFoliosImportStatus(activePersonalFoliosJobId.value);
+    }
+  }, 3000);
+};
+
+const closePersonalFoliosImportModal = () => {
+  if (isUploadingPersonalFolios.value || activePersonalFoliosJobId.value !== null) {
+    return;
+  }
+
+  showPersonalFoliosImportModal.value = false;
+  resetPersonalFoliosImportFlow();
+};
+
+const restartPersonalFoliosImport = () => {
+  resetPersonalFoliosImportFlow();
+};
+
+const handlePersonalFoliosFileChange = (event) => {
+  const [file] = event.target.files ?? [];
+  personalFoliosUploadError.value = '';
+  personalFoliosSuccessMessage.value = '';
+
+  if (!file) {
+    personalFoliosFile.value = null;
+
+    return;
+  }
+
+  const validExtension = /\.(xlsx|xls)$/i.test(file.name);
+  if (!validExtension) {
+    personalFoliosFile.value = null;
+    personalFoliosUploadError.value = 'Selecciona un archivo Excel válido (.xlsx o .xls).';
+
+    return;
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    personalFoliosFile.value = null;
+    personalFoliosUploadError.value = 'El archivo no debe superar los 10MB.';
+
+    return;
+  }
+
+  personalFoliosFile.value = file;
+};
+
+const uploadPersonalFolios = () => {
+  if (!personalFoliosFile.value || isUploadingPersonalFolios.value) {
+    return;
+  }
+
+  if (activePersonalFoliosJobId.value !== null) {
+    return;
+  }
+
+  personalFoliosUploadError.value = '';
+  personalFoliosSuccessMessage.value = '';
+  personalFoliosProcessingMessage.value = 'Actualizando nombres de evaluados...';
+  personalFoliosModalStep.value = 'processing';
+  isUploadingPersonalFolios.value = true;
+
+  const formData = new FormData();
+  formData.append('file', personalFoliosFile.value);
+  formData.append('work_center_id', selectedWorkCenterId.value);
+
+  axios.post(
+    route('organizations.work-centers.personal-folios.import', { organization: props.organization.id }),
+    formData,
+    {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        Accept: 'application/json',
+      },
+    },
+  )
+    .then((response) => {
+      const jobId = response.data?.bulk_import_job_id;
+      if (jobId) {
+        startPersonalFoliosPolling(jobId);
+      } else {
+        personalFoliosProcessingMessage.value = '';
+        personalFoliosSuccessMessage.value = 'Se actualizaron 0 cantidad de nombres.';
+        personalFoliosModalStep.value = 'success';
+      }
+    })
+    .catch((error) => {
+      personalFoliosProcessingMessage.value = '';
+      personalFoliosUploadError.value = error?.response?.data?.message || 'No se pudo procesar el archivo.';
+      personalFoliosModalStep.value = 'form';
+    })
+    .finally(() => {
+      isUploadingPersonalFolios.value = false;
+    });
+};
+
+const getReadableFileSize = (sizeInBytes) => {
+  if (!sizeInBytes) {
+    return '0 KB';
+  }
+
+  return `${(sizeInBytes / 1024 / 1024).toFixed(2)} MB`;
 };
 
 const handleGlobalClick = (event) => {
@@ -341,6 +583,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', handleGlobalClick);
   document.removeEventListener('keydown', handleGlobalKeydown);
+  stopPersonalFoliosPolling();
 });
 </script>
 
@@ -378,7 +621,7 @@ onBeforeUnmount(() => {
                     <path d="M10 2a.75.75 0 01.75.75v7.19l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V2.75A.75.75 0 0110 2z" />
                     <path d="M3.5 13.5a.75.75 0 01.75.75v1a1 1 0 001 1h8.5a1 1 0 001-1v-1a.75.75 0 011.5 0v1a2.5 2.5 0 01-2.5 2.5h-8.5a2.5 2.5 0 01-2.5-2.5v-1a.75.75 0 01.75-.75z" />
                   </svg>
-                  Descargar reportes
+                  Reportes y carga de datos
                 </span>
                 <svg class="h-4 w-4 transition-transform" :class="reportMenuOpen ? 'rotate-180' : 'rotate-0'" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
@@ -574,6 +817,162 @@ onBeforeUnmount(() => {
           </article>
         </div>
       </div>
+
+      <Teleport to="body">
+        <div
+          v-if="showPersonalFoliosImportModal"
+          class="fixed inset-0 z-[80] bg-slate-900/45"
+        >
+          <div class="flex min-h-[100dvh] items-start justify-center p-3 sm:items-center sm:p-4">
+            <div class="flex w-full max-w-xl max-h-[calc(100dvh-1.5rem)] flex-col rounded-xl border border-slate-200 bg-white shadow-2xl sm:max-h-[90vh]">
+          <div class="flex items-start justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <h3 class="text-base font-semibold text-slate-900">Cargar nombres de folios</h3>
+              <p class="mt-1 text-sm text-slate-600">
+                Sigue estos pasos para evitar errores: descarga el archivo, edita solo la columna “Nombre” y súbelo de nuevo.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              :disabled="isUploadingPersonalFolios || activePersonalFoliosJobId !== null"
+              @click="closePersonalFoliosImportModal"
+            >
+              <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M4.22 4.22a.75.75 0 011.06 0L10 8.94l4.72-4.72a.75.75 0 111.06 1.06L11.06 10l4.72 4.72a.75.75 0 11-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 11-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 010-1.06z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="overflow-y-auto px-5 py-4">
+            <div v-if="personalFoliosModalStep === 'processing'" class="py-10 text-center">
+              <svg class="mx-auto h-8 w-8 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              <p class="mt-4 text-sm font-semibold text-slate-800">Actualizando nombres de evaluados...</p>
+              <p class="mt-1 text-sm text-slate-600">Este proceso puede tardar unos segundos.</p>
+            </div>
+
+            <div v-else-if="personalFoliosModalStep === 'success'" class="py-10 text-center">
+              <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <svg class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.25 7.25a1 1 0 01-1.415 0L4.29 10.21a1 1 0 111.42-1.42l3.036 3.035 6.542-6.535a1 1 0 011.416 0z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <p class="mt-4 text-sm font-semibold text-emerald-800">{{ personalFoliosSuccessMessage }}</p>
+              <button
+                type="button"
+                class="mt-5 inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                @click="restartPersonalFoliosImport"
+              >
+                Volver a actualizar
+              </button>
+            </div>
+
+            <div v-else class="space-y-4">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-sm font-semibold text-slate-800">Guía rápida (2 pasos)</p>
+              <ol class="mt-2 space-y-1 pl-4 text-sm text-slate-700">
+                <li class="list-decimal">Descarga el archivo base.</li>
+                <li class="list-decimal">Edita solo la columna Nombre y súbelo aquí.</li>
+              </ol>
+            </div>
+
+            <div>
+              <label for="work-center-filter" class="mb-2 block text-sm font-medium text-slate-700">Centro de trabajo</label>
+              <select
+                id="work-center-filter"
+                v-model="selectedWorkCenterId"
+                class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                :disabled="isUploadingPersonalFolios || activePersonalFoliosJobId !== null"
+              >
+                <option v-for="option in workCenterOptions" :key="option.id" :value="option.id">{{ option.label }}</option>
+              </select>
+              <p class="mt-2 text-xs text-slate-500">Puedes seleccionar un centro específico o “Todos los centros de trabajo”.</p>
+            </div>
+
+            <div class="rounded-lg border border-sky-200 bg-sky-50 p-3">
+              <p class="text-sm font-medium text-sky-800">Paso 1: Descargar archivo base</p>
+              <button
+                type="button"
+                class="mt-2 inline-flex items-center rounded-md border border-sky-300 bg-white px-3 py-2 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-70"
+                :disabled="isDownloadingPersonalFolios || isUploadingPersonalFolios"
+                @click="downloadPersonalFolios"
+              >
+                <svg v-if="isDownloadingPersonalFolios" class="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                {{ isDownloadingPersonalFolios ? 'Descargando...' : 'Descargar archivo base' }}
+              </button>
+            </div>
+
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+              El cruce se realiza con ID del centro de trabajo + folio personal + source para evitar mezclas entre centros.
+            </div>
+
+            <p class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Importante: no cambies las columnas ID Centro de trabajo, Folio Personal ni Source.
+            </p>
+
+            <p v-if="personalFoliosProcessingMessage" class="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              {{ personalFoliosProcessingMessage }}
+            </p>
+
+            <p v-if="personalFoliosSuccessMessage" class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              {{ personalFoliosSuccessMessage }}
+            </p>
+
+            <div>
+              <label for="personal-folios-file" class="mb-2 block text-sm font-medium text-slate-700">Paso 2: Subir archivo editado</label>
+              <input
+                id="personal-folios-file"
+                type="file"
+                accept=".xlsx,.xls"
+                class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+                :disabled="isUploadingPersonalFolios"
+                @change="handlePersonalFoliosFileChange"
+              >
+              <p class="mt-2 text-xs text-slate-500">Formato permitido: .xlsx, .xls (máximo 10MB)</p>
+            </div>
+
+            <p v-if="personalFoliosFile" class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              Archivo listo: <span class="font-semibold">{{ personalFoliosFile.name }}</span> ({{ getReadableFileSize(personalFoliosFile.size) }})
+            </p>
+
+            <p v-if="personalFoliosUploadError" class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {{ personalFoliosUploadError }}
+            </p>
+            </div>
+          </div>
+
+          <div v-if="personalFoliosModalStep === 'form'" class="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+            <button
+              type="button"
+              class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+              :disabled="isUploadingPersonalFolios || activePersonalFoliosJobId !== null"
+              @click="closePersonalFoliosImportModal"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+              :disabled="!personalFoliosFile || isUploadingPersonalFolios || activePersonalFoliosJobId !== null"
+              @click="uploadPersonalFolios"
+            >
+              <svg v-if="isUploadingPersonalFolios" class="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              {{ activePersonalFoliosJobId !== null ? 'Actualizando...' : 'Cargar nombres' }}
+            </button>
+          </div>
+            </div>
+          </div>
+        </div>
+      </Teleport>
     </div>
   </Dashboard>
 </template>
