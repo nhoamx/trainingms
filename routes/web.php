@@ -575,6 +575,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [\App\Http\Controllers\WorkCenterController::class, 'index'])->name('index');
             Route::get('/create', [\App\Http\Controllers\WorkCenterController::class, 'create'])->name('create');
             Route::get('/export-metrics', [\App\Http\Controllers\WorkCenterController::class, 'downloadMetrics'])->name('export-metrics');
+            Route::get('/personal-folios/download', [\App\Http\Controllers\WorkCenterController::class, 'downloadPersonalFolios'])->name('personal-folios.download');
+            Route::post('/personal-folios/import', [\App\Http\Controllers\WorkCenterController::class, 'importPersonalFolios'])->name('personal-folios.import');
             Route::post('/', [\App\Http\Controllers\WorkCenterController::class, 'store'])->name('store');
             Route::get('/{workCenter}/edit', [\App\Http\Controllers\WorkCenterController::class, 'edit'])->name('edit');
             Route::put('/{workCenter}', [\App\Http\Controllers\WorkCenterController::class, 'update'])->name('update');
