@@ -206,8 +206,8 @@ const reportDownloadOptions = computed(() => {
     },
     {
       key: 'assign_evaluee_names',
-      label: 'Asignar nombres de evaluados',
-      description: 'Descarga base, edita nombres y súbelo desde el asistente',
+      label: 'Actualizar datos de evaluados',
+      description: 'Descarga base, edita nombre y datos demograficos, y subelo desde el asistente',
       loading: false,
       visible: true,
     },
@@ -423,7 +423,7 @@ const refreshPersonalFoliosImportStatus = async (jobId) => {
       stopPersonalFoliosPolling();
       activePersonalFoliosJobId.value = null;
       personalFoliosProcessingMessage.value = '';
-      personalFoliosSuccessMessage.value = `Se actualizaron ${response.data.updated_count ?? 0} cantidad de nombres.`;
+      personalFoliosSuccessMessage.value = `Se actualizaron ${response.data.updated_count ?? 0} registros de evaluados.`;
       personalFoliosModalStep.value = 'success';
 
       return;
@@ -511,7 +511,7 @@ const uploadPersonalFolios = () => {
 
   personalFoliosUploadError.value = '';
   personalFoliosSuccessMessage.value = '';
-  personalFoliosProcessingMessage.value = 'Actualizando nombres de evaluados...';
+  personalFoliosProcessingMessage.value = 'Actualizando datos de evaluados...';
   personalFoliosModalStep.value = 'processing';
   isUploadingPersonalFolios.value = true;
 
@@ -535,7 +535,7 @@ const uploadPersonalFolios = () => {
         startPersonalFoliosPolling(jobId);
       } else {
         personalFoliosProcessingMessage.value = '';
-        personalFoliosSuccessMessage.value = 'Se actualizaron 0 cantidad de nombres.';
+        personalFoliosSuccessMessage.value = 'Se actualizaron 0 registros de evaluados.';
         personalFoliosModalStep.value = 'success';
       }
     })
@@ -827,9 +827,9 @@ onBeforeUnmount(() => {
             <div class="flex w-full max-w-xl max-h-[calc(100dvh-1.5rem)] flex-col rounded-xl border border-slate-200 bg-white shadow-2xl sm:max-h-[90vh]">
           <div class="flex items-start justify-between border-b border-slate-200 px-5 py-4">
             <div>
-              <h3 class="text-base font-semibold text-slate-900">Cargar nombres de folios</h3>
+              <h3 class="text-base font-semibold text-slate-900">Actualizar datos de folios</h3>
               <p class="mt-1 text-sm text-slate-600">
-                Sigue estos pasos para evitar errores: descarga el archivo, edita solo la columna “Nombre” y súbelo de nuevo.
+                Sigue estos pasos para evitar errores: descarga el archivo, edita solo las columnas permitidas y subelo de nuevo.
               </p>
             </div>
             <button
@@ -850,7 +850,7 @@ onBeforeUnmount(() => {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
               </svg>
-              <p class="mt-4 text-sm font-semibold text-slate-800">Actualizando nombres de evaluados...</p>
+              <p class="mt-4 text-sm font-semibold text-slate-800">Actualizando datos de evaluados...</p>
               <p class="mt-1 text-sm text-slate-600">Este proceso puede tardar unos segundos.</p>
             </div>
 
@@ -875,7 +875,7 @@ onBeforeUnmount(() => {
               <p class="text-sm font-semibold text-slate-800">Guía rápida (2 pasos)</p>
               <ol class="mt-2 space-y-1 pl-4 text-sm text-slate-700">
                 <li class="list-decimal">Descarga el archivo base.</li>
-                <li class="list-decimal">Edita solo la columna Nombre y súbelo aquí.</li>
+                <li class="list-decimal">Edita Nombre, Puesto, Departamento y los datos demograficos necesarios, y subelo aqui.</li>
               </ol>
             </div>
 
@@ -913,7 +913,7 @@ onBeforeUnmount(() => {
             </div>
 
             <p class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Importante: no cambies las columnas ID Centro de trabajo, Folio Personal ni Source.
+              Importante: no cambies las columnas ID Centro de trabajo, Folio Personal ni Source. Solo edita Nombre y columnas demograficas.
             </p>
 
             <p v-if="personalFoliosProcessingMessage" class="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
@@ -966,7 +966,7 @@ onBeforeUnmount(() => {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
               </svg>
-              {{ activePersonalFoliosJobId !== null ? 'Actualizando...' : 'Cargar nombres' }}
+              {{ activePersonalFoliosJobId !== null ? 'Actualizando...' : 'Cargar archivo actualizado' }}
             </button>
           </div>
             </div>

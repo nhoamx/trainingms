@@ -17,7 +17,20 @@ class DemographicDataFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'gender' => null,
+            'age' => null,
+            'marital_status' => null,
+            'education_level' => null,
+            'position' => null,
+            'department' => null,
+            'position_type' => null,
+            'contract_type' => null,
+            'personnel_type' => null,
+            'work_schedule' => null,
+            'shift_rotation' => null,
+            'time_in_current_position' => null,
+            'work_experience' => null,
+            'extra_fields' => null,
         ];
     }
 }

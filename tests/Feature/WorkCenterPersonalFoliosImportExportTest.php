@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Exports\WorkCenterPersonalFoliosExport;
 use App\Imports\WorkCenterPersonalFoliosImport;
+use App\Models\DemographicData;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
@@ -97,13 +98,20 @@ class WorkCenterPersonalFoliosImportExportTest extends TestCase
             'name' => 'Centro Norte',
         ]);
 
-        PaperEvaluation::factory()->create([
+        $evaluation = PaperEvaluation::factory()->create([
             'organization_id' => $organization->id,
             'work_center_id' => $workCenter->id,
             'source' => 'paper',
             'processing_status' => 'completed',
             'personal_folio' => '01001',
             'evaluee_name' => 'Persona Uno',
+        ]);
+
+        DemographicData::factory()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'position' => 'Analista',
+            'department' => 'Recursos Humanos',
+            'contract_type' => 'Tiempo indeterminado',
         ]);
 
         $export = new WorkCenterPersonalFoliosExport($organization);
@@ -115,6 +123,19 @@ class WorkCenterPersonalFoliosImportExportTest extends TestCase
             'Folio Personal',
             'Source',
             'Nombre',
+            'Genero',
+            'Edad',
+            'Estado civil',
+            'Nivel de estudios',
+            'Puesto',
+            'Departamento',
+            'Tipo de puesto',
+            'Tipo de contratacion',
+            'Tipo de personal',
+            'Jornada',
+            'Rotacion de turnos',
+            'Tiempo en puesto actual',
+            'Experiencia laboral',
         ], $export->headings());
 
         $this->assertCount(1, $rows);
@@ -126,6 +147,9 @@ class WorkCenterPersonalFoliosImportExportTest extends TestCase
         $this->assertSame('01001', $mapped[2]);
         $this->assertSame('paper', $mapped[3]);
         $this->assertSame('Persona Uno', $mapped[4]);
+        $this->assertSame('Analista', $mapped[9]);
+        $this->assertSame('Recursos Humanos', $mapped[10]);
+        $this->assertSame('Tiempo indeterminado', $mapped[12]);
     }
 
     public function test_it_updates_only_matching_source_with_same_work_center_and_folio(): void
@@ -167,6 +191,66 @@ class WorkCenterPersonalFoliosImportExportTest extends TestCase
 
         $this->assertSame('Nombre Paper', $paperEvaluation->evaluee_name);
         $this->assertSame('Online Actualizado', $onlineEvaluation->evaluee_name);
+        $this->assertSame(1, $import->getSummary()['updated']);
+    }
+
+    public function test_it_updates_demographic_fields_and_syncs_referencia_v_data(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        $evaluation = PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'paper',
+            'processing_status' => 'completed',
+            'evaluation_type' => 'referencia_v',
+            'personal_folio' => '00077',
+            'demographic_data' => [
+                'datos_laborales' => [
+                    'ocupacion_puesto' => 'Operador',
+                    'departamento_seccion_area' => 'Produccion',
+                    'tipo_contratacion' => 'Por obra o proyecto',
+                    'experiencia' => [
+                        'tiempo_puesto_actual' => 'Menos de 6 meses',
+                    ],
+                ],
+            ],
+        ]);
+
+        DemographicData::factory()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'position' => 'Operador',
+            'department' => 'Produccion',
+            'contract_type' => 'Por obra o proyecto',
+            'time_in_current_position' => 'Menos de 6 meses',
+        ]);
+
+        $import = new WorkCenterPersonalFoliosImport($organization->id);
+
+        $import->collection(new Collection([
+            new Collection([
+                'id_centro_de_trabajo' => $workCenter->id,
+                'folio_personal' => '00077',
+                'source' => 'paper',
+                'puesto' => 'Supervisor de linea',
+                'departamento' => 'Calidad',
+                'tipo_de_contratacion' => 'Tiempo indeterminado',
+                'tiempo_en_puesto_actual' => '',
+            ]),
+        ]));
+
+        $evaluation->refresh();
+        $evaluation->demographicData->refresh();
+
+        $this->assertSame('Supervisor de linea', $evaluation->demographicData->position);
+        $this->assertSame('Calidad', $evaluation->demographicData->department);
+        $this->assertSame('Tiempo indeterminado', $evaluation->demographicData->contract_type);
+        $this->assertNull($evaluation->demographicData->time_in_current_position);
+        $this->assertSame('Supervisor de linea', $evaluation->demographic_data['datos_laborales']['ocupacion_puesto']);
+        $this->assertSame('Calidad', $evaluation->demographic_data['datos_laborales']['departamento_seccion_area']);
+        $this->assertSame('Tiempo indeterminado', $evaluation->demographic_data['datos_laborales']['tipo_contratacion']);
+        $this->assertNull($evaluation->demographic_data['datos_laborales']['experiencia']['tiempo_puesto_actual']);
         $this->assertSame(1, $import->getSummary()['updated']);
     }
 }

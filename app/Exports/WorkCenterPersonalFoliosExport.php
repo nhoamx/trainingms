@@ -14,6 +14,22 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class WorkCenterPersonalFoliosExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithStyles
 {
+    protected const DEMOGRAPHIC_COLUMNS = [
+        'gender' => 'Genero',
+        'age' => 'Edad',
+        'marital_status' => 'Estado civil',
+        'education_level' => 'Nivel de estudios',
+        'position' => 'Puesto',
+        'department' => 'Departamento',
+        'position_type' => 'Tipo de puesto',
+        'contract_type' => 'Tipo de contratacion',
+        'personnel_type' => 'Tipo de personal',
+        'work_schedule' => 'Jornada',
+        'shift_rotation' => 'Rotacion de turnos',
+        'time_in_current_position' => 'Tiempo en puesto actual',
+        'work_experience' => 'Experiencia laboral',
+    ];
+
     public function __construct(
         private readonly Organization $organization,
         private readonly ?string $workCenterId = null,
@@ -27,7 +43,10 @@ class WorkCenterPersonalFoliosExport implements FromCollection, ShouldAutoSize, 
             ->where('processing_status', 'completed')
             ->whereNotNull('work_center_id')
             ->whereNotNull('personal_folio')
-            ->with('workCenter:id,name')
+            ->with([
+                'workCenter:id,name',
+                'demographicData:paper_evaluation_id,gender,age,marital_status,education_level,position,department,position_type,contract_type,personnel_type,work_schedule,shift_rotation,time_in_current_position,work_experience',
+            ])
             ->when($this->workCenterId !== null, function ($query): void {
                 $query->where('work_center_id', $this->workCenterId);
             })
@@ -42,24 +61,30 @@ class WorkCenterPersonalFoliosExport implements FromCollection, ShouldAutoSize, 
 
     public function headings(): array
     {
-        return [
+        return array_merge([
             'Centro de trabajo',
             'ID Centro de trabajo',
             'Folio Personal',
             'Source',
             'Nombre',
-        ];
+        ], array_values(self::DEMOGRAPHIC_COLUMNS));
     }
 
     public function map($evaluation): array
     {
-        return [
+        $mapped = [
             $evaluation->workCenter?->name ?? 'Sin centro',
             $evaluation->work_center_id,
             $evaluation->personal_folio,
             $evaluation->source,
             $evaluation->evaluee_name ?? '',
         ];
+
+        foreach (array_keys(self::DEMOGRAPHIC_COLUMNS) as $field) {
+            $mapped[] = $evaluation->demographicData?->{$field} ?? '';
+        }
+
+        return $mapped;
     }
 
     public function styles(Worksheet $sheet): array
