@@ -66,14 +66,14 @@ class WorkCenterOrganizationReportServiceTest extends TestCase
         $this->assertSame('Masculino', $mappedEvaluation['referencia_v']['sexo']);
     }
 
-    public function test_it_uses_paper_columns_when_raw_data_is_empty(): void
+    public function test_it_uses_evaluation_answers_for_references_in_default_report_path(): void
     {
         $organization = Organization::factory()->create();
         $workCenter = WorkCenter::factory()->create([
             'organization_id' => $organization->id,
         ]);
 
-        PaperEvaluation::factory()->create([
+        $evaluation = PaperEvaluation::factory()->create([
             'organization_id' => $organization->id,
             'work_center_id' => $workCenter->id,
             'source' => 'paper',
@@ -114,6 +114,30 @@ class WorkCenterOrganizationReportServiceTest extends TestCase
             ],
         ]);
 
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_iii',
+            'question_key' => '1',
+            'answer_value' => 'C',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_i',
+            'question_key' => '1',
+            'answer_value' => 'false',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_i',
+            'question_key' => '2',
+            'answer_value' => 'true',
+            'answer_meta' => null,
+        ]);
+
         $service = app(WorkCenterOrganizationReportService::class);
         $result = $service->getOrganizationWorkCenters($organization);
 
@@ -123,22 +147,22 @@ class WorkCenterOrganizationReportServiceTest extends TestCase
         $evaluation = $result[0]['evaluations'][0];
 
         $this->assertSame('Persona Presencial', $evaluation['evaluee_name']);
-        $this->assertSame('A', $evaluation['referencia_iii']['1']);
-        $this->assertSame('SI', $evaluation['referencia_i']['1']);
-        $this->assertSame('SI', $evaluation['referencia_i_acontecimientos_traumaticos']['1']);
-        $this->assertSame('NO', $evaluation['referencia_i_acontecimientos_traumaticos']['2']);
+        $this->assertSame('C', $evaluation['referencia_iii']['1']);
+        $this->assertSame('NO', $evaluation['referencia_i']['1']);
+        $this->assertSame('NO', $evaluation['referencia_i_acontecimientos_traumaticos']['1']);
+        $this->assertSame('SI', $evaluation['referencia_i_acontecimientos_traumaticos']['2']);
         $this->assertSame('39', $evaluation['referencia_v']['edad']);
         $this->assertSame('Masculino', $evaluation['referencia_v']['sexo']);
     }
 
-    public function test_it_maps_paper_cio_shape_for_referencia_iii_and_referencia_v(): void
+    public function test_it_ignores_legacy_json_answers_for_references_when_evaluation_answers_exist(): void
     {
         $organization = Organization::factory()->create();
         $workCenter = WorkCenter::factory()->create([
             'organization_id' => $organization->id,
         ]);
 
-        PaperEvaluation::factory()->create([
+        $evaluation = PaperEvaluation::factory()->create([
             'organization_id' => $organization->id,
             'work_center_id' => $workCenter->id,
             'source' => 'paper',
@@ -187,6 +211,38 @@ class WorkCenterOrganizationReportServiceTest extends TestCase
             ],
         ]);
 
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_iii',
+            'question_key' => '1',
+            'answer_value' => 'E',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_iii',
+            'question_key' => '64',
+            'answer_value' => 'C',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_i',
+            'question_key' => '1',
+            'answer_value' => 'true',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_i',
+            'question_key' => '2',
+            'answer_value' => 'false',
+            'answer_meta' => null,
+        ]);
+
         $service = app(WorkCenterOrganizationReportService::class);
         $result = $service->getOrganizationWorkCenters($organization);
 
@@ -195,12 +251,12 @@ class WorkCenterOrganizationReportServiceTest extends TestCase
 
         $evaluation = $result[0]['evaluations'][0];
 
-        $this->assertSame('A', $evaluation['referencia_iii']['1']);
-        $this->assertSame('D', $evaluation['referencia_iii']['2']);
-        $this->assertSame('B', $evaluation['referencia_iii']['64']);
-        $this->assertSame('NO', $evaluation['referencia_i']['1']);
-        $this->assertSame('SI', $evaluation['referencia_i']['2']);
-        $this->assertSame('NO', $evaluation['referencia_i_acontecimientos_traumaticos']['1']);
+        $this->assertSame('E', $evaluation['referencia_iii']['1']);
+        $this->assertSame('', $evaluation['referencia_iii']['2']);
+        $this->assertSame('C', $evaluation['referencia_iii']['64']);
+        $this->assertSame('SI', $evaluation['referencia_i']['1']);
+        $this->assertSame('NO', $evaluation['referencia_i']['2']);
+        $this->assertSame('SI', $evaluation['referencia_i_acontecimientos_traumaticos']['1']);
 
         $this->assertSame('57', $evaluation['referencia_v']['edad']);
         $this->assertSame('Masculino', $evaluation['referencia_v']['sexo']);
@@ -208,27 +264,44 @@ class WorkCenterOrganizationReportServiceTest extends TestCase
         $this->assertSame('Sin formacion', $evaluation['referencia_v']['nivel_estudios']);
     }
 
-    public function test_it_normalizes_question_prefixed_keys_for_referencia_i_answers(): void
+    public function test_it_normalizes_question_prefixed_keys_for_referencia_i_answers_from_evaluation_answers(): void
     {
         $organization = Organization::factory()->create();
         $workCenter = WorkCenter::factory()->create([
             'organization_id' => $organization->id,
         ]);
 
-        PaperEvaluation::factory()->create([
+        $evaluation = PaperEvaluation::factory()->create([
             'organization_id' => $organization->id,
             'work_center_id' => $workCenter->id,
             'source' => 'online',
             'evaluee_name' => 'Persona Online',
-            'raw_data' => [
-                'referencia_i' => [
-                    'question_1' => ['value' => 'SI'],
-                    'pregunta_2' => ['value' => 'NO'],
-                    'question_14' => ['value' => 'SI'],
-                ],
-            ],
             'referencia_i_answers' => null,
             'citsats_s1' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_i',
+            'question_key' => 'question_1',
+            'answer_value' => 'SI',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_i',
+            'question_key' => 'pregunta_2',
+            'answer_value' => 'NO',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_i',
+            'question_key' => 'question_14',
+            'answer_value' => 'SI',
+            'answer_meta' => null,
         ]);
 
         $service = app(WorkCenterOrganizationReportService::class);

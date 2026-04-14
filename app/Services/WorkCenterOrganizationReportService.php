@@ -67,6 +67,7 @@ class WorkCenterOrganizationReportService
             ->where('organization_id', $organization->id)
             ->whereIn('work_center_id', $workCenters->pluck('id'))
             ->select([
+                'id',
                 'work_center_id',
                 'folio',
                 'personal_folio',
@@ -74,9 +75,12 @@ class WorkCenterOrganizationReportService
                 'source',
                 'raw_data',
                 'demographic_data',
-                'referencia_i_answers',
-                'referencia_iii_answers',
                 'citsats_s1',
+            ])
+            ->with([
+                'evaluationAnswers' => function ($query) {
+                    $query->select(['paper_evaluation_id', 'instrument', 'question_key', 'answer_value']);
+                },
             ])
             ->orderBy('folio')
             ->get()
@@ -142,38 +146,37 @@ class WorkCenterOrganizationReportService
     }
 
     /**
-     * @return array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}
+     * @return array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_iii_condition_cs: mixed, referencia_iii_condition_mgmt: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}
      */
     private function mapEvaluation(PaperEvaluation $evaluation): array
     {
+        $answersByInstrument = $this->indexAnswersByInstrument($evaluation);
         $rawData = is_array($evaluation->raw_data) ? $evaluation->raw_data : [];
 
-        $referenciaIii = $this->extractReferenciaIii($rawData, $evaluation);
-        $referenciaI = $this->normalizeAnswerMap($this->extractReferenciaI($rawData, $evaluation));
+        $referenciaIiiAnswers = $answersByInstrument['referencia_iii'] ?? [];
+        $referenciaIii = $this->mapReferenciaIii($answersByInstrument['referencia_iii'] ?? []);
+        $referenciaI = $this->normalizeAnswerMap($answersByInstrument['referencia_i'] ?? []);
         $referenciaV = $this->extractReferenciaV($rawData, $evaluation);
-        $acontecimientosTraumaticos = is_array($referenciaI)
-            ? ($referenciaI['acontecimientos_traumaticos'] ?? null)
-            : null;
 
-        if (! is_array($acontecimientosTraumaticos)) {
-            $columnAts = is_array($evaluation->citsats_s1) ? $evaluation->citsats_s1 : [];
-            $acontecimientosTraumaticos = $columnAts;
+        $atsFromNormalized = [];
+        foreach (self::ATS_KEYS as $key) {
+            if (array_key_exists($key, $referenciaI) && $referenciaI[$key] !== null && $referenciaI[$key] !== '') {
+                $atsFromNormalized[$key] = $referenciaI[$key];
+            }
         }
 
-        if (is_array($acontecimientosTraumaticos)) {
-            $acontecimientosTraumaticos = $this->normalizeAnswerMap($acontecimientosTraumaticos);
-        }
-
-        if (is_array($referenciaI)) {
-            unset($referenciaI['acontecimientos_traumaticos']);
-        }
+        $acontecimientosTraumaticos = ! empty($atsFromNormalized)
+            ? $atsFromNormalized
+            : (is_array($evaluation->citsats_s1) ? $this->normalizeAnswerMap($evaluation->citsats_s1) : []);
 
         return [
             'folio' => (string) $evaluation->folio,
             'personal_folio' => (string) ($evaluation->personal_folio ?? ''),
             'evaluee_name' => (string) ($evaluation->evaluee_name ?? ''),
             'source' => (string) $evaluation->source,
-            'referencia_iii' => $this->mapReferenciaIii($referenciaIii),
+            'referencia_iii' => $referenciaIii,
+            'referencia_iii_condition_cs' => $this->normalizeAnswerDisplayValue($referenciaIiiAnswers['condition_cs'] ?? ''),
+            'referencia_iii_condition_mgmt' => $this->normalizeAnswerDisplayValue($referenciaIiiAnswers['condition_mgmt'] ?? ''),
             'referencia_i_acontecimientos_traumaticos' => $acontecimientosTraumaticos,
             'referencia_i' => $referenciaI,
             'referencia_v' => $this->mapReferenciaV($referenciaV),
@@ -181,12 +184,13 @@ class WorkCenterOrganizationReportService
     }
 
     /**
-     * @return array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}
+     * @return array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_iii_condition_cs: mixed, referencia_iii_condition_mgmt: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}
      */
     private function mapNormalizedEvaluation(PaperEvaluation $evaluation): array
     {
         $answersByInstrument = $this->indexAnswersByInstrument($evaluation);
 
+        $referenciaIiiAnswers = $answersByInstrument['referencia_iii'] ?? [];
         $referenciaIii = $this->mapReferenciaIii($answersByInstrument['referencia_iii'] ?? []);
         $referenciaI = $this->normalizeAnswerMap($answersByInstrument['referencia_i'] ?? []);
 
@@ -210,6 +214,8 @@ class WorkCenterOrganizationReportService
             'evaluee_name' => (string) ($evaluation->evaluee_name ?? ''),
             'source' => (string) $evaluation->source,
             'referencia_iii' => $referenciaIii,
+            'referencia_iii_condition_cs' => $this->normalizeAnswerDisplayValue($referenciaIiiAnswers['condition_cs'] ?? ''),
+            'referencia_iii_condition_mgmt' => $this->normalizeAnswerDisplayValue($referenciaIiiAnswers['condition_mgmt'] ?? ''),
             'referencia_i_acontecimientos_traumaticos' => $ats,
             'referencia_i' => $referenciaI,
             'referencia_v' => $this->mapReferenciaV($referenciaV),

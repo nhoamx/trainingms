@@ -45,7 +45,7 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
     ];
 
     /**
-     * @param  array{id: string, code: string, name: string, is_primary: bool, evaluations: array<int, array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>}  $workCenter
+     * @param  array{id: string, code: string, name: string, is_primary: bool, evaluations: array<int, array{folio: string, personal_folio: string, evaluee_name: string, source: string, referencia_iii: mixed, referencia_iii_condition_cs?: mixed, referencia_iii_condition_mgmt?: mixed, referencia_i_acontecimientos_traumaticos: mixed, referencia_i: mixed, referencia_v: mixed}>}  $workCenter
      */
     public function __construct(
         private readonly array $workCenter,
@@ -56,10 +56,19 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
      */
     public function headings(): array
     {
-        $referenceIiiHeadings = array_map(
-            fn (int $questionNumber): string => 'Guia III - Pregunta '.$questionNumber,
-            range(1, 72)
-        );
+        $referenceIiiHeadings = [];
+
+        foreach (range(1, 72) as $questionNumber) {
+            if ($questionNumber === 65) {
+                $referenceIiiHeadings[] = 'Guia III - Condicion servicio a clientes o usuarios';
+            }
+
+            if ($questionNumber === 69) {
+                $referenceIiiHeadings[] = 'Guia III - Condicion jefe de otros trabajadores';
+            }
+
+            $referenceIiiHeadings[] = 'Guia III - Pregunta '.$questionNumber;
+        }
 
         $atsHeadings = array_map(
             fn (string $key): string => 'Acontecimiento traumatico '.$key,
@@ -122,8 +131,18 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
                 $atsValues = [];
                 $referenceIValues = [];
                 $referenceVValues = [];
+                $referenceIiiConditionCustomerService = $evaluation['referencia_iii_condition_cs'] ?? '';
+                $referenceIiiConditionManagement = $evaluation['referencia_iii_condition_mgmt'] ?? '';
 
                 foreach (range(1, 72) as $questionNumber) {
+                    if ($questionNumber === 65) {
+                        $referenceIiiValues[] = $referenceIiiConditionCustomerService;
+                    }
+
+                    if ($questionNumber === 69) {
+                        $referenceIiiValues[] = $referenceIiiConditionManagement;
+                    }
+
                     $prefixedKey = 'pregunta_'.$questionNumber;
                     $numericKey = (string) $questionNumber;
 
@@ -200,9 +219,9 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
         // Header color blocks by section: base, Referencia V, Guia III, ATS, Guia I.
         $this->applyHeaderSectionColor($sheet, 1, 4, '1D4ED8');
         $this->applyHeaderSectionColor($sheet, 5, 17, '047857');
-        $this->applyHeaderSectionColor($sheet, 18, 89, '2563EB');
-        $this->applyHeaderSectionColor($sheet, 90, 95, 'B45309');
-        $this->applyHeaderSectionColor($sheet, 96, 109, '7C3AED');
+        $this->applyHeaderSectionColor($sheet, 18, 91, '2563EB');
+        $this->applyHeaderSectionColor($sheet, 92, 97, 'B45309');
+        $this->applyHeaderSectionColor($sheet, 98, 111, '7C3AED');
 
         if ($lastRow >= 2) {
             $contentRange = "A2:{$lastColumn}{$lastRow}";
@@ -251,7 +270,7 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
 
     /**
      * @param  array<int, array<string, mixed>>  $evaluations
-     * @return array{personal_folio: string, folios_label: string, evaluee_name: string, source: string, referencia_iii: array<string, mixed>, referencia_i_acontecimientos_traumaticos: array<string, mixed>, referencia_i: array<string, mixed>, referencia_v: array<string, mixed>}
+     * @return array{personal_folio: string, folios_label: string, evaluee_name: string, source: string, referencia_iii: array<string, mixed>, referencia_iii_condition_cs: mixed, referencia_iii_condition_mgmt: mixed, referencia_i_acontecimientos_traumaticos: array<string, mixed>, referencia_i: array<string, mixed>, referencia_v: array<string, mixed>}
      */
     private function mergePersonEvaluations(array $evaluations): array
     {
@@ -259,6 +278,8 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
         $evalueeName = '';
         $source = '';
         $referenciaIii = [];
+        $referenciaIiiConditionCustomerService = '';
+        $referenciaIiiConditionManagement = '';
         $ats = [];
         $referenciaI = [];
         $referenciaV = [];
@@ -280,6 +301,14 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
 
             if ($source === '') {
                 $source = trim((string) ($evaluation['source'] ?? ''));
+            }
+
+            if ($referenciaIiiConditionCustomerService === '') {
+                $referenciaIiiConditionCustomerService = $this->normalizeConditionValue($evaluation['referencia_iii_condition_cs'] ?? '');
+            }
+
+            if ($referenciaIiiConditionManagement === '') {
+                $referenciaIiiConditionManagement = $this->normalizeConditionValue($evaluation['referencia_iii_condition_mgmt'] ?? '');
             }
 
             $referenciaIii = $this->mergeNonEmptyValues(
@@ -316,6 +345,8 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
             'evaluee_name' => $evalueeName,
             'source' => $source,
             'referencia_iii' => $referenciaIii,
+            'referencia_iii_condition_cs' => $referenciaIiiConditionCustomerService,
+            'referencia_iii_condition_mgmt' => $referenciaIiiConditionManagement,
             'referencia_i_acontecimientos_traumaticos' => $ats,
             'referencia_i' => $referenciaI,
             'referencia_v' => $referenciaV,
@@ -352,6 +383,21 @@ class WorkCenterResponsesSheetExport implements FromArray, ShouldAutoSize, WithH
             'paper' => 'Presencial',
             'online' => 'En línea',
             default => $source,
+        };
+    }
+
+    private function normalizeConditionValue(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $normalized = strtolower(trim($value));
+
+        return match ($normalized) {
+            'true', '1' => 'SI',
+            'false', '0' => 'NO',
+            default => $value,
         };
     }
 }
