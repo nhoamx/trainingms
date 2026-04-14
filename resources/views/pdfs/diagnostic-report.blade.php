@@ -160,7 +160,7 @@
             background: #fef3c7;
             padding: 12px;
             margin-bottom: 20px;
-            border-left: 4px solid #f59e0b;
+            border-left: 4px solid #F8FF03;
             border-radius: 5px;
         }
 

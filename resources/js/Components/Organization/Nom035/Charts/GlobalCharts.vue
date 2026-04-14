@@ -122,7 +122,7 @@ const chartInstance = ref<Chart | null>(null);
 const colors = props.globalStatistics?.colors || {
   nulo: '#3B82F6',
   bajo: '#10B981',
-  medio: '#F59E0B',
+  medio: '#F8FF03',
   alto: '#F97316',
   muy_alto: '#EF4444'
 };

@@ -335,7 +335,7 @@ const insertTable = (): void => {
 
 const colorPalette: string[] = [
   '#000000', '#374151', '#6b7280', '#9ca3af', '#ffffff',
-  '#dc2626', '#f97316', '#f59e0b', '#84cc16', '#22c55e',
+  '#dc2626', '#f97316', '#F8FF03', '#84cc16', '#22c55e',
   '#14b8a6', '#3b82f6', '#6366f1', '#a855f7', '#ec4899',
   '#fca5a5', '#fed7aa', '#fde68a', '#bbf7d0', '#a5f3fc',
   '#bfdbfe', '#e9d5ff', '#fce7f3', '#e5e7eb', '#1e293b',

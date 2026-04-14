@@ -765,7 +765,7 @@ HTML;
         $demographicColors = [
             '#3b82f6', // blue-500
             '#10b981', // green-500
-            '#f59e0b', // amber-500
+            '#F8FF03', // amber-500
             '#ef4444', // red-500
             '#8b5cf6', // violet-500
             '#ec4899', // pink-500
@@ -1018,7 +1018,7 @@ HTML;
         $demographicColors = [
             '#3b82f6', // blue-500
             '#10b981', // green-500
-            '#f59e0b', // amber-500
+            '#F8FF03', // amber-500
             '#ef4444', // red-500
             '#8b5cf6', // violet-500
             '#ec4899', // pink-500
@@ -1213,7 +1213,7 @@ HTML;
         $levelColors = [
             'Totalmente Desacuerdo' => '#3b82f6', // blue-500
             'Desacuerdo' => '#22c55e',            // green-500
-            'De Acuerdo' => '#eab308',            // yellow-500
+            'De Acuerdo' => '#F8FF03',            // yellow-500
             'Totalmente de Acuerdo' => '#ef4444', // red-500
         ];
 
@@ -1430,7 +1430,7 @@ HTML;
         $levelColors = [
             '#3b82f6', // blue-500 - Totalmente Desacuerdo
             '#22c55e', // green-500 - Desacuerdo
-            '#eab308', // yellow-500 - De Acuerdo
+            '#F8FF03', // yellow-500 - De Acuerdo
             '#ef4444', // red-500 - Totalmente de Acuerdo
         ];
 
@@ -1838,7 +1838,7 @@ HTML;
             } elseif ($pct >= 50) {
                 $colors[] = '#84cc16'; // lime-500
             } elseif ($pct >= 25) {
-                $colors[] = '#eab308'; // yellow-500
+                $colors[] = '#F8FF03'; // yellow-500
             } else {
                 $colors[] = '#dc2626'; // red-600
             }
@@ -2233,7 +2233,7 @@ HTML;
         /* Color classes matching Likert values (4=best, 1=worst) */
         .color-4 { background: #60a5fa; color: white; } /* blue-400 - Totalmente de Acuerdo */
         .color-3 { background: #16a34a; color: white; } /* green-600 - De Acuerdo */
-        .color-2 { background: #eab308; color: black; } /* yellow-500 - Desacuerdo */
+        .color-2 { background: #F8FF03; color: black; } /* yellow-500 - Desacuerdo */
         .color-1 { background: #dc2626; color: white; } /* red-600 - Totalmente Desacuerdo */
         .color-0 { background: #9ca3af; color: white; } /* gray - No answer */
     </style>

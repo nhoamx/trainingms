@@ -174,7 +174,7 @@ const chartInstances = ref<Record<number, Chart>>({});
 const responseColors = {
   siempre: '#10B981',
   casi_siempre: '#3B82F6',
-  algunas_veces: '#F59E0B',
+  algunas_veces: '#F8FF03',
   casi_nunca: '#F97316',
   nunca: '#EF4444',
 };

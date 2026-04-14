@@ -233,7 +233,7 @@ const createQuestionComparisonData = (detail, questions) => {
   const data = {
     labels: ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'],
     datasets: selectedQuestions.map((question, index) => {
-      const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#F97316'];
+      const colors = ['#3B82F6', '#10B981', '#F8FF03', '#EF4444', '#8B5CF6', '#EC4899', '#F97316'];
       return {
         label: `Pregunta ${question}`,
         data: [
@@ -295,7 +295,7 @@ const estadoCivilData = computed(() => {
         '#4F46E5', // Indigo
         '#10B981', // Emerald
         '#EF4444', // Red
-        '#F59E0B', // Amber
+        '#F8FF03', // Amber
         '#8B5CF6', // Purple
         '#6B7280'  // Gray
       ]
@@ -363,7 +363,7 @@ const nivelAcademicoData = computed(() => {
         '#3B82F6', // Blue
         '#EC4899', // Pink
         '#8B5CF6', // Purple
-        '#F59E0B', // Amber
+        '#F8FF03', // Amber
         '#10B981', // Emerald
         '#6366F1', // Indigo
         '#EF4444', // Red
@@ -420,7 +420,7 @@ const answersDistributionData = computed(() => {
       backgroundColor: [
         '#3B82F6', // A - Blue
         '#22C55E', // B - Green
-        '#F59E0B', // C - Amber
+        '#F8FF03', // C - Amber
         '#EF4444', // D - Red
         '#8B5CF6'  // E - Purple
       ]
@@ -443,7 +443,7 @@ const categoryScoresData = computed(() => {
       backgroundColor: [
         '#3B82F6', // Blue
         '#10B981', // Emerald
-        '#F59E0B', // Amber
+        '#F8FF03', // Amber
         '#EF4444', // Red
         '#8B5CF6'  // Purple
       ]
@@ -695,7 +695,7 @@ const estadoCivilDistributionData = computed(() => {
       {
         label: 'Medio',
         data: props.questionReports.estadoCivil.map(item => item.niveles.Medio),
-        backgroundColor: '#F59E0B', // Amarillo
+        backgroundColor: '#F8FF03', // Amarillo
         stack: 'Stack 0'
       },
       {
@@ -792,7 +792,7 @@ const cfComparisonData = computed(() => {
     datasets.push({
       label: 'Tipo de Jornada',
       data: [props.questionReports.tipoJornada.reduce((sum, item) => sum + item.cf, 0) / props.questionReports.tipoJornada.length],
-      backgroundColor: '#F59E0B', // Ámbar
+      backgroundColor: '#F8FF03', // Ámbar
     });
   }
 
@@ -879,7 +879,7 @@ const edadLevelDistributionData = computed(() => {
       {
         label: 'Medio',
         data: validLabels.map(range => ageRanges[range].analysis?.niveles?.Medio || 0),
-        backgroundColor: '#F59E0B', // Amarillo
+        backgroundColor: '#F8FF03', // Amarillo
         stack: 'Stack 0'
       },
       {
@@ -922,7 +922,7 @@ const nivelAcademicoDistributionData = computed(() => {
       {
         label: 'Medio',
         data: props.questionReports.nivelAcademico.map(item => item.niveles.Medio),
-        backgroundColor: '#F59E0B', // Amarillo
+        backgroundColor: '#F8FF03', // Amarillo
         stack: 'Stack 0'
       },
       {

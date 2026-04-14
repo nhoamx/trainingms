@@ -242,7 +242,7 @@ const sortBy = ref('number');
 const responseColors = {
   siempre: '#10B981',      // Verde
   casi_siempre: '#3B82F6', // Azul
-  algunas_veces: '#F59E0B', // Amarillo
+  algunas_veces: '#F8FF03', // Amarillo
   casi_nunca: '#F97316',   // Naranja
   nunca: '#EF4444'         // Rojo
 };

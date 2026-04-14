@@ -1723,7 +1723,7 @@ const questionScoreTotals = computed(() => {
     } else if (percentage >= 50) {
       color = '#84cc16' // lime-500
     } else if (percentage >= 25) {
-      color = '#eab308' // yellow-500
+      color = '#F8FF03' // yellow-500
     } else {
       color = '#dc2626' // red-600
     }
