@@ -100,7 +100,7 @@
             background: #fef3c7;
             padding: 12px;
             margin-bottom: 20px;
-            border-left: 4px solid #f59e0b;
+            border-left: 4px solid #F8FF03;
             border-radius: 5px;
         }
 
@@ -178,7 +178,7 @@
 
         .risk-nulo { background-color: #06b6d4 !important; color: white; }
         .risk-bajo { background-color: #22c55e !important; color: white; }
-        .risk-medio { background-color: #facc15 !important; color: black; }
+        .risk-medio { background-color: #F8FF03 !important; color: black; }
         .risk-alto { background-color: #f97316 !important; color: white; }
         .risk-muy-alto { background-color: #ef4444 !important; color: white; }
 
@@ -443,7 +443,7 @@
             data() {
                 return {
                     riskLevels: ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'],
-                    riskColors: ['#06b6d4', '#22c55e', '#facc15', '#f97316', '#ef4444'],
+                    riskColors: ['#06b6d4', '#22c55e', '#F8FF03', '#f97316', '#ef4444'],
                     finalRisk: diagnosticData.final_risk || {},
                     categories: diagnosticData.categories || {},
                     domains: diagnosticData.domains || {},
@@ -566,7 +566,7 @@
                                             display: true,
                                             color: (context) => {
                                                 const bgColor = context.dataset.backgroundColor[context.dataIndex];
-                                                return bgColor === '#facc15' || bgColor === '#f97316' ? '#000000' : '#FFFFFF';
+                                                return bgColor === '#F8FF03' || bgColor === '#f97316' ? '#000000' : '#FFFFFF';
                                             },
                                             font: { weight: 'bold', size: 11 },
                                             formatter: (value) => value > 0 ? value : '',

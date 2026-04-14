@@ -146,7 +146,7 @@
 
         .risk-nulo { background-color: #06b6d4 !important; color: white; }
         .risk-bajo { background-color: #22c55e !important; color: white; }
-        .risk-medio { background-color: #facc15 !important; color: black; }
+        .risk-medio { background-color: #F8FF03 !important; color: black; }
         .risk-alto { background-color: #f97316 !important; color: white; }
         .risk-muy-alto { background-color: #ef4444 !important; color: white; }
 
@@ -328,7 +328,7 @@
                     const colorPalette = [
                         '#3b82f6', // Blue
                         '#10b981', // Green
-                        '#f59e0b', // Amber
+                        '#F8FF03', // Amber
                         '#ef4444', // Red
                         '#8b5cf6', // Purple
                         '#ec4899', // Pink
