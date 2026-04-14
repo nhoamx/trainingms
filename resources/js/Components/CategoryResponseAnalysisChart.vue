@@ -22,7 +22,7 @@ const hasValidData = computed(() => {
 const answerColors = {
   'A': '#F44336', // Rojo - Siempre
   'B': '#FFB300', // Naranja - Casi siempre
-  'C': '#FFEB3B', // Amarillo - Algunas veces
+  'C': '#F8FF03', // Amarillo - Algunas veces FFEB3B 
   'D': '#8BC34A', // Verde - Casi nunca
   'E': '#4DD0C6', // Turquesa - Nunca
 };
