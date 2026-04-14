@@ -17,7 +17,7 @@ const props = defineProps({
 const riskColors = {
   'Nulo': '#3B82F6',      // Azul
   'Bajo': '#10B981',      // Verde
-  'Medio': '#F59E0B',     // Amarillo dorado
+  'Medio': '#F8FF03',     // Amarillo dorado
   'Alto': '#F97316',      // Naranja
   'Muy Alto': '#EF4444'   // Rojo
 };
