@@ -13,7 +13,7 @@ const props = defineProps({
 const answerDetails = {
   'A': { label: 'Muy alto', bgColor: '#F44336', textColor: '#fff' },
   'B': { label: 'Alto', bgColor: '#FFB300', textColor: '#fff' },
-  'C': { label: 'Medio', bgColor: '#FFC107', textColor: '#000' },
+  'C': { label: 'Medio', bgColor: '#F8FF03', textColor: '#000' },
   'D': { label: 'Bajo', bgColor: '#8BC34A', textColor: '#fff' },
   'E': { label: 'Nulo', bgColor: '#4DD0C6', textColor: '#000' }
 };

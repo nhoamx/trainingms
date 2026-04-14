@@ -21,7 +21,7 @@ const riskLevels = ['Nulo', 'Bajo', 'Medio', 'Alto', 'Muy Alto'];
 const riskColors = {
   'Nulo': '#3B82F6',      // Azul
   'Bajo': '#10B981',      // Verde
-  'Medio': '#F59E0B',     // Amarillo
+  'Medio': '#F8FF03',     // Amarillo
   'Alto': '#F97316',      // Naranja
   'Muy Alto': '#EF4444'   // Rojo
 };

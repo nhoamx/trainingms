@@ -17,7 +17,7 @@ const props = defineProps({
 const colorMap = {
   'A': '#F44336', // Rojo - Muy Alto
   'B': '#FFB300', // Naranja - Alto
-  'C': '#FFEB3B', // Amarillo - Medio
+  'C': '#F8FF03', // Amarillo - Medio
   'D': '#8BC34A', // Verde - Bajo
   'E': '#4DD0C6'  // Turquesa - Nulo
 };
