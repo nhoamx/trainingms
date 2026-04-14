@@ -8,7 +8,7 @@ return [
         'alto' => '#F97316', // orange-500 - Naranja
         'muy_alto' => '#EF4444', // red-500 - Rojo
     ],
-
+//.
     'labels' => [
         'nulo' => 'Nulo',
         'bajo' => 'Bajo',
