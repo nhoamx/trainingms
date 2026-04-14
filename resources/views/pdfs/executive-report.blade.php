@@ -122,7 +122,7 @@
 
         .risk-nulo { background: #06b6d4; color: white; }
         .risk-bajo { background: #22c55e; color: white; }
-        .risk-medio { background: #facc15; color: black; }
+        .risk-medio { background: #F8FF03; color: black; }
         .risk-alto { background: #f97316; color: white; }
         .risk-muy-alto { background: #ef4444; color: white; }
 
@@ -996,7 +996,7 @@
                                 backgroundColor: [
                                     '#06b6d4',
                                     '#22c55e',
-                                    '#facc15',
+                                    '#F8FF03',
                                     '#f97316',
                                     '#ef4444'
                                 ],
@@ -1080,7 +1080,7 @@
                                 backgroundColor: [
                                     '#06b6d4',
                                     '#22c55e',
-                                    '#facc15',
+                                    '#F8FF03',
                                     '#f97316',
                                     '#ef4444'
                                 ],

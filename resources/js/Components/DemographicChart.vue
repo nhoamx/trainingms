@@ -38,7 +38,7 @@ const generateColors = (numColors) => {
     '#8B5CF6', // Violet
     '#EC4899', // Pink
     '#10B981', // Emerald
-    '#F59E0B', // Amber
+    '#F8FF03', // Amber
     '#EF4444', // Red-500
     '#3B82F6'  // Blue-500
   ];
@@ -106,7 +106,7 @@ const chartOptions = computed(() => ({
         const backgroundColor = context.dataset.backgroundColor[context.dataIndex];
         
         // Colores claros que requieren texto negro
-        const lightColors = ['#FFFF00', '#00CED1', '#F59E0B', '#FBBF24', '#FEF08A', '#FED7AA'];
+        const lightColors = ['#FFFF00', '#00CED1', '#F8FF03', '#FBBF24', '#FEF08A', '#FED7AA'];
         
         // Si el color está en la lista de colores claros, usar texto negro
         if (lightColors.includes(backgroundColor)) {

@@ -1482,7 +1482,7 @@ const formatPresentationDate = (dateString: string | null): string => {
 
 const atsColorHex = [
   '#F43F5E',
-  '#F59E0B',
+  '#F8FF03',
   '#10B981',
   '#0EA5E9',
   '#8B5CF6',
