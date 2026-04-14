@@ -21,7 +21,7 @@ const chart = ref(null);
 const typeColors = {
   'A': '#EF4444', // Muy alto - Rojo fuerte
   'B': '#F97316', // Alto - Naranja intenso
-  'C': '#F59E0B', // Medio - Amarillo dorado
+  'C': '#F8FF03', // Medio - Amarillo dorado
   'D': '#10B981', // Bajo - Verde
   'E': '#3B82F6', // Nulo - Azul
 };
