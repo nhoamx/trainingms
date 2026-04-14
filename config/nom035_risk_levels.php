@@ -4,7 +4,7 @@ return [
     'colors' => [
         'nulo' => '#3B82F6', // blue-500 - Azul
         'bajo' => '#10B981', // green-500 - Verde
-        'medio' => '#F59E0B', // amber-500 - Amarillo
+        'medio' => '#F8FF03', // amber-500 - Amarillo
         'alto' => '#F97316', // orange-500 - Naranja
         'muy_alto' => '#EF4444', // red-500 - Rojo
     ],
