@@ -107,7 +107,7 @@
             <p class="mt-1 text-sm text-gray-600">Información base compartida antes de entrar a etapas e instrumentos</p>
           </div>
 
-          <div class="px-6 pt-4">
+          <div class="px-6 pt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <nav class="flex flex-wrap gap-2 lg:gap-4" aria-label="Tabs">
               <button
                 v-for="tab in generalTabs"
@@ -124,6 +124,13 @@
                 {{ tab.label }}
               </button>
             </nav>
+
+            <a
+              :href="downloadReportHref"
+              class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              Descargar informe
+            </a>
           </div>
 
           <div class="p-6 sm:p-8">
@@ -614,6 +621,14 @@ const sourceDescription = computed(() => {
   return props.selectedSource === 'paper'
     ? 'Mostrando evaluaciones capturadas desde formularios físicos (OMR).'
     : 'Mostrando evaluaciones capturadas desde formularios en línea.';
+});
+
+const downloadReportHref = computed((): string => {
+  return route('work-centers.executive-report.download', {
+    workCenter: props.workCenter.id,
+    organization: props.organization.id,
+    source: props.selectedSource,
+  });
 });
 
 const sourceHref = (source: 'online' | 'paper' | 'all'): string => {

@@ -751,3 +751,10 @@ Route::middleware('auth')->prefix('api/pdf-jobs')->name('api.pdf-jobs.')->group(
     Route::get('/{pdfJob}', [PdfGenerationJobController::class, 'show'])->name('show');
     Route::get('/{pdfJob}/download', [PdfGenerationJobController::class, 'download'])->name('download');
 });
+
+use App\Http\Controllers\WorkCenter\ExecutiveReportDownloadController;
+
+Route::get(
+    '/centro-trabajo/{workCenter}/dashboard/nom-035/informe/{organization}',
+    [ExecutiveReportDownloadController::class, 'download']
+)->name('work-centers.executive-report.download');
