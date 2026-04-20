@@ -75,8 +75,8 @@ class ExecutiveReportDownloadController extends Controller
             'InfoTable',
             [
                 'borderSize' => 6,
-                'borderColor' => 'D9E2F3',
-                'cellMargin' => 90,
+                'borderColor' => '808080',
+                'cellMargin' => 55,
                 'alignment' => JcTable::CENTER,
             ]
         );
@@ -85,8 +85,8 @@ class ExecutiveReportDownloadController extends Controller
             'StatsTable',
             [
                 'borderSize' => 6,
-                'borderColor' => 'D9E2F3',
-                'cellMargin' => 90,
+                'borderColor' => '808080',
+                'cellMargin' => 55,
                 'alignment' => JcTable::CENTER,
             ]
         );
@@ -97,6 +97,34 @@ class ExecutiveReportDownloadController extends Controller
             'marginBottom' => 900,
             'marginLeft' => 900,
         ]);
+
+        $footer = $section->addFooter();
+
+        $footerTable = $footer->addTable([
+            'alignment' => JcTable::CENTER,
+            'borderSize' => 0,
+            'cellMargin' => 0,
+        ]);
+
+        $footerTable->addRow();
+
+        $footerTable->addCell(3200)->addText(
+            $this->safeValue($workCenter->code ?? 'N/D'),
+            ['bold' => true, 'size' => 9, 'color' => '6B7280'],
+            ['spaceAfter' => 0]
+        );
+
+        $footerTable->addCell(3600)->addText(
+            'Fecha elaboración: ' . $this->formatDate(now()),
+            ['size' => 9, 'color' => '6B7280'],
+            ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+        );
+
+        $footerTable->addCell(2600)->addPreserveText(
+            'Página {PAGE} de {NUMPAGES}',
+            ['size' => 9, 'color' => '6B7280'],
+            ['alignment' => Jc::END, 'spaceAfter' => 0]
+        );
 
         $this->addCover($section, $organization, $workCenter);
         $section->addPageBreak();
@@ -110,8 +138,6 @@ class ExecutiveReportDownloadController extends Controller
         $section->addPageBreak();
         $this->addReferenceThreeCategorySection($section, $organization, $workCenter);
         $section->addPageBreak();
-        $this->addReferenceThreeDomainSection($section, $organization, $workCenter);
-        $section->addPageBreak();
         $this->addReferenceThreeDimensionSection($section, $organization, $workCenter);
         $section->addPageBreak();
         $this->addWorkerIdentificationByDimensionSection($section, $organization, $workCenter);
@@ -123,6 +149,8 @@ class ExecutiveReportDownloadController extends Controller
         $this->addReferenceThreeQuestionPositionSection($section, $organization, $workCenter);
         $section->addPageBreak();
         $this->addReferenceThreeQuestionDepartmentSection($section, $organization, $workCenter);
+        $section->addPageBreak();
+        $this->addReferenceThreeQuestionWorkScheduleSection($section, $organization, $workCenter);
         $section->addPageBreak();
         $this->addReferenceThreeQuestionRiskFactorSection($section, $organization, $workCenter);
         $section->addPageBreak();
@@ -249,148 +277,243 @@ class ExecutiveReportDownloadController extends Controller
 }
 
     private function addGeneralInformationSection(Section $section, Organization $organization, WorkCenter $workCenter): void
-    {
-        $section->addText(
-            '1. Información General del Centro de Trabajo',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 180]
-        );
-
-        $section->addText(
-            'Datos principales de identificación, contacto y aplicación para el centro de trabajo seleccionado.',
-            ['size' => 10, 'color' => '4B5563'],
-            ['spaceAfter' => 220]
-        );
-
-        $section->addText(
-            'Datos Generales',
-            ['bold' => true, 'size' => 12, 'color' => '1D4ED8'],
-            ['spaceAfter' => 120]
-        );
-
-        $infoTable = $section->addTable('InfoTable');
-
-        $this->addInfoRow($infoTable, 'Empresa', $this->firstFilled($organization->name));
-        $this->addInfoRow($infoTable, 'Centro de trabajo', $this->firstFilled($workCenter->name));
-        $this->addInfoRow($infoTable, 'Código', $this->firstFilled($workCenter->code));
-        $this->addInfoRow($infoTable, 'Razón social', $this->firstFilled($workCenter->legal_name, $organization->razon_social));
-        $this->addInfoRow($infoTable, 'RFC', $this->firstFilled($workCenter->tax_id, $organization->rfc));
-        $this->addInfoRow($infoTable, 'Registro patronal', $this->firstFilled($workCenter->employer_registration, $organization->registro_patronal));
-        $this->addInfoRow($infoTable, 'Domicilio', $this->formatAddress($workCenter, $organization));
-        $this->addInfoRow($infoTable, 'Teléfono', $this->firstFilled($workCenter->phone, $organization->contacto_movil));
-
-        $section->addTextBreak(1);
-
-        $section->addText(
-            'Contacto',
-            ['bold' => true, 'size' => 12, 'color' => '16A34A'],
-            ['spaceAfter' => 120]
-        );
-
-        $contactTable = $section->addTable('InfoTable');
-
-        $this->addInfoRow($contactTable, 'Nombre contacto', $this->firstFilled($workCenter->contact_name, $organization->contacto_nombre));
-        $this->addInfoRow($contactTable, 'Puesto contacto', $this->firstFilled($workCenter->contact_position, $organization->contacto_puesto));
-        $this->addInfoRow($contactTable, 'Email contacto', $this->firstFilled($workCenter->contact_email, $organization->contacto_email));
-        $this->addInfoRow($contactTable, 'Teléfono contacto', $this->firstFilled($workCenter->contact_phone, $organization->contacto_movil));
-        $this->addInfoRow($contactTable, 'Responsable', $this->firstFilled($workCenter->responsible_name, $organization->responsable_nombre));
-        $this->addInfoRow($contactTable, 'Puesto responsable', $this->firstFilled($workCenter->responsible_position, $organization->responsable_puesto));
-        $this->addInfoRow($contactTable, 'Email responsable', $this->firstFilled($workCenter->responsible_email, $organization->responsable_email));
-        $this->addInfoRow($contactTable, 'Teléfono responsable', $this->firstFilled($workCenter->responsible_phone, $organization->responsable_movil));
-
-        
-    }
-
-        private function addPaperDemographicSection(Section $section, Organization $organization, WorkCenter $workCenter): void
-    {
-        $summary = $this->getParticipantSummary($organization->id, $workCenter->id);
-
-        $section->addText(
-            '2. Perfil Demográfico de Participantes',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 180]
-        );
-
-        $section->addText(
-            'Resumen de participantes evaluados por medio presencial y en línea para el centro de trabajo seleccionado.',
-            ['size' => 10, 'color' => '4B5563'],
-            ['spaceAfter' => 220]
-        );
-
-        $totalsTable = $section->addTable('StatsTable');
-
-        $this->addInfoRow($totalsTable, 'Empresa', $this->firstFilled($organization->name));
-        $this->addInfoRow($totalsTable, 'Centro de trabajo', $this->firstFilled($workCenter->name));
-        $this->addInfoRow($totalsTable, 'Participantes totales', (string) $summary['total_participants']);
-        $this->addInfoRow($totalsTable, 'Participantes presencial', (string) $summary['paper_participants']);
-        $this->addInfoRow($totalsTable, 'Participantes en línea', (string) $summary['online_participants']);
-        $this->addInfoRow($totalsTable, 'Hombres', (string) $summary['men_total']);
-        $this->addInfoRow($totalsTable, 'Mujeres', (string) $summary['women_total']);
-        $this->addInfoRow($totalsTable, 'Sexo no especificado', (string) $summary['unspecified_gender_total']);
-        $this->addInfoRow($totalsTable, 'Plantilla registrada', (string) ($workCenter->total_workers ?? 0));
-
-        $section->addTextBreak(1);
-
-        $this->addDistributionTable($section, 'Sexo', $summary['gender']);
-        $this->addDistributionTable($section, 'Edad', $summary['age']);
-        $this->addDistributionTable($section, 'Estado civil', $summary['marital_status']);
-        $this->addDistributionTable($section, 'Nivel de estudios', $summary['education_level']);
-        $this->addDistributionTable($section, 'Puesto', $summary['position']);
-        $this->addDistributionTable($section, 'Departamento / Área', $summary['department']);
-        $this->addDistributionTable($section, 'Tipo de puesto', $summary['position_type']);
-        $this->addDistributionTable($section, 'Tipo de contrato', $summary['contract_type']);
-        $this->addDistributionTable($section, 'Tipo de personal', $summary['personnel_type']);
-        $this->addDistributionTable($section, 'Jornada laboral', $summary['work_schedule']);
-        $this->addDistributionTable($section, 'Rotación de turno', $summary['shift_rotation']);
-        $this->addDistributionTable($section, 'Antigüedad en el puesto actual', $summary['time_in_current_position']);
-        $this->addDistributionTable($section, 'Experiencia laboral', $summary['work_experience']);
-    }
-
-    private function addReferenceThreeGlobalRiskSection(Section $section, Organization $organization, WorkCenter $workCenter): void
-    {
-        $summary = $this->getReferenceThreeGlobalSummary($organization->id, $workCenter->id);
-
-        $section->addText(
-            '3. Distribución Global de Niveles de Riesgo',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 180]
-        );
-
-        $section->addText(
-            'Resultado global de las evaluaciones Referencia III capturadas en línea y presencial para el centro de trabajo seleccionado.',
-            ['size' => 10, 'color' => '4B5563'],
-            ['spaceAfter' => 220]
-        );
-
-        if (($summary['total_evaluations'] ?? 0) === 0) {
+        {
             $section->addText(
-                'No hay evaluaciones de Referencia III disponibles para este centro de trabajo.',
-                ['size' => 10, 'color' => '374151']
+                'Información General del Centro de Trabajo',
+                ['bold' => true, 'size' => 14],
+                ['spaceAfter' => 140]
             );
-            return;
+
+            $cards = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 0,
+                'cellMargin' => 40,
+            ]);
+
+            $cards->addRow();
+
+            $companyCell = $cards->addCell(3133, ['bgColor' => '062A78']);
+            $companyCell->addText('Empresa', ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
+            $companyCell->addText($this->safeValue($organization->name), ['bold' => true, 'size' => 11, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+
+            $centerCell = $cards->addCell(3133, ['bgColor' => '1F4E78']);
+            $centerCell->addText('Centro de trabajo', ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
+            $centerCell->addText($this->safeValue($workCenter->name), ['bold' => true, 'size' => 11, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+
+            $codeCell = $cards->addCell(3134, ['bgColor' => '374151']);
+            $codeCell->addText('Código', ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
+            $codeCell->addText($this->safeValue($workCenter->code), ['bold' => true, 'size' => 11, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+
+            $section->addTextBreak(1);
+
+            $bandOne = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 0,
+                'cellMargin' => 0,
+            ]);
+            $bandOne->addRow();
+            $bandOne->addCell(9400, ['bgColor' => 'D9D9D9'])->addText(
+                'Datos Generales',
+                ['bold' => true, 'size' => 11, 'color' => '111111'],
+                ['spaceAfter' => 0]
+            );
+
+            $section->addTextBreak(1);
+
+            $infoTable = $section->addTable('InfoTable');
+            $this->addInfoRow($infoTable, 'Empresa', $this->firstFilled($organization->name));
+            $this->addInfoRow($infoTable, 'Centro de trabajo', $this->firstFilled($workCenter->name));
+            $this->addInfoRow($infoTable, 'Código', $this->firstFilled($workCenter->code));
+            $this->addInfoRow($infoTable, 'Razón social', $this->firstFilled($workCenter->legal_name, $organization->razon_social));
+            $this->addInfoRow($infoTable, 'RFC', $this->firstFilled($workCenter->tax_id, $organization->rfc));
+            $this->addInfoRow($infoTable, 'Registro patronal', $this->firstFilled($workCenter->employer_registration, $organization->registro_patronal));
+            $this->addInfoRow($infoTable, 'Domicilio', $this->formatAddress($workCenter, $organization));
+            $this->addInfoRow($infoTable, 'Teléfono', $this->firstFilled($workCenter->phone, $organization->contacto_movil));
+
+            $section->addTextBreak(1);
+
+            $bandTwo = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 0,
+                'cellMargin' => 0,
+            ]);
+            $bandTwo->addRow();
+            $bandTwo->addCell(9400, ['bgColor' => 'D9D9D9'])->addText(
+                'Contacto y Responsable',
+                ['bold' => true, 'size' => 11, 'color' => '111111'],
+                ['spaceAfter' => 0]
+            );
+
+            $section->addTextBreak(1);
+
+            $contactTable = $section->addTable('InfoTable');
+            $this->addInfoRow($contactTable, 'Nombre contacto', $this->firstFilled($workCenter->contact_name, $organization->contacto_nombre));
+            $this->addInfoRow($contactTable, 'Puesto contacto', $this->firstFilled($workCenter->contact_position, $organization->contacto_puesto));
+            $this->addInfoRow($contactTable, 'Email contacto', $this->firstFilled($workCenter->contact_email, $organization->contacto_email));
+            $this->addInfoRow($contactTable, 'Teléfono contacto', $this->firstFilled($workCenter->contact_phone, $organization->contacto_movil));
+            $this->addInfoRow($contactTable, 'Responsable', $this->firstFilled($workCenter->responsible_name, $organization->responsable_nombre));
+            $this->addInfoRow($contactTable, 'Puesto responsable', $this->firstFilled($workCenter->responsible_position, $organization->responsable_puesto));
+            $this->addInfoRow($contactTable, 'Email responsable', $this->firstFilled($workCenter->responsible_email, $organization->responsable_email));
+            $this->addInfoRow($contactTable, 'Teléfono responsable', $this->firstFilled($workCenter->responsible_phone, $organization->responsable_movil));
         }
 
-        $totalsTable = $section->addTable('StatsTable');
+        private function addPaperDemographicSection(Section $section, Organization $organization, WorkCenter $workCenter): void
+        {
+            $summary = $this->getParticipantSummary($organization->id, $workCenter->id);
 
-        $this->addInfoRow($totalsTable, 'Empresa', $this->firstFilled($organization->name));
-        $this->addInfoRow($totalsTable, 'Centro de trabajo', $this->firstFilled($workCenter->name));
-        $this->addInfoRow($totalsTable, 'Evaluaciones Referencia III', (string) $summary['total_evaluations']);
-        $this->addInfoRow($totalsTable, 'Evaluaciones presencial', (string) $summary['paper_evaluations']);
-        $this->addInfoRow($totalsTable, 'Evaluaciones en línea', (string) $summary['online_evaluations']);
-        $this->addInfoRow($totalsTable, 'Puntuación promedio', $summary['average_global_score'] . ' / ' . $summary['max_global_score']);
-        $this->addInfoRow($totalsTable, 'Porcentaje promedio', $summary['average_global_percentage'] . '%');
-        $this->addInfoRow($totalsTable, 'Nivel predominante', $summary['dominant_level_label']);
+            $section->addText(
+                'Perfil Demográfico de Participantes',
+                ['bold' => true, 'size' => 14],
+                ['spaceAfter' => 140]
+            );
 
-        $section->addTextBreak(1);
+            $cards = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 0,
+                'cellMargin' => 40,
+            ]);
 
-        $globalChartPath = $this->generateRiskDistributionChart(
-            'Distribución Global de Niveles de Riesgo',
-            $summary['distribution'],
-            storage_path('app/tmp/nom035/charts/global_' . md5($organization->id . '_' . $workCenter->id) . '.png')
-        );
+            $cards->addRow();
 
-        $this->addChartImageIfExists($section, $globalChartPath, 560);
-    }
+            $card1 = $cards->addCell(2350, ['bgColor' => '062A78']);
+            $card1->addText('Participantes totales', ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
+            $card1->addText((string) $summary['total_participants'], ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+
+            $card2 = $cards->addCell(2350, ['bgColor' => '1F4E78']);
+            $card2->addText('Presencial', ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
+            $card2->addText((string) $summary['paper_participants'], ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+
+            $card3 = $cards->addCell(2350, ['bgColor' => '374151']);
+            $card3->addText('En línea', ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
+            $card3->addText((string) $summary['online_participants'], ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+
+            $card4 = $cards->addCell(2350, ['bgColor' => '16A34A']);
+            $card4->addText('H / M', ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
+            $card4->addText(
+                (string) $summary['men_total'] . ' / ' . (string) $summary['women_total'],
+                ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            $section->addTextBreak(1);
+
+            $band = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 0,
+                'cellMargin' => 0,
+            ]);
+            $band->addRow();
+            $band->addCell(9400, ['bgColor' => 'D9D9D9'])->addText(
+                'Resumen General',
+                ['bold' => true, 'size' => 11, 'color' => '111111'],
+                ['spaceAfter' => 0]
+            );
+
+            $section->addTextBreak(1);
+
+            $totalsTable = $section->addTable('StatsTable');
+            $this->addInfoRow($totalsTable, 'Empresa', $this->firstFilled($organization->name));
+            $this->addInfoRow($totalsTable, 'Centro de trabajo', $this->firstFilled($workCenter->name));
+            $this->addInfoRow($totalsTable, 'Plantilla registrada', (string) ($workCenter->total_workers ?? 0));
+            $this->addInfoRow($totalsTable, 'Participantes totales', (string) $summary['total_participants']);
+            $this->addInfoRow($totalsTable, 'Participantes presencial', (string) $summary['paper_participants']);
+            $this->addInfoRow($totalsTable, 'Participantes en línea', (string) $summary['online_participants']);
+            $this->addInfoRow($totalsTable, 'Hombres', (string) $summary['men_total']);
+            $this->addInfoRow($totalsTable, 'Mujeres', (string) $summary['women_total']);
+            $this->addInfoRow($totalsTable, 'Sexo no especificado', (string) $summary['unspecified_gender_total']);
+
+            $section->addTextBreak(1);
+
+            $this->addDistributionTable($section, 'Sexo', $summary['gender']);
+            $this->addDistributionTable($section, 'Edad', $summary['age']);
+            $this->addDistributionTable($section, 'Estado civil', $summary['marital_status']);
+            $this->addDistributionTable($section, 'Nivel de estudios', $summary['education_level']);
+            $this->addDistributionTable($section, 'Puesto', $summary['position']);
+            $this->addDistributionTable($section, 'Departamento / Área', $summary['department']);
+            $this->addDistributionTable($section, 'Tipo de puesto', $summary['position_type']);
+            $this->addDistributionTable($section, 'Tipo de contrato', $summary['contract_type']);
+            $this->addDistributionTable($section, 'Tipo de personal', $summary['personnel_type']);
+            $this->addDistributionTable($section, 'Jornada laboral', $summary['work_schedule']);
+            $this->addDistributionTable($section, 'Rotación de turno', $summary['shift_rotation']);
+            $this->addDistributionTable($section, 'Antigüedad en el puesto actual', $summary['time_in_current_position']);
+            $this->addDistributionTable($section, 'Experiencia laboral', $summary['work_experience']);
+        }
+
+    private function addReferenceThreeGlobalRiskSection(Section $section, Organization $organization, WorkCenter $workCenter): void
+        {
+            $summary = $this->getReferenceThreeGlobalSummary($organization->id, $workCenter->id);
+
+            $section->addText(
+                '1. Análisis Cuantitativo de los Factores de Riesgo Psicosocial.',
+                ['bold' => true, 'size' => 14],
+                ['spaceAfter' => 120]
+            );
+
+            $section->addText(
+                'Referencia: Calificación Total',
+                ['bold' => true, 'size' => 12],
+                ['spaceAfter' => 180]
+            );
+
+            if (($summary['total_evaluations'] ?? 0) === 0) {
+                $section->addText(
+                    'No hay evaluaciones de Referencia III disponibles para este centro de trabajo.',
+                    ['size' => 10, 'color' => '374151']
+                );
+                return;
+            }
+
+            $cards = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 0,
+                'cellMargin' => 40,
+            ]);
+
+            $cards->addRow();
+
+            $c1 = $cards->addCell(2350, ['bgColor' => '062A78']);
+            $c1->addText('Evaluaciones', ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
+            $c1->addText((string) $summary['total_evaluations'], ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+
+            $c2 = $cards->addCell(2350, ['bgColor' => '1F4E78']);
+            $c2->addText('Promedio', ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
+            $c2->addText($summary['average_global_score'] . ' / ' . $summary['max_global_score'], ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+
+            $c3 = $cards->addCell(2350, ['bgColor' => '374151']);
+            $c3->addText('% Promedio', ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
+            $c3->addText($summary['average_global_percentage'] . '%', ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+
+            $levelStyle = $this->getWordRiskCellStyle($summary['dominant_level_key'] ?? 'nulo');
+            $c4 = $cards->addCell(2350, ['bgColor' => $levelStyle['bg']]);
+            $c4->addText('Nivel predominante', ['bold' => true, 'size' => 9, 'color' => $levelStyle['text']], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
+            $c4->addText($summary['dominant_level_label'], ['bold' => true, 'size' => 13, 'color' => $levelStyle['text']], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+
+            $section->addTextBreak(1);
+
+            $this->addRiskLevelDistributionTable(
+                $section,
+                'Nivel de riesgo',
+                $summary['distribution'],
+                (int) $summary['total_evaluations']
+            );
+
+            $section->addTextBreak(1);
+
+            $globalChartPath = $this->generateRiskDistributionChart(
+                'Distribución Global de Niveles de Riesgo',
+                $summary['distribution'],
+                storage_path('app/tmp/nom035/charts/global_' . md5($organization->id . '_' . $workCenter->id) . '.png')
+            );
+
+            $this->addChartImageIfExists($section, $globalChartPath, 560);
+
+            $section->addTextBreak(1);
+            $section->addText(
+                '*Referencia: NORMA Oficial Mexicana NOM-035-STPS-2018. Guía de Referencia III.3 inciso a) Tabla 5. Pág. 39. inciso c) Pág. 40',
+                ['size' => 9, 'color' => '374151'],
+                ['alignment' => Jc::CENTER]
+            );
+        }
 
     private function addWorkplaceViolenceQuantitativeSection(
             Section $section,
@@ -567,15 +690,21 @@ class ExecutiveReportDownloadController extends Controller
             $summary = $this->getReferenceThreeCategorySummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '4. Análisis por Categoría',
+                '3. Evaluación del Entorno Organizacional.',
                 ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 180]
+                ['spaceAfter' => 140]
             );
 
             $section->addText(
-                'Distribución consolidada por categoría con conteos por nivel y gráficas de atención.',
-                ['size' => 10, 'color' => '4B5563'],
-                ['spaceAfter' => 220]
+                'Análisis Cuantitativo Global',
+                ['bold' => true, 'size' => 12],
+                ['spaceAfter' => 140]
+            );
+
+            $section->addText(
+                'Entorno Organizacional Favorable: Aquel en el que se promueve el sentido de pertenencia de los trabajadores a la empresa; la formación para la adecuada realización de las tareas encomendadas; la definición precisa de responsabilidades para los trabajadores del centro de trabajo; la participación proactiva y comunicación entre trabajadores; la distribución adecuada de cargas de trabajo, con jornadas de trabajo regulares conforme a la Ley Federal del Trabajo, y la evaluación y el reconocimiento del desempeño.',
+                ['size' => 10],
+                ['spaceAfter' => 180]
             );
 
             if (($summary['total_evaluations'] ?? 0) === 0) {
@@ -593,6 +722,13 @@ class ExecutiveReportDownloadController extends Controller
             );
 
             $this->addChartImageIfExists($section, $chartPath, 500);
+
+            $section->addTextBreak(1);
+            $section->addText(
+                '*Referencia: NORMA Oficial Mexicana NOM-035-STPS-2018. Índice de contenido 4.6. Página 3 NORMA Oficial Mexicana NOM-035-STPS-2018. Índice de contenido 7.3. Página 6',
+                ['size' => 9, 'color' => '374151'],
+                ['alignment' => Jc::CENTER]
+            );
         }
 
     private function addReferenceThreeDomainSection(Section $section, Organization $organization, WorkCenter $workCenter): void
@@ -633,7 +769,7 @@ class ExecutiveReportDownloadController extends Controller
             $summary = $this->getReferenceThreeDimensionSummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '6. Análisis por Dimensión',
+                '4. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Dimensión. Tabla 6',
                 ['bold' => true, 'size' => 14],
                 ['spaceAfter' => 180]
             );
@@ -658,7 +794,7 @@ class ExecutiveReportDownloadController extends Controller
                 if ($index > 0) {
                     $section->addPageBreak();
                     $section->addText(
-                        '6. Análisis por Dimensión (continuación)',
+                        '4. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Dimensión. Tabla 6 (continuación)',
                         ['bold' => true, 'size' => 14],
                         ['spaceAfter' => 180]
                     );
@@ -688,10 +824,16 @@ class ExecutiveReportDownloadController extends Controller
             $summary = $this->getQuestionAverageMatrixSummary($organization->id, $workCenter->id);
 
             $section->addText(
-                'a) Promedio General por Pregunta',
-                ['bold' => true, 'size' => 12],
-                ['spaceAfter' => 180]
-            );
+            '5. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Calificación Final. Tabla 6',
+            ['bold' => true, 'size' => 14],
+            ['spaceAfter' => 140]
+        );
+
+        $section->addText(
+            'a) Promedio General por Pregunta',
+            ['bold' => true, 'size' => 12],
+            ['spaceAfter' => 180]
+        );
 
             if (($summary['participants'] ?? 0) === 0) {
                 $section->addText(
@@ -796,16 +938,10 @@ class ExecutiveReportDownloadController extends Controller
                 }
 
                 $section->addText(
-                    '5. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Calificación Final. Tabla 6',
-                    ['bold' => true, 'size' => 14],
-                    ['spaceAfter' => 140]
-                );
-
-                $section->addText(
-                    'c) Por Naturaleza de funciones. I. De los Puestos',
-                    ['bold' => true, 'size' => 12],
-                    ['spaceAfter' => 120]
-                );
+            'c) Por Naturaleza de funciones. I. De los Puestos',
+            ['bold' => true, 'size' => 12],
+            ['spaceAfter' => 120]
+        );
 
                 $this->addQuestionAverageGenderBand($section, $positionLabel);
                 $this->renderQuestionAverageMatrixTable($section, $summary);
@@ -815,16 +951,10 @@ class ExecutiveReportDownloadController extends Controller
 
             if (! $printed) {
                 $section->addText(
-                    '5. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Calificación Final. Tabla 6',
-                    ['bold' => true, 'size' => 14],
-                    ['spaceAfter' => 140]
-                );
-
-                $section->addText(
-                    'c) Por Naturaleza de funciones. I. De los Puestos',
-                    ['bold' => true, 'size' => 12],
-                    ['spaceAfter' => 120]
-                );
+            'c) Por Naturaleza de funciones. I. De los Puestos',
+            ['bold' => true, 'size' => 12],
+            ['spaceAfter' => 120]
+        );
 
                 $section->addText(
                     'No hay información de puestos disponible para generar esta sección.',
@@ -864,16 +994,10 @@ class ExecutiveReportDownloadController extends Controller
                 }
 
                 $section->addText(
-                    '5. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Calificación Final. Tabla 6',
-                    ['bold' => true, 'size' => 14],
-                    ['spaceAfter' => 140]
-                );
-
-                $section->addText(
-                    'c) Por Naturaleza de funciones. II. De las Áreas',
-                    ['bold' => true, 'size' => 12],
-                    ['spaceAfter' => 120]
-                );
+            'c) Por Naturaleza de funciones. II. De las Áreas',
+            ['bold' => true, 'size' => 12],
+            ['spaceAfter' => 120]
+        );
 
                 $this->addQuestionAverageGenderBand($section, $departmentLabel);
                 $this->renderQuestionAverageMatrixTable($section, $summary);
@@ -883,16 +1007,10 @@ class ExecutiveReportDownloadController extends Controller
 
             if (! $printed) {
                 $section->addText(
-                    '5. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Calificación Final. Tabla 6',
-                    ['bold' => true, 'size' => 14],
-                    ['spaceAfter' => 140]
-                );
-
-                $section->addText(
-                    'c) Por Naturaleza de funciones. II. De las Áreas',
-                    ['bold' => true, 'size' => 12],
-                    ['spaceAfter' => 120]
-                );
+            'c) Por Naturaleza de funciones. II. De las Áreas',
+            ['bold' => true, 'size' => 12],
+            ['spaceAfter' => 120]
+        );
 
                 $section->addText(
                     'No hay información de áreas disponible para generar esta sección.',
@@ -932,16 +1050,10 @@ class ExecutiveReportDownloadController extends Controller
                 }
 
                 $section->addText(
-                    '5. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Calificación Final. Tabla 6',
-                    ['bold' => true, 'size' => 14],
-                    ['spaceAfter' => 140]
-                );
-
-                $section->addText(
-                    'c) Por Naturaleza de funciones. III. De la Jornada Laboral',
-                    ['bold' => true, 'size' => 12],
-                    ['spaceAfter' => 120]
-                );
+            'c) Por Naturaleza de funciones. III. De la Jornada Laboral',
+            ['bold' => true, 'size' => 12],
+            ['spaceAfter' => 120]
+        );
 
                 $this->addQuestionAverageGenderBand($section, $scheduleLabel);
                 $this->renderQuestionAverageMatrixTable($section, $summary);
@@ -994,16 +1106,10 @@ class ExecutiveReportDownloadController extends Controller
                 );
 
                 $section->addText(
-                    '5. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Calificación Final. Tabla 6',
-                    ['bold' => true, 'size' => 14],
-                    ['spaceAfter' => 140]
-                );
-
-                $section->addText(
-                    'd) Por Factor de Riesgo',
-                    ['bold' => true, 'size' => 12],
-                    ['spaceAfter' => 120]
-                );
+            'd) Por Factor de Riesgo',
+            ['bold' => true, 'size' => 12],
+            ['spaceAfter' => 120]
+        );
 
                 $this->addQuestionAverageGenderBand(
                     $section,
@@ -1024,10 +1130,10 @@ class ExecutiveReportDownloadController extends Controller
 
             $band->addRow();
             $band->addCell(9400, ['bgColor' => 'D9D9D9'])->addText(
-                $label,
-                ['bold' => true, 'size' => 11, 'color' => '111111'],
-                ['spaceAfter' => 0]
-            );
+            $this->safeValue($label),
+            ['bold' => true, 'size' => 11, 'color' => '111111'],
+            ['spaceAfter' => 0]
+        );
 
             $section->addTextBreak(1);
         }
@@ -2053,7 +2159,7 @@ class ExecutiveReportDownloadController extends Controller
 
             $footer->addRow();
             $footer->addCell(9400, ['bgColor' => 'D9D9D9'])->addText(
-                'T o t a l    ' . $group['name'] . ': ' . $group['participants'],
+                'T o t a l    ' . $this->safeValue($group['name']) . ': ' . $group['participants'],
                 ['bold' => true, 'size' => 11],
                 ['alignment' => Jc::END, 'spaceAfter' => 0]
             );
@@ -2067,7 +2173,7 @@ class ExecutiveReportDownloadController extends Controller
             $rows = $this->getWorkerIdentificationByCategorySummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '11. Identificación de los Trabajadores con Factores de Riesgo Psicosocial. Referencia: Categoría',
+                '11. Identificación de los Trabajadores con Factores de Riesgo Psicosocial. Referencia: Categoria',
                 ['bold' => true, 'size' => 14],
                 ['spaceAfter' => 140]
             );
@@ -2792,7 +2898,7 @@ class ExecutiveReportDownloadController extends Controller
             return match ($levelKey) {
                 'muy_alto' => 'EF4444',
                 'alto' => 'F59E0B',
-                'medio' => 'FACC15',
+                'medio' => 'F8FF03',
                 'bajo' => '16A34A',
                 default => '3B82F6',
             };
@@ -2965,44 +3071,62 @@ class ExecutiveReportDownloadController extends Controller
         }
 
     private function addDistributionTable(Section $section, string $title, array $rows): void
-    {
-        $section->addText(
-            $title,
-            ['bold' => true, 'size' => 12, 'color' => '1D4ED8'],
-            ['spaceBefore' => 120, 'spaceAfter' => 100]
-        );
+        {
+            $band = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 0,
+                'cellMargin' => 0,
+            ]);
 
-        $table = $section->addTable('StatsTable');
-
-        $table->addRow();
-        $table->addCell(7000, ['bgColor' => 'EAF2FF'])->addText(
-            'Categoría',
-            ['bold' => true, 'size' => 10, 'color' => '111827']
-        );
-        $table->addCell(1800, ['bgColor' => 'EAF2FF'])->addText(
-            'Total',
-            ['bold' => true, 'size' => 10, 'color' => '111827']
-        );
-
-        if (empty($rows)) {
-            $table->addRow();
-            $table->addCell(7000)->addText('N/D', ['size' => 10, 'color' => '374151']);
-            $table->addCell(1800)->addText('0', ['size' => 10, 'color' => '374151']);
-            return;
-        }
-
-        foreach ($rows as $row) {
-            $table->addRow();
-            $table->addCell(7000)->addText(
-                $this->safeValue($row['label'] ?? 'N/D'),
-                ['size' => 10, 'color' => '374151']
+            $band->addRow();
+            $band->addCell(9400, ['bgColor' => 'D9D9D9'])->addText(
+                $title,
+                ['bold' => true, 'size' => 11, 'color' => '111111'],
+                ['spaceAfter' => 0]
             );
-            $table->addCell(1800)->addText(
-                (string) ($row['total'] ?? 0),
-                ['size' => 10, 'color' => '374151']
+
+            $section->addTextBreak(1);
+
+            $table = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 6,
+                'borderColor' => '808080',
+                'cellMargin' => 45,
+            ]);
+
+            $table->addRow();
+            $table->addCell(7000, ['bgColor' => '062A78'])->addText(
+                'Categoría',
+                ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
+                ['spaceAfter' => 0]
             );
+            $table->addCell(1800, ['bgColor' => '062A78'])->addText(
+                'Total',
+                ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            if (empty($rows)) {
+                $table->addRow();
+                $table->addCell(7000)->addText('N/D', ['size' => 10, 'color' => '374151'], ['spaceAfter' => 0]);
+                $table->addCell(1800)->addText('0', ['bold' => true, 'size' => 10, 'color' => '374151'], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+                return;
+            }
+
+            foreach ($rows as $row) {
+                $table->addRow();
+                $table->addCell(7000)->addText(
+                    $this->safeValue($row['label'] ?? 'N/D'),
+                    ['size' => 10, 'color' => '111827'],
+                    ['spaceAfter' => 0]
+                );
+                $table->addCell(1800)->addText(
+                    (string) ($row['total'] ?? 0),
+                    ['bold' => true, 'size' => 10, 'color' => '111827'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+            }
         }
-    }
 
     private function getParticipantSummary(string $organizationId, string $workCenterId): array
     {
@@ -6345,19 +6469,21 @@ class ExecutiveReportDownloadController extends Controller
         }
 
     private function addInfoRow($table, string $label, ?string $value): void
-    {
-        $table->addRow();
+        {
+            $table->addRow();
 
-        $table->addCell(2600, ['bgColor' => 'F8FAFC'])->addText(
-            $label,
-            ['bold' => true, 'size' => 10, 'color' => '111827']
-        );
+            $table->addCell(2600, ['bgColor' => 'D9D9D9'])->addText(
+                $this->safeValue($label),
+                ['bold' => true, 'size' => 10, 'color' => '111827'],
+                ['spaceAfter' => 0]
+            );
 
-        $table->addCell(7000)->addText(
-            $this->safeValue($value),
-            ['size' => 10, 'color' => '374151']
-        );
-    }
+            $table->addCell(7000)->addText(
+                $this->safeValue($value),
+                ['size' => 10, 'color' => '111827'],
+                ['spaceAfter' => 0]
+            );
+        }
 
     private function formatAddress(WorkCenter $workCenter, Organization $organization): string
     {
@@ -6390,11 +6516,21 @@ class ExecutiveReportDownloadController extends Controller
     }
 
     private function safeValue($value): string
-    {
-        $value = is_null($value) ? '' : trim((string) $value);
+        {
+            $value = is_null($value) ? '' : trim((string) $value);
 
-        return $value === '' ? 'N/D' : $value;
-    }
+            if ($value === '') {
+                return 'N/D';
+            }
+
+            // limpia caracteres de control que también pueden romper el XML del DOCX
+            $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', ' ', $value) ?? $value;
+
+            // evita doble codificación y luego escapa para XML
+            $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+            return htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8');
+        }
 
     private function formatDate($date): string
     {
