@@ -77,6 +77,7 @@ class WorkCenterOrganizationReportServiceTest extends TestCase
             'organization_id' => $organization->id,
             'work_center_id' => $workCenter->id,
             'source' => 'paper',
+            'evaluation_type' => 'referencia_iii',
             'evaluee_name' => 'Persona Presencial',
             'raw_data' => null,
             'referencia_iii_answers' => [
@@ -155,7 +156,7 @@ class WorkCenterOrganizationReportServiceTest extends TestCase
         $this->assertSame('Masculino', $evaluation['referencia_v']['sexo']);
     }
 
-    public function test_it_ignores_legacy_json_answers_for_references_when_evaluation_answers_exist(): void
+    public function test_it_prioritizes_raw_data_ats_for_referencia_iii_in_default_report_path(): void
     {
         $organization = Organization::factory()->create();
         $workCenter = WorkCenter::factory()->create([
@@ -256,12 +257,95 @@ class WorkCenterOrganizationReportServiceTest extends TestCase
         $this->assertSame('C', $evaluation['referencia_iii']['64']);
         $this->assertSame('SI', $evaluation['referencia_i']['1']);
         $this->assertSame('NO', $evaluation['referencia_i']['2']);
-        $this->assertSame('SI', $evaluation['referencia_i_acontecimientos_traumaticos']['1']);
+        $this->assertSame('NO', $evaluation['referencia_i_acontecimientos_traumaticos']['1']);
+        $this->assertSame('NO', $evaluation['referencia_i_acontecimientos_traumaticos']['2']);
 
         $this->assertSame('57', $evaluation['referencia_v']['edad']);
         $this->assertSame('Masculino', $evaluation['referencia_v']['sexo']);
         $this->assertSame('Soltero', $evaluation['referencia_v']['estado_civil']);
         $this->assertSame('Sin formacion', $evaluation['referencia_v']['nivel_estudios']);
+    }
+
+    public function test_it_prioritizes_raw_data_ats_for_referencia_iii_in_normalized_report_path(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
+        $evaluation = PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'paper',
+            'evaluation_type' => 'referencia_iii',
+            'raw_data' => [
+                'referencia_i' => [
+                    'acontecimientos_traumaticos' => [
+                        '1' => ['value' => 'SI'],
+                    ],
+                ],
+            ],
+            'citsats_s1' => [
+                '1' => false,
+                '2' => true,
+            ],
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_i',
+            'question_key' => '1',
+            'answer_value' => 'false',
+            'answer_meta' => null,
+        ]);
+
+        EvaluationAnswer::query()->create([
+            'paper_evaluation_id' => $evaluation->id,
+            'instrument' => 'referencia_i',
+            'question_key' => '2',
+            'answer_value' => 'false',
+            'answer_meta' => null,
+        ]);
+
+        $service = app(WorkCenterOrganizationReportService::class);
+        $result = $service->getOrganizationWorkCentersFromNormalizedAnswers($organization);
+
+        $this->assertCount(1, $result);
+        $this->assertCount(1, $result[0]['evaluations']);
+
+        $mappedEvaluation = $result[0]['evaluations'][0];
+        $this->assertSame('SI', $mappedEvaluation['referencia_i_acontecimientos_traumaticos']['1']);
+        $this->assertSame('NO', $mappedEvaluation['referencia_i_acontecimientos_traumaticos']['2']);
+    }
+
+    public function test_it_falls_back_to_citsats_when_referencia_iii_has_no_raw_data_or_referencia_i_answers(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'source' => 'paper',
+            'evaluation_type' => 'referencia_iii',
+            'raw_data' => [],
+            'citsats_s1' => [
+                '1' => true,
+                '2' => false,
+            ],
+        ]);
+
+        $service = app(WorkCenterOrganizationReportService::class);
+        $result = $service->getOrganizationWorkCenters($organization);
+
+        $this->assertCount(1, $result);
+        $this->assertCount(1, $result[0]['evaluations']);
+
+        $mappedEvaluation = $result[0]['evaluations'][0];
+        $this->assertSame('SI', $mappedEvaluation['referencia_i_acontecimientos_traumaticos']['1']);
+        $this->assertSame('NO', $mappedEvaluation['referencia_i_acontecimientos_traumaticos']['2']);
     }
 
     public function test_it_normalizes_question_prefixed_keys_for_referencia_i_answers_from_evaluation_answers(): void

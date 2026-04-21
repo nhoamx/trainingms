@@ -166,7 +166,7 @@ class WorkCenterOrganizationReportService
         }
 
         $acontecimientosTraumaticos = ! empty($atsFromNormalized)
-            ? $atsFromNormalized
+            ? $this->normalizeAnswerMap($atsFromNormalized)
             : (is_array($evaluation->citsats_s1) ? $this->normalizeAnswerMap($evaluation->citsats_s1) : []);
 
         return [
@@ -202,7 +202,7 @@ class WorkCenterOrganizationReportService
         }
 
         $ats = ! empty($atsFromNormalized)
-            ? $atsFromNormalized
+            ? $this->normalizeAnswerMap($atsFromNormalized)
             : (is_array($evaluation->citsats_s1) ? $this->normalizeAnswerMap($evaluation->citsats_s1) : []);
 
         $rawData = is_array($evaluation->raw_data) ? $evaluation->raw_data : [];
