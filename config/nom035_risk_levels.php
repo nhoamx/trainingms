@@ -4,7 +4,7 @@ return [
     'colors' => [
         'nulo' => '#3B82F6', // blue-500 - Azul
         'bajo' => '#10B981', // green-500 - Verde
-        'medio' => '#F8FF03', // amber-500 - Amarillo
+        'medio' => '#F8FF03', // amber-500 - Amarillo claro
         'alto' => '#F97316', // orange-500 - Naranja
         'muy_alto' => '#EF4444', // red-500 - Rojo
     ],
@@ -161,8 +161,8 @@ return [
             'max_score' => 24, // 6 preguntas × 4 puntos (47,48,49,50,51,52)
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 5],
-                'bajo' => ['min' => 6, 'max' => 8],
-                'medio' => ['min' => 9, 'max' => 13],
+                'bajo' => ['min' => 6, 'max' => 9],
+                'medio' => ['min' => 10, 'max' => 13],
                 'alto' => ['min' => 14, 'max' => 17],
                 'muy_alto' => ['min' => 18, 'max' => 999],
             ],
@@ -172,10 +172,10 @@ return [
             'max_score' => 16, // 4 preguntas × 4 puntos (53,54,55,56)
             'levels' => [
                 'nulo' => ['min' => 0, 'max' => 3],
-                'bajo' => ['min' => 4, 'max' => 6],
-                'medio' => ['min' => 7, 'max' => 9],
-                'alto' => ['min' => 10, 'max' => 12],
-                'muy_alto' => ['min' => 13, 'max' => 999],
+                'bajo' => ['min' => 4, 'max' => 5],
+                'medio' => ['min' => 6, 'max' => 7],
+                'alto' => ['min' => 8, 'max' => 9],
+                'muy_alto' => ['min' => 10, 'max' => 999],
             ],
         ],
     ],

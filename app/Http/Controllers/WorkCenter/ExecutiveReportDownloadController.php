@@ -1,5 +1,5 @@
 <?php
-
+//Reporte
 namespace App\Http\Controllers\WorkCenter;
 
 use App\Http\Controllers\Controller;
