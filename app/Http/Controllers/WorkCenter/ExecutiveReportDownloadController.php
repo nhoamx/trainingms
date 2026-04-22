@@ -1,5 +1,5 @@
 <?php
-//Reporte
+
 namespace App\Http\Controllers\WorkCenter;
 
 use App\Http\Controllers\Controller;
@@ -1534,7 +1534,7 @@ class ExecutiveReportDownloadController extends Controller
             );
 
             $section->addText(
-                'a) por la Naturaleza de sus Funciones II. De las Areas',
+                'a) por la Naturaleza de sus Funciones II. De las Áreas',
                 ['bold' => true, 'size' => 12],
                 ['spaceAfter' => 180]
             );
@@ -2799,7 +2799,7 @@ class ExecutiveReportDownloadController extends Controller
                             'name' => 'Carga de trabajo',
                             'dimensions' => [
                                 ['name' => 'Cargas cuantitativas', 'items' => [6, 12]],
-                                ['name' => 'Ritmos de trabajo acelerados', 'items' => [7, 8]],
+                                ['name' => 'Ritmos de trabajo acelerado', 'items' => [7, 8]],
                                 ['name' => 'Carga mental', 'items' => [9, 10, 11]],
                                 ['name' => 'Cargas psicológicas emocionales', 'items' => [65, 66, 67, 68], 'note_key' => 'a'],
                                 ['name' => 'Cargas de alta responsabilidad', 'items' => [13, 14]],
