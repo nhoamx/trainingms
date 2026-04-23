@@ -1066,18 +1066,14 @@ class WorkCenterNom035CalculationService
      */
     private function getRefIIIAnswersFromTable(PaperEvaluation $evaluation): Collection
     {
-        $instrumentValue = EvaluationInstrument::ReferenciaIII->value;
-
         if ($evaluation->relationLoaded('evaluationAnswers')) {
             return $evaluation->evaluationAnswers->filter(
-                fn ($a): bool => ($a->instrument instanceof EvaluationInstrument
-                    ? $a->instrument->value
-                    : (string) $a->instrument) === $instrumentValue
+                fn ($a): bool => $a->instrument === EvaluationInstrument::ReferenciaIII
             )->values();
         }
 
         return $evaluation->evaluationAnswers()
-            ->where('instrument', $instrumentValue)
+            ->where('instrument', EvaluationInstrument::ReferenciaIII->value)
             ->get();
     }
 
