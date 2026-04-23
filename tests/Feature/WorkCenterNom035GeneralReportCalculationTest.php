@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\EvaluationAnswer;
 use App\Models\Organization;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
@@ -180,6 +181,60 @@ class WorkCenterNom035GeneralReportCalculationTest extends TestCase
 
         $this->assertSame(2, $questionStats[69]['totalResponses']);
         $this->assertSame(2, $questionStats[69]['responses']['nunca']);
+    }
+
+    /**
+     * When evaluation_answers rows exist for an evaluation, the service must use those rows
+     * as the authoritative source instead of the legacy JSON columns.  This prevents the
+     * dashboard distribution from diverging from the executive-report distribution.
+     *
+     * Scenario: JSON columns have conditional questions 65-72 enabled (condition = 'SI'),
+     * but evaluation_answers was populated with questions 1-64 only (condition was actually NO).
+     * Expected: score is calculated from questions 1-64 only (= 116 for all-A answers).
+     * If JSON were used instead, the score would be 148 (116 + 8 × 4 for questions 65-72).
+     */
+    public function test_calculation_uses_evaluation_answers_table_when_available(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        $evaluation = PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'paper',
+            // JSON columns: conditional says 65-72 are enabled (all A)
+            'referencia_iii_answers' => $this->buildAnswers('A'),
+            'referencia_iii_conditional' => [
+                'customer_service' => [
+                    'condition' => 'SI',
+                    'questions' => [65 => 'A', 66 => 'A', 67 => 'A', 68 => 'A'],
+                ],
+                'management' => [
+                    'condition' => 'SI',
+                    'questions' => [69 => 'A', 70 => 'A', 71 => 'A', 72 => 'A'],
+                ],
+            ],
+        ]);
+
+        // evaluation_answers has only questions 1-64 (conditions were NO when processed)
+        foreach (range(1, 64) as $q) {
+            EvaluationAnswer::create([
+                'paper_evaluation_id' => $evaluation->id,
+                'instrument' => 'referencia_iii',
+                'question_key' => (string) $q,
+                'answer_value' => 'A',
+            ]);
+        }
+
+        $service = new WorkCenterNom035CalculationService;
+        $stats = $service->calculateGlobalStatistics($workCenter);
+
+        // Group-2 questions in 1-64 answered A (score=4): q02,03,05-22,29,54,58-64 = 29 questions → 116
+        // If JSON were used: +8 conditional questions (all A, group-2) → 148
+        $this->assertSame(1, $stats['global']['total_evaluations']);
+        $this->assertSame(116, (int) $stats['global']['average_score']);
     }
 
     /**
