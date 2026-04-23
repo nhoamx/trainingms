@@ -38,9 +38,12 @@ class ExecutiveReportDownloadController extends Controller
             mkdir($outputDir, 0755, true);
         }
 
+                $runId = now()->format('Ymd_His_u') . '_' . Str::random(8);
+
         $fileName = 'Informe_Ejecutivo_NOM035_' .
             Str::slug($organizationModel->name ?? 'empresa', '_') . '_' .
-            Str::slug($workCenterModel->name ?? 'centro_trabajo', '_') .
+            Str::slug($workCenterModel->name ?? 'centro_trabajo', '_') . '_' .
+            $runId .
             '.docx';
 
         $outputPath = $outputDir . DIRECTORY_SEPARATOR . $fileName;
@@ -51,6 +54,19 @@ class ExecutiveReportDownloadController extends Controller
         return response()
             ->download($outputPath, $fileName)
             ->deleteFileAfterSend(true);
+    }
+
+        private function makeUniqueChartPath(string $prefix): string
+    {
+        $chartDir = storage_path('app/tmp/nom035/charts');
+
+        if (! is_dir($chartDir)) {
+            mkdir($chartDir, 0755, true);
+        }
+
+        $runId = now()->format('Ymd_His_u') . '_' . Str::random(8);
+
+        return $chartDir . DIRECTORY_SEPARATOR . $prefix . '_' . $runId . '.png';
     }
 
     private function buildReport(Organization $organization, WorkCenter $workCenter): PhpWord
@@ -502,7 +518,7 @@ class ExecutiveReportDownloadController extends Controller
             $globalChartPath = $this->generateRiskDistributionChart(
                 'Distribución Global de Niveles de Riesgo',
                 $summary['distribution'],
-                storage_path('app/tmp/nom035/charts/global_' . md5($organization->id . '_' . $workCenter->id) . '.png')
+                $this->makeUniqueChartPath('global')
             );
 
             $this->addChartImageIfExists($section, $globalChartPath, 560);
@@ -616,7 +632,7 @@ class ExecutiveReportDownloadController extends Controller
             $chartPath = $this->generateRiskDistributionChart(
                 'Violencia laboral',
                 $summary['distribution'],
-                storage_path('app/tmp/nom035/charts/violencia_laboral_' . md5($organization->id . '_' . $workCenter->id) . '.png')
+                $this->makeUniqueChartPath('violencia_laboral')
             );
 
             $this->addChartImageIfExists($section, $chartPath, 560);
@@ -718,7 +734,7 @@ class ExecutiveReportDownloadController extends Controller
             $chartPath = $this->generateCategoryDashboardChart(
                 $summary['categories'],
                 (int) $summary['total_evaluations'],
-                storage_path('app/tmp/nom035/charts/category_dashboard_' . md5($organization->id . '_' . $workCenter->id) . '.png')
+                $this->makeUniqueChartPath('category_dashboard')
             );
 
             $this->addChartImageIfExists($section, $chartPath, 500);
@@ -758,7 +774,7 @@ class ExecutiveReportDownloadController extends Controller
             $chartPath = $this->generateDomainDashboardChart(
                 $summary['domains'],
                 (int) $summary['total_evaluations'],
-                storage_path('app/tmp/nom035/charts/domain_dashboard_' . md5($organization->id . '_' . $workCenter->id) . '.png')
+                $this->makeUniqueChartPath('domain_dashboard')
             );
 
             $this->addChartImageIfExists($section, $chartPath, 500);
@@ -803,11 +819,7 @@ class ExecutiveReportDownloadController extends Controller
                 $chartPath = $this->generateDimensionDashboardChart(
                     $chunk->values()->all(),
                     (int) $summary['total_evaluations'],
-                    storage_path(
-                        'app/tmp/nom035/charts/dimension_dashboard_' .
-                        md5($organization->id . '_' . $workCenter->id) .
-                        '_' . ($index + 1) . '.png'
-                    ),
+                    $this->makeUniqueChartPath('dimension_dashboard_' . ($index + 1)),
                     $index + 1,
                     $dimensionChunks->count()
                 );
@@ -867,7 +879,7 @@ class ExecutiveReportDownloadController extends Controller
 
             if (($femaleSummary['participants'] ?? 0) > 0) {
                 $section->addText(
-                    'b) Análisis por Género',
+                    'b) Por Género',
                     ['bold' => true, 'size' => 12],
                     ['spaceAfter' => 120]
                 );
@@ -883,7 +895,7 @@ class ExecutiveReportDownloadController extends Controller
                 }
 
                 $section->addText(
-                    'b) Análisis por Género',
+                    'b) Por Género',
                     ['bold' => true, 'size' => 12],
                     ['spaceAfter' => 120]
                 );
@@ -895,7 +907,7 @@ class ExecutiveReportDownloadController extends Controller
 
             if (! $printed) {
                 $section->addText(
-                    'b) Análisis por Género',
+                    'b) Por Género',
                     ['bold' => true, 'size' => 12],
                     ['spaceAfter' => 120]
                 );
@@ -1062,11 +1074,6 @@ class ExecutiveReportDownloadController extends Controller
             }
 
             if (! $printed) {
-                $section->addText(
-                    '5. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Calificación Final. Tabla 6',
-                    ['bold' => true, 'size' => 14],
-                    ['spaceAfter' => 140]
-                );
 
                 $section->addText(
                     'c) Por Naturaleza de funciones. III. De la Jornada Laboral',
@@ -1134,8 +1141,6 @@ class ExecutiveReportDownloadController extends Controller
             ['bold' => true, 'size' => 11, 'color' => '111111'],
             ['spaceAfter' => 0]
         );
-
-            $section->addTextBreak(1);
         }
 
         private function renderQuestionAverageMatrixTable(Section $section, array $summary): void
@@ -1144,28 +1149,28 @@ class ExecutiveReportDownloadController extends Controller
                 'alignment' => JcTable::CENTER,
                 'borderSize' => 6,
                 'borderColor' => '444444',
-                'cellMargin' => 35,
+                'cellMargin' => 20,
             ]);
 
-            $table->addRow(700);
+            $table->addRow(560, ['cantSplit' => true]);
             $table->addCell(2700, ['gridSpan' => 2, 'bgColor' => 'D9D9D9'])->addText(
                 'Categorías',
-                ['bold' => true, 'size' => 11],
+                ['bold' => true, 'size' => 10],
                 ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
             $table->addCell(3000, ['gridSpan' => 2, 'bgColor' => 'D9D9D9'])->addText(
                 'Dominios',
-                ['bold' => true, 'size' => 11],
+                ['bold' => true, 'size' => 10],
                 ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
             $table->addCell(5200, ['gridSpan' => 2, 'bgColor' => 'D9D9D9'])->addText(
                 'Factores de Riesgo Psicosocial',
-                ['bold' => true, 'size' => 11],
+                ['bold' => true, 'size' => 10],
                 ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
             $table->addCell(5600, ['bgColor' => 'D9D9D9'])->addText(
                 'Preguntas (items)',
-                ['bold' => true, 'size' => 11],
+                ['bold' => true, 'size' => 10],
                 ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
 
@@ -1185,25 +1190,21 @@ class ExecutiveReportDownloadController extends Controller
                         $dimensionLevel = $this->classifyNom035Score('dimensions', $dimension['name'], (int) $dimension['score']);
                         $dimensionStyle = $this->getWordRiskCellStyle($dimensionLevel['key']);
 
-                        $table->addRow(520);
+                        $table->addRow(420, ['cantSplit' => true]);
 
                         if (! $categoryStarted) {
                             $categoryRows = collect($category['domains'])->sum(fn ($domainItem) => count($domainItem['dimensions']));
 
                             $table->addCell(2000, ['vMerge' => 'restart'])->addText(
                                 $category['name'],
-                                ['bold' => true, 'size' => 10],
+                                ['bold' => true, 'size' => 9],
                                 ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                             );
                             $table->addCell(700, ['vMerge' => 'restart', 'bgColor' => $categoryStyle['bg']])->addText(
                                 (string) $category['score'],
-                                ['bold' => true, 'size' => 10, 'color' => $categoryStyle['text']],
+                                ['bold' => true, 'size' => 9, 'color' => $categoryStyle['text']],
                                 ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                             );
-
-                            for ($i = 1; $i < $categoryRows; $i++) {
-                                // el vMerge se continúa en las filas siguientes automáticamente
-                            }
 
                             $categoryStarted = true;
                         } else {
@@ -1212,22 +1213,16 @@ class ExecutiveReportDownloadController extends Controller
                         }
 
                         if (! $domainStarted) {
-                            $domainRows = count($domain['dimensions']);
-
                             $table->addCell(2300, ['vMerge' => 'restart'])->addText(
                                 $domain['name'],
-                                ['bold' => true, 'size' => 10],
+                                ['bold' => true, 'size' => 9],
                                 ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                             );
                             $table->addCell(700, ['vMerge' => 'restart', 'bgColor' => $domainStyle['bg']])->addText(
                                 (string) $domain['score'],
-                                ['bold' => true, 'size' => 10, 'color' => $domainStyle['text']],
+                                ['bold' => true, 'size' => 9, 'color' => $domainStyle['text']],
                                 ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                             );
-
-                            for ($i = 1; $i < $domainRows; $i++) {
-                                // el vMerge se continúa en las filas siguientes automáticamente
-                            }
 
                             $domainStarted = true;
                         } else {
@@ -1237,13 +1232,13 @@ class ExecutiveReportDownloadController extends Controller
 
                         $table->addCell(4500)->addText(
                             $dimension['name'],
-                            ['size' => 10],
+                            ['size' => 9],
                             ['spaceAfter' => 0]
                         );
 
                         $table->addCell(700, ['bgColor' => $dimensionStyle['bg']])->addText(
                             (string) $dimension['score'],
-                            ['bold' => true, 'size' => 10, 'color' => $dimensionStyle['text']],
+                            ['bold' => true, 'size' => 9, 'color' => $dimensionStyle['text']],
                             ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                         );
 
@@ -1253,15 +1248,13 @@ class ExecutiveReportDownloadController extends Controller
                 }
             }
 
-            $section->addTextBreak(1);
-
             $footer = $section->addTable([
                 'alignment' => JcTable::CENTER,
                 'borderSize' => 6,
                 'borderColor' => '444444',
-                'cellMargin' => 35,
+                'cellMargin' => 20,
             ]);
-            $footer->addRow();
+            $footer->addRow(420, ['cantSplit' => true]);
 
             $globalLevel = $this->classifyNom035Score('global', null, (int) $summary['final_total']);
             $globalStyle = $this->getWordRiskCellStyle($globalLevel['key']);
@@ -1270,22 +1263,19 @@ class ExecutiveReportDownloadController extends Controller
             $footerRun = $footerCell->addTextRun(['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
             $footerRun->addText(
                 'Calificación Total Final',
-                ['bold' => true, 'size' => 11, 'color' => $globalStyle['text']]
+                ['bold' => true, 'size' => 10, 'color' => $globalStyle['text']]
             );
             $footerRun->addTextBreak();
             $footerRun->addText(
                 $summary['final_total'] . ' / 288 - ' . number_format($summary['final_percentage'], 2) . ' %',
-                ['bold' => true, 'size' => 11, 'color' => $globalStyle['text']]
+                ['bold' => true, 'size' => 10, 'color' => $globalStyle['text']]
             );
 
             $footer->addCell(4200, ['bgColor' => 'D9D9D9'])->addText(
                 $summary['participants'] . ' Participantes',
-                ['bold' => true, 'size' => 11, 'color' => '111111'],
+                ['bold' => true, 'size' => 10, 'color' => '111111'],
                 ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
-
-            $section->addTextBreak(1);
-            $this->addQuestionAverageMatrixLegends($section);
         }
 
     private function addWorkerIdentificationByDimensionSection(
@@ -1341,47 +1331,70 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addWorkerHeaderCell($table, 850, 'Atiende');
 
                 foreach ($group['rows'] as $row) {
-                    $table->addRow();
+                $table->addRow();
 
-                    $riskStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
+                $dimensionStyle = $this->getWordRiskCellStyle($row['dimension_level_key'] ?? 'nulo');
+                $globalStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
-                    $table->addCell(900)->addText(
-                        $group['code'],
-                        [
-                            'bold' => true,
-                            'size' => 10,
-                            'color' => $riskStyle['text'],
-                        ],
-                        [
-                            'alignment' => Jc::CENTER,
-                            'spaceAfter' => 0,
-                        ]
-                    );
-                    $table->getRows()[count($table->getRows()) - 1]->getCells()[0]->getStyle()->setBgColor($riskStyle['bg']);
+                $table->addCell(900, ['bgColor' => $dimensionStyle['bg']])->addText(
+                    (string) ($row['dimension_score'] ?? 0),
+                    [
+                        'bold' => true,
+                        'size' => 10,
+                        'color' => $dimensionStyle['text'],
+                    ],
+                    [
+                        'alignment' => Jc::CENTER,
+                        'spaceAfter' => 0,
+                    ]
+                );
 
-                    $table->addCell(900)->addText(
-                        $this->safeValue($row['folio']),
-                        ['size' => 10],
-                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                    );
+                $table->addCell(900)->addText(
+                    $this->safeValue($row['folio']),
+                    ['size' => 10],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
 
-                    $table->addCell(900)->addText(
-                        (string) $row['global_score'],
-                        [
-                            'bold' => true,
-                            'size' => 10,
-                            'color' => $riskStyle['text'],
-                        ],
-                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                    );
-                    $table->getRows()[count($table->getRows()) - 1]->getCells()[2]->getStyle()->setBgColor($riskStyle['bg']);
+                $table->addCell(900, ['bgColor' => $globalStyle['bg']])->addText(
+                    (string) ($row['global_score'] ?? 0),
+                    [
+                        'bold' => true,
+                        'size' => 10,
+                        'color' => $globalStyle['text'],
+                    ],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
 
-                    $table->addCell(5200)->addText($this->safeValue($row['name']), ['size' => 10], ['spaceAfter' => 0]);
-                    $table->addCell(2100)->addText($this->safeValue($row['area']), ['size' => 10], ['spaceAfter' => 0]);
-                    $table->addCell(2100)->addText($this->safeValue($row['position']), ['size' => 10], ['spaceAfter' => 0]);
-                    $table->addCell(850)->addText($row['is_boss'] ? 'X' : '', ['size' => 10], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-                    $table->addCell(850)->addText($row['attends_public'] ? 'X' : '', ['size' => 10], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-                }
+                $table->addCell(5200)->addText(
+                    $this->safeValue($row['name']),
+                    ['size' => 10],
+                    ['spaceAfter' => 0]
+                );
+
+                $table->addCell(2100)->addText(
+                    $this->safeValue($row['area']),
+                    ['size' => 10],
+                    ['spaceAfter' => 0]
+                );
+
+                $table->addCell(2100)->addText(
+                    $this->safeValue($row['position']),
+                    ['size' => 10],
+                    ['spaceAfter' => 0]
+                );
+
+                $table->addCell(850)->addText(
+                    $this->workerFlagMark((bool) ($row['is_boss'] ?? false)),
+                    ['bold' => true, 'size' => 12],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $table->addCell(850)->addText(
+                    $this->workerFlagMark((bool) ($row['attends_public'] ?? false)),
+                    ['bold' => true, 'size' => 12],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+            }
 
                 // fila total
                 $table->addRow();
@@ -1506,16 +1519,16 @@ class ExecutiveReportDownloadController extends Controller
                     );
 
                     $table->addCell(850)->addText(
-                        ! empty($row['is_boss']) ? 'X' : '',
-                        ['size' => 10],
-                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                    );
+                    $this->workerFlagMark((bool) ($row['is_boss'] ?? false)),
+                    ['bold' => true, 'size' => 12],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
 
-                    $table->addCell(850)->addText(
-                        ! empty($row['attends_public']) ? 'X' : '',
-                        ['size' => 10],
-                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                    );
+                $table->addCell(850)->addText(
+                    $this->workerFlagMark((bool) ($row['attends_public'] ?? false)),
+                    ['bold' => true, 'size' => 12],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
                 }
             }
         }
@@ -1608,16 +1621,16 @@ class ExecutiveReportDownloadController extends Controller
                     );
 
                     $table->addCell(850)->addText(
-                        ! empty($row['is_boss']) ? 'X' : '',
-                        ['size' => 10],
-                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                    );
+                    $this->workerFlagMark((bool) ($row['is_boss'] ?? false)),
+                    ['bold' => true, 'size' => 12],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
 
-                    $table->addCell(850)->addText(
-                        ! empty($row['attends_public']) ? 'X' : '',
-                        ['size' => 10],
-                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                    );
+                $table->addCell(850)->addText(
+                    $this->workerFlagMark((bool) ($row['attends_public'] ?? false)),
+                    ['bold' => true, 'size' => 12],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
                 }
             }
         }
@@ -1710,16 +1723,16 @@ class ExecutiveReportDownloadController extends Controller
                     );
 
                     $table->addCell(850)->addText(
-                        ! empty($row['is_boss']) ? 'X' : '',
-                        ['size' => 10],
-                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                    );
+                    $this->workerFlagMark((bool) ($row['is_boss'] ?? false)),
+                    ['bold' => true, 'size' => 12],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
 
-                    $table->addCell(850)->addText(
-                        ! empty($row['attends_public']) ? 'X' : '',
-                        ['size' => 10],
-                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                    );
+                $table->addCell(850)->addText(
+                    $this->workerFlagMark((bool) ($row['attends_public'] ?? false)),
+                    ['bold' => true, 'size' => 12],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
                 }
             }
         }
@@ -2039,16 +2052,16 @@ class ExecutiveReportDownloadController extends Controller
                 );
 
                 $table->addCell(850)->addText(
-                    ! empty($row['is_boss']) ? 'X' : '',
-                    ['size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
+                $this->workerFlagMark((bool) ($row['is_boss'] ?? false)),
+                ['bold' => true, 'size' => 12],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
 
-                $table->addCell(850)->addText(
-                    ! empty($row['attends_public']) ? 'X' : '',
-                    ['size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
+            $table->addCell(850)->addText(
+                $this->workerFlagMark((bool) ($row['attends_public'] ?? false)),
+                ['bold' => true, 'size' => 12],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
             }
         }
 
@@ -2506,47 +2519,73 @@ class ExecutiveReportDownloadController extends Controller
                 ->whereIn('pe.id', $evaluationIds);
 
             $rows = $query
-                ->select(
-                    'pe.id as evaluation_id',
-                    'ea.question_key',
-                    'ea.answer_value'
-                )
-                ->orderBy('pe.id')
-                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
-                ->get();
+            ->select(
+                'pe.id as evaluation_id',
+                'ea.question_key',
+                'ea.answer_value',
+                'dd.extra_fields'
+            )
+            ->orderBy('pe.id')
+            ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
+            ->get();
 
-            $participants = $rows->pluck('evaluation_id')->unique()->count();
+        $participants = $rows->pluck('evaluation_id')->unique()->count();
 
-            $questionTotals = [];
-            $noteEvaluations = [
-                'a' => [],
-                'b' => [],
-            ];
+        $questionTotals = [];
+        $noteEvaluations = [
+            'a' => [],
+            'b' => [],
+        ];
 
-            foreach ($rows as $row) {
-                $score = $this->getReferenceThreeScore($row->question_key, $row->answer_value);
-
-                if ($score === null) {
-                    continue;
-                }
-
-                $key = (int) $row->question_key;
-
-                if (! isset($questionTotals[$key])) {
-                    $questionTotals[$key] = ['sum' => 0, 'count' => 0];
-                }
-
-                $questionTotals[$key]['sum'] += $score;
-                $questionTotals[$key]['count']++;
-
-                if (in_array($key, [65, 66, 67, 68], true)) {
-                    $noteEvaluations['a'][$row->evaluation_id] = true;
-                }
-
-                if (in_array($key, [69, 70, 71, 72], true)) {
-                    $noteEvaluations['b'][$row->evaluation_id] = true;
-                }
+        foreach ($rows as $row) {
+            $extra = json_decode((string) ($row->extra_fields ?? '[]'), true);
+            if (! is_array($extra)) {
+                $extra = [];
             }
+
+            $key = (int) $row->question_key;
+
+            $attendsPublic = $this->extractWorkerFlag($extra, [
+                'atiende', 'atiende_clientes', 'atencion_clientes',
+                'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
+            ]) || in_array($key, [65, 66, 67, 68], true);
+
+            $isBoss = $this->extractWorkerFlag($extra, [
+                'jefe', 'soy_jefe', 'is_boss', 'is_manager',
+                'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
+            ]) || in_array($key, [69, 70, 71, 72], true);
+
+            if ($attendsPublic) {
+                $noteEvaluations['a'][$row->evaluation_id] = true;
+            }
+
+            if ($isBoss) {
+                $noteEvaluations['b'][$row->evaluation_id] = true;
+            }
+
+            $key = (int) $row->question_key;
+
+            if (in_array($key, [65, 66, 67, 68], true) && ! $attendsPublic) {
+                continue;
+            }
+
+            if (in_array($key, [69, 70, 71, 72], true) && ! $isBoss) {
+                continue;
+            }
+
+            $score = $this->getReferenceThreeScore($row->question_key, $row->answer_value);
+
+            if ($score === null) {
+                continue;
+            }
+
+            if (! isset($questionTotals[$key])) {
+                $questionTotals[$key] = ['sum' => 0, 'count' => 0];
+            }
+
+            $questionTotals[$key]['sum'] += $score;
+            $questionTotals[$key]['count']++;
+        }
 
             $noteCounts = [
                 'a' => count($noteEvaluations['a']),
@@ -2566,31 +2605,33 @@ class ExecutiveReportDownloadController extends Controller
                     $domainScore = 0;
                     $dimensions = [];
 
-                    foreach ($domain['dimensions'] as $dimension) {
-                        $dimensionScore = 0;
+                                        foreach ($domain['dimensions'] as $dimension) {
+                        $dimensionScore = 0.0;
                         $items = [];
 
                         foreach ($dimension['items'] as $itemNumber) {
-                            $avg = 0;
+                            $avgRaw = 0.0;
 
                             if (! empty($questionTotals[$itemNumber]['count'])) {
-                                $avg = round($questionTotals[$itemNumber]['sum'] / $questionTotals[$itemNumber]['count']);
+                                $avgRaw = $questionTotals[$itemNumber]['sum'] / $questionTotals[$itemNumber]['count'];
                             }
 
-                            $avg = max(0, min(4, (int) $avg));
+                            $itemScore = max(0, min(4, (int) round($avgRaw, 0, PHP_ROUND_HALF_UP)));
 
                             $items[] = [
                                 'number' => $itemNumber,
-                                'score' => $avg,
+                                'score' => $itemScore,
                             ];
 
-                            $dimensionScore += $avg;
+                            $dimensionScore += $avgRaw;
                         }
+
+                        $dimensionDisplayScore = (int) round($dimensionScore, 0, PHP_ROUND_HALF_UP);
 
                         $dimensions[] = [
                             'name' => $dimension['name'],
                             'items' => $items,
-                            'score' => $dimensionScore,
+                            'score' => $dimensionDisplayScore,
                             'note' => ! empty($dimension['note_key'])
                                 ? ('*' . $dimension['note_key'] . ' / ' . ($noteCounts[$dimension['note_key']] ?? 0))
                                 : null,
@@ -2599,23 +2640,29 @@ class ExecutiveReportDownloadController extends Controller
                         $domainScore += $dimensionScore;
                     }
 
+                    $domainDisplayScore = (int) round($domainScore, 0, PHP_ROUND_HALF_UP);
+
                     $domains[] = [
                         'name' => $domain['name'],
-                        'score' => $domainScore,
+                        'score' => $domainDisplayScore,
                         'dimensions' => $dimensions,
                     ];
 
                     $categoryScore += $domainScore;
                 }
 
+                $categoryDisplayScore = (int) round($categoryScore, 0, PHP_ROUND_HALF_UP);
+
                 $categories[] = [
                     'name' => $category['name'],
-                    'score' => $categoryScore,
+                    'score' => $categoryDisplayScore,
                     'domains' => $domains,
                 ];
 
-                $finalTotal += $categoryScore;
+                $finalTotal += $categoryDisplayScore;
             }
+
+            $finalTotal = (int) round($finalTotal, 0, PHP_ROUND_HALF_UP);
 
             return [
                 'participants' => $participants,
@@ -2657,49 +2704,75 @@ class ExecutiveReportDownloadController extends Controller
             }
 
             $rows = $query
-                ->select(
-                    'pe.id as evaluation_id',
-                    'ea.question_key',
-                    'ea.answer_value'
-                )
-                ->orderBy('pe.id')
-                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
-                ->get();
+            ->select(
+                'pe.id as evaluation_id',
+                'ea.question_key',
+                'ea.answer_value',
+                'dd.extra_fields'
+            )
+            ->orderBy('pe.id')
+            ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
+            ->get();
 
-            $participants = $rows->pluck('evaluation_id')->unique()->count();
+        $participants = $rows->pluck('evaluation_id')->unique()->count();
 
-            $questionTotals = [];
-            $noteEvaluations = [
-                'a' => [],
-                'b' => [],
-            ];
+        $questionTotals = [];
+        $noteEvaluations = [
+            'a' => [],
+            'b' => [],
+        ];
 
-            foreach ($rows as $row) {
-                $score = $this->getReferenceThreeScore($row->question_key, $row->answer_value);
-
-                if ($score === null) {
-                    continue;
-                }
-
-                $key = (int) $row->question_key;
-
-                if (! isset($questionTotals[$key])) {
-                    $questionTotals[$key] = ['sum' => 0, 'count' => 0];
-                }
-
-                $questionTotals[$key]['sum'] += $score;
-                $questionTotals[$key]['count']++;
-
-                if (in_array($key, [65, 66, 67, 68], true)) {
-                    $noteEvaluations['a'][$row->evaluation_id] = true;
-                }
-
-                if (in_array($key, [69, 70, 71, 72], true)) {
-                    $noteEvaluations['b'][$row->evaluation_id] = true;
-                }
+        foreach ($rows as $row) {
+            $extra = json_decode((string) ($row->extra_fields ?? '[]'), true);
+            if (! is_array($extra)) {
+                $extra = [];
             }
 
-            $noteCounts = [
+           $key = (int) $row->question_key;
+
+            $attendsPublic = $this->extractWorkerFlag($extra, [
+                'atiende', 'atiende_clientes', 'atencion_clientes',
+                'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
+            ]) || in_array($key, [65, 66, 67, 68], true);
+
+            $isBoss = $this->extractWorkerFlag($extra, [
+                'jefe', 'soy_jefe', 'is_boss', 'is_manager',
+                'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
+            ]) || in_array($key, [69, 70, 71, 72], true);
+
+            if ($attendsPublic) {
+                $noteEvaluations['a'][$row->evaluation_id] = true;
+            }
+
+            if ($isBoss) {
+                $noteEvaluations['b'][$row->evaluation_id] = true;
+            }
+
+            $key = (int) $row->question_key;
+
+            if (in_array($key, [65, 66, 67, 68], true) && ! $attendsPublic) {
+                continue;
+            }
+
+            if (in_array($key, [69, 70, 71, 72], true) && ! $isBoss) {
+                continue;
+            }
+
+            $score = $this->getReferenceThreeScore($row->question_key, $row->answer_value);
+
+            if ($score === null) {
+                continue;
+            }
+
+            if (! isset($questionTotals[$key])) {
+                $questionTotals[$key] = ['sum' => 0, 'count' => 0];
+            }
+
+            $questionTotals[$key]['sum'] += $score;
+            $questionTotals[$key]['count']++;
+        }
+
+                        $noteCounts = [
                 'a' => count($noteEvaluations['a']),
                 'b' => count($noteEvaluations['b']),
             ];
@@ -2710,38 +2783,40 @@ class ExecutiveReportDownloadController extends Controller
             $finalTotal = 0;
 
             foreach ($layout as $category) {
-                $categoryScore = 0;
+                $categoryScore = 0.0;
                 $domains = [];
 
                 foreach ($category['domains'] as $domain) {
-                    $domainScore = 0;
+                    $domainScore = 0.0;
                     $dimensions = [];
 
                     foreach ($domain['dimensions'] as $dimension) {
-                        $dimensionScore = 0;
+                        $dimensionScore = 0.0;
                         $items = [];
 
                         foreach ($dimension['items'] as $itemNumber) {
-                            $avg = 0;
+                            $avgRaw = 0.0;
 
                             if (! empty($questionTotals[$itemNumber]['count'])) {
-                                $avg = round($questionTotals[$itemNumber]['sum'] / $questionTotals[$itemNumber]['count']);
+                                $avgRaw = $questionTotals[$itemNumber]['sum'] / $questionTotals[$itemNumber]['count'];
                             }
 
-                            $avg = max(0, min(4, (int) $avg));
+                            $itemScore = max(0, min(4, (int) round($avgRaw, 0, PHP_ROUND_HALF_UP)));
 
                             $items[] = [
                                 'number' => $itemNumber,
-                                'score' => $avg,
+                                'score' => $itemScore,
                             ];
 
-                            $dimensionScore += $avg;
+                            $dimensionScore += $avgRaw;
                         }
+
+                        $dimensionDisplayScore = (int) round($dimensionScore, 0, PHP_ROUND_HALF_UP);
 
                         $dimensions[] = [
                             'name' => $dimension['name'],
                             'items' => $items,
-                            'score' => $dimensionScore,
+                            'score' => $dimensionDisplayScore,
                             'note' => ! empty($dimension['note_key'])
                                 ? ('*' . $dimension['note_key'] . ' / ' . ($noteCounts[$dimension['note_key']] ?? 0))
                                 : null,
@@ -2750,23 +2825,29 @@ class ExecutiveReportDownloadController extends Controller
                         $domainScore += $dimensionScore;
                     }
 
+                    $domainDisplayScore = (int) round($domainScore, 0, PHP_ROUND_HALF_UP);
+
                     $domains[] = [
                         'name' => $domain['name'],
-                        'score' => $domainScore,
+                        'score' => $domainDisplayScore,
                         'dimensions' => $dimensions,
                     ];
 
                     $categoryScore += $domainScore;
                 }
 
+                $categoryDisplayScore = (int) round($categoryScore, 0, PHP_ROUND_HALF_UP);
+
                 $categories[] = [
                     'name' => $category['name'],
-                    'score' => $categoryScore,
+                    'score' => $categoryDisplayScore,
                     'domains' => $domains,
                 ];
 
-                $finalTotal += $categoryScore;
+                $finalTotal += $categoryDisplayScore;
             }
+
+            $finalTotal = (int) round($finalTotal, 0, PHP_ROUND_HALF_UP);
 
             return [
                 'participants' => $participants,
@@ -2913,6 +2994,11 @@ class ExecutiveReportDownloadController extends Controller
             );
         }
 
+        private function workerFlagMark(bool $value): string
+        {
+            return $value ? '✓' : '';
+        }
+
     private function addQuestionGlobalHeaderCell($table, int $width, string $label, string $bgColor, string $textColor): void
         {
             $table->addCell($width, ['bgColor' => $bgColor])->addText(
@@ -2970,34 +3056,34 @@ class ExecutiveReportDownloadController extends Controller
             $itemsTable = $cell->addTable([
                 'alignment' => JcTable::CENTER,
                 'borderSize' => 0,
-                'cellMargin' => 15,
+                'cellMargin' => 8,
             ]);
 
-            $itemsTable->addRow();
+            $itemsTable->addRow(320, ['cantSplit' => true]);
 
             foreach ($items as $item) {
                 $hex = $this->getQuestionValueHex((int) $item['score']);
                 $textColor = ((int) $item['score'] === 2) ? '111111' : 'FFFFFF';
 
-                $itemsTable->addCell(430, [
+                $itemsTable->addCell(360, [
                     'bgColor' => $hex,
                     'borderSize' => 6,
                     'borderColor' => '333333',
                 ])->addText(
                     (string) $item['number'],
-                    ['bold' => true, 'size' => 10, 'color' => $textColor],
+                    ['bold' => true, 'size' => 9, 'color' => $textColor],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
             }
 
             if ($note) {
-                $itemsTable->addCell(1200, [
+                $itemsTable->addCell(900, [
                     'bgColor' => 'D9D9D9',
                     'borderSize' => 6,
                     'borderColor' => '333333',
                 ])->addText(
                     $note,
-                    ['size' => 10, 'color' => '111111'],
+                    ['size' => 9, 'color' => '111111'],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
             }
@@ -3007,18 +3093,18 @@ class ExecutiveReportDownloadController extends Controller
         {
             $section->addText(
                 'Nivel de riesgo',
-                ['size' => 10],
-                ['spaceAfter' => 40]
+                ['size' => 9],
+                ['spaceAfter' => 20]
             );
 
             $riskLegend = $section->addTable([
                 'alignment' => JcTable::START,
                 'borderSize' => 6,
                 'borderColor' => '000000',
-                'cellMargin' => 20,
+                'cellMargin' => 15,
             ]);
 
-            $riskLegend->addRow();
+            $riskLegend->addRow(300, ['cantSplit' => true]);
 
             foreach ([
                 ['Nulo', '3B82F6', 'FFFFFF'],
@@ -3027,29 +3113,27 @@ class ExecutiveReportDownloadController extends Controller
                 ['Alto', 'F59E0B', 'FFFFFF'],
                 ['Muy Alto', 'EF4444', 'FFFFFF'],
             ] as [$label, $bg, $text]) {
-                $riskLegend->addCell(1400, ['bgColor' => $bg])->addText(
+                $riskLegend->addCell(1120, ['bgColor' => $bg])->addText(
                     $label,
-                    ['bold' => true, 'size' => 10, 'color' => $text],
+                    ['bold' => true, 'size' => 9, 'color' => $text],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
             }
 
-            $section->addTextBreak(1);
-
             $section->addText(
                 'Valor de la pregunta según el color',
-                ['size' => 10],
-                ['spaceAfter' => 40]
+                ['size' => 9],
+                ['spaceBefore' => 40, 'spaceAfter' => 20]
             );
 
             $valueLegend = $section->addTable([
                 'alignment' => JcTable::START,
                 'borderSize' => 6,
                 'borderColor' => '000000',
-                'cellMargin' => 20,
+                'cellMargin' => 15,
             ]);
 
-            $valueLegend->addRow();
+            $valueLegend->addRow(300, ['cantSplit' => true]);
 
             foreach ([
                 ['0', '3B82F6', 'FFFFFF'],
@@ -3058,16 +3142,15 @@ class ExecutiveReportDownloadController extends Controller
                 ['3', 'F59E0B', 'FFFFFF'],
                 ['4', 'EF4444', 'FFFFFF'],
             ] as [$label, $bg, $text]) {
-                $valueLegend->addCell(700, ['bgColor' => $bg])->addText(
+                $valueLegend->addCell(520, ['bgColor' => $bg])->addText(
                     $label,
-                    ['bold' => true, 'size' => 10, 'color' => $text],
+                    ['bold' => true, 'size' => 9, 'color' => $text],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
             }
 
-            $section->addTextBreak(1);
-            $section->addText('*a  Servicio a clientes o usuarios', ['size' => 10], ['spaceAfter' => 40]);
-            $section->addText('*b  Soy jefe de otros trabajadores', ['size' => 10], ['spaceAfter' => 40]);
+            $section->addText('*a  Servicio a clientes o usuarios', ['size' => 9], ['spaceBefore' => 30, 'spaceAfter' => 15]);
+            $section->addText('*b  Soy jefe de otros trabajadores', ['size' => 9], ['spaceAfter' => 15]);
         }
 
     private function addDistributionTable(Section $section, string $title, array $rows): void
@@ -3332,6 +3415,7 @@ class ExecutiveReportDownloadController extends Controller
     {
         $rows = DB::table('evaluation_answers as ea')
             ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
+            ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
             ->where('pe.organization_id', $organizationId)
             ->where('pe.work_center_id', $workCenterId)
             ->where('pe.evaluation_type', 'referencia_iii')
@@ -3343,7 +3427,8 @@ class ExecutiveReportDownloadController extends Controller
                 'pe.id as evaluation_id',
                 'pe.source',
                 'ea.question_key',
-                'ea.answer_value'
+                'ea.answer_value',
+                'dd.extra_fields'
             )
             ->orderBy('pe.id')
             ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
@@ -3399,73 +3484,111 @@ class ExecutiveReportDownloadController extends Controller
     }
 
     private function getReferenceThreeEvaluations($rows): array
-    {
-        return $rows
-            ->groupBy('evaluation_id')
-            ->map(function ($items, $evaluationId) {
-                return $this->buildReferenceThreeEvaluationResult(
-                    (string) $evaluationId,
-                    (string) ($items->first()->source ?? 'paper'),
-                    $items
-                );
-            })
-            ->values()
-            ->all();
-    }
+        {
+            return $rows
+                ->groupBy('evaluation_id')
+                ->map(function ($items, $evaluationId) {
+                    $first = $items->first();
 
-    private function buildReferenceThreeEvaluationResult(string $evaluationId, string $source, $answers): array
-    {
-        $globalScore = 0;
-        $dimensionScores = [];
-        $domainScores = [];
-        $categoryScores = [];
+                    $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
+                    if (! is_array($extra)) {
+                        $extra = [];
+                    }
 
-        foreach ($answers as $answer) {
-            $score = $this->getReferenceThreeScore($answer->question_key, $answer->answer_value);
-            $meta = $this->getReferenceThreeQuestionMeta($answer->question_key);
+                    $isBoss = $this->extractWorkerFlag($extra, [
+                        'jefe', 'soy_jefe', 'is_boss', 'is_manager',
+                        'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
+                    ]) || $items->contains(function ($answer) {
+                        return in_array((int) $answer->question_key, [69, 70, 71, 72], true);
+                    });
 
-            if ($score === null || $meta === null) {
-                continue;
+                    $attendsPublic = $this->extractWorkerFlag($extra, [
+                        'atiende', 'atiende_clientes', 'atencion_clientes',
+                        'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
+                    ]) || $items->contains(function ($answer) {
+                        return in_array((int) $answer->question_key, [65, 66, 67, 68], true);
+                    });
+
+                    return $this->buildReferenceThreeEvaluationResult(
+                        (string) $evaluationId,
+                        (string) ($first->source ?? 'paper'),
+                        $items,
+                        $attendsPublic,
+                        $isBoss
+                    );
+                })
+                ->values()
+                ->all();
+        }
+
+    private function buildReferenceThreeEvaluationResult(
+            string $evaluationId,
+            string $source,
+            $answers,
+            bool $attendsPublic = false,
+            bool $isBoss = false
+        ): array {
+            $globalScore = 0;
+            $dimensionScores = [];
+            $domainScores = [];
+            $categoryScores = [];
+
+            foreach ($answers as $answer) {
+                $questionKey = (int) $answer->question_key;
+
+                if (in_array($questionKey, [65, 66, 67, 68], true) && ! $attendsPublic) {
+                    continue;
+                }
+
+                if (in_array($questionKey, [69, 70, 71, 72], true) && ! $isBoss) {
+                    continue;
+                }
+
+                $score = $this->getReferenceThreeScore($answer->question_key, $answer->answer_value);
+                $meta = $this->getReferenceThreeQuestionMeta($answer->question_key);
+
+                if ($score === null || $meta === null) {
+                    continue;
+                }
+
+                $globalScore += $score;
+
+                $dimensionScores[$meta['dimension']] = ($dimensionScores[$meta['dimension']] ?? 0) + $score;
+                $domainScores[$meta['domain']] = ($domainScores[$meta['domain']] ?? 0) + $score;
+                $categoryScores[$meta['category']] = ($categoryScores[$meta['category']] ?? 0) + $score;
             }
 
-            $globalScore += $score;
+            $dimensionLevels = [];
+            foreach ($dimensionScores as $name => $score) {
+                $dimensionLevels[$name] = $this->classifyNom035Score('dimensions', $name, $score);
+            }
 
-            $dimensionScores[$meta['dimension']] = ($dimensionScores[$meta['dimension']] ?? 0) + $score;
-            $domainScores[$meta['domain']] = ($domainScores[$meta['domain']] ?? 0) + $score;
-            $categoryScores[$meta['category']] = ($categoryScores[$meta['category']] ?? 0) + $score;
+            $domainLevels = [];
+            foreach ($domainScores as $name => $score) {
+                $domainLevels[$name] = $this->classifyNom035Score('domains', $name, $score);
+            }
+
+            $categoryLevels = [];
+            foreach ($categoryScores as $name => $score) {
+                $categoryLevels[$name] = $this->classifyNom035Score('categories', $name, $score);
+            }
+
+            $globalLevel = $this->classifyNom035Score('global', null, $globalScore);
+
+            return [
+                'evaluation_id' => $evaluationId,
+                'source' => $source,
+                'global_score' => $globalScore,
+                'global_level_key' => $globalLevel['key'],
+                'global_level_label' => $globalLevel['label'],
+                'dimension_scores' => $dimensionScores,
+                'dimension_levels' => $dimensionLevels,
+                'domain_scores' => $domainScores,
+                'domain_levels' => $domainLevels,
+                'category_scores' => $categoryScores,
+                'category_levels' => $categoryLevels,
+            ];
         }
-
-        $dimensionLevels = [];
-        foreach ($dimensionScores as $name => $score) {
-            $dimensionLevels[$name] = $this->classifyNom035Score('dimensions', $name, $score);
-        }
-
-        $domainLevels = [];
-        foreach ($domainScores as $name => $score) {
-            $domainLevels[$name] = $this->classifyNom035Score('domains', $name, $score);
-        }
-
-        $categoryLevels = [];
-        foreach ($categoryScores as $name => $score) {
-            $categoryLevels[$name] = $this->classifyNom035Score('categories', $name, $score);
-        }
-
-        $globalLevel = $this->classifyNom035Score('global', null, $globalScore);
-
-        return [
-            'evaluation_id' => $evaluationId,
-            'source' => $source,
-            'global_score' => $globalScore,
-            'global_level_key' => $globalLevel['key'],
-            'global_level_label' => $globalLevel['label'],
-            'dimension_scores' => $dimensionScores,
-            'dimension_levels' => $dimensionLevels,
-            'domain_scores' => $domainScores,
-            'domain_levels' => $domainLevels,
-            'category_scores' => $categoryScores,
-            'category_levels' => $categoryLevels,
-        ];
-    }
 
     private function classifyNom035Score(string $scope, ?string $name, int $score): array
     {
@@ -3830,43 +3953,50 @@ class ExecutiveReportDownloadController extends Controller
             $evaluations = $rows
                 ->groupBy('evaluation_id')
                 ->map(function ($items, $evaluationId) {
-                    $result = $this->buildReferenceThreeEvaluationResult(
-                        (string) $evaluationId,
-                        (string) ($items->first()->source ?? 'paper'),
-                        $items
-                    );
+                $first = $items->first();
 
-                    $first = $items->first();
-                    $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
-                    if (! is_array($extra)) {
-                        $extra = [];
-                    }
+                $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
+                if (! is_array($extra)) {
+                    $extra = [];
+                }
 
-                    $result['folio'] = $this->safeValue($first->personal_folio);
-                    $result['name'] = $this->safeValue($first->evaluee_name);
-                    $result['area'] = $this->safeValue($first->department);
-                    $result['position'] = $this->safeValue($first->position);
-                    $result['is_boss'] = $this->extractWorkerFlag($extra, [
-                        'jefe',
-                        'soy_jefe',
-                        'is_boss',
-                        'is_manager',
-                        'supervises_people',
-                        'supervisa_personal',
-                        'jefe_trabajadores',
-                    ]);
-                    $result['attends_public'] = $this->extractWorkerFlag($extra, [
-                        'atiende',
-                        'atiende_clientes',
-                        'atencion_clientes',
-                        'servicio_clientes',
-                        'servicio_usuarios',
-                        'client_service',
-                        'attends_public',
-                    ]);
+                $isBoss = $this->extractWorkerFlag($extra, [
+                    'jefe',
+                    'soy_jefe',
+                    'is_boss',
+                    'is_manager',
+                    'supervises_people',
+                    'supervisa_personal',
+                    'jefe_trabajadores',
+                ]);
 
-                    return $result;
-                })
+                $attendsPublic = $this->extractWorkerFlag($extra, [
+                    'atiende',
+                    'atiende_clientes',
+                    'atencion_clientes',
+                    'servicio_clientes',
+                    'servicio_usuarios',
+                    'client_service',
+                    'attends_public',
+                ]);
+
+                $result = $this->buildReferenceThreeEvaluationResult(
+                    (string) $evaluationId,
+                    (string) ($first->source ?? 'paper'),
+                    $items,
+                    $attendsPublic,
+                    $isBoss
+                );
+
+                $result['folio'] = $this->safeValue($first->personal_folio);
+                $result['name'] = $this->safeValue($first->evaluee_name);
+                $result['area'] = $this->safeValue($first->department);
+                $result['position'] = $this->safeValue($first->position);
+                $result['is_boss'] = $isBoss;
+                $result['attends_public'] = $attendsPublic;
+
+                return $result;
+            })
                 ->values()
                 ->all();
 
@@ -3892,6 +4022,8 @@ class ExecutiveReportDownloadController extends Controller
 
                     $dimensionRows[] = [
                         'folio' => $evaluation['folio'] ?? 'N/D',
+                        'dimension_score' => (int) ($evaluation['dimension_scores'][$dimensionName] ?? 0),
+                        'dimension_level_key' => $dimensionLevel,
                         'global_score' => (int) ($evaluation['global_score'] ?? 0),
                         'global_level_key' => $evaluation['global_level_key'] ?? 'nulo',
                         'name' => $evaluation['name'] ?? 'N/D',
@@ -3951,44 +4083,51 @@ class ExecutiveReportDownloadController extends Controller
             $evaluations = $rows
                 ->groupBy('evaluation_id')
                 ->map(function ($items, $evaluationId) {
-                    $result = $this->buildReferenceThreeEvaluationResult(
-                        (string) $evaluationId,
-                        (string) ($items->first()->source ?? 'paper'),
-                        $items
-                    );
+                $first = $items->first();
 
-                    $first = $items->first();
-                    $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
-                    if (! is_array($extra)) {
-                        $extra = [];
-                    }
+                $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
+                if (! is_array($extra)) {
+                    $extra = [];
+                }
 
-                    $result['folio'] = $this->safeValue($first->personal_folio);
-                    $result['name'] = $this->safeValue($first->evaluee_name);
-                    $result['area'] = $this->safeValue($first->department);
-                    $result['position'] = $this->safeValue($first->position);
-                    $result['work_schedule'] = $this->safeValue($first->work_schedule);
-                    $result['is_boss'] = $this->extractWorkerFlag($extra, [
-                        'jefe',
-                        'soy_jefe',
-                        'is_boss',
-                        'is_manager',
-                        'supervises_people',
-                        'supervisa_personal',
-                        'jefe_trabajadores',
-                    ]);
-                    $result['attends_public'] = $this->extractWorkerFlag($extra, [
-                        'atiende',
-                        'atiende_clientes',
-                        'atencion_clientes',
-                        'servicio_clientes',
-                        'servicio_usuarios',
-                        'client_service',
-                        'attends_public',
-                    ]);
+                $isBoss = $this->extractWorkerFlag($extra, [
+                    'jefe',
+                    'soy_jefe',
+                    'is_boss',
+                    'is_manager',
+                    'supervises_people',
+                    'supervisa_personal',
+                    'jefe_trabajadores',
+                ]);
 
-                    return $result;
-                })
+                $attendsPublic = $this->extractWorkerFlag($extra, [
+                    'atiende',
+                    'atiende_clientes',
+                    'atencion_clientes',
+                    'servicio_clientes',
+                    'servicio_usuarios',
+                    'client_service',
+                    'attends_public',
+                ]);
+
+                $result = $this->buildReferenceThreeEvaluationResult(
+                    (string) $evaluationId,
+                    (string) ($first->source ?? 'paper'),
+                    $items,
+                    $attendsPublic,
+                    $isBoss
+                );
+
+                $result['folio'] = $this->safeValue($first->personal_folio);
+                $result['name'] = $this->safeValue($first->evaluee_name);
+                $result['area'] = $this->safeValue($first->department);
+                $result['position'] = $this->safeValue($first->position);
+                $result['work_schedule'] = $this->safeValue($first->work_schedule);
+                $result['is_boss'] = $isBoss;
+                $result['attends_public'] = $attendsPublic;
+
+                return $result;
+            })
                 ->values()
                 ->all();
 
@@ -4058,44 +4197,51 @@ class ExecutiveReportDownloadController extends Controller
             $evaluations = $rows
                 ->groupBy('evaluation_id')
                 ->map(function ($items, $evaluationId) {
-                    $result = $this->buildReferenceThreeEvaluationResult(
-                        (string) $evaluationId,
-                        (string) ($items->first()->source ?? 'paper'),
-                        $items
-                    );
+                $first = $items->first();
 
-                    $first = $items->first();
-                    $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
-                    if (! is_array($extra)) {
-                        $extra = [];
-                    }
+                $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
+                if (! is_array($extra)) {
+                    $extra = [];
+                }
 
-                    $result['folio'] = $this->safeValue($first->personal_folio);
-                    $result['name'] = $this->safeValue($first->evaluee_name);
-                    $result['area'] = $this->safeValue($first->department);
-                    $result['position'] = $this->safeValue($first->position);
-                    $result['work_schedule'] = $this->safeValue($first->work_schedule);
-                    $result['is_boss'] = $this->extractWorkerFlag($extra, [
-                        'jefe',
-                        'soy_jefe',
-                        'is_boss',
-                        'is_manager',
-                        'supervises_people',
-                        'supervisa_personal',
-                        'jefe_trabajadores',
-                    ]);
-                    $result['attends_public'] = $this->extractWorkerFlag($extra, [
-                        'atiende',
-                        'atiende_clientes',
-                        'atencion_clientes',
-                        'servicio_clientes',
-                        'servicio_usuarios',
-                        'client_service',
-                        'attends_public',
-                    ]);
+                $isBoss = $this->extractWorkerFlag($extra, [
+                    'jefe',
+                    'soy_jefe',
+                    'is_boss',
+                    'is_manager',
+                    'supervises_people',
+                    'supervisa_personal',
+                    'jefe_trabajadores',
+                ]);
 
-                    return $result;
-                })
+                $attendsPublic = $this->extractWorkerFlag($extra, [
+                    'atiende',
+                    'atiende_clientes',
+                    'atencion_clientes',
+                    'servicio_clientes',
+                    'servicio_usuarios',
+                    'client_service',
+                    'attends_public',
+                ]);
+
+                $result = $this->buildReferenceThreeEvaluationResult(
+                    (string) $evaluationId,
+                    (string) ($first->source ?? 'paper'),
+                    $items,
+                    $attendsPublic,
+                    $isBoss
+                );
+
+                $result['folio'] = $this->safeValue($first->personal_folio);
+                $result['name'] = $this->safeValue($first->evaluee_name);
+                $result['area'] = $this->safeValue($first->department);
+                $result['position'] = $this->safeValue($first->position);
+                $result['work_schedule'] = $this->safeValue($first->work_schedule);
+                $result['is_boss'] = $isBoss;
+                $result['attends_public'] = $attendsPublic;
+
+                return $result;
+            })
                 ->values()
                 ->all();
 
@@ -4165,44 +4311,51 @@ class ExecutiveReportDownloadController extends Controller
             $evaluations = $rows
                 ->groupBy('evaluation_id')
                 ->map(function ($items, $evaluationId) {
-                    $result = $this->buildReferenceThreeEvaluationResult(
-                        (string) $evaluationId,
-                        (string) ($items->first()->source ?? 'paper'),
-                        $items
-                    );
+                $first = $items->first();
 
-                    $first = $items->first();
-                    $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
-                    if (! is_array($extra)) {
-                        $extra = [];
-                    }
+                $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
+                if (! is_array($extra)) {
+                    $extra = [];
+                }
 
-                    $result['folio'] = $this->safeValue($first->personal_folio);
-                    $result['name'] = $this->safeValue($first->evaluee_name);
-                    $result['area'] = $this->safeValue($first->department);
-                    $result['position'] = $this->safeValue($first->position);
-                    $result['work_schedule'] = $this->safeValue($first->work_schedule);
-                    $result['is_boss'] = $this->extractWorkerFlag($extra, [
-                        'jefe',
-                        'soy_jefe',
-                        'is_boss',
-                        'is_manager',
-                        'supervises_people',
-                        'supervisa_personal',
-                        'jefe_trabajadores',
-                    ]);
-                    $result['attends_public'] = $this->extractWorkerFlag($extra, [
-                        'atiende',
-                        'atiende_clientes',
-                        'atencion_clientes',
-                        'servicio_clientes',
-                        'servicio_usuarios',
-                        'client_service',
-                        'attends_public',
-                    ]);
+                $isBoss = $this->extractWorkerFlag($extra, [
+                    'jefe',
+                    'soy_jefe',
+                    'is_boss',
+                    'is_manager',
+                    'supervises_people',
+                    'supervisa_personal',
+                    'jefe_trabajadores',
+                ]);
 
-                    return $result;
-                })
+                $attendsPublic = $this->extractWorkerFlag($extra, [
+                    'atiende',
+                    'atiende_clientes',
+                    'atencion_clientes',
+                    'servicio_clientes',
+                    'servicio_usuarios',
+                    'client_service',
+                    'attends_public',
+                ]);
+
+                $result = $this->buildReferenceThreeEvaluationResult(
+                    (string) $evaluationId,
+                    (string) ($first->source ?? 'paper'),
+                    $items,
+                    $attendsPublic,
+                    $isBoss
+                );
+
+                $result['folio'] = $this->safeValue($first->personal_folio);
+                $result['name'] = $this->safeValue($first->evaluee_name);
+                $result['area'] = $this->safeValue($first->department);
+                $result['position'] = $this->safeValue($first->position);
+                $result['work_schedule'] = $this->safeValue($first->work_schedule);
+                $result['is_boss'] = $isBoss;
+                $result['attends_public'] = $attendsPublic;
+
+                return $result;
+            })
                 ->values()
                 ->all();
 
@@ -4484,33 +4637,40 @@ class ExecutiveReportDownloadController extends Controller
             $evaluations = $rows
                 ->groupBy('evaluation_id')
                 ->map(function ($items, $evaluationId) {
-                    $result = $this->buildReferenceThreeEvaluationResult(
-                        (string) $evaluationId,
-                        (string) ($items->first()->source ?? 'paper'),
-                        $items
-                    );
+                $first = $items->first();
 
-                    $first = $items->first();
-                    $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
-                    if (! is_array($extra)) {
-                        $extra = [];
-                    }
+                $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
+                if (! is_array($extra)) {
+                    $extra = [];
+                }
 
-                    $result['folio'] = $this->safeValue($first->personal_folio);
-                    $result['name'] = $this->safeValue($first->evaluee_name);
-                    $result['area'] = $this->safeValue($first->department);
-                    $result['position'] = $this->safeValue($first->position);
-                    $result['is_boss'] = $this->extractWorkerFlag($extra, [
-                        'jefe', 'soy_jefe', 'is_boss', 'is_manager',
-                        'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
-                    ]);
-                    $result['attends_public'] = $this->extractWorkerFlag($extra, [
-                        'atiende', 'atiende_clientes', 'atencion_clientes',
-                        'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
-                    ]);
+                $isBoss = $this->extractWorkerFlag($extra, [
+                    'jefe', 'soy_jefe', 'is_boss', 'is_manager',
+                    'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
+                ]);
 
-                    return $result;
-                })
+                $attendsPublic = $this->extractWorkerFlag($extra, [
+                    'atiende', 'atiende_clientes', 'atencion_clientes',
+                    'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
+                ]);
+
+                $result = $this->buildReferenceThreeEvaluationResult(
+                    (string) $evaluationId,
+                    (string) ($first->source ?? 'paper'),
+                    $items,
+                    $attendsPublic,
+                    $isBoss
+                );
+
+                $result['folio'] = $this->safeValue($first->personal_folio);
+                $result['name'] = $this->safeValue($first->evaluee_name);
+                $result['area'] = $this->safeValue($first->department);
+                $result['position'] = $this->safeValue($first->position);
+                $result['is_boss'] = $isBoss;
+                $result['attends_public'] = $attendsPublic;
+
+                return $result;
+            })
                 ->values()
                 ->all();
 
@@ -4548,12 +4708,13 @@ class ExecutiveReportDownloadController extends Controller
                 ->where('pe.processing_status', 'completed')
                 ->whereNull('pe.deleted_at')
                 ->select(
-                    'pe.id as evaluation_id',
-                    'pe.source',
-                    'ea.question_key',
-                    'ea.answer_value',
-                    'dd.department'
-                )
+                'pe.id as evaluation_id',
+                'pe.source',
+                'ea.question_key',
+                'ea.answer_value',
+                'dd.department',
+                'dd.extra_fields'
+            )
                 ->orderBy('pe.id')
                 ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
                 ->get();
@@ -4561,17 +4722,35 @@ class ExecutiveReportDownloadController extends Controller
             $evaluations = $rows
                 ->groupBy('evaluation_id')
                 ->map(function ($items, $evaluationId) {
-                    $result = $this->buildReferenceThreeEvaluationResult(
-                        (string) $evaluationId,
-                        (string) ($items->first()->source ?? 'paper'),
-                        $items
-                    );
+                $first = $items->first();
 
-                    $first = $items->first();
-                    $result['area'] = $this->safeValue($first->department);
+                $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
+                if (! is_array($extra)) {
+                    $extra = [];
+                }
 
-                    return $result;
-                })
+                $isBoss = $this->extractWorkerFlag($extra, [
+                    'jefe', 'soy_jefe', 'is_boss', 'is_manager',
+                    'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
+                ]);
+
+                $attendsPublic = $this->extractWorkerFlag($extra, [
+                    'atiende', 'atiende_clientes', 'atencion_clientes',
+                    'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
+                ]);
+
+                $result = $this->buildReferenceThreeEvaluationResult(
+                    (string) $evaluationId,
+                    (string) ($first->source ?? 'paper'),
+                    $items,
+                    $attendsPublic,
+                    $isBoss
+                );
+
+                $result['area'] = $this->safeValue($first->department);
+
+                return $result;
+            })
                 ->values()
                 ->all();
 
@@ -4630,13 +4809,14 @@ class ExecutiveReportDownloadController extends Controller
                 ->where('pe.processing_status', 'completed')
                 ->whereNull('pe.deleted_at')
                 ->select(
-                    'pe.id as evaluation_id',
-                    'pe.source',
-                    'pe.personal_folio',
-                    'pe.evaluee_name',
-                    'ea.question_key',
-                    'ea.answer_value'
-                )
+                'pe.id as evaluation_id',
+                'pe.source',
+                'pe.personal_folio',
+                'pe.evaluee_name',
+                'ea.question_key',
+                'ea.answer_value',
+                'dd.extra_fields'
+            )
                 ->orderBy('pe.id')
                 ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
                 ->get();
@@ -4646,14 +4826,30 @@ class ExecutiveReportDownloadController extends Controller
             return $rows
                 ->groupBy('evaluation_id')
                 ->map(function ($items, $evaluationId) use ($categoryNames) {
-                    $result = $this->buildReferenceThreeEvaluationResult(
-                        (string) $evaluationId,
-                        (string) ($items->first()->source ?? 'paper'),
-                        $items
-                    );
+                $first = $items->first();
 
-                    $first = $items->first();
+                $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
+                if (! is_array($extra)) {
+                    $extra = [];
+                }
 
+                $isBoss = $this->extractWorkerFlag($extra, [
+                    'jefe', 'soy_jefe', 'is_boss', 'is_manager',
+                    'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
+                ]);
+
+                $attendsPublic = $this->extractWorkerFlag($extra, [
+                    'atiende', 'atiende_clientes', 'atencion_clientes',
+                    'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
+                ]);
+
+                $result = $this->buildReferenceThreeEvaluationResult(
+                    (string) $evaluationId,
+                    (string) ($first->source ?? 'paper'),
+                    $items,
+                    $attendsPublic,
+                    $isBoss
+                );
                     $categories = [];
                     foreach ($categoryNames as $categoryName) {
                         $score = (int) ($result['category_scores'][$categoryName] ?? 0);
@@ -4761,13 +4957,25 @@ class ExecutiveReportDownloadController extends Controller
 
         private function extractWorkerFlag(array $payload, array $keys): bool
         {
-            foreach ($keys as $key) {
-                if (array_key_exists($key, $payload) && $this->isTruthyWorkerValue($payload[$key])) {
-                    return true;
-                }
-            }
+            $normalizedKeys = array_map(
+                fn ($key) => mb_strtolower(trim((string) $key)),
+                $keys
+            );
 
-            foreach ($payload as $value) {
+            foreach ($payload as $payloadKey => $value) {
+                $payloadKeyNormalized = mb_strtolower(trim((string) $payloadKey));
+
+                foreach ($normalizedKeys as $expectedKey) {
+                    if (
+                        $payloadKeyNormalized === $expectedKey ||
+                        str_contains($payloadKeyNormalized, $expectedKey)
+                    ) {
+                        if ($this->isTruthyWorkerValue($value)) {
+                            return true;
+                        }
+                    }
+                }
+
                 if (is_array($value) && $this->extractWorkerFlag($value, $keys)) {
                     return true;
                 }
@@ -4777,18 +4985,21 @@ class ExecutiveReportDownloadController extends Controller
         }
 
         private function isTruthyWorkerValue($value): bool
-        {
-            if (is_bool($value)) {
-                return $value;
-            }
+            {
+                if (is_bool($value)) {
+                    return $value;
+                }
 
-            if (is_numeric($value)) {
-                return (int) $value === 1;
-            }
+                if (is_numeric($value)) {
+                    return (int) $value === 1;
+                }
 
-            $value = mb_strtolower(trim((string) $value));
+                $value = mb_strtolower(trim((string) $value));
 
-            return in_array($value, ['1', 'si', 'sí', 'true', 'x', 'yes'], true);
+                return in_array($value, [
+                    '1', 'si', 'sí', 'true', 'x', 'yes',
+                    'aplica', 'activo', 'checked', 'seleccionado', 'on'
+                ], true);
         }
 
     private function addChartImageIfExists(Section $section, ?string $chartPath, int $width = 560): void
