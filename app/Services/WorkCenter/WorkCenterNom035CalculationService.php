@@ -397,6 +397,27 @@ class WorkCenterNom035CalculationService
                     $questionStats[$questionNumeric]['scores'][] = $score;
                 }
             }
+
+            for ($questionNumber = 65; $questionNumber <= 72; $questionNumber++) {
+                $questionKey = $this->normalizeQuestionKey($questionNumber);
+
+                if (array_key_exists($questionKey, $answers) || array_key_exists($questionNumber, $answers)) {
+                    continue;
+                }
+
+                if (! isset($questionStats[$questionNumber])) {
+                    continue;
+                }
+
+                $questionStats[$questionNumber]['responses']['nunca']++;
+
+                $group = in_array($questionKey, $answerValues['group1']['questions'], true)
+                    ? 'group1'
+                    : 'group2';
+
+                $score = $answerValues[$group]['values']['E'] ?? 0;
+                $questionStats[$questionNumber]['scores'][] = $score;
+            }
         }
 
         $result = [];

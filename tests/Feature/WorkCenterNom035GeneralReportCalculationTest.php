@@ -106,6 +106,82 @@ class WorkCenterNom035GeneralReportCalculationTest extends TestCase
         $this->assertSame(2, $question65Row['dimension']['score']);
     }
 
+    public function test_question_statistics_defaults_missing_conditional_answers_to_option_e(): void
+    {
+        $organization = Organization::factory()->create();
+        $workCenter = WorkCenter::factory()->create(['organization_id' => $organization->id]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'paper',
+            'referencia_iii_answers' => $this->buildAnswers('C'),
+            'referencia_iii_conditional' => [
+                'customer_service' => [
+                    'condition' => 'SI',
+                    'questions' => [
+                        65 => 'A',
+                        66 => 'B',
+                        67 => 'C',
+                        68 => 'D',
+                    ],
+                ],
+                'management' => [
+                    'condition' => 'NO',
+                    'questions' => [
+                        69 => null,
+                        70 => null,
+                        71 => null,
+                        72 => null,
+                    ],
+                ],
+            ],
+        ]);
+
+        PaperEvaluation::factory()->create([
+            'organization_id' => $organization->id,
+            'work_center_id' => $workCenter->id,
+            'processing_status' => 'completed',
+            'evaluation_type' => 'referencia_iii',
+            'source' => 'paper',
+            'referencia_iii_answers' => $this->buildAnswers('C'),
+            'referencia_iii_conditional' => [
+                'customer_service' => [
+                    'condition' => 'NO',
+                    'questions' => [
+                        65 => null,
+                        66 => null,
+                        67 => null,
+                        68 => null,
+                    ],
+                ],
+                'management' => [
+                    'condition' => 'NO',
+                    'questions' => [
+                        69 => null,
+                        70 => null,
+                        71 => null,
+                        72 => null,
+                    ],
+                ],
+            ],
+        ]);
+
+        $service = new WorkCenterNom035CalculationService;
+        $stats = $service->calculateQuestionStatistics($workCenter);
+
+        $questionStats = json_decode(json_encode($stats['questions']), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertSame(2, $questionStats[65]['totalResponses']);
+        $this->assertSame(1, $questionStats[65]['responses']['siempre']);
+        $this->assertSame(1, $questionStats[65]['responses']['nunca']);
+
+        $this->assertSame(2, $questionStats[69]['totalResponses']);
+        $this->assertSame(2, $questionStats[69]['responses']['nunca']);
+    }
+
     /**
      * @return array<int, string>
      */
