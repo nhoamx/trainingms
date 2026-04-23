@@ -431,9 +431,6 @@ class ExecutiveReportDownloadController extends Controller
             $this->addInfoRow($totalsTable, 'Empresa', $this->firstFilled($organization->name));
             $this->addInfoRow($totalsTable, 'Centro de trabajo', $this->firstFilled($workCenter->name));
             $this->addInfoRow($totalsTable, 'Plantilla registrada', (string) ($workCenter->total_workers ?? 0));
-            $this->addInfoRow($totalsTable, 'Participantes totales', (string) $summary['total_participants']);
-            $this->addInfoRow($totalsTable, 'Participantes presencial', (string) $summary['paper_participants']);
-            $this->addInfoRow($totalsTable, 'Participantes en línea', (string) $summary['online_participants']);
             $this->addInfoRow($totalsTable, 'Hombres', (string) $summary['men_total']);
             $this->addInfoRow($totalsTable, 'Mujeres', (string) $summary['women_total']);
             $this->addInfoRow($totalsTable, 'Sexo no especificado', (string) $summary['unspecified_gender_total']);
@@ -3230,9 +3227,7 @@ class ExecutiveReportDownloadController extends Controller
             ->distinct()
             ->count('pe.personal_folio');
 
-        $totalParticipants = (clone $evaluationsBase)
-            ->distinct()
-            ->count('pe.personal_folio');
+        $totalParticipants = $paperParticipants + $onlineParticipants;
 
         $demographicBase = DB::table('paper_evaluations as pe')
             ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
