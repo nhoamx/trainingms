@@ -1249,6 +1249,7 @@ interface ViolenceLaborStatistics {
 }
 
 interface Props {
+  selectedSource?: string | null;
   domainStatistics?: DomainStatistics;
   categoryStatistics?: CategoryStatistics;
   dimensionStatistics?: DimensionStatistics;
@@ -1311,8 +1312,17 @@ const props = withDefaults(defineProps<Props>(), {
 const route = (...args: unknown[]): string => (window as unknown as Window & { route: (...params: unknown[]) => string }).route(...args);
 
 const currentSource = computed<'paper' | 'online' | null>(() => {
-  const source = new URLSearchParams(window.location.search).get('source');
+  // First, try to use the selectedSource prop from Inertia (passed via URL path parameter)
+  if (props.selectedSource === 'paper' || props.selectedSource === 'online') {
+    return props.selectedSource;
+  }
+  if (props.selectedSource === null) {
+    // null means 'all' - both online and paper
+    return null;
+  }
 
+  // Fallback to URL query string parameter
+  const source = new URLSearchParams(window.location.search).get('source');
   if (source === 'paper' || source === 'online') {
     return source;
   }
@@ -1479,6 +1489,16 @@ const filteredViolenceParticipants = computed(() => {
   const participants = props.violenceLaborStatistics.participants ?? [];
 
   return participants.filter((participant) => {
+    // Filter by source (online/paper/all)
+    if (currentSource.value !== null) {
+      // If a specific source is selected, only include that source
+      if (normalizeSource(participant.source) !== currentSource.value) {
+        return false;
+      }
+    }
+    // If currentSource is null (meaning 'all'), include both sources
+    
+    // Then apply demographic filters
     if (analysisFilters.value.genero && participant.demographics.genero !== analysisFilters.value.genero) {
       return false;
     }
@@ -1670,11 +1690,21 @@ const groupedGeneralReport = computed(() => {
   return grouped;
 });
 
-// Filtered evaluations based on demographic filters
+// Filtered evaluations based on demographic filters AND source filter
 const filteredEvaluations = computed(() => {
   if (!props.analysisData) return [];
   
   return props.analysisData.evaluations.filter(evaluation => {
+    // Filter by source (online/paper/all)
+    if (currentSource.value !== null) {
+      // If a specific source is selected, only include that source
+      if (normalizeSource(evaluation.source) !== currentSource.value) {
+        return false;
+      }
+    }
+    // If currentSource is null (meaning 'all'), include both sources
+    
+    // Then apply demographic filters
     if (analysisFilters.value.genero && evaluation.demographics.genero !== analysisFilters.value.genero) {
       return false;
     }
@@ -1951,7 +1981,19 @@ const participantsWithScores = computed(() => {
     })
   );
 
-  const participants = props.analysisData.evaluations.map((evaluation: any) => {
+  // Filter evaluations by source first, then map
+  const filteredBySource = props.analysisData.evaluations.filter((evaluation: any) => {
+    // If a specific source is selected, only include that source
+    if (currentSource.value !== null) {
+      if (normalizeSource(evaluation.source) !== currentSource.value) {
+        return false;
+      }
+    }
+    // If currentSource is null (meaning 'all'), include both sources
+    return true;
+  });
+
+  const participants = filteredBySource.map((evaluation: any) => {
     // Use the total_score from backend calculation
     const score = evaluation.total_score ?? 0;
 

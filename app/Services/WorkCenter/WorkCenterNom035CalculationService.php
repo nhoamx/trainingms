@@ -382,9 +382,11 @@ class WorkCenterNom035CalculationService
                     continue;
                 }
 
-                if (isset($questionStats[$questionNumber]) && $answer !== null && isset($responseLabels[$answer])) {
+                $questionNumeric = (int) $questionNumber;
+
+                if (isset($questionStats[$questionNumeric]) && $answer !== null && isset($responseLabels[$answer])) {
                     $responseLabel = $responseLabels[$answer];
-                    $questionStats[$questionNumber]['responses'][$responseLabel]++;
+                    $questionStats[$questionNumeric]['responses'][$responseLabel]++;
 
                     $questionKey = str_pad($questionNumber, 2, '0', STR_PAD_LEFT);
                     $group = in_array($questionKey, $answerValues['group1']['questions'])
@@ -392,7 +394,7 @@ class WorkCenterNom035CalculationService
                         : 'group2';
 
                     $score = $answerValues[$group]['values'][$answer] ?? 0;
-                    $questionStats[$questionNumber]['scores'][] = $score;
+                    $questionStats[$questionNumeric]['scores'][] = $score;
                 }
             }
         }

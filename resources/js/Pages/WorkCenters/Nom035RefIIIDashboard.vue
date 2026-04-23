@@ -68,6 +68,7 @@
               :prevention-actions="preventionActions"
               :can-manage-prevention-actions="isAdmin"
               :work-center-id="props.dashboardData.work_center.id"
+              :selected-source="props.selectedSource"
             />
           </div>
         </div>
@@ -255,6 +256,7 @@ interface EvaluationType {
 }
 
 interface Props {
+  selectedSource?: string | null;
   dashboardData: DashboardData;
   domainStatistics?: DomainStatistics;
   categoryStatistics?: CategoryStatistics;
