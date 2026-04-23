@@ -142,50 +142,72 @@ class ExecutiveReportDownloadController extends Controller
             ['alignment' => Jc::END, 'spaceAfter' => 0]
         );
 
-        $this->addCover($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addGeneralInformationSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addPaperDemographicSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addReferenceThreeGlobalRiskSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addWorkplaceViolenceQuantitativeSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addReferenceThreeCategorySection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addReferenceThreeDimensionSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addWorkerIdentificationByDimensionSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addReferenceThreeQuestionGlobalSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addReferenceThreeQuestionGenderSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addReferenceThreeQuestionPositionSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addReferenceThreeQuestionDepartmentSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addReferenceThreeQuestionWorkScheduleSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addReferenceThreeQuestionRiskFactorSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addWorkerIdentificationByPositionSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addWorkerIdentificationByDepartmentSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addWorkerIdentificationByWorkScheduleSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addSevereTraumaticEventsSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addWorkplaceViolenceWorkersSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addFinalRiskWorkersSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addDomainQuantitativeAnalysisSection($section, $organization, $workCenter);
-        $section->addPageBreak();
-        $this->addWorkerIdentificationByCategorySection($section, $organization, $workCenter);
-        return $phpWord;
+                $this->addCover($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addGeneralInformationSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addPaperDemographicSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addReferenceThreeCategorySection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addReferenceThreeDimensionSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addReferenceThreeQuestionGlobalSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addReferenceThreeQuestionGenderSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addReferenceThreeQuestionWorkScheduleSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addReferenceThreeQuestionDepartmentSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addReferenceThreeQuestionPositionSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addReferenceThreeQuestionRiskFactorSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addWorkerIdentificationByDimensionSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addWorkerIdentificationByDepartmentSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addWorkerIdentificationByPositionSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addWorkerIdentificationByWorkScheduleSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addSevereTraumaticEventsSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addWorkplaceViolenceWorkersSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addFinalRiskWorkersSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addDomainQuantitativeAnalysisSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addWorkerIdentificationByCategorySection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addReferenceThreeGlobalRiskSection($section, $organization, $workCenter);
+                $section->addTextBreak(1);
+
+                $this->addWorkplaceViolenceQuantitativeSection($section, $organization, $workCenter);
+
+                return $phpWord;
             }
 
     private function addCover(Section $section, Organization $organization, WorkCenter $workCenter): void
@@ -437,15 +459,14 @@ class ExecutiveReportDownloadController extends Controller
 
             $section->addTextBreak(1);
 
-            $this->addDistributionTable($section, 'Sexo', $summary['gender']);
-            $this->addDistributionTable($section, 'Edad', $summary['age']);
+            $this->addDistributionTable($section, 'Rango de edad', $summary['age']);
             $this->addDistributionTable($section, 'Estado civil', $summary['marital_status']);
             $this->addDistributionTable($section, 'Nivel de estudios', $summary['education_level']);
+            $this->addDistributionTable($section, 'Área', $summary['department']);
             $this->addDistributionTable($section, 'Puesto', $summary['position']);
-            $this->addDistributionTable($section, 'Departamento / Área', $summary['department']);
             $this->addDistributionTable($section, 'Tipo de puesto', $summary['position_type']);
-            $this->addDistributionTable($section, 'Tipo de contrato', $summary['contract_type']);
             $this->addDistributionTable($section, 'Tipo de personal', $summary['personnel_type']);
+            $this->addDistributionTable($section, 'Tipo de contratación', $summary['contract_type']);
             $this->addDistributionTable($section, 'Jornada laboral', $summary['work_schedule']);
             $this->addDistributionTable($section, 'Rotación de turno', $summary['shift_rotation']);
             $this->addDistributionTable($section, 'Antigüedad en el puesto actual', $summary['time_in_current_position']);
@@ -923,7 +944,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $positions = $this->getQuestionAveragePositionLabels($organization->id, $workCenter->id);
 
-            $printed = false;
+            $blocks = [];
 
             foreach ($positions as $row) {
                 $positionLabel = trim((string) ($row['label'] ?? ''));
@@ -942,33 +963,43 @@ class ExecutiveReportDownloadController extends Controller
                     continue;
                 }
 
-                if ($printed) {
-                    $section->addPageBreak();
-                }
-
-                $section->addText(
-            'c) Por Naturaleza de funciones. I. De los Puestos',
-            ['bold' => true, 'size' => 12],
-            ['spaceAfter' => 120]
-        );
-
-                $this->addQuestionAverageGenderBand($section, $positionLabel);
-                $this->renderQuestionAverageMatrixTable($section, $summary);
-
-                $printed = true;
+                $blocks[] = [
+                    'label' => $positionLabel,
+                    'summary' => $summary,
+                ];
             }
 
-            if (! $printed) {
+            usort($blocks, function ($a, $b) {
+                return $this->compareQuestionSummaryBlocks($a, $b);
+            });
+
+            if (empty($blocks)) {
                 $section->addText(
-            'c) Por Naturaleza de funciones. I. De los Puestos',
-            ['bold' => true, 'size' => 12],
-            ['spaceAfter' => 120]
-        );
+                    'c) Por Naturaleza de funciones. I. De los Puestos',
+                    ['bold' => true, 'size' => 12],
+                    ['spaceAfter' => 120]
+                );
 
                 $section->addText(
                     'No hay información de puestos disponible para generar esta sección.',
                     ['size' => 10, 'color' => '374151']
                 );
+                return;
+            }
+
+            foreach ($blocks as $index => $block) {
+                if ($index > 0) {
+                    $section->addPageBreak();
+                }
+
+                $section->addText(
+                    'c) Por Naturaleza de funciones. I. De los Puestos',
+                    ['bold' => true, 'size' => 12],
+                    ['spaceAfter' => 120]
+                );
+
+                $this->addQuestionAverageGenderBand($section, $block['label']);
+                $this->renderQuestionAverageMatrixTable($section, $block['summary']);
             }
         }
 
@@ -979,7 +1010,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $departments = $this->getQuestionAverageDepartmentLabels($organization->id, $workCenter->id);
 
-            $printed = false;
+            $blocks = [];
 
             foreach ($departments as $row) {
                 $departmentLabel = trim((string) ($row['label'] ?? ''));
@@ -998,33 +1029,43 @@ class ExecutiveReportDownloadController extends Controller
                     continue;
                 }
 
-                if ($printed) {
-                    $section->addPageBreak();
-                }
-
-                $section->addText(
-            'c) Por Naturaleza de funciones. II. De las Áreas',
-            ['bold' => true, 'size' => 12],
-            ['spaceAfter' => 120]
-        );
-
-                $this->addQuestionAverageGenderBand($section, $departmentLabel);
-                $this->renderQuestionAverageMatrixTable($section, $summary);
-
-                $printed = true;
+                $blocks[] = [
+                    'label' => $departmentLabel,
+                    'summary' => $summary,
+                ];
             }
 
-            if (! $printed) {
+            usort($blocks, function ($a, $b) {
+                return $this->compareQuestionSummaryBlocks($a, $b);
+            });
+
+            if (empty($blocks)) {
                 $section->addText(
-            'c) Por Naturaleza de funciones. II. De las Áreas',
-            ['bold' => true, 'size' => 12],
-            ['spaceAfter' => 120]
-        );
+                    'c) Por Naturaleza de funciones. II. De las Áreas',
+                    ['bold' => true, 'size' => 12],
+                    ['spaceAfter' => 120]
+                );
 
                 $section->addText(
                     'No hay información de áreas disponible para generar esta sección.',
                     ['size' => 10, 'color' => '374151']
                 );
+                return;
+            }
+
+            foreach ($blocks as $index => $block) {
+                if ($index > 0) {
+                    $section->addPageBreak();
+                }
+
+                $section->addText(
+                    'c) Por Naturaleza de funciones. II. De las Áreas',
+                    ['bold' => true, 'size' => 12],
+                    ['spaceAfter' => 120]
+                );
+
+                $this->addQuestionAverageGenderBand($section, $block['label']);
+                $this->renderQuestionAverageMatrixTable($section, $block['summary']);
             }
         }
 
@@ -1035,7 +1076,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $schedules = $this->getQuestionAverageWorkScheduleLabels($organization->id, $workCenter->id);
 
-            $printed = false;
+            $blocks = [];
 
             foreach ($schedules as $row) {
                 $scheduleLabel = trim((string) ($row['label'] ?? ''));
@@ -1054,24 +1095,17 @@ class ExecutiveReportDownloadController extends Controller
                     continue;
                 }
 
-                if ($printed) {
-                    $section->addPageBreak();
-                }
-
-                $section->addText(
-            'c) Por Naturaleza de funciones. III. De la Jornada Laboral',
-            ['bold' => true, 'size' => 12],
-            ['spaceAfter' => 120]
-        );
-
-                $this->addQuestionAverageGenderBand($section, $scheduleLabel);
-                $this->renderQuestionAverageMatrixTable($section, $summary);
-
-                $printed = true;
+                $blocks[] = [
+                    'label' => $scheduleLabel,
+                    'summary' => $summary,
+                ];
             }
 
-            if (! $printed) {
+            usort($blocks, function ($a, $b) {
+                return $this->compareQuestionSummaryBlocks($a, $b);
+            });
 
+            if (empty($blocks)) {
                 $section->addText(
                     'c) Por Naturaleza de funciones. III. De la Jornada Laboral',
                     ['bold' => true, 'size' => 12],
@@ -1082,6 +1116,22 @@ class ExecutiveReportDownloadController extends Controller
                     'No hay información de jornada laboral disponible para generar esta sección.',
                     ['size' => 10, 'color' => '374151']
                 );
+                return;
+            }
+
+            foreach ($blocks as $index => $block) {
+                if ($index > 0) {
+                    $section->addPageBreak();
+                }
+
+                $section->addText(
+                    'c) Por Naturaleza de funciones. III. De la Jornada Laboral',
+                    ['bold' => true, 'size' => 12],
+                    ['spaceAfter' => 120]
+                );
+
+                $this->addQuestionAverageGenderBand($section, $block['label']);
+                $this->renderQuestionAverageMatrixTable($section, $block['summary']);
             }
         }
 
@@ -1228,10 +1278,10 @@ class ExecutiveReportDownloadController extends Controller
                         }
 
                         $table->addCell(4500)->addText(
-                            $dimension['name'],
-                            ['size' => 9],
-                            ['spaceAfter' => 0]
-                        );
+                        $dimension['name'],
+                        ['size' => 9],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
 
                         $table->addCell(700, ['bgColor' => $dimensionStyle['bg']])->addText(
                             (string) $dimension['score'],
@@ -1324,8 +1374,6 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addWorkerHeaderCell($table, 5200, 'Nombre');
                 $this->addWorkerHeaderCell($table, 2100, 'Area');
                 $this->addWorkerHeaderCell($table, 2100, 'Puesto');
-                $this->addWorkerHeaderCell($table, 850, 'Jefe');
-                $this->addWorkerHeaderCell($table, 850, 'Atiende');
 
                 foreach ($group['rows'] as $row) {
                 $table->addRow();
@@ -1340,10 +1388,7 @@ class ExecutiveReportDownloadController extends Controller
                         'size' => 10,
                         'color' => $dimensionStyle['text'],
                     ],
-                    [
-                        'alignment' => Jc::CENTER,
-                        'spaceAfter' => 0,
-                    ]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
                 $table->addCell(900)->addText(
@@ -1365,30 +1410,18 @@ class ExecutiveReportDownloadController extends Controller
                 $table->addCell(5200)->addText(
                     $this->safeValue($row['name']),
                     ['size' => 10],
-                    ['spaceAfter' => 0]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
                 $table->addCell(2100)->addText(
                     $this->safeValue($row['area']),
                     ['size' => 10],
-                    ['spaceAfter' => 0]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
                 $table->addCell(2100)->addText(
                     $this->safeValue($row['position']),
                     ['size' => 10],
-                    ['spaceAfter' => 0]
-                );
-
-                $table->addCell(850)->addText(
-                    $this->workerFlagMark((bool) ($row['is_boss'] ?? false)),
-                    ['bold' => true, 'size' => 12],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(850)->addText(
-                    $this->workerFlagMark((bool) ($row['attends_public'] ?? false)),
-                    ['bold' => true, 'size' => 12],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
             }
@@ -1402,11 +1435,11 @@ class ExecutiveReportDownloadController extends Controller
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
-                $table->addCell(7200, ['gridSpan' => 4, 'bgColor' => 'D9D9D9'])->addText(
-                    $group['number'] . ' ' . $group['name'],
-                    ['bold' => true, 'size' => 10],
-                    ['spaceAfter' => 0]
-                );
+                $table->addCell(7200, ['gridSpan' => 2, 'bgColor' => 'D9D9D9'])->addText(
+                $group['number'] . ' ' . $group['name'],
+                ['bold' => true, 'size' => 10],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
 
                 $table->addCell(950, ['bgColor' => 'FF1A1A'])->addText(
                     (string) $group['totals']['muy_alto'],
@@ -1477,8 +1510,6 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addWorkerHeaderCell($table, 5200, 'Nombre');
                 $this->addWorkerHeaderCell($table, 2200, 'Area');
                 $this->addWorkerHeaderCell($table, 1700, 'Jornada');
-                $this->addWorkerHeaderCell($table, 850, 'Jefe');
-                $this->addWorkerHeaderCell($table, 850, 'Atiende');
 
                 foreach ($group['rows'] as $row) {
                     $table->addRow();
@@ -1500,32 +1531,20 @@ class ExecutiveReportDownloadController extends Controller
                     $table->addCell(5200)->addText(
                         $this->safeValue($row['name']),
                         ['size' => 10],
-                        ['spaceAfter' => 0]
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
 
                     $table->addCell(2200)->addText(
                         $this->safeValue($row['area']),
                         ['size' => 10],
-                        ['spaceAfter' => 0]
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
 
                     $table->addCell(1700)->addText(
                         $this->safeValue($row['work_schedule']),
                         ['size' => 10],
-                        ['spaceAfter' => 0]
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
-
-                    $table->addCell(850)->addText(
-                    $this->workerFlagMark((bool) ($row['is_boss'] ?? false)),
-                    ['bold' => true, 'size' => 12],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(850)->addText(
-                    $this->workerFlagMark((bool) ($row['attends_public'] ?? false)),
-                    ['bold' => true, 'size' => 12],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
                 }
             }
         }
@@ -1579,8 +1598,6 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addWorkerHeaderCell($table, 5200, 'Nombre');
                 $this->addWorkerHeaderCell($table, 2200, 'Puesto');
                 $this->addWorkerHeaderCell($table, 1700, 'Jornada');
-                $this->addWorkerHeaderCell($table, 850, 'Jefe');
-                $this->addWorkerHeaderCell($table, 850, 'Atiende');
 
                 foreach ($group['rows'] as $row) {
                     $table->addRow();
@@ -1602,32 +1619,20 @@ class ExecutiveReportDownloadController extends Controller
                     $table->addCell(5200)->addText(
                         $this->safeValue($row['name']),
                         ['size' => 10],
-                        ['spaceAfter' => 0]
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
 
                     $table->addCell(2200)->addText(
                         $this->safeValue($row['position']),
                         ['size' => 10],
-                        ['spaceAfter' => 0]
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
 
                     $table->addCell(1700)->addText(
                         $this->safeValue($row['work_schedule']),
                         ['size' => 10],
-                        ['spaceAfter' => 0]
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
-
-                    $table->addCell(850)->addText(
-                    $this->workerFlagMark((bool) ($row['is_boss'] ?? false)),
-                    ['bold' => true, 'size' => 12],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(850)->addText(
-                    $this->workerFlagMark((bool) ($row['attends_public'] ?? false)),
-                    ['bold' => true, 'size' => 12],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
                 }
             }
         }
@@ -1681,8 +1686,6 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addWorkerHeaderCell($table, 5200, 'Nombre');
                 $this->addWorkerHeaderCell($table, 2200, 'Area');
                 $this->addWorkerHeaderCell($table, 2200, 'Puesto');
-                $this->addWorkerHeaderCell($table, 850, 'Jefe');
-                $this->addWorkerHeaderCell($table, 850, 'Atiende');
 
                 foreach ($group['rows'] as $row) {
                     $table->addRow();
@@ -1704,32 +1707,20 @@ class ExecutiveReportDownloadController extends Controller
                     $table->addCell(5200)->addText(
                         $this->safeValue($row['name']),
                         ['size' => 10],
-                        ['spaceAfter' => 0]
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
 
                     $table->addCell(2200)->addText(
                         $this->safeValue($row['area']),
                         ['size' => 10],
-                        ['spaceAfter' => 0]
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
 
                     $table->addCell(2200)->addText(
                         $this->safeValue($row['position']),
                         ['size' => 10],
-                        ['spaceAfter' => 0]
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
-
-                    $table->addCell(850)->addText(
-                    $this->workerFlagMark((bool) ($row['is_boss'] ?? false)),
-                    ['bold' => true, 'size' => 12],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(850)->addText(
-                    $this->workerFlagMark((bool) ($row['attends_public'] ?? false)),
-                    ['bold' => true, 'size' => 12],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
                 }
             }
         }
@@ -2010,8 +2001,6 @@ class ExecutiveReportDownloadController extends Controller
             $this->addWorkerHeaderCell($table, 5200, 'Nombre');
             $this->addWorkerHeaderCell($table, 2200, 'Area');
             $this->addWorkerHeaderCell($table, 1700, 'Puesto');
-            $this->addWorkerHeaderCell($table, 850, 'Jefe');
-            $this->addWorkerHeaderCell($table, 850, 'Atiende');
 
             foreach ($rows as $row) {
                 $table->addRow();
@@ -2033,32 +2022,20 @@ class ExecutiveReportDownloadController extends Controller
                 $table->addCell(5200)->addText(
                     $this->safeValue($row['name']),
                     ['size' => 10],
-                    ['spaceAfter' => 0]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
                 $table->addCell(2200)->addText(
                     $this->safeValue($row['area']),
                     ['size' => 10],
-                    ['spaceAfter' => 0]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
                 $table->addCell(1700)->addText(
                     $this->safeValue($row['position']),
                     ['size' => 10],
-                    ['spaceAfter' => 0]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
-
-                $table->addCell(850)->addText(
-                $this->workerFlagMark((bool) ($row['is_boss'] ?? false)),
-                ['bold' => true, 'size' => 12],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $table->addCell(850)->addText(
-                $this->workerFlagMark((bool) ($row['attends_public'] ?? false)),
-                ['bold' => true, 'size' => 12],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
             }
         }
 
@@ -2987,7 +2964,7 @@ class ExecutiveReportDownloadController extends Controller
             $table->addCell($width, ['bgColor' => 'FFFFFF'])->addText(
                 $label,
                 ['size' => 10, 'color' => '111111'],
-                ['spaceAfter' => 0]
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
         }
 
@@ -3176,9 +3153,9 @@ class ExecutiveReportDownloadController extends Controller
 
             $table->addRow();
             $table->addCell(7000, ['bgColor' => '062A78'])->addText(
-                'Categoría',
+                $title,
                 ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
-                ['spaceAfter' => 0]
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
             $table->addCell(1800, ['bgColor' => '062A78'])->addText(
                 'Total',
@@ -3188,8 +3165,16 @@ class ExecutiveReportDownloadController extends Controller
 
             if (empty($rows)) {
                 $table->addRow();
-                $table->addCell(7000)->addText('N/D', ['size' => 10, 'color' => '374151'], ['spaceAfter' => 0]);
-                $table->addCell(1800)->addText('0', ['bold' => true, 'size' => 10, 'color' => '374151'], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+                $table->addCell(7000)->addText(
+                    'N/D',
+                    ['size' => 10, 'color' => '374151'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+                $table->addCell(1800)->addText(
+                    '0',
+                    ['bold' => true, 'size' => 10, 'color' => '374151'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
                 return;
             }
 
@@ -3198,7 +3183,7 @@ class ExecutiveReportDownloadController extends Controller
                 $table->addCell(7000)->addText(
                     $this->safeValue($row['label'] ?? 'N/D'),
                     ['size' => 10, 'color' => '111827'],
-                    ['spaceAfter' => 0]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
                 $table->addCell(1800)->addText(
                     (string) ($row['total'] ?? 0),
@@ -3206,6 +3191,7 @@ class ExecutiveReportDownloadController extends Controller
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
             }
+            
         }
 
     private function getParticipantSummary(string $organizationId, string $workCenterId): array
@@ -3722,6 +3708,120 @@ class ExecutiveReportDownloadController extends Controller
             };
         }
 
+    private function riskLevelWeight(string $levelKey): int
+        {
+            return match ($levelKey) {
+                'muy_alto' => 5,
+                'alto' => 4,
+                'medio' => 3,
+                'bajo' => 2,
+                default => 1,
+            };
+        }
+
+        private function compareRiskRows(
+            array $a,
+            array $b,
+            string $levelField = 'global_level_key',
+            string $scoreField = 'global_score'
+        ): int {
+            $riskCompare = $this->riskLevelWeight((string) ($b[$levelField] ?? 'nulo'))
+                <=> $this->riskLevelWeight((string) ($a[$levelField] ?? 'nulo'));
+
+            if ($riskCompare !== 0) {
+                return $riskCompare;
+            }
+
+            $scoreCompare = ((int) ($b[$scoreField] ?? 0))
+                <=> ((int) ($a[$scoreField] ?? 0));
+
+            if ($scoreCompare !== 0) {
+                return $scoreCompare;
+            }
+
+            return strnatcasecmp(
+                (string) ($a['name'] ?? $a['folio'] ?? ''),
+                (string) ($b['name'] ?? $b['folio'] ?? '')
+            );
+        }
+
+        private function compareGroupedTablesByRisk(array $a, array $b): int
+        {
+            $aFirst = $a['rows'][0] ?? [];
+            $bFirst = $b['rows'][0] ?? [];
+
+            $aLevel = (string) ($aFirst['dimension_level_key'] ?? $aFirst['global_level_key'] ?? 'nulo');
+            $bLevel = (string) ($bFirst['dimension_level_key'] ?? $bFirst['global_level_key'] ?? 'nulo');
+
+            $riskCompare = $this->riskLevelWeight($bLevel) <=> $this->riskLevelWeight($aLevel);
+
+            if ($riskCompare !== 0) {
+                return $riskCompare;
+            }
+
+            $aScore = (int) ($aFirst['dimension_score'] ?? $aFirst['global_score'] ?? 0);
+            $bScore = (int) ($bFirst['dimension_score'] ?? $bFirst['global_score'] ?? 0);
+
+            $scoreCompare = $bScore <=> $aScore;
+
+            if ($scoreCompare !== 0) {
+                return $scoreCompare;
+            }
+
+            return strnatcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+        }
+
+        private function compareQuestionSummaryBlocks(array $a, array $b): int
+        {
+            $aLevel = $this->classifyNom035Score('global', null, (int) ($a['summary']['final_total'] ?? 0))['key'] ?? 'nulo';
+            $bLevel = $this->classifyNom035Score('global', null, (int) ($b['summary']['final_total'] ?? 0))['key'] ?? 'nulo';
+
+            $riskCompare = $this->riskLevelWeight($bLevel) <=> $this->riskLevelWeight($aLevel);
+
+            if ($riskCompare !== 0) {
+                return $riskCompare;
+            }
+
+            $scoreCompare = ((int) ($b['summary']['final_total'] ?? 0))
+                <=> ((int) ($a['summary']['final_total'] ?? 0));
+
+            if ($scoreCompare !== 0) {
+                return $scoreCompare;
+            }
+
+            return strnatcasecmp((string) ($a['label'] ?? ''), (string) ($b['label'] ?? ''));
+        }
+
+        private function sortDimensionSummariesByRisk(array $dimensions): array
+        {
+            usort($dimensions, function ($a, $b) {
+                $riskCompare = $this->riskLevelWeight((string) ($b['dominant_level_key'] ?? 'nulo'))
+                    <=> $this->riskLevelWeight((string) ($a['dominant_level_key'] ?? 'nulo'));
+
+                if ($riskCompare !== 0) {
+                    return $riskCompare;
+                }
+
+                $bDominant = (int) (($b['distribution'][$b['dominant_level_key'] ?? 'nulo'] ?? 0));
+                $aDominant = (int) (($a['distribution'][$a['dominant_level_key'] ?? 'nulo'] ?? 0));
+
+                if ($bDominant !== $aDominant) {
+                    return $bDominant <=> $aDominant;
+                }
+
+                $bAttention = $this->getAttentionCount($b['distribution'] ?? []);
+                $aAttention = $this->getAttentionCount($a['distribution'] ?? []);
+
+                if ($bAttention !== $aAttention) {
+                    return $bAttention <=> $aAttention;
+                }
+
+                return strnatcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+            });
+
+            return $dimensions;
+        }
+
     private function addRiskLevelDistributionTable(Section $section, string $title, array $distribution, int $totalEvaluations): void
     {
         $section->addText(
@@ -3733,9 +3833,21 @@ class ExecutiveReportDownloadController extends Controller
         $table = $section->addTable('StatsTable');
 
         $table->addRow();
-        $table->addCell(3200, ['bgColor' => 'EAF2FF'])->addText('Nivel', ['bold' => true, 'size' => 10]);
-        $table->addCell(1600, ['bgColor' => 'EAF2FF'])->addText('Total', ['bold' => true, 'size' => 10]);
-        $table->addCell(1600, ['bgColor' => 'EAF2FF'])->addText('%', ['bold' => true, 'size' => 10]);
+        $table->addCell(3200, ['bgColor' => 'EAF2FF'])->addText(
+            'Nivel',
+            ['bold' => true, 'size' => 10],
+            ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+        );
+        $table->addCell(1600, ['bgColor' => 'EAF2FF'])->addText(
+            'Total',
+            ['bold' => true, 'size' => 10],
+            ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+        );
+        $table->addCell(1600, ['bgColor' => 'EAF2FF'])->addText(
+            '%',
+            ['bold' => true, 'size' => 10],
+            ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+        );
 
         foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
             $total = (int) ($distribution[$levelKey] ?? 0);
@@ -3746,11 +3858,21 @@ class ExecutiveReportDownloadController extends Controller
             $table->addRow();
             $table->addCell(3200)->addText(
                 config("nom035_risk_levels.labels.$levelKey", ucfirst($levelKey)),
-                ['size' => 10, 'color' => '374151']
+                ['size' => 10, 'color' => '374151'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
-            $table->addCell(1600)->addText((string) $total, ['size' => 10, 'color' => '374151']);
-            $table->addCell(1600)->addText($percentage . '%', ['size' => 10, 'color' => '374151']);
+            $table->addCell(1600)->addText(
+                (string) $total,
+                ['size' => 10, 'color' => '374151'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+            $table->addCell(1600)->addText(
+                $percentage . '%',
+                ['size' => 10, 'color' => '374151'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
         }
+        
     }
 
     private function getReferenceThreeDomainSummary(string $organizationId, string $workCenterId): array
@@ -3880,7 +4002,7 @@ class ExecutiveReportDownloadController extends Controller
                 'dominant_level_label' => config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey)),
             ];
         }
-
+        $dimensions = $this->sortDimensionSummariesByRisk($dimensions);
         return [
             'total_evaluations' => $totalEvaluations,
             'dimensions' => $dimensions,
@@ -4030,8 +4152,8 @@ class ExecutiveReportDownloadController extends Controller
                 }
 
                 usort($dimensionRows, function ($a, $b) {
-                    return ($b['global_score'] ?? 0) <=> ($a['global_score'] ?? 0);
-                });
+                return $this->compareRiskRows($a, $b, 'dimension_level_key', 'dimension_score');
+            });
 
                 if (! empty($dimensionRows)) {
                     $groups[] = [
@@ -4043,7 +4165,9 @@ class ExecutiveReportDownloadController extends Controller
                     ];
                 }
             }
-
+            usort($groups, function ($a, $b) {
+            return $this->compareGroupedTablesByRisk($a, $b);
+        });
             return $groups;
         }
 
@@ -4145,16 +4269,20 @@ class ExecutiveReportDownloadController extends Controller
                                 'attends_public' => (bool) ($evaluation['attends_public'] ?? false),
                             ];
                         })
-                        ->sortByDesc('global_score')
-                        ->values()
-                        ->all();
+                        ->sort(function ($a, $b) {
+                        return $this->compareRiskRows($a, $b, 'global_level_key', 'global_score');
+                    })
+                    ->values()
+                    ->all();
 
                     return [
                         'name' => $positionName,
                         'rows' => $rows,
                     ];
-                })
-                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                    })
+                    ->sort(function ($a, $b) {
+                        return $this->compareGroupedTablesByRisk($a, $b);
+                    })
                 ->values()
                 ->all();
 
@@ -4259,16 +4387,20 @@ class ExecutiveReportDownloadController extends Controller
                                 'attends_public' => (bool) ($evaluation['attends_public'] ?? false),
                             ];
                         })
-                        ->sortByDesc('global_score')
-                        ->values()
-                        ->all();
-
-                    return [
-                        'name' => $departmentName,
-                        'rows' => $rows,
-                    ];
+                        ->sort(function ($a, $b) {
+                    return $this->compareRiskRows($a, $b, 'global_level_key', 'global_score');
                 })
-                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values()
+                ->all();
+
+                return [
+                    'name' => $departmentName,
+                    'rows' => $rows,
+                ];
+                })
+                ->sort(function ($a, $b) {
+                    return $this->compareGroupedTablesByRisk($a, $b);
+                })
                 ->values()
                 ->all();
 
@@ -4373,16 +4505,20 @@ class ExecutiveReportDownloadController extends Controller
                                 'attends_public' => (bool) ($evaluation['attends_public'] ?? false),
                             ];
                         })
-                        ->sortByDesc('global_score')
-                        ->values()
-                        ->all();
-
-                    return [
-                        'name' => $workScheduleName,
-                        'rows' => $rows,
-                    ];
+                        ->sort(function ($a, $b) {
+                    return $this->compareRiskRows($a, $b, 'global_level_key', 'global_score');
                 })
-                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values()
+                ->all();
+
+                return [
+                    'name' => $workScheduleName,
+                    'rows' => $rows,
+                ];
+                })
+                ->sort(function ($a, $b) {
+                    return $this->compareGroupedTablesByRisk($a, $b);
+                })
                 ->values()
                 ->all();
 
@@ -4507,9 +4643,6 @@ class ExecutiveReportDownloadController extends Controller
                     }
 
                     $points = array_sum($itemScores);
-                    if ($points <= 0) {
-                        return null;
-                    }
 
                     $first = $items->first();
                     $gender = trim((string) ($first->gender ?? ''));
@@ -4525,7 +4658,6 @@ class ExecutiveReportDownloadController extends Controller
                         'items' => $itemScores,
                     ];
                 })
-                ->filter()
                 ->sortByDesc('points')
                 ->values()
                 ->all();
@@ -4685,9 +4817,11 @@ class ExecutiveReportDownloadController extends Controller
                         'attends_public' => (bool) ($evaluation['attends_public'] ?? false),
                     ];
                 })
-                ->sortByDesc('global_score')
-                ->values()
-                ->all();
+                ->sort(function ($a, $b) {
+                return $this->compareRiskRows($a, $b, 'global_level_key', 'global_score');
+            })
+            ->values()
+            ->all();
         }
 
         private function getDomainQuantitativeAnalysisSummary(string $organizationId, string $workCenterId): array
@@ -4869,9 +5003,11 @@ class ExecutiveReportDownloadController extends Controller
                 ->filter(function ($row) {
                     return in_array($row['global_level_key'] ?? 'nulo', ['medio', 'alto', 'muy_alto'], true);
                 })
-                ->sortByDesc('global_score')
-                ->values()
-                ->all();
+                ->sort(function ($a, $b) {
+                return $this->compareRiskRows($a, $b, 'global_level_key', 'global_score');
+            })
+            ->values()
+            ->all();
         }
 
         private function parseAtsSectionsFromAnswers(array $answers): array
@@ -6681,13 +6817,13 @@ class ExecutiveReportDownloadController extends Controller
             $table->addCell(2600, ['bgColor' => 'D9D9D9'])->addText(
                 $this->safeValue($label),
                 ['bold' => true, 'size' => 10, 'color' => '111827'],
-                ['spaceAfter' => 0]
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
 
             $table->addCell(7000)->addText(
                 $this->safeValue($value),
                 ['size' => 10, 'color' => '111827'],
-                ['spaceAfter' => 0]
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
         }
 
