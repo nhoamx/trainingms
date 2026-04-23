@@ -2,19 +2,26 @@
 
 namespace App\Services\WorkCenter;
 
+use App\Enums\EvaluationInstrument;
 use App\Models\PaperEvaluation;
 use App\Models\WorkCenter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class WorkCenterNom035CalculationService
 {
     private function baseRefIIIQuery(WorkCenter $workCenter, ?string $source = null): Builder
     {
+        $instrumentValue = EvaluationInstrument::ReferenciaIII->value;
+
         $query = PaperEvaluation::query()
             ->where('work_center_id', $workCenter->id)
             ->where('processing_status', 'completed')
             ->where('evaluation_type', 'referencia_iii')
             ->whereNull('deleted_at')
+            ->with(['evaluationAnswers' => function ($q) use ($instrumentValue): void {
+                $q->where('instrument', $instrumentValue);
+            }])
             ->where(function (Builder $builder): void {
                 $builder
                     ->whereNotNull('referencia_iii_answers')
@@ -987,10 +994,37 @@ class WorkCenterNom035CalculationService
     /**
      * Merge base Referencia III answers with conditional management answers (65-72) when applicable.
      *
+     * Prefers the normalized `evaluation_answers` table when rows exist for this evaluation,
+     * ensuring the same conditional-question logic used by the executive report is applied.
+     * Falls back to the legacy JSON columns for evaluations not yet in that table.
+     *
      * @return array<int|string, mixed>
      */
     private function getMergedReferenciaIIIAnswers(PaperEvaluation $evaluation): array
     {
+        $dbAnswers = $this->getRefIIIAnswersFromTable($evaluation);
+
+        if ($dbAnswers->isNotEmpty()) {
+            $answers = [];
+
+            foreach ($dbAnswers as $row) {
+                if (! is_numeric($row->question_key) || $row->answer_value === null) {
+                    continue;
+                }
+
+                $normalizedValue = strtoupper(trim($row->answer_value));
+
+                if (! in_array($normalizedValue, ['A', 'B', 'C', 'D', 'E'], true)) {
+                    continue;
+                }
+
+                $answers[$this->normalizeQuestionKey((int) $row->question_key)] = $normalizedValue;
+            }
+
+            return $answers;
+        }
+
+        // Fallback: read from legacy JSON columns.
         $answers = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
         $rawAnswers = $this->getRawReferenciaIIIAnswers($evaluation);
         $conditionalAnswers = is_array($evaluation->referencia_iii_conditional) ? $evaluation->referencia_iii_conditional : [];
@@ -1020,6 +1054,27 @@ class WorkCenterNom035CalculationService
         }
 
         return $answers;
+    }
+
+    /**
+     * Read Referencia III rows from the `evaluation_answers` table for a single evaluation.
+     *
+     * Uses the already-loaded relation when available (eager-loaded via baseRefIIIQuery),
+     * otherwise falls back to a lazy query to avoid N+1 for callers that skipped eager loading.
+     *
+     * @return Collection<int, \App\Models\EvaluationAnswer>
+     */
+    private function getRefIIIAnswersFromTable(PaperEvaluation $evaluation): Collection
+    {
+        if ($evaluation->relationLoaded('evaluationAnswers')) {
+            return $evaluation->evaluationAnswers->filter(
+                fn ($a): bool => $a->instrument === EvaluationInstrument::ReferenciaIII
+            )->values();
+        }
+
+        return $evaluation->evaluationAnswers()
+            ->where('instrument', EvaluationInstrument::ReferenciaIII->value)
+            ->get();
     }
 
     /**
