@@ -14,6 +14,7 @@ class WorkCenterNom035CalculationService
             ->where('work_center_id', $workCenter->id)
             ->where('processing_status', 'completed')
             ->where('evaluation_type', 'referencia_iii')
+            ->whereNull('deleted_at')
             ->where(function (Builder $builder): void {
                 $builder
                     ->whereNotNull('referencia_iii_answers')
@@ -299,15 +300,24 @@ class WorkCenterNom035CalculationService
 
         $average = count($globalScores) > 0 ? array_sum($globalScores) / count($globalScores) : 0;
         $maxScore = $riskLevels['global']['max_score'];
-        $averageLevel = $this->getGlobalRiskLevel($average, $riskLevels);
+
+        $dominantLevelKey = 'nulo';
+        $dominantCount = -1;
+
+        foreach ($globalDistribution as $levelKey => $count) {
+            if ($count > $dominantCount) {
+                $dominantCount = $count;
+                $dominantLevelKey = $levelKey;
+            }
+        }
 
         return [
             'global' => [
                 'average_score' => round($average, 2),
                 'max_score' => $maxScore,
                 'percentage' => $maxScore > 0 ? round(($average / $maxScore) * 100, 2) : 0,
-                'risk_level' => $averageLevel,
-                'risk_level_label' => $riskLevels['labels'][$averageLevel],
+                'risk_level' => $dominantLevelKey,
+                'risk_level_label' => $riskLevels['labels'][$dominantLevelKey],
                 'levels' => $riskLevels['global']['levels'] ?? [],
                 'distribution' => $globalDistribution,
                 'total_evaluations' => count($globalScores),
@@ -1008,8 +1018,6 @@ class WorkCenterNom035CalculationService
 
             $answers[$this->normalizeQuestionKey($questionNumber)] = $answer;
         }
-
-        $this->removeDisabledConditionalQuestions($answers, $conditionalAnswers);
 
         return $answers;
     }
