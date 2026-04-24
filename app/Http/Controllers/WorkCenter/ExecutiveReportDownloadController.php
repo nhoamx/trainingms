@@ -4655,59 +4655,50 @@ class ExecutiveReportDownloadController extends Controller
             $requiresWomen = 0;
 
             foreach ($rows as $row) {
-                $answers = [];
+            $answers = $this->getMergedAtsAnswersFromRow($row);
 
-                foreach (['referencia_i_answers', 'citsats_s1', 'raw_data'] as $field) {
-                    $decoded = json_decode((string) ($row->{$field} ?? ''), true);
-
-                    if (is_array($decoded) && $decoded !== []) {
-                        $answers = $decoded;
-                        break;
-                    }
-                }
-
-                if ($answers === []) {
-                    continue;
-                }
-
-                $sections = $this->parseAtsSectionsFromAnswers($answers);
-
-                $total = (int) ($sections['s1'] ?? 0)
-                    + (int) ($sections['s2'] ?? 0)
-                    + (int) ($sections['s3'] ?? 0)
-                    + (int) ($sections['s4'] ?? 0);
-
-                if ($total <= 0) {
-                    continue;
-                }
-
-                $requiresValuation = $this->requiresAtsValuation($sections);
-
-                $gender = trim((string) ($row->gender ?? ''));
-                $genderNormalized = Str::lower(Str::ascii($gender));
-                $genderLabel = $gender !== '' ? ucfirst(mb_strtolower($gender)) : 'N/D';
-
-                if ($requiresValuation) {
-                    if (in_array($genderNormalized, ['hombre', 'hombres', 'masculino', 'masculina', 'm'], true)) {
-                        $requiresMen++;
-                    } elseif (in_array($genderNormalized, ['mujer', 'mujeres', 'femenino', 'femenina', 'f'], true)) {
-                        $requiresWomen++;
-                    }
-                }
-
-                $resultRows[] = [
-                    'evaluation_id' => (string) $row->evaluation_id,
-                    'folio' => $this->safeValue($row->personal_folio),
-                    'name' => $this->safeValue($row->evaluee_name),
-                    'gender' => $genderLabel,
-                    'position' => $this->safeValue($row->position),
-                    's1' => (int) ($sections['s1'] ?? 0),
-                    's2' => (int) ($sections['s2'] ?? 0),
-                    's3' => (int) ($sections['s3'] ?? 0),
-                    's4' => (int) ($sections['s4'] ?? 0),
-                    'requires_valuation' => $requiresValuation,
-                ];
+            if ($answers === []) {
+                continue;
             }
+
+            $sections = $this->parseAtsSectionsFromAnswers($answers);
+
+            $total = (int) ($sections['s1'] ?? 0)
+                + (int) ($sections['s2'] ?? 0)
+                + (int) ($sections['s3'] ?? 0)
+                + (int) ($sections['s4'] ?? 0);
+
+            if ($total <= 0) {
+                continue;
+            }
+
+            $requiresValuation = $this->requiresAtsValuation($sections);
+
+            $gender = trim((string) ($row->gender ?? ''));
+            $genderNormalized = Str::lower(Str::ascii($gender));
+            $genderLabel = $gender !== '' ? ucfirst(mb_strtolower($gender)) : 'N/D';
+
+            if ($requiresValuation) {
+                if (in_array($genderNormalized, ['hombre', 'hombres', 'masculino', 'masculina', 'm'], true)) {
+                    $requiresMen++;
+                } elseif (in_array($genderNormalized, ['mujer', 'mujeres', 'femenino', 'femenina', 'f'], true)) {
+                    $requiresWomen++;
+                }
+            }
+
+            $resultRows[] = [
+                'evaluation_id' => (string) $row->evaluation_id,
+                'folio' => $this->safeValue($row->personal_folio),
+                'name' => $this->safeValue($row->evaluee_name),
+                'gender' => $genderLabel,
+                'position' => $this->safeValue($row->position),
+                's1' => (int) ($sections['s1'] ?? 0),
+                's2' => (int) ($sections['s2'] ?? 0),
+                's3' => (int) ($sections['s3'] ?? 0),
+                's4' => (int) ($sections['s4'] ?? 0),
+                'requires_valuation' => $requiresValuation,
+            ];
+        }
 
             return [
                 'rows' => collect($resultRows)->sortBy('folio', SORT_NATURAL)->values()->all(),
@@ -4761,62 +4752,13 @@ class ExecutiveReportDownloadController extends Controller
                 $participantsConsidered = 0;
 
                 foreach ($rows as $row) {
-                $eventPayload = [];
+                $answers = $this->getMergedAtsAnswersFromRow($row);
 
-                foreach (['referencia_i_answers', 'citsats_s1', 'raw_data'] as $field) {
-                    $decoded = json_decode((string) ($row->{$field} ?? ''), true);
-
-                    if (! is_array($decoded) || $decoded === []) {
-                        continue;
-                    }
-
-                    $candidate = $this->normalizeAtsKeysRecursive($decoded);
-
-                    // 1) Buscar bloque ATS explícito
-                    $payload = $this->getAtsSectionPayload($candidate, [
-                        'acontecimientos_traumaticos',
-                        'acontecimientos traumaticos',
-                        'evento_traumatico',
-                        'eventos_traumaticos',
-                        'eventos traumaticos',
-                        'seccion_i',
-                        'section_i',
-                        's_i',
-                        'si',
-                        'seccion_1',
-                        'section_1',
-                        's1',
-                        'section1',
-                    ]);
-
-                    if ($payload !== []) {
-                        $eventPayload = $payload;
-                        break;
-                    }
-
-                    // 2) Si no existe bloque formal, usar todo el payload
-                    //    solo si realmente contiene alguno de los eventos ATS
-                    $looksLikeAts =
-                        $this->extractWorkerFlag($candidate, ['accidente', 'accidentes']) ||
-                        $this->extractWorkerFlag($candidate, ['asalto', 'asaltos']) ||
-                        $this->extractWorkerFlag($candidate, ['acto_violento', 'actos_violentos', 'acto violento', 'actos violentos']) ||
-                        $this->extractWorkerFlag($candidate, ['secuestro', 'secuestros']) ||
-                        $this->extractWorkerFlag($candidate, ['amenaza', 'amenazas']) ||
-                        $this->extractWorkerFlag($candidate, [
-                            'situacion_de_riesgo',
-                            'situacion_riesgo',
-                            'situacion de riesgo',
-                            'situacion_de_peligro',
-                            'situacion de peligro',
-                            'cualquier_otro_que_ponga_en_riesgo',
-                            'cualquier otro que ponga en riesgo'
-                        ]);
-
-                    if ($looksLikeAts) {
-                        $eventPayload = $candidate;
-                        break;
-                    }
+                if ($answers === []) {
+                    continue;
                 }
+
+                $eventPayload = $this->findAtsEventPayload($answers);
 
                 if ($eventPayload === []) {
                     continue;
@@ -4827,19 +4769,16 @@ class ExecutiveReportDownloadController extends Controller
                 $flags = [
                     'accidente' => $this->extractWorkerFlag($eventPayload, [
                         'accidente',
-                        'accidentes',
-                        'accidente_que_tenga_como_consecuencia_la_muerte',
+                        'accidente que tenga como consecuencia la muerte',
                     ]),
                     'asaltos' => $this->extractWorkerFlag($eventPayload, [
                         'asalto',
                         'asaltos',
                     ]),
                     'actos_violentos' => $this->extractWorkerFlag($eventPayload, [
-                        'acto_violento',
-                        'actos_violentos',
                         'acto violento',
                         'actos violentos',
-                        'actos_violentos_que_derivaron_en_lesiones_graves',
+                        'actos violentos que derivaron en lesiones graves',
                     ]),
                     'secuestro' => $this->extractWorkerFlag($eventPayload, [
                         'secuestro',
@@ -4850,57 +4789,53 @@ class ExecutiveReportDownloadController extends Controller
                         'amenazas',
                     ]),
                     'situacion_riesgo' => $this->extractWorkerFlag($eventPayload, [
-                        'situacion_de_riesgo',
-                        'situacion_riesgo',
                         'situacion de riesgo',
-                        'situacion_de_peligro',
                         'situacion de peligro',
-                        'cualquier_otro_que_ponga_en_riesgo',
                         'cualquier otro que ponga en riesgo',
                     ]),
                 ];
 
-                    foreach ($flags as $key => $flag) {
-                        if ($flag) {
-                            $eventCounts[$key]++;
-                        }
+                foreach ($flags as $key => $flag) {
+                    if ($flag) {
+                        $eventCounts[$key]++;
                     }
-
-                    $hasAny = in_array(true, $flags, true);
-
-                    if (! $hasAny) {
-                        continue;
-                    }
-
-                    $gender = trim((string) ($row->gender ?? ''));
-                    $genderLabel = $gender !== '' ? ucfirst(mb_strtolower($gender)) : 'N/D';
-
-                    $presentedAt = 'N/D';
-                    try {
-                        if (! empty($row->created_at)) {
-                            $presentedAt = Carbon::parse($row->created_at)->format('d/m/Y, H:i');
-                        }
-                    } catch (\Throwable $e) {
-                        $presentedAt = 'N/D';
-                    }
-
-                    $ageLabel = 'N/D';
-                    if ($row->age !== null && trim((string) $row->age) !== '') {
-                        $ageLabel = rtrim(rtrim(number_format((float) $row->age, 2, '.', ''), '0'), '.');
-                    }
-
-                    $yesRows[] = [
-                        'evaluation_id' => (string) $row->evaluation_id,
-                        'folio' => $this->safeValue($row->personal_folio),
-                        'name' => $this->safeValue($row->evaluee_name),
-                        'presented_at' => $presentedAt,
-                        'gender' => $genderLabel,
-                        'age' => $ageLabel,
-                        'position' => $this->safeValue($row->position),
-                        'area' => $this->safeValue($row->department),
-                        'flags' => $flags,
-                    ];
                 }
+
+                $hasAny = in_array(true, $flags, true);
+
+                if (! $hasAny) {
+                    continue;
+                }
+
+                $gender = trim((string) ($row->gender ?? ''));
+                $genderLabel = $gender !== '' ? ucfirst(mb_strtolower($gender)) : 'N/D';
+
+                $presentedAt = 'N/D';
+                try {
+                    if (! empty($row->created_at)) {
+                        $presentedAt = Carbon::parse($row->created_at)->format('d/m/Y, H:i');
+                    }
+                } catch (\Throwable $e) {
+                    $presentedAt = 'N/D';
+                }
+
+                $ageLabel = 'N/D';
+                if ($row->age !== null && trim((string) $row->age) !== '') {
+                    $ageLabel = rtrim(rtrim(number_format((float) $row->age, 2, '.', ''), '0'), '.');
+                }
+
+                $yesRows[] = [
+                    'evaluation_id' => (string) $row->evaluation_id,
+                    'folio' => $this->safeValue($row->personal_folio),
+                    'name' => $this->safeValue($row->evaluee_name),
+                    'presented_at' => $presentedAt,
+                    'gender' => $genderLabel,
+                    'age' => $ageLabel,
+                    'position' => $this->safeValue($row->position),
+                    'area' => $this->safeValue($row->department),
+                    'flags' => $flags,
+                ];
+            }
 
                 $yesRows = collect($yesRows)
                     ->sortBy('folio', SORT_NATURAL)
@@ -5338,24 +5273,24 @@ class ExecutiveReportDownloadController extends Controller
         {
             $normalized = $this->normalizeAtsKeysRecursive($answers);
 
-            $s1Payload = $this->getAtsSectionPayload($normalized, [
-                'seccion_i', 'section_i', 's_i', 'si',
-                'seccion_1', 'section_1', 's1', 'section1'
-            ]);
+            $s1Payload = $this->findAtsEventPayload($normalized);
 
             $s2Payload = $this->getAtsSectionPayload($normalized, [
                 'seccion_ii', 'section_ii', 's_ii', 'sii',
-                'seccion_2', 'section_2', 's2', 'section2'
+                'seccion_2', 'section_2', 's2', 'section2',
+                'recuerdos persistentes sobre el acontecimiento (durante el ultimo mes)',
             ]);
 
             $s3Payload = $this->getAtsSectionPayload($normalized, [
                 'seccion_iii', 'section_iii', 's_iii', 'siii',
-                'seccion_3', 'section_3', 's3', 'section3'
+                'seccion_3', 'section_3', 's3', 'section3',
+                'esfuerzo por evitar circunstancias parecidas o asociadas al acontecimiento (durante el ultimo mes)',
             ]);
 
             $s4Payload = $this->getAtsSectionPayload($normalized, [
                 'seccion_iv', 'section_iv', 's_iv', 'siv',
-                'seccion_4', 'section_4', 's4', 'section4'
+                'seccion_4', 'section_4', 's4', 'section4',
+                'afectacion (durante el ultimo mes)',
             ]);
 
             return [
@@ -5374,6 +5309,38 @@ class ExecutiveReportDownloadController extends Controller
                     || (int) ($sections['s3'] ?? 0) >= 3
                     || (int) ($sections['s4'] ?? 0) >= 2
                 );
+        }
+
+        private function getMergedAtsAnswersFromRow($row): array
+        {
+            $merged = [];
+
+            foreach (['referencia_i_answers', 'citsats_s1', 'raw_data'] as $field) {
+                $decoded = json_decode((string) ($row->{$field} ?? ''), true);
+
+                if (is_array($decoded) && $decoded !== []) {
+                    $merged = $this->mergeAtsArrays($merged, $decoded);
+                }
+            }
+
+            return $this->normalizeAtsKeysRecursive($merged);
+        }
+
+        private function mergeAtsArrays(array $base, array $append): array
+        {
+            foreach ($append as $key => $value) {
+                if (
+                    array_key_exists($key, $base) &&
+                    is_array($base[$key]) &&
+                    is_array($value)
+                ) {
+                    $base[$key] = $this->mergeAtsArrays($base[$key], $value);
+                } else {
+                    $base[$key] = $value;
+                }
+            }
+
+            return $base;
         }
 
         private function getAtsSectionPayload(array $payload, array $aliases)
@@ -5397,6 +5364,7 @@ class ExecutiveReportDownloadController extends Controller
 
                 if (is_array($value)) {
                     $found = $this->getAtsSectionPayload($value, $aliases);
+
                     if ($found !== []) {
                         return $found;
                     }
@@ -5404,6 +5372,96 @@ class ExecutiveReportDownloadController extends Controller
             }
 
             return [];
+        }
+
+        private function findAtsEventPayload(array $payload): array
+        {
+            if ($this->countAtsEventAliases($payload) >= 3) {
+                return $payload;
+            }
+
+            foreach ($payload as $value) {
+                if (is_array($value)) {
+                    $found = $this->findAtsEventPayload($value);
+
+                    if ($found !== []) {
+                        return $found;
+                    }
+                }
+            }
+
+            return [];
+        }
+
+        private function countAtsEventAliases(array $payload): int
+        {
+            $normalize = function ($value): string {
+                return str_replace(
+                    ['-', ' '],
+                    '_',
+                    Str::lower(Str::ascii(trim((string) $value)))
+                );
+            };
+
+            $aliases = array_map($normalize, [
+                'accidente',
+                'asalto',
+                'asaltos',
+                'acto violento',
+                'actos violentos',
+                'secuestro',
+                'amenaza',
+                'amenazas',
+                'situacion de riesgo',
+                'cualquier otro que ponga en riesgo',
+            ]);
+
+            $found = [];
+
+            $walker = function ($node) use (&$walker, &$found, $aliases, $normalize) {
+                if (! is_array($node)) {
+                    return;
+                }
+
+                foreach ($node as $key => $value) {
+                    if (is_string($key)) {
+                        $keyNormalized = $normalize($key);
+
+                        foreach ($aliases as $alias) {
+                            if (
+                                $keyNormalized === $alias ||
+                                str_contains($keyNormalized, $alias) ||
+                                str_contains($alias, $keyNormalized)
+                            ) {
+                                $found[$alias] = true;
+                            }
+                        }
+                    }
+
+                    if (! is_array($value)) {
+                        $valueNormalized = $normalize($value);
+
+                        foreach ($aliases as $alias) {
+                            if (
+                                $valueNormalized !== '' &&
+                                (
+                                    $valueNormalized === $alias ||
+                                    str_contains($valueNormalized, $alias) ||
+                                    str_contains($alias, $valueNormalized)
+                                )
+                            ) {
+                                $found[$alias] = true;
+                            }
+                        }
+                    } else {
+                        $walker($value);
+                    }
+                }
+            };
+
+            $walker($payload);
+
+            return count($found);
         }
 
         private function normalizeAtsKeysRecursive($value)
@@ -5450,48 +5508,101 @@ class ExecutiveReportDownloadController extends Controller
 
             $normalizedKeys = array_map($normalize, $keys);
 
-            foreach ($payload as $payloadKey => $value) {
-                $payloadKeyNormalized = $normalize($payloadKey);
-
-                // Caso 1: el evento viene como KEY => true/1/"sí"
-                foreach ($normalizedKeys as $expectedKey) {
-                    if (
-                        $payloadKeyNormalized === $expectedKey ||
-                        str_contains($payloadKeyNormalized, $expectedKey)
-                    ) {
-                        if (is_array($value)) {
-                            if ($this->countTruthyRecursive($value) > 0) {
-                                return true;
-                            }
-
-                            // o si dentro del arreglo vienen textos seleccionados
-                            if ($this->extractWorkerFlag($value, $keys)) {
-                                return true;
-                            }
-                        } elseif ($this->isTruthyWorkerValue($value)) {
+            if (array_is_list($payload)) {
+                foreach ($payload as $item) {
+                    if (is_array($item)) {
+                        if ($this->extractWorkerFlag($item, $keys)) {
                             return true;
                         }
+                        continue;
                     }
-                }
 
-                // Caso 2: el evento viene como VALOR dentro de un array/lista
-                if (! is_array($value)) {
-                    $valueNormalized = $normalize($value);
+                    $itemNormalized = $normalize($item);
 
                     foreach ($normalizedKeys as $expectedKey) {
                         if (
-                            $valueNormalized === $expectedKey ||
-                            str_contains($valueNormalized, $expectedKey) ||
-                            str_contains($expectedKey, $valueNormalized)
+                            $itemNormalized !== '' &&
+                            (
+                                $itemNormalized === $expectedKey ||
+                                str_contains($itemNormalized, $expectedKey) ||
+                                str_contains($expectedKey, $itemNormalized)
+                            )
                         ) {
                             return true;
                         }
                     }
                 }
 
-                // Caso 3: recursión normal
-                if (is_array($value) && $this->extractWorkerFlag($value, $keys)) {
-                    return true;
+                return false;
+            }
+
+            foreach ($payload as $payloadKey => $value) {
+                $payloadKeyNormalized = $normalize($payloadKey);
+
+                foreach ($normalizedKeys as $expectedKey) {
+                    if (
+                        $payloadKeyNormalized === $expectedKey ||
+                        str_contains($payloadKeyNormalized, $expectedKey)
+                    ) {
+                        if (! is_array($value) && $this->isTruthyWorkerValue($value)) {
+                            return true;
+                        }
+
+                        if (is_array($value)) {
+                            foreach ([
+                                'checked', 'selected', 'seleccionado', 'activo',
+                                'aplica', 'value', 'valor', 'respuesta', 'answer', 'si'
+                            ] as $selectedKey) {
+                                if (
+                                    array_key_exists($selectedKey, $value) &&
+                                    $this->isTruthyWorkerValue($value[$selectedKey])
+                                ) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (is_array($value)) {
+                    $labelValue = null;
+
+                    foreach ([
+                        'label', 'texto', 'text', 'nombre', 'name',
+                        'titulo', 'title', 'opcion', 'option',
+                        'valor_texto', 'display'
+                    ] as $labelKey) {
+                        if (array_key_exists($labelKey, $value) && ! is_array($value[$labelKey])) {
+                            $labelValue = $normalize($value[$labelKey]);
+                            break;
+                        }
+                    }
+
+                    if ($labelValue !== null) {
+                        foreach ($normalizedKeys as $expectedKey) {
+                            if (
+                                $labelValue === $expectedKey ||
+                                str_contains($labelValue, $expectedKey) ||
+                                str_contains($expectedKey, $labelValue)
+                            ) {
+                                foreach ([
+                                    'checked', 'selected', 'seleccionado', 'activo',
+                                    'aplica', 'value', 'valor', 'respuesta', 'answer', 'si'
+                                ] as $selectedKey) {
+                                    if (
+                                        array_key_exists($selectedKey, $value) &&
+                                        $this->isTruthyWorkerValue($value[$selectedKey])
+                                    ) {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if ($this->extractWorkerFlag($value, $keys)) {
+                        return true;
+                    }
                 }
             }
 
