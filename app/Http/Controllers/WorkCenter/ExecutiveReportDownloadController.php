@@ -4623,236 +4623,153 @@ class ExecutiveReportDownloadController extends Controller
         }
 
         private function getSevereTraumaticEventsSummary(string $organizationId, string $workCenterId): array
-        {
-            $rows = DB::table('paper_evaluations as pe')
-                ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
-                ->where('pe.organization_id', $organizationId)
-                ->where('pe.work_center_id', $workCenterId)
-                ->where('pe.evaluation_type', 'referencia_i')
-                ->whereIn('pe.source', ['paper', 'online'])
-                ->where('pe.processing_status', 'completed')
-                ->whereNull('pe.deleted_at')
-                ->where(function ($query) {
-                    $query->whereNotNull('pe.referencia_i_answers')
-                        ->orWhereNotNull('pe.citsats_s1')
-                        ->orWhereNotNull('pe.raw_data');
-                })
-                ->select(
-                    'pe.id as evaluation_id',
-                    'pe.personal_folio',
-                    'pe.evaluee_name',
-                    'pe.referencia_i_answers',
-                    'pe.citsats_s1',
-                    'pe.raw_data',
-                    'dd.gender',
-                    'dd.position'
-                )
-                ->orderBy('pe.personal_folio')
-                ->get();
-
-            $resultRows = [];
-            $requiresMen = 0;
-            $requiresWomen = 0;
-
-            foreach ($rows as $row) {
-            $answers = $this->getMergedAtsAnswersFromRow($row);
-
-            if ($answers === []) {
-                continue;
-            }
-
-            $sections = $this->parseAtsSectionsFromAnswers($answers);
-
-            $total = (int) ($sections['s1'] ?? 0)
-                + (int) ($sections['s2'] ?? 0)
-                + (int) ($sections['s3'] ?? 0)
-                + (int) ($sections['s4'] ?? 0);
-
-            if ($total <= 0) {
-                continue;
-            }
-
-            $requiresValuation = $this->requiresAtsValuation($sections);
-
-            $gender = trim((string) ($row->gender ?? ''));
-            $genderNormalized = Str::lower(Str::ascii($gender));
-            $genderLabel = $gender !== '' ? ucfirst(mb_strtolower($gender)) : 'N/D';
-
-            if ($requiresValuation) {
-                if (in_array($genderNormalized, ['hombre', 'hombres', 'masculino', 'masculina', 'm'], true)) {
-                    $requiresMen++;
-                } elseif (in_array($genderNormalized, ['mujer', 'mujeres', 'femenino', 'femenina', 'f'], true)) {
-                    $requiresWomen++;
-                }
-            }
-
-            $resultRows[] = [
-                'evaluation_id' => (string) $row->evaluation_id,
-                'folio' => $this->safeValue($row->personal_folio),
-                'name' => $this->safeValue($row->evaluee_name),
-                'gender' => $genderLabel,
-                'position' => $this->safeValue($row->position),
-                's1' => (int) ($sections['s1'] ?? 0),
-                's2' => (int) ($sections['s2'] ?? 0),
-                's3' => (int) ($sections['s3'] ?? 0),
-                's4' => (int) ($sections['s4'] ?? 0),
-                'requires_valuation' => $requiresValuation,
-            ];
-        }
-
-            return [
-                'rows' => collect($resultRows)->sortBy('folio', SORT_NATURAL)->values()->all(),
-                'requires_valuation_total' => $requiresMen + $requiresWomen,
-                'requires_valuation_men' => $requiresMen,
-                'requires_valuation_women' => $requiresWomen,
-            ];
-        }
-
-            private function getAtsPanoramaSummary(string $organizationId, string $workCenterId): array
             {
-                $rows = DB::table('paper_evaluations as pe')
-                    ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
-                    ->where('pe.organization_id', $organizationId)
-                    ->where('pe.work_center_id', $workCenterId)
-                    ->where('pe.evaluation_type', 'referencia_i')
-                    ->whereIn('pe.source', ['paper', 'online'])
-                    ->where('pe.processing_status', 'completed')
-                    ->whereNull('pe.deleted_at')
-                    ->where(function ($query) {
-                        $query->whereNotNull('pe.referencia_i_answers')
-                            ->orWhereNotNull('pe.citsats_s1')
-                            ->orWhereNotNull('pe.raw_data');
+                $workCenter = WorkCenter::query()
+                    ->where('organization_id', $organizationId)
+                    ->findOrFail($workCenterId);
+
+                /** @var \App\Services\WorkCenter\WorkCenterNom035RefIStatisticsService $service */
+                $service = app(\App\Services\WorkCenter\WorkCenterNom035RefIStatisticsService::class);
+
+                $clinicalPayload = $service->getClinicalAssessmentParticipants($workCenter);
+                $acontecimientoPayload = $service->getAcontecimientoParticipants($workCenter);
+
+                $s1ByEvaluationId = collect($acontecimientoPayload['participants'] ?? [])
+                    ->mapWithKeys(function (array $participant) {
+                        $events = $participant['events'] ?? [];
+
+                        return [
+                            (string) ($participant['id'] ?? '') => count(array_filter($events)),
+                        ];
                     })
-                    ->select(
-                        'pe.id as evaluation_id',
-                        'pe.personal_folio',
-                        'pe.evaluee_name',
-                        'pe.referencia_i_answers',
-                        'pe.citsats_s1',
-                        'pe.raw_data',
-                        'pe.created_at',
-                        'dd.gender',
-                        'dd.age',
-                        'dd.position',
-                        'dd.department'
-                    )
-                    ->orderBy('pe.personal_folio')
-                    ->get();
+                    ->all();
 
-                $eventCounts = [
-                    'accidente' => 0,
-                    'asaltos' => 0,
-                    'actos_violentos' => 0,
-                    'secuestro' => 0,
-                    'amenazas' => 0,
-                    'situacion_riesgo' => 0,
-                ];
+                $resultRows = [];
+                $requiresMen = 0;
+                $requiresWomen = 0;
 
-                $yesRows = [];
-                $participantsConsidered = 0;
-
-                foreach ($rows as $row) {
-                $answers = $this->getMergedAtsAnswersFromRow($row);
-
-                if ($answers === []) {
-                    continue;
-                }
-
-                $eventPayload = $this->findAtsEventPayload($answers);
-
-                if ($eventPayload === []) {
-                    continue;
-                }
-
-                $participantsConsidered++;
-
-                $flags = [
-                    'accidente' => $this->extractWorkerFlag($eventPayload, [
-                        'accidente',
-                        'accidente que tenga como consecuencia la muerte',
-                    ]),
-                    'asaltos' => $this->extractWorkerFlag($eventPayload, [
-                        'asalto',
-                        'asaltos',
-                    ]),
-                    'actos_violentos' => $this->extractWorkerFlag($eventPayload, [
-                        'acto violento',
-                        'actos violentos',
-                        'actos violentos que derivaron en lesiones graves',
-                    ]),
-                    'secuestro' => $this->extractWorkerFlag($eventPayload, [
-                        'secuestro',
-                        'secuestros',
-                    ]),
-                    'amenazas' => $this->extractWorkerFlag($eventPayload, [
-                        'amenaza',
-                        'amenazas',
-                    ]),
-                    'situacion_riesgo' => $this->extractWorkerFlag($eventPayload, [
-                        'situacion de riesgo',
-                        'situacion de peligro',
-                        'cualquier otro que ponga en riesgo',
-                    ]),
-                ];
-
-                foreach ($flags as $key => $flag) {
-                    if ($flag) {
-                        $eventCounts[$key]++;
+                foreach (($clinicalPayload['participants'] ?? []) as $participant) {
+                    if (! ($participant['requires_clinical_assessment'] ?? false)) {
+                        continue;
                     }
-                }
 
-                $hasAny = in_array(true, $flags, true);
+                    $demographics = $participant['demographics'] ?? [];
+                    $sections = $participant['sections'] ?? [];
+                    $evaluationId = (string) ($participant['id'] ?? '');
 
-                if (! $hasAny) {
-                    continue;
-                }
+                    $gender = trim((string) ($demographics['genero'] ?? ''));
+                    $genderNormalized = Str::lower(Str::ascii($gender));
+                    $genderLabel = $gender !== '' && $gender !== 'No especificado'
+                        ? ucfirst(mb_strtolower($gender))
+                        : 'N/D';
 
-                $gender = trim((string) ($row->gender ?? ''));
-                $genderLabel = $gender !== '' ? ucfirst(mb_strtolower($gender)) : 'N/D';
-
-                $presentedAt = 'N/D';
-                try {
-                    if (! empty($row->created_at)) {
-                        $presentedAt = Carbon::parse($row->created_at)->format('d/m/Y, H:i');
+                    if (in_array($genderNormalized, ['hombre', 'hombres', 'masculino', 'masculina', 'm'], true)) {
+                        $requiresMen++;
+                    } elseif (in_array($genderNormalized, ['mujer', 'mujeres', 'femenino', 'femenina', 'f'], true)) {
+                        $requiresWomen++;
                     }
-                } catch (\Throwable $e) {
-                    $presentedAt = 'N/D';
+
+                    $resultRows[] = [
+                        'evaluation_id' => $evaluationId,
+                        'folio' => $this->safeValue($participant['personal_folio'] ?? null),
+                        'name' => $this->safeValue($participant['name'] ?? null),
+                        'gender' => $genderLabel,
+                        'position' => $this->safeValue($demographics['puesto'] ?? null),
+                        's1' => (int) ($s1ByEvaluationId[$evaluationId] ?? 0),
+                        's2' => (int) ($sections['ii']['yes_count'] ?? 0),
+                        's3' => (int) ($sections['iii']['yes_count'] ?? 0),
+                        's4' => (int) ($sections['iv']['yes_count'] ?? 0),
+                        'requires_valuation' => true,
+                    ];
                 }
 
-                $ageLabel = 'N/D';
-                if ($row->age !== null && trim((string) $row->age) !== '') {
-                    $ageLabel = rtrim(rtrim(number_format((float) $row->age, 2, '.', ''), '0'), '.');
-                }
-
-                $yesRows[] = [
-                    'evaluation_id' => (string) $row->evaluation_id,
-                    'folio' => $this->safeValue($row->personal_folio),
-                    'name' => $this->safeValue($row->evaluee_name),
-                    'presented_at' => $presentedAt,
-                    'gender' => $genderLabel,
-                    'age' => $ageLabel,
-                    'position' => $this->safeValue($row->position),
-                    'area' => $this->safeValue($row->department),
-                    'flags' => $flags,
+                return [
+                    'rows' => collect($resultRows)->sortBy('folio', SORT_NATURAL)->values()->all(),
+                    'requires_valuation_total' => (int) ($clinicalPayload['requires_clinical_count'] ?? count($resultRows)),
+                    'requires_valuation_men' => $requiresMen,
+                    'requires_valuation_women' => $requiresWomen,
                 ];
             }
 
-                $yesRows = collect($yesRows)
+        private function getAtsPanoramaSummary(string $organizationId, string $workCenterId): array
+            {
+                $workCenter = WorkCenter::query()
+                    ->where('organization_id', $organizationId)
+                    ->findOrFail($workCenterId);
+
+                /** @var \App\Services\WorkCenter\WorkCenterNom035RefIStatisticsService $service */
+                $service = app(\App\Services\WorkCenter\WorkCenterNom035RefIStatisticsService::class);
+
+                $panorama = $service->getAtsPanoramaStatistics($workCenter);
+                $participantsPayload = $service->getAcontecimientoParticipants($workCenter);
+
+                $participants = collect($participantsPayload['participants'] ?? []);
+
+                $yesRows = $participants
+                    ->filter(fn (array $participant) => (bool) ($participant['has_any_event'] ?? false))
+                    ->map(function (array $participant) {
+                        $demographics = $participant['demographics'] ?? [];
+
+                        $gender = trim((string) ($demographics['genero'] ?? ''));
+                        $genderLabel = $gender !== '' && $gender !== 'No especificado'
+                            ? ucfirst(mb_strtolower($gender))
+                            : 'N/D';
+
+                        $presentedAt = 'N/D';
+                        try {
+                            if (! empty($participant['created_at'])) {
+                                $presentedAt = Carbon::parse($participant['created_at'])->format('d/m/Y, H:i');
+                            }
+                        } catch (\Throwable $e) {
+                            $presentedAt = 'N/D';
+                        }
+
+                        $ageValue = $demographics['edad'] ?? null;
+                        $ageLabel = 'N/D';
+                        if ($ageValue !== null && $ageValue !== '' && $ageValue !== 'No especificado') {
+                            $ageLabel = is_numeric($ageValue)
+                                ? rtrim(rtrim(number_format((float) $ageValue, 2, '.', ''), '0'), '.')
+                                : (string) $ageValue;
+                        }
+
+                        $events = $participant['events'] ?? [];
+
+                        return [
+                            'evaluation_id' => (string) ($participant['id'] ?? ''),
+                            'folio' => $this->safeValue($participant['personal_folio'] ?? null),
+                            'name' => $this->safeValue($participant['name'] ?? null),
+                            'presented_at' => $presentedAt,
+                            'gender' => $genderLabel,
+                            'age' => $ageLabel,
+                            'position' => $this->safeValue($demographics['puesto'] ?? null),
+                            'area' => $this->safeValue($demographics['area'] ?? null),
+                            'flags' => [
+                                'accidente' => (bool) ($events['1'] ?? false),
+                                'asaltos' => (bool) ($events['2'] ?? false),
+                                'actos_violentos' => (bool) ($events['3'] ?? false),
+                                'secuestro' => (bool) ($events['4'] ?? false),
+                                'amenazas' => (bool) ($events['5'] ?? false),
+                                'situacion_riesgo' => (bool) ($events['6'] ?? false),
+                            ],
+                        ];
+                    })
                     ->sortBy('folio', SORT_NATURAL)
                     ->values()
                     ->all();
 
+                $items = collect($panorama['items'] ?? [])->keyBy(fn ($item) => (int) ($item['index'] ?? 0));
+
                 return [
-                    'participants_considered' => $participantsConsidered,
-                    'without_events' => max(0, $participantsConsidered - count($yesRows)),
+                    'participants_considered' => (int) ($panorama['total_evaluations'] ?? 0),
+                    'without_events' => (int) ($panorama['without_traumatic_event_count'] ?? 0),
                     'responded_yes_rows' => $yesRows,
                     'event_counts' => [
-                        ['label' => 'Accidente', 'count' => (int) $eventCounts['accidente'], 'hex' => 'F43F5E'],
-                        ['label' => 'Asaltos', 'count' => (int) $eventCounts['asaltos'], 'hex' => 'F59E0B'],
-                        ['label' => 'Actos violentos', 'count' => (int) $eventCounts['actos_violentos'], 'hex' => '10B981'],
-                        ['label' => 'Secuestro', 'count' => (int) $eventCounts['secuestro'], 'hex' => '0EA5E9'],
-                        ['label' => 'Amenazas', 'count' => (int) $eventCounts['amenazas'], 'hex' => '8B5CF6'],
-                        ['label' => 'Situación de riesgo', 'count' => (int) $eventCounts['situacion_riesgo'], 'hex' => 'D946EF'],
+                        ['label' => 'Accidente', 'count' => (int) (($items[1]['yes_count'] ?? 0)), 'hex' => 'F43F5E'],
+                        ['label' => 'Asaltos', 'count' => (int) (($items[2]['yes_count'] ?? 0)), 'hex' => 'F59E0B'],
+                        ['label' => 'Actos violentos', 'count' => (int) (($items[3]['yes_count'] ?? 0)), 'hex' => '10B981'],
+                        ['label' => 'Secuestro', 'count' => (int) (($items[4]['yes_count'] ?? 0)), 'hex' => '0EA5E9'],
+                        ['label' => 'Amenazas', 'count' => (int) (($items[5]['yes_count'] ?? 0)), 'hex' => '8B5CF6'],
+                        ['label' => 'Situación de riesgo', 'count' => (int) (($items[6]['yes_count'] ?? 0)), 'hex' => 'D946EF'],
                     ],
                 ];
             }
