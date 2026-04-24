@@ -77,10 +77,9 @@ class ExecutiveReportDownloadController extends Controller
 
         $phpWord->addTitleStyle(
             1,
-            ['bold' => true, 'size' => 16, 'color' => '1F2937'],
-            ['spaceAfter' => 240]
+            ['bold' => true, 'size' => 14, 'color' => '111111'],
+            ['spaceAfter' => 140]
         );
-
         $phpWord->addTitleStyle(
             2,
             ['bold' => true, 'size' => 12, 'color' => '1F2937'],
@@ -414,7 +413,7 @@ class ExecutiveReportDownloadController extends Controller
                 $section->addTextBreak(2);
             }
 
-            private function addIndexSection(Section $section): void
+           private function addIndexSection(Section $section): void
             {
                 $section->addText(
                     'Índice',
@@ -422,79 +421,10 @@ class ExecutiveReportDownloadController extends Controller
                     ['spaceAfter' => 120]
                 );
 
-                $rows = [
-                    ['I', 'Centro de trabajo', '1'],
-                    ['II', 'Análisis demográfico', '2'],
-                    ['III', 'Análisis general referencia nivel de riesgo', '7'],
-                    ['IV', 'Análisis general referencia (categoría / dominio / dimensiones / pregunta)', '8'],
-                    ['V', 'Análisis referencia género', '9'],
-                    ['VI', 'Análisis referencia jornada', '11'],
-                    ['VII', 'Análisis referencia área', '13'],
-                    ['VIII', 'Análisis referencia puesto', '22'],
-                    ['IX', 'Análisis referencia nivel de riesgo', '48'],
-                    ['X', 'Análisis de trabajadores referencia dimensión', '57'],
-                    ['XI', 'Análisis de trabajadores nivel de riesgo referencia área', '73'],
-                    ['XII', 'Análisis de trabajadores nivel de riesgo referencia puesto', '75'],
-                    ['XIII', 'Análisis de trabajadores nivel de riesgo referencia jornada laboral', '78'],
-                    ['XIV', 'Análisis de trabajadores referencia acontecimientos traumáticos severos', '80'],
-                    ['XV', 'Análisis de trabajadores referencia violencia laboral', '81'],
-                    ['XVI', 'Análisis de trabajadores referencia factores de riesgo psicosocial altos y muy altos', '85'],
-                    ['XVII', 'Análisis cuantitativo referencia nivel de riesgo por dominio y puesto', '87'],
-                    ['XVIII', 'Análisis de trabajadores referencia nivel de riesgo por categoría', '96'],
-                    ['XIX', 'Evaluación del Entorno Organizacional', '98'],
-                    ['XX', 'Análisis cuantitativo referencia nivel de riesgo por dimensión', '99'],
-                    ['XXI', 'Información del equipo consultor', '101'],
-                ];
-
-                $table = $section->addTable([
-                    'alignment' => JcTable::CENTER,
-                    'borderSize' => 6,
-                    'borderColor' => '808080',
-                    'cellMargin' => 45,
-                ]);
-
-                // encabezado
-                $table->addRow(380);
-
-                $table->addCell(600, ['bgColor' => 'DCE6F1', 'valign' => 'center'])->addText(
-                    '',
-                    ['bold' => true, 'size' => 9, 'color' => '111111'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                $section->addTOC(
+                    ['name' => 'Arial', 'size' => 10],
+                    ['tabLeader' => \PhpOffice\PhpWord\Style\TOC::TABLEADER_DOT]
                 );
-
-                $table->addCell(7900, ['bgColor' => 'DCE6F1', 'valign' => 'center'])->addText(
-                    'Contenido',
-                    ['bold' => true, 'size' => 9, 'color' => '111111'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(900, ['bgColor' => 'DCE6F1', 'valign' => 'center'])->addText(
-                    'Pág.',
-                    ['bold' => true, 'size' => 9, 'color' => '111111'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                foreach ($rows as [$roman, $content, $page]) {
-                    $table->addRow(520);
-
-                    $table->addCell(600, ['valign' => 'center'])->addText(
-                        $roman,
-                        ['bold' => true, 'size' => 10, 'color' => '111111'],
-                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                    );
-
-                    $table->addCell(7900, ['valign' => 'center'])->addText(
-                        $content,
-                        ['size' => 10, 'color' => '111111'],
-                        ['spaceAfter' => 0]
-                    );
-
-                    $table->addCell(900, ['valign' => 'center'])->addText(
-                        $page,
-                        ['size' => 10, 'color' => '111111'],
-                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                    );
-                }
             }
 
     private function addGeneralInformationSection(Section $section, Organization $organization, WorkCenter $workCenter): void
@@ -503,11 +433,7 @@ class ExecutiveReportDownloadController extends Controller
             $blueMid = '1F4E78';
             $blueGray = '374151';
 
-            $section->addText(
-                'I.      Centro de Trabajo',
-                ['bold' => true, 'size' => 14, 'color' => '111111'],
-                ['spaceAfter' => 140]
-            );
+           $section->addTitle('I. Centro de Trabajo', 1);
 
             // Tarjetas superiores
             $cards = $section->addTable([
@@ -613,11 +539,7 @@ class ExecutiveReportDownloadController extends Controller
         {
             $summary = $this->getParticipantSummary($organization->id, $workCenter->id);
 
-            $section->addText(
-                'II. Análisis demográfico',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 140]
-            );
+            $section->addTitle('II. Análisis demográfico', 1);
 
             $cards = $section->addTable([
                 'alignment' => JcTable::CENTER,
@@ -750,11 +672,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $summary = $this->getWorkplaceViolenceQuantitativeSummary($organization->id, $workCenter->id);
 
-            $section->addText(
-            'XV. Análisis de trabajadores referencia violencia laboral',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 180]
-        );
+            $section->addTitle('XV. Análisis de trabajadores referencia violencia laboral', 1);
 
             $paragraphs = [
                 'La Organización Mundial de la Salud (OMS) define el acoso laboral o mobbing como el comportamiento agresivo de uno o más miembros de un equipo de trabajo hacia un individuo de dicho grupo, con el objetivo de producir miedo, desprecio o depresión en ese trabajador, hasta que renuncie o sea despedido.',
@@ -917,11 +835,7 @@ class ExecutiveReportDownloadController extends Controller
         {
             $summary = $this->getReferenceThreeCategorySummary($organization->id, $workCenter->id);
 
-            $section->addText(
-                'XIX. Evaluación del Entorno Organizacional.',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 140]
-            );
+            $section->addTitle('XIX. Evaluación del Entorno Organizacional.', 1);
 
             $section->addText(
                 'Análisis Cuantitativo Global',
@@ -996,11 +910,7 @@ class ExecutiveReportDownloadController extends Controller
         {
             $summary = $this->getReferenceThreeDimensionSummary($organization->id, $workCenter->id);
 
-            $section->addText(
-            'XX. Análisis cuantitativo referencia nivel de riesgo por dimensión (continuación)',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 180]
-        );
+           $section->addTitle('XX. Análisis cuantitativo referencia nivel de riesgo por dimensión', 1);
 
             $section->addText(
                 'Distribución consolidada por dimensión con conteos por nivel y gráficas de atención.',
@@ -1022,10 +932,10 @@ class ExecutiveReportDownloadController extends Controller
                 if ($index > 0) {
                     $section->addPageBreak();
                     $section->addText(
-                        'XX. Análisis cuantitativo referencia nivel de riesgo por dimensión',
-                        ['bold' => true, 'size' => 14],
-                        ['spaceAfter' => 180]
-                    );
+                    'XX. Análisis cuantitativo referencia nivel de riesgo por dimensión (continuación)',
+                    ['bold' => true, 'size' => 14],
+                    ['spaceAfter' => 180]
+                );
                 }
 
                 $chartPath = $this->generateDimensionDashboardChart(
@@ -1047,11 +957,7 @@ class ExecutiveReportDownloadController extends Controller
     ): void {
         $summary = $this->getQuestionAverageMatrixSummary($organization->id, $workCenter->id);
 
-        $section->addText(
-            'IV. Análisis general referencia (categoría / dominio / dimensiones / pregunta)',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 120]
-        );
+        $section->addTitle('IV. Análisis general referencia (categoría / dominio / dimensiones / pregunta)', 1);
 
         if (($summary['participants'] ?? 0) === 0) {
             $section->addText(
@@ -1081,11 +987,7 @@ class ExecutiveReportDownloadController extends Controller
             ['hombre', 'hombres', 'masculino', 'masculina', 'm']
         );
 
-        $section->addText(
-            'V. Análisis referencia género',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 120]
-        );
+        $section->addTitle('V. Análisis referencia género', 1);
 
         $printed = false;
 
@@ -1150,11 +1052,7 @@ class ExecutiveReportDownloadController extends Controller
                 return $this->compareQuestionSummaryBlocks($a, $b);
             });
 
-            $section->addText(
-                'VIII. Análisis referencia puesto',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 120]
-            );
+            $section->addTitle('VIII. Análisis referencia puesto', 1);
 
             if (empty($blocks)) {
                 $this->addQuestionAverageGenderBand($section, 'Sin información');
@@ -1218,11 +1116,7 @@ class ExecutiveReportDownloadController extends Controller
                 return $this->compareQuestionSummaryBlocks($a, $b);
             });
 
-            $section->addText(
-                'VII. Análisis referencia área',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 120]
-            );
+            $section->addTitle('VII. Análisis referencia área', 1);
 
             if (empty($blocks)) {
                 $this->addQuestionAverageGenderBand($section, 'Sin información');
@@ -1286,11 +1180,7 @@ class ExecutiveReportDownloadController extends Controller
                 return $this->compareQuestionSummaryBlocks($a, $b);
             });
 
-            $section->addText(
-                'VI. Análisis referencia jornada laboral',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 120]
-            );
+            $section->addTitle('VI. Análisis referencia jornada laboral', 1);
 
             if (empty($blocks)) {
                 $this->addQuestionAverageGenderBand($section, 'Sin información');
@@ -1348,11 +1238,15 @@ class ExecutiveReportDownloadController extends Controller
                     $section->addPageBreak();
                 }
 
-                $section->addText(
-                    'IX. Análisis referencia nivel de riesgo',
-                    ['bold' => true, 'size' => 14],
-                    ['spaceAfter' => 120]
-                );
+                if (! $printed) {
+                    $section->addTitle('IX. Análisis referencia nivel de riesgo', 1);
+                } else {
+                    $section->addText(
+                        'IX. Análisis referencia nivel de riesgo',
+                        ['bold' => true, 'size' => 14],
+                        ['spaceAfter' => 120]
+                    );
+                }
 
                 $this->addQuestionAverageGenderBand(
                     $section,
@@ -1364,11 +1258,7 @@ class ExecutiveReportDownloadController extends Controller
             }
 
             if (! $printed) {
-                $section->addText(
-                    'IX. Análisis referencia nivel de riesgo',
-                    ['bold' => true, 'size' => 14],
-                    ['spaceAfter' => 120]
-                );
+                $section->addTitle('IX. Análisis referencia nivel de riesgo', 1);
 
                 $this->addQuestionAverageGenderBand($section, 'Sin información');
 
@@ -1557,11 +1447,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $groups = $this->getWorkerIdentificationByDimensionSummary($organization->id, $workCenter->id);
 
-            $section->addText(
-            'X.- Análisis de trabajadores referencia dimensión.',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 180]
-        );
+            $section->addTitle('X. Análisis de trabajadores referencia dimensión', 1);
 
             if (empty($groups)) {
                 $section->addText(
@@ -1699,11 +1585,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $groups = $this->getWorkerIdentificationByPositionSummary($organization->id, $workCenter->id);
 
-            $section->addText(
-            'XII. Análisis de trabajadores nivel de riesgo referencia puesto',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 120]
-        );
+            $section->addTitle('XII. Análisis de trabajadores nivel de riesgo referencia puesto', 1);
 
             if (empty($groups)) {
                 $section->addText(
@@ -1781,11 +1663,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $groups = $this->getWorkerIdentificationByDepartmentSummary($organization->id, $workCenter->id);
 
-            $section->addText(
-                'XI. Análisis de trabajadores nivel de riesgo referencia área',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 120]
-            );
+            $section->addTitle('XI. Análisis de trabajadores nivel de riesgo referencia área', 1);
 
             if (empty($groups)) {
                 $section->addText(
@@ -1874,11 +1752,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $groups = $this->getWorkerIdentificationByWorkScheduleSummary($organization->id, $workCenter->id);
 
-            $section->addText(
-            'XIII. Análisis de trabajadores nivel de riesgo referencia jornada laboral',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 120]
-        );
+           $section->addTitle('XIII. Análisis de trabajadores nivel de riesgo referencia jornada laboral', 1);
 
             if (empty($groups)) {
                 $section->addText(
@@ -1957,11 +1831,7 @@ class ExecutiveReportDownloadController extends Controller
             $summary = $this->getSevereTraumaticEventsSummary($organization->id, $workCenter->id);
             $panorama = $this->getAtsPanoramaSummary($organization->id, $workCenter->id);
 
-            $section->addText(
-                'XIV. Análisis de trabajadores referencia acontecimientos traumáticos severos',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 180]
-            );
+            $section->addTitle('XIV. Análisis de trabajadores referencia acontecimientos traumáticos severos', 1);
 
             $paragraphs = [
                 'Un Acontecimiento Traumático Severo es aquel experimentado durante o con motivo del trabajo que se caracteriza por la ocurrencia de la muerte o que representa un peligro real para la integridad física de una o varias personas y que puede generar trastorno de estrés postraumático para quien lo sufre o lo presencia.',
@@ -2225,11 +2095,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $rows = $this->getFinalRiskWorkersSummary($organization->id, $workCenter->id);
 
-            $section->addText(
-            'XVI. Análisis de trabajadores referencia factores de riesgo psicosocial altos y muy altos',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 180]
-        );
+            $section->addTitle('XVI. Análisis de trabajadores referencia factores de riesgo psicosocial altos y muy altos', 1);
 
             if (empty($rows)) {
                 $section->addText(
@@ -2299,11 +2165,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $groups = $this->getDomainQuantitativeAnalysisSummary($organization->id, $workCenter->id);
 
-            $section->addText(
-            'XVII. Análisis cuantitativo referencia nivel de riesgo por dominio y puesto',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 180]
-        );
+            $section->addTitle('XVII. Análisis cuantitativo referencia nivel de riesgo por dominio y puesto', 1);
 
             if (empty($groups)) {
                 $section->addText(
@@ -2406,11 +2268,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $rows = $this->getWorkerIdentificationByCategorySummary($organization->id, $workCenter->id);
 
-            $section->addText(
-            'XVIII. Análisis de trabajadores referencia nivel de riesgo por categoría',
-            ['bold' => true, 'size' => 14],
-            ['spaceAfter' => 120]
-        );
+            $section->addTitle('XVIII. Análisis de trabajadores referencia nivel de riesgo por categoría', 1);
 
         $section->addText(
             '1. Ambiente de trabajo   2. Factores propios de la actividad   3. Organización del tiempo de trabajo   4. Liderazgo y relaciones en el trabajo   5. Entorno organizacional',
@@ -4770,15 +4628,22 @@ class ExecutiveReportDownloadController extends Controller
                 ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
                 ->where('pe.organization_id', $organizationId)
                 ->where('pe.work_center_id', $workCenterId)
+                ->where('pe.evaluation_type', 'referencia_i')
                 ->whereIn('pe.source', ['paper', 'online'])
                 ->where('pe.processing_status', 'completed')
                 ->whereNull('pe.deleted_at')
-                ->whereNotNull('pe.referencia_i_answers')
+                ->where(function ($query) {
+                    $query->whereNotNull('pe.referencia_i_answers')
+                        ->orWhereNotNull('pe.citsats_s1')
+                        ->orWhereNotNull('pe.raw_data');
+                })
                 ->select(
                     'pe.id as evaluation_id',
                     'pe.personal_folio',
                     'pe.evaluee_name',
                     'pe.referencia_i_answers',
+                    'pe.citsats_s1',
+                    'pe.raw_data',
                     'dd.gender',
                     'dd.position'
                 )
@@ -4790,14 +4655,28 @@ class ExecutiveReportDownloadController extends Controller
             $requiresWomen = 0;
 
             foreach ($rows as $row) {
-                $answers = json_decode((string) $row->referencia_i_answers, true);
-                if (! is_array($answers)) {
+                $answers = [];
+
+                foreach (['referencia_i_answers', 'citsats_s1', 'raw_data'] as $field) {
+                    $decoded = json_decode((string) ($row->{$field} ?? ''), true);
+
+                    if (is_array($decoded) && $decoded !== []) {
+                        $answers = $decoded;
+                        break;
+                    }
+                }
+
+                if ($answers === []) {
                     continue;
                 }
 
                 $sections = $this->parseAtsSectionsFromAnswers($answers);
 
-                $total = $sections['s1'] + $sections['s2'] + $sections['s3'] + $sections['s4'];
+                $total = (int) ($sections['s1'] ?? 0)
+                    + (int) ($sections['s2'] ?? 0)
+                    + (int) ($sections['s3'] ?? 0)
+                    + (int) ($sections['s4'] ?? 0);
+
                 if ($total <= 0) {
                     continue;
                 }
@@ -4805,12 +4684,13 @@ class ExecutiveReportDownloadController extends Controller
                 $requiresValuation = $this->requiresAtsValuation($sections);
 
                 $gender = trim((string) ($row->gender ?? ''));
+                $genderNormalized = Str::lower(Str::ascii($gender));
                 $genderLabel = $gender !== '' ? ucfirst(mb_strtolower($gender)) : 'N/D';
 
                 if ($requiresValuation) {
-                    if (str_contains(mb_strtolower($genderLabel), 'masc') || $genderLabel === 'Hombre') {
+                    if (in_array($genderNormalized, ['hombre', 'hombres', 'masculino', 'masculina', 'm'], true)) {
                         $requiresMen++;
-                    } elseif (str_contains(mb_strtolower($genderLabel), 'fem') || $genderLabel === 'Mujer') {
+                    } elseif (in_array($genderNormalized, ['mujer', 'mujeres', 'femenino', 'femenina', 'f'], true)) {
                         $requiresWomen++;
                     }
                 }
@@ -4821,10 +4701,10 @@ class ExecutiveReportDownloadController extends Controller
                     'name' => $this->safeValue($row->evaluee_name),
                     'gender' => $genderLabel,
                     'position' => $this->safeValue($row->position),
-                    's1' => $sections['s1'],
-                    's2' => $sections['s2'],
-                    's3' => $sections['s3'],
-                    's4' => $sections['s4'],
+                    's1' => (int) ($sections['s1'] ?? 0),
+                    's2' => (int) ($sections['s2'] ?? 0),
+                    's3' => (int) ($sections['s3'] ?? 0),
+                    's4' => (int) ($sections['s4'] ?? 0),
                     'requires_valuation' => $requiresValuation,
                 ];
             }
@@ -4843,15 +4723,22 @@ class ExecutiveReportDownloadController extends Controller
                     ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
                     ->where('pe.organization_id', $organizationId)
                     ->where('pe.work_center_id', $workCenterId)
+                    ->where('pe.evaluation_type', 'referencia_i')
                     ->whereIn('pe.source', ['paper', 'online'])
                     ->where('pe.processing_status', 'completed')
                     ->whereNull('pe.deleted_at')
-                    ->whereNotNull('pe.referencia_i_answers')
+                    ->where(function ($query) {
+                        $query->whereNotNull('pe.referencia_i_answers')
+                            ->orWhereNotNull('pe.citsats_s1')
+                            ->orWhereNotNull('pe.raw_data');
+                    })
                     ->select(
                         'pe.id as evaluation_id',
                         'pe.personal_folio',
                         'pe.evaluee_name',
                         'pe.referencia_i_answers',
+                        'pe.citsats_s1',
+                        'pe.raw_data',
                         'pe.created_at',
                         'dd.gender',
                         'dd.age',
@@ -4874,46 +4761,46 @@ class ExecutiveReportDownloadController extends Controller
                 $participantsConsidered = 0;
 
                 foreach ($rows as $row) {
-                    $answers = json_decode((string) $row->referencia_i_answers, true);
+                    $answers = [];
 
-                    if (! is_array($answers)) {
+                    foreach (['referencia_i_answers', 'citsats_s1', 'raw_data'] as $field) {
+                        $decoded = json_decode((string) ($row->{$field} ?? ''), true);
+
+                        if (is_array($decoded) && $decoded !== []) {
+                            $answers = $decoded;
+                            break;
+                        }
+                    }
+
+                    if ($answers === []) {
                         continue;
                     }
 
                     $participantsConsidered++;
-
                     $normalized = $this->normalizeAtsKeysRecursive($answers);
 
-                $eventPayload = $this->getAtsSectionPayload($normalized, [
-                    'seccion_i', 'section_i', 's_i', 'si',
-                    'seccion_1', 'section_1', 's1', 'section1'
-                ]);
+                    $eventPayload = $this->getAtsSectionPayload($normalized, [
+                        'seccion_i', 'section_i', 's_i', 'si',
+                        'seccion_1', 'section_1', 's1', 'section1'
+                    ]);
 
-                if ($eventPayload === []) {
-                    $eventPayload = $normalized;
-                }
+                    if ($eventPayload === []) {
+                        $eventPayload = $normalized;
+                    }
 
-                $flags = [
-                    'accidente' => $this->extractWorkerFlag($eventPayload, [
-                        'accidente', 'accidentes',
-                    ]),
-                    'asaltos' => $this->extractWorkerFlag($eventPayload, [
-                        'asalto', 'asaltos',
-                    ]),
-                    'actos_violentos' => $this->extractWorkerFlag($eventPayload, [
-                        'acto_violento', 'actos_violentos', 'acto violento', 'actos violentos',
-                    ]),
-                    'secuestro' => $this->extractWorkerFlag($eventPayload, [
-                        'secuestro', 'secuestros',
-                    ]),
-                    'amenazas' => $this->extractWorkerFlag($eventPayload, [
-                        'amenaza', 'amenazas',
-                    ]),
-                    'situacion_riesgo' => $this->extractWorkerFlag($eventPayload, [
-                        'situacion_de_riesgo', 'situacion_riesgo', 'situacion de riesgo',
-                        'situacion_de_peligro', 'situacion de peligro',
-                    ]),
-                ];
+                    $flags = [
+                        'accidente' => $this->extractWorkerFlag($eventPayload, ['accidente', 'accidentes']),
+                        'asaltos' => $this->extractWorkerFlag($eventPayload, ['asalto', 'asaltos']),
+                        'actos_violentos' => $this->extractWorkerFlag($eventPayload, [
+                            'acto_violento', 'actos_violentos', 'acto violento', 'actos violentos',
+                        ]),
+                        'secuestro' => $this->extractWorkerFlag($eventPayload, ['secuestro', 'secuestros']),
+                        'amenazas' => $this->extractWorkerFlag($eventPayload, ['amenaza', 'amenazas']),
+                        'situacion_riesgo' => $this->extractWorkerFlag($eventPayload, [
+                            'situacion_de_riesgo', 'situacion_riesgo', 'situacion de riesgo',
+                            'situacion_de_peligro', 'situacion de peligro',
+                        ]),
+                    ];
 
                     foreach ($flags as $key => $flag) {
                         if ($flag) {
@@ -7355,11 +7242,7 @@ class ExecutiveReportDownloadController extends Controller
                 ],
             ];
 
-            $section->addText(
-                'XXI. Información del equipo consultor',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 180]
-            );
+            $section->addTitle('XXI. Información del equipo consultor', 1);
 
             foreach ($profiles as $index => $profile) {
                 if ($index > 0) {
