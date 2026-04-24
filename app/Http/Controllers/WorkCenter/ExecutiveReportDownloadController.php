@@ -40,11 +40,11 @@ class ExecutiveReportDownloadController extends Controller
 
                 $runId = now()->format('Ymd_His_u') . '_' . Str::random(8);
 
-        $fileName = 'Informe_Ejecutivo_NOM035_' .
-            Str::slug($organizationModel->name ?? 'empresa', '_') . '_' .
-            Str::slug($workCenterModel->name ?? 'centro_trabajo', '_') . '_' .
-            $runId .
-            '.docx';
+        $fileName = 'Informe_Analitico_NOM035_' .
+        Str::slug($organizationModel->name ?? 'empresa', '_') . '_' .
+        Str::slug($workCenterModel->name ?? 'centro_trabajo', '_') . '_' .
+        $runId .
+        '.docx';
 
         $outputPath = $outputDir . DIRECTORY_SEPARATOR . $fileName;
 
@@ -114,35 +114,33 @@ class ExecutiveReportDownloadController extends Controller
             'marginLeft' => 900,
         ]);
 
-        $footer = $section->addFooter();
+        $empresaNumero = $this->firstFilled(
+        $organization->company_number,
+        $organization->numero_empresa,
+        $organization->codigo_empresa,
+        'E-' . str_pad((string) $organization->id, 3, '0', STR_PAD_LEFT)
+    );
 
-        $footerTable = $footer->addTable([
-            'alignment' => JcTable::CENTER,
-            'borderSize' => 0,
-            'cellMargin' => 0,
-        ]);
+    $fechaFooter = now()->format('dmY');
 
-        $footerTable->addRow();
+    $footerLabel = 'Informe Analítico TMSN35 – ' .
+        $fechaFooter . ' ' .
+        $empresaNumero . ' ' .
+        mb_strtoupper($this->safeValue($organization->name)) . ' – ' .
+        mb_strtoupper($this->safeValue($workCenter->name));
 
-        $footerTable->addCell(3200)->addText(
-            $this->safeValue($workCenter->code ?? 'N/D'),
-            ['bold' => true, 'size' => 9, 'color' => '6B7280'],
-            ['spaceAfter' => 0]
-        );
+    $footer = $section->addFooter();
 
-        $footerTable->addCell(3600)->addText(
-            'Fecha elaboración: ' . $this->formatDate(now()),
-            ['size' => 9, 'color' => '6B7280'],
-            ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-        );
-
-        $footerTable->addCell(2600)->addPreserveText(
-            'Página {PAGE} de {NUMPAGES}',
-            ['size' => 9, 'color' => '6B7280'],
-            ['alignment' => Jc::END, 'spaceAfter' => 0]
-        );
+    $footer->addPreserveText(
+        $footerLabel . ' - Página {PAGE} | {NUMPAGES}',
+        ['size' => 9, 'color' => '6B7280'],
+        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+    );
 
                 $this->addCover($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addIndexSection($section);
                 $section->addPageBreak();
 
                 $this->addGeneralInformationSection($section, $organization, $workCenter);
@@ -187,10 +185,10 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addSevereTraumaticEventsSection($section, $organization, $workCenter);
                 $section->addPageBreak();
 
-                $this->addWorkplaceViolenceWorkersSection($section, $organization, $workCenter);
+                $this->addWorkplaceViolenceQuantitativeSection($section, $organization, $workCenter);
                 $section->addPageBreak();
 
-                $this->addWorkerIdentificationByCategorySection($section, $organization, $workCenter);
+                $this->addWorkplaceViolenceWorkersSection($section, $organization, $workCenter);
                 $section->addPageBreak();
 
                 $this->addFinalRiskWorkersSection($section, $organization, $workCenter);
@@ -199,11 +197,7 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addDomainQuantitativeAnalysisSection($section, $organization, $workCenter);
                 $section->addPageBreak();
 
-                
-
-                
-
-                $this->addWorkplaceViolenceQuantitativeSection($section, $organization, $workCenter);
+                $this->addWorkerIdentificationByCategorySection($section, $organization, $workCenter);
                 $section->addPageBreak();
 
                 $this->addReferenceThreeCategorySection($section, $organization, $workCenter);
@@ -212,6 +206,7 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addReferenceThreeDimensionSection($section, $organization, $workCenter);
                 $section->addPageBreak();
 
+                $this->addConsultantInformationSection($section);
 
                 return $phpWord;
             }
@@ -419,15 +414,88 @@ class ExecutiveReportDownloadController extends Controller
                 $section->addTextBreak(2);
             }
 
-    private function addIndexSection(Section $section): void
-        {
-            $section->addTitle('Índice', 1);
+            private function addIndexSection(Section $section): void
+            {
+                $section->addText(
+                    'Índice',
+                    ['bold' => true, 'size' => 14, 'color' => '111111'],
+                    ['spaceAfter' => 120]
+                );
 
-            $section->addTOC(
-                ['name' => 'Arial', 'size' => 10],
-                ['tabLeader' => \PhpOffice\PhpWord\Style\TOC::TABLEADER_DOT]
-            );
-        }
+                $rows = [
+                    ['I', 'Centro de trabajo', '1'],
+                    ['II', 'Análisis demográfico', '2'],
+                    ['III', 'Análisis general referencia nivel de riesgo', '7'],
+                    ['IV', 'Análisis general referencia (categoría / dominio / dimensiones / pregunta)', '8'],
+                    ['V', 'Análisis referencia género', '9'],
+                    ['VI', 'Análisis referencia jornada', '11'],
+                    ['VII', 'Análisis referencia área', '13'],
+                    ['VIII', 'Análisis referencia puesto', '22'],
+                    ['IX', 'Análisis referencia nivel de riesgo', '48'],
+                    ['X', 'Análisis de trabajadores referencia dimensión', '57'],
+                    ['XI', 'Análisis de trabajadores nivel de riesgo referencia área', '73'],
+                    ['XII', 'Análisis de trabajadores nivel de riesgo referencia puesto', '75'],
+                    ['XIII', 'Análisis de trabajadores nivel de riesgo referencia jornada laboral', '78'],
+                    ['XIV', 'Análisis de trabajadores referencia acontecimientos traumáticos severos', '80'],
+                    ['XV', 'Análisis de trabajadores referencia violencia laboral', '81'],
+                    ['XVI', 'Análisis de trabajadores referencia factores de riesgo psicosocial altos y muy altos', '85'],
+                    ['XVII', 'Análisis cuantitativo referencia nivel de riesgo por dominio y puesto', '87'],
+                    ['XVIII', 'Análisis de trabajadores referencia nivel de riesgo por categoría', '96'],
+                    ['XIX', 'Evaluación del Entorno Organizacional', '98'],
+                    ['XX', 'Análisis cuantitativo referencia nivel de riesgo por dimensión', '99'],
+                    ['XXI', 'Información del equipo consultor', '101'],
+                ];
+
+                $table = $section->addTable([
+                    'alignment' => JcTable::CENTER,
+                    'borderSize' => 6,
+                    'borderColor' => '808080',
+                    'cellMargin' => 45,
+                ]);
+
+                // encabezado
+                $table->addRow(380);
+
+                $table->addCell(600, ['bgColor' => 'DCE6F1', 'valign' => 'center'])->addText(
+                    '',
+                    ['bold' => true, 'size' => 9, 'color' => '111111'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $table->addCell(7900, ['bgColor' => 'DCE6F1', 'valign' => 'center'])->addText(
+                    'Contenido',
+                    ['bold' => true, 'size' => 9, 'color' => '111111'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $table->addCell(900, ['bgColor' => 'DCE6F1', 'valign' => 'center'])->addText(
+                    'Pág.',
+                    ['bold' => true, 'size' => 9, 'color' => '111111'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                foreach ($rows as [$roman, $content, $page]) {
+                    $table->addRow(520);
+
+                    $table->addCell(600, ['valign' => 'center'])->addText(
+                        $roman,
+                        ['bold' => true, 'size' => 10, 'color' => '111111'],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
+
+                    $table->addCell(7900, ['valign' => 'center'])->addText(
+                        $content,
+                        ['size' => 10, 'color' => '111111'],
+                        ['spaceAfter' => 0]
+                    );
+
+                    $table->addCell(900, ['valign' => 'center'])->addText(
+                        $page,
+                        ['size' => 10, 'color' => '111111'],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
+                }
+            }
 
     private function addGeneralInformationSection(Section $section, Organization $organization, WorkCenter $workCenter): void
         {
@@ -683,10 +751,10 @@ class ExecutiveReportDownloadController extends Controller
             $summary = $this->getWorkplaceViolenceQuantitativeSummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '2. Análisis Cuantitativo de Actos de Violencia Laboral',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 180]
-            );
+            'XV. Análisis de trabajadores referencia violencia laboral',
+            ['bold' => true, 'size' => 14],
+            ['spaceAfter' => 180]
+        );
 
             $paragraphs = [
                 'La Organización Mundial de la Salud (OMS) define el acoso laboral o mobbing como el comportamiento agresivo de uno o más miembros de un equipo de trabajo hacia un individuo de dicho grupo, con el objetivo de producir miedo, desprecio o depresión en ese trabajador, hasta que renuncie o sea despedido.',
@@ -850,7 +918,7 @@ class ExecutiveReportDownloadController extends Controller
             $summary = $this->getReferenceThreeCategorySummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '3. Evaluación del Entorno Organizacional.',
+                'XIX. Evaluación del Entorno Organizacional.',
                 ['bold' => true, 'size' => 14],
                 ['spaceAfter' => 140]
             );
@@ -929,10 +997,10 @@ class ExecutiveReportDownloadController extends Controller
             $summary = $this->getReferenceThreeDimensionSummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '4. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Dimensión. Tabla 6',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 180]
-            );
+            'XX. Análisis cuantitativo referencia nivel de riesgo por dimensión (continuación)',
+            ['bold' => true, 'size' => 14],
+            ['spaceAfter' => 180]
+        );
 
             $section->addText(
                 'Distribución consolidada por dimensión con conteos por nivel y gráficas de atención.',
@@ -954,7 +1022,7 @@ class ExecutiveReportDownloadController extends Controller
                 if ($index > 0) {
                     $section->addPageBreak();
                     $section->addText(
-                        '4. Análisis Cuantitativo de los Factores de Riesgo Psicosocial, Referencia: Dimensión. Tabla 6 (continuación)',
+                        'XX. Análisis cuantitativo referencia nivel de riesgo por dimensión',
                         ['bold' => true, 'size' => 14],
                         ['spaceAfter' => 180]
                     );
@@ -1467,6 +1535,21 @@ class ExecutiveReportDownloadController extends Controller
                 );
             }
 
+        private function stripFirstTwoLeadingZeros(?string $value): string
+        {
+            $value = trim((string) $value);
+
+            if ($value === '') {
+                return 'N/D';
+            }
+
+            if (preg_match('/^[A-Za-z]+\d+$/', $value)) {
+                return preg_replace('/^([A-Za-z]+)00/', '$1', $value) ?? $value;
+            }
+
+            return preg_replace('/^00/', '', $value) ?: $value;
+        }
+
     private function addWorkerIdentificationByDimensionSection(
             Section $section,
             Organization $organization,
@@ -1475,10 +1558,10 @@ class ExecutiveReportDownloadController extends Controller
             $groups = $this->getWorkerIdentificationByDimensionSummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '4.1 Identificación de los Trabajadores. Factores de Riesgo Psicosocial, Referencia: Dimensión. Tabla 6',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 180]
-            );
+            'X.- Análisis de trabajadores referencia dimensión.',
+            ['bold' => true, 'size' => 14],
+            ['spaceAfter' => 180]
+        );
 
             if (empty($groups)) {
                 $section->addText(
@@ -1496,10 +1579,10 @@ class ExecutiveReportDownloadController extends Controller
                 }
 
                 $section->addText(
-                    $group['number'] . ' ' . $group['name'],
-                    ['bold' => true, 'size' => 11],
-                    ['spaceBefore' => 120, 'spaceAfter' => 80]
-                );
+                str_pad((string) ($group['number'] ?? 0), 2, '0', STR_PAD_LEFT) . ' ' . $group['name'],
+                ['bold' => true, 'underline' => 'single', 'size' => 11],
+                ['spaceBefore' => 120, 'spaceAfter' => 80]
+            );
 
                 $table = $section->addTable([
                     'alignment' => JcTable::CENTER,
@@ -1511,93 +1594,99 @@ class ExecutiveReportDownloadController extends Controller
                 // encabezado
                 $table->addRow();
                 $this->addWorkerHeaderCell($table, 900, 'Riesgo');
-                $this->addWorkerHeaderCell($table, 900, 'Folio');
-                $this->addWorkerHeaderCell($table, 900, 'Calif.');
-                $this->addWorkerHeaderCell($table, 5200, 'Nombre');
-                $this->addWorkerHeaderCell($table, 2100, 'Area');
-                $this->addWorkerHeaderCell($table, 2100, 'Puesto');
+                $this->addWorkerHeaderCell($table, 1200, 'Folio');
+                $this->addWorkerHeaderCell($table, 400, 'Calif.');
+                $this->addWorkerHeaderCell($table, 4900, 'Nombre');
+                $this->addWorkerHeaderCell($table, 2200, 'Área');
+                $this->addWorkerHeaderCell($table, 1700, 'Puesto');
 
                 foreach ($group['rows'] as $row) {
-                $table->addRow();
+                    $table->addRow();
 
-                $dimensionStyle = $this->getWordRiskCellStyle($row['dimension_level_key'] ?? 'nulo');
-                $globalStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
+                    $dimensionStyle = $this->getWordRiskCellStyle($row['dimension_level_key'] ?? 'nulo');
+                    $globalStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
-                $table->addCell(900, ['bgColor' => $dimensionStyle['bg']])->addText(
-                    (string) ($row['dimension_score'] ?? 0),
-                    [
-                        'bold' => true,
-                        'size' => 10,
-                        'color' => $dimensionStyle['text'],
-                    ],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
+                    $riskCode = 'D' . str_pad((string) ($group['number'] ?? 0), 2, '0', STR_PAD_LEFT);
+                    $folioValue = $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? ''));
 
-                $table->addCell(900)->addText(
-                    $this->safeValue($row['folio']),
-                    ['size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
+                    $table->addCell(900, [
+                        'bgColor' => $dimensionStyle['bg'],
+                        'valign' => 'center',
+                    ])->addText(
+                        $riskCode,
+                        [
+                            'bold' => true,
+                            'size' => 10,
+                            'color' => $dimensionStyle['text'],
+                        ],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
 
-                $table->addCell(900, ['bgColor' => $globalStyle['bg']])->addText(
-                    (string) ($row['global_score'] ?? 0),
-                    [
-                        'bold' => true,
-                        'size' => 10,
-                        'color' => $globalStyle['text'],
-                    ],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
+                    $table->addCell(1200, [
+                        'valign' => 'center',
+                    ])->addText(
+                        $folioValue,
+                        ['size' => 10],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
 
-                $table->addCell(5200)->addText(
-                    $this->safeValue($row['name']),
-                    ['size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
+                    $table->addCell(400, [
+                        'bgColor' => $globalStyle['bg'],
+                        'valign' => 'center',
+                    ])->addText(
+                        (string) ($row['global_score'] ?? 0),
+                        [
+                            'bold' => true,
+                            'size' => 10,
+                            'color' => $globalStyle['text'],
+                        ],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
 
-                $table->addCell(2100)->addText(
-                    $this->safeValue($row['area']),
-                    ['size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
+                    $table->addCell(4900, [
+                        'valign' => 'center',
+                    ])->addText(
+                        $this->safeValue($row['name']),
+                        ['size' => 10],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
 
-                $table->addCell(2100)->addText(
-                    $this->safeValue($row['position']),
-                    ['size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-            }
+                    $table->addCell(2200, [
+                        'valign' => 'center',
+                    ])->addText(
+                        $this->safeValue($row['area']),
+                        ['size' => 10],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
+
+                    $table->addCell(1700, [
+                        'valign' => 'center',
+                    ])->addText(
+                        $this->safeValue($row['position']),
+                        ['size' => 10],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
+                }
 
                 // fila total
                 $table->addRow();
 
-                $table->addCell(1200, ['gridSpan' => 1, 'bgColor' => 'D9D9D9'])->addText(
+                $table->addCell(9450, [
+                    'gridSpan' => 5,
+                    'bgColor' => 'D9D9D9',
+                    'valign' => 'center',
+                ])->addText(
                     'T o t a l',
-                    ['bold' => true, 'size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(7200, ['gridSpan' => 2, 'bgColor' => 'D9D9D9'])->addText(
-                $group['number'] . ' ' . $group['name'],
-                ['bold' => true, 'size' => 10],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-                $table->addCell(950, ['bgColor' => 'FF1A1A'])->addText(
-                    (string) $group['totals']['muy_alto'],
-                    ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(950, ['bgColor' => 'F28C00'])->addText(
-                    (string) $group['totals']['alto'],
-                    ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(950, ['bgColor' => 'F6E600'])->addText(
-                    (string) $group['totals']['medio'],
                     ['bold' => true, 'size' => 10, 'color' => '111111'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $table->addCell(1850, [
+                    'bgColor' => '062A78',
+                    'valign' => 'center',
+                ])->addText(
+                    (string) count($group['rows']),
+                    ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
             }
@@ -1611,16 +1700,10 @@ class ExecutiveReportDownloadController extends Controller
             $groups = $this->getWorkerIdentificationByPositionSummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '6. Identificación de los Trabajadores con Factores de Riesgo Psicosocial',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 120]
-            );
-
-            $section->addText(
-                'a) por la Naturaleza de sus Funciones I. De los Puestos',
-                ['bold' => true, 'size' => 12],
-                ['spaceAfter' => 180]
-            );
+            'XII. Análisis de trabajadores nivel de riesgo referencia puesto',
+            ['bold' => true, 'size' => 14],
+            ['spaceAfter' => 120]
+        );
 
             if (empty($groups)) {
                 $section->addText(
@@ -1659,7 +1742,7 @@ class ExecutiveReportDownloadController extends Controller
                     $riskStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
                     $table->addCell(900)->addText(
-                        $this->safeValue($row['folio']),
+                        $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
                         ['size' => 10],
                         ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
@@ -1699,15 +1782,9 @@ class ExecutiveReportDownloadController extends Controller
             $groups = $this->getWorkerIdentificationByDepartmentSummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '6. Identificación de los Trabajadores con Factores de Riesgo Psicosocial',
+                'XI. Análisis de trabajadores nivel de riesgo referencia área',
                 ['bold' => true, 'size' => 14],
                 ['spaceAfter' => 120]
-            );
-
-            $section->addText(
-                'a) por la Naturaleza de sus Funciones II. De las Áreas',
-                ['bold' => true, 'size' => 12],
-                ['spaceAfter' => 180]
             );
 
             if (empty($groups)) {
@@ -1735,42 +1812,53 @@ class ExecutiveReportDownloadController extends Controller
                 ]);
 
                 $table->addRow();
-                $this->addWorkerHeaderCell($table, 900, 'Folio');
-                $this->addWorkerHeaderCell($table, 900, 'Calif.');
-                $this->addWorkerHeaderCell($table, 5200, 'Nombre');
-                $this->addWorkerHeaderCell($table, 2200, 'Puesto');
-                $this->addWorkerHeaderCell($table, 1700, 'Jornada');
+                $this->addWorkerHeaderCell($table, 1200, 'Folio');
+                $this->addWorkerHeaderCell($table, 450, 'Calif.');
+                $this->addWorkerHeaderCell($table, 4300, 'Nombre');
+                $this->addWorkerHeaderCell($table, 2400, 'Área');
+                $this->addWorkerHeaderCell($table, 1450, 'Jornada');
 
                 foreach ($group['rows'] as $row) {
                     $table->addRow();
 
                     $riskStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
-                    $table->addCell(900)->addText(
-                        $this->safeValue($row['folio']),
+                    $table->addCell(1200, [
+                        'valign' => 'center',
+                    ])->addText(
+                        $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
                         ['size' => 10],
                         ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
 
-                    $table->addCell(900, ['bgColor' => $riskStyle['bg']])->addText(
+                    $table->addCell(450, [
+                        'bgColor' => $riskStyle['bg'],
+                        'valign' => 'center',
+                    ])->addText(
                         (string) ($row['global_score'] ?? 0),
                         ['bold' => true, 'size' => 10, 'color' => $riskStyle['text']],
                         ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
 
-                    $table->addCell(5200)->addText(
+                    $table->addCell(4300, [
+                        'valign' => 'center',
+                    ])->addText(
                         $this->safeValue($row['name']),
                         ['size' => 10],
                         ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
 
-                    $table->addCell(2200)->addText(
+                    $table->addCell(2400, [
+                        'valign' => 'center',
+                    ])->addText(
                         $this->safeValue($row['position']),
                         ['size' => 10],
                         ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
 
-                    $table->addCell(1700)->addText(
+                    $table->addCell(1450, [
+                        'valign' => 'center',
+                    ])->addText(
                         $this->safeValue($row['work_schedule']),
                         ['size' => 10],
                         ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
@@ -1787,16 +1875,10 @@ class ExecutiveReportDownloadController extends Controller
             $groups = $this->getWorkerIdentificationByWorkScheduleSummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '6. Identificación de los Trabajadores con Factores de Riesgo Psicosocial',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 120]
-            );
-
-            $section->addText(
-                'a) por la Naturaleza de sus Funciones III. De la Jornada Laboral',
-                ['bold' => true, 'size' => 12],
-                ['spaceAfter' => 180]
-            );
+            'XIII. Análisis de trabajadores nivel de riesgo referencia jornada laboral',
+            ['bold' => true, 'size' => 14],
+            ['spaceAfter' => 120]
+        );
 
             if (empty($groups)) {
                 $section->addText(
@@ -1835,7 +1917,7 @@ class ExecutiveReportDownloadController extends Controller
                     $riskStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
                     $table->addCell(900)->addText(
-                        $this->safeValue($row['folio']),
+                        $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
                         ['size' => 10],
                         ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
@@ -1873,9 +1955,10 @@ class ExecutiveReportDownloadController extends Controller
             WorkCenter $workCenter
         ): void {
             $summary = $this->getSevereTraumaticEventsSummary($organization->id, $workCenter->id);
+            $panorama = $this->getAtsPanoramaSummary($organization->id, $workCenter->id);
 
             $section->addText(
-                "7. Identificación de los Trabajadores que fueron sujetos a\nAcontecimientos Traumáticos Severos durante o con motivo del trabajo",
+                'XIV. Análisis de trabajadores referencia acontecimientos traumáticos severos',
                 ['bold' => true, 'size' => 14],
                 ['spaceAfter' => 180]
             );
@@ -1892,22 +1975,54 @@ class ExecutiveReportDownloadController extends Controller
                 $section->addText(
                     $text,
                     ['size' => 10],
-                    ['spaceAfter' => 80]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 80]
                 );
             }
 
             $section->addTextBreak(1);
 
+            if (($panorama['participants_considered'] ?? 0) > 0) {
+                $section->addText(
+                    'Panorama general de Acontecimientos',
+                    ['bold' => true, 'size' => 16, 'color' => '1F2937'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 80]
+                );
+
+                $section->addText(
+                    'Esta gráfica muestra el panorama general de las personas que respondieron sí a alguna de las 6 preguntas de los acontecimientos traumáticos severos.',
+                    ['size' => 10, 'color' => '4B5563'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 40]
+                );
+
+                $section->addText(
+                    'Participantes considerados: ' .
+                    $panorama['participants_considered'] .
+                    ' (' . $panorama['without_events'] . ' sin acontecimientos traumáticos)',
+                    ['size' => 10, 'color' => '6B7280'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 120]
+                );
+
+                $chartPath = $this->generateAtsPanoramaChart(
+                    $panorama['event_counts'],
+                    $this->makeUniqueChartPath('ats_panorama')
+                );
+
+                $this->addChartImageIfExists($section, $chartPath, 560);
+
+                $section->addTextBreak(1);
+            }
+
             $section->addText(
                 'Trabajadores que Fueron Sujetos a Acontecimientos Traumáticos Severos',
                 ['bold' => true, 'size' => 12],
-                ['spaceAfter' => 120]
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 120]
             );
 
             if (empty($summary['rows'])) {
                 $section->addText(
                     'No se encontraron trabajadores con registro de acontecimientos traumáticos severos.',
-                    ['size' => 10, 'color' => '374151']
+                    ['size' => 10, 'color' => '374151'],
+                    ['alignment' => Jc::CENTER]
                 );
                 return;
             }
@@ -1936,7 +2051,7 @@ class ExecutiveReportDownloadController extends Controller
                 $rowBg = ! empty($row['requires_valuation']) ? 'D9D9D9' : null;
 
                 $table->addCell(700, $rowBg ? ['bgColor' => $rowBg] : [])->addText(
-                    $this->safeValue($row['folio']),
+                    $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
                     ['size' => 10],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
@@ -1944,19 +2059,19 @@ class ExecutiveReportDownloadController extends Controller
                 $table->addCell(4000, $rowBg ? ['bgColor' => $rowBg] : [])->addText(
                     $this->safeValue($row['name']),
                     ['size' => 10],
-                    ['spaceAfter' => 0]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
                 $table->addCell(1300, $rowBg ? ['bgColor' => $rowBg] : [])->addText(
                     $this->safeValue($row['gender']),
                     ['size' => 10],
-                    ['spaceAfter' => 0]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
                 $table->addCell(1800, $rowBg ? ['bgColor' => $rowBg] : [])->addText(
                     $this->safeValue($row['position']),
                     ['size' => 10],
-                    ['spaceAfter' => 0]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
                 foreach (['s1', 's2', 's3', 's4'] as $key) {
@@ -2025,11 +2140,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $rows = $this->getWorkplaceViolenceWorkersSummary($organization->id, $workCenter->id);
 
-            $section->addText(
-                '8. Identificación de los Trabajadores Sujetos a Actos de Violencia Laboral',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 180]
-            );
+            $section->addTextBreak(1);
 
             if (empty($rows)) {
                 $section->addText(
@@ -2064,7 +2175,7 @@ class ExecutiveReportDownloadController extends Controller
                 $pointsStyle = $this->getWordRiskCellStyle($pointsLevel['key']);
 
                 $table->addCell(650)->addText(
-                    $this->safeValue($row['folio']),
+                    $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
                     ['size' => 10],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
@@ -2115,10 +2226,10 @@ class ExecutiveReportDownloadController extends Controller
             $rows = $this->getFinalRiskWorkersSummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '9. Identificación de los Trabajadores con Factores de Riesgo Psicosocial. Referencia: Calificación Final.',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 180]
-            );
+            'XVI. Análisis de trabajadores referencia factores de riesgo psicosocial altos y muy altos',
+            ['bold' => true, 'size' => 14],
+            ['spaceAfter' => 180]
+        );
 
             if (empty($rows)) {
                 $section->addText(
@@ -2150,7 +2261,7 @@ class ExecutiveReportDownloadController extends Controller
                 $riskStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
                 $table->addCell(900)->addText(
-                    $this->safeValue($row['folio']),
+                    $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
                     ['size' => 10],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
@@ -2189,16 +2300,10 @@ class ExecutiveReportDownloadController extends Controller
             $groups = $this->getDomainQuantitativeAnalysisSummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '10. Análisis Cuantitativo de los Dominios, Referencia: Calificación Final. Tabla 6',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 180]
-            );
-
-            $section->addText(
-                'Promedio por Pregunta (Global)',
-                ['bold' => true, 'size' => 12],
-                ['spaceAfter' => 180]
-            );
+            'XVII. Análisis cuantitativo referencia nivel de riesgo por dominio y puesto',
+            ['bold' => true, 'size' => 14],
+            ['spaceAfter' => 180]
+        );
 
             if (empty($groups)) {
                 $section->addText(
@@ -2302,16 +2407,16 @@ class ExecutiveReportDownloadController extends Controller
             $rows = $this->getWorkerIdentificationByCategorySummary($organization->id, $workCenter->id);
 
             $section->addText(
-                '11. Identificación de los Trabajadores con Factores de Riesgo Psicosocial. Referencia: Categoria',
-                ['bold' => true, 'size' => 14],
-                ['spaceAfter' => 140]
-            );
+            'XVIII. Análisis de trabajadores referencia nivel de riesgo por categoría',
+            ['bold' => true, 'size' => 14],
+            ['spaceAfter' => 120]
+        );
 
-            $section->addText(
-                '1. Ambiente de trabajo   2. Factores propios de la actividad   3. Organización del tiempo de trabajo   4. Liderazgo y relaciones en el trabajo   5. Entorno organizacional',
-                ['size' => 10],
-                ['spaceAfter' => 140]
-            );
+        $section->addText(
+            '1. Ambiente de trabajo   2. Factores propios de la actividad   3. Organización del tiempo de trabajo   4. Liderazgo y relaciones en el trabajo   5. Entorno organizacional',
+            ['size' => 10],
+            ['spaceAfter' => 120]
+        );
 
             if (empty($rows)) {
                 $section->addText(
@@ -2346,7 +2451,7 @@ class ExecutiveReportDownloadController extends Controller
                 $globalStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
                 $table->addCell(800)->addText(
-                    $this->safeValue($row['folio']),
+                    $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
                     ['size' => 10],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
@@ -2377,38 +2482,41 @@ class ExecutiveReportDownloadController extends Controller
 
         private function addWorkerIdentificationRiskLegend(Section $section): void
         {
-            $section->addText(
-                'Nivel de riesgo',
-                ['size' => 11],
-                ['spaceAfter' => 60]
+           $section->addText(
+            'Nivel de riesgo',
+            ['size' => 10],
+            ['alignment' => Jc::CENTER, 'spaceAfter' => 60]
+        );
+
+        $legend = $section->addTable([
+            'alignment' => JcTable::CENTER,
+            'borderSize' => 6,
+            'borderColor' => '000000',
+            'cellMargin' => 20,
+        ]);
+
+        $legend->addRow();
+
+        $items = [
+            ['Nulo', '3B82F6', 'FFFFFF'],
+            ['Bajo', '16A34A', 'FFFFFF'],
+            ['Medio', 'F8FF03', '111111'],
+            ['Alto', 'F59E0B', 'FFFFFF'],
+            ['Muy Alto', 'EF4444', 'FFFFFF'],
+        ];
+
+        foreach ($items as [$label, $bg, $text]) {
+            $legend->addCell(1700, [
+                'bgColor' => $bg,
+                'valign' => 'center',
+            ])->addText(
+                $label,
+                ['bold' => true, 'size' => 10, 'color' => $text],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
+        }
 
-            $legend = $section->addTable([
-                'alignment' => JcTable::CENTER,
-                'borderSize' => 6,
-                'borderColor' => '000000',
-                'cellMargin' => 20,
-            ]);
-
-            $legend->addRow();
-
-            $items = [
-                ['Nulo', '3B82F6', 'FFFFFF'],
-                ['Bajo', '16A34A', 'FFFFFF'],
-                ['Medio', 'F8FF03', '111111'],
-                ['Alto', 'F59E0B', 'FFFFFF'],
-                ['Muy Alto', 'EF4444', 'FFFFFF'],
-            ];
-
-            foreach ($items as [$label, $bg, $text]) {
-                $legend->addCell(1700, ['bgColor' => $bg])->addText(
-                    $label,
-                    ['bold' => true, 'size' => 10, 'color' => $text],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-            }
-
-            $section->addTextBreak(1);
+        $section->addTextBreak(1);
         }
 
         private function getQuestionAverageMatrixSummary(string $organizationId, string $workCenterId): array
@@ -3103,9 +3211,12 @@ class ExecutiveReportDownloadController extends Controller
 
         private function addWorkerHeaderCell($table, int $width, string $label): void
         {
-            $table->addCell($width, ['bgColor' => 'FFFFFF'])->addText(
+            $table->addCell($width, [
+                'bgColor' => '062A78',
+                'valign' => 'center',
+            ])->addText(
                 $label,
-                ['size' => 10, 'color' => '111111'],
+                ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'],
                 ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
         }
@@ -4726,6 +4837,140 @@ class ExecutiveReportDownloadController extends Controller
             ];
         }
 
+            private function getAtsPanoramaSummary(string $organizationId, string $workCenterId): array
+            {
+                $rows = DB::table('paper_evaluations as pe')
+                    ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
+                    ->where('pe.organization_id', $organizationId)
+                    ->where('pe.work_center_id', $workCenterId)
+                    ->whereIn('pe.source', ['paper', 'online'])
+                    ->where('pe.processing_status', 'completed')
+                    ->whereNull('pe.deleted_at')
+                    ->whereNotNull('pe.referencia_i_answers')
+                    ->select(
+                        'pe.id as evaluation_id',
+                        'pe.personal_folio',
+                        'pe.evaluee_name',
+                        'pe.referencia_i_answers',
+                        'pe.created_at',
+                        'dd.gender',
+                        'dd.age',
+                        'dd.position',
+                        'dd.department'
+                    )
+                    ->orderBy('pe.personal_folio')
+                    ->get();
+
+                $eventCounts = [
+                    'accidente' => 0,
+                    'asaltos' => 0,
+                    'actos_violentos' => 0,
+                    'secuestro' => 0,
+                    'amenazas' => 0,
+                    'situacion_riesgo' => 0,
+                ];
+
+                $yesRows = [];
+                $participantsConsidered = 0;
+
+                foreach ($rows as $row) {
+                    $answers = json_decode((string) $row->referencia_i_answers, true);
+
+                    if (! is_array($answers)) {
+                        continue;
+                    }
+
+                    $participantsConsidered++;
+
+                    $normalized = $this->normalizeAtsKeysRecursive($answers);
+                    $sectionOne = $this->getAtsSectionPayload($normalized, [
+                        'seccion_i', 'section_i', 's_i', 'si',
+                    ]);
+
+                    $flags = [
+                        'accidente' => $this->extractWorkerFlag($sectionOne, [
+                            'accidente', 'accidentes',
+                        ]),
+                        'asaltos' => $this->extractWorkerFlag($sectionOne, [
+                            'asalto', 'asaltos',
+                        ]),
+                        'actos_violentos' => $this->extractWorkerFlag($sectionOne, [
+                            'acto_violento', 'actos_violentos', 'acto violento', 'actos violentos',
+                        ]),
+                        'secuestro' => $this->extractWorkerFlag($sectionOne, [
+                            'secuestro', 'secuestros',
+                        ]),
+                        'amenazas' => $this->extractWorkerFlag($sectionOne, [
+                            'amenaza', 'amenazas',
+                        ]),
+                        'situacion_riesgo' => $this->extractWorkerFlag($sectionOne, [
+                            'situacion_de_riesgo', 'situacion_riesgo', 'situacion de riesgo',
+                            'situacion_de_peligro', 'situacion de peligro',
+                        ]),
+                    ];
+
+                    foreach ($flags as $key => $flag) {
+                        if ($flag) {
+                            $eventCounts[$key]++;
+                        }
+                    }
+
+                    $hasAny = in_array(true, $flags, true);
+
+                    if (! $hasAny) {
+                        continue;
+                    }
+
+                    $gender = trim((string) ($row->gender ?? ''));
+                    $genderLabel = $gender !== '' ? ucfirst(mb_strtolower($gender)) : 'N/D';
+
+                    $presentedAt = 'N/D';
+                    try {
+                        if (! empty($row->created_at)) {
+                            $presentedAt = Carbon::parse($row->created_at)->format('d/m/Y, H:i');
+                        }
+                    } catch (\Throwable $e) {
+                        $presentedAt = 'N/D';
+                    }
+
+                    $ageLabel = 'N/D';
+                    if ($row->age !== null && trim((string) $row->age) !== '') {
+                        $ageLabel = rtrim(rtrim(number_format((float) $row->age, 2, '.', ''), '0'), '.');
+                    }
+
+                    $yesRows[] = [
+                        'evaluation_id' => (string) $row->evaluation_id,
+                        'folio' => $this->safeValue($row->personal_folio),
+                        'name' => $this->safeValue($row->evaluee_name),
+                        'presented_at' => $presentedAt,
+                        'gender' => $genderLabel,
+                        'age' => $ageLabel,
+                        'position' => $this->safeValue($row->position),
+                        'area' => $this->safeValue($row->department),
+                        'flags' => $flags,
+                    ];
+                }
+
+                $yesRows = collect($yesRows)
+                    ->sortBy('folio', SORT_NATURAL)
+                    ->values()
+                    ->all();
+
+                return [
+                    'participants_considered' => $participantsConsidered,
+                    'without_events' => max(0, $participantsConsidered - count($yesRows)),
+                    'responded_yes_rows' => $yesRows,
+                    'event_counts' => [
+                        ['label' => 'Accidente', 'count' => (int) $eventCounts['accidente'], 'hex' => 'F43F5E'],
+                        ['label' => 'Asaltos', 'count' => (int) $eventCounts['asaltos'], 'hex' => 'F59E0B'],
+                        ['label' => 'Actos violentos', 'count' => (int) $eventCounts['actos_violentos'], 'hex' => '10B981'],
+                        ['label' => 'Secuestro', 'count' => (int) $eventCounts['secuestro'], 'hex' => '0EA5E9'],
+                        ['label' => 'Amenazas', 'count' => (int) $eventCounts['amenazas'], 'hex' => '8B5CF6'],
+                        ['label' => 'Situación de riesgo', 'count' => (int) $eventCounts['situacion_riesgo'], 'hex' => 'D946EF'],
+                    ],
+                ];
+            }
+
         private function getWorkplaceViolenceWorkersSummary(string $organizationId, string $workCenterId): array
         {
             $atsFlags = collect($this->getSevereTraumaticEventsSummary($organizationId, $workCenterId)['rows'] ?? [])
@@ -5274,6 +5519,98 @@ class ExecutiveReportDownloadController extends Controller
                 'spaceAfter' => 80,
             ]);
         }
+
+        private function generateAtsPanoramaChart(array $events, string $outputPath): ?string
+            {
+                if (! function_exists('imagecreatetruecolor')) {
+                    return null;
+                }
+
+                if (empty($events)) {
+                    return null;
+                }
+
+                $chartDir = dirname($outputPath);
+
+                if (! is_dir($chartDir)) {
+                    mkdir($chartDir, 0755, true);
+                }
+
+                $width = 1220;
+                $height = 560;
+
+                $image = imagecreatetruecolor($width, $height);
+
+                if (function_exists('imageantialias')) {
+                    imageantialias($image, true);
+                }
+
+                $bg = imagecolorallocate($image, 255, 255, 255);
+                $border = imagecolorallocate($image, 229, 231, 235);
+                $text = imagecolorallocate($image, 55, 65, 81);
+                $axis = imagecolorallocate($image, 209, 213, 219);
+
+                imagefill($image, 0, 0, $bg);
+
+                imagefilledrectangle($image, 18, 18, $width - 18, $height - 18, $bg);
+                imagerectangle($image, 18, 18, $width - 18, $height - 18, $border);
+
+                $left = 70;
+                $right = $width - 70;
+                $top = 70;
+                $baseline = 420;
+                $maxBarHeight = 240;
+
+                imageline($image, $left, $baseline, $right, $baseline, $axis);
+
+                $count = count($events);
+                $barWidth = 90;
+                $available = ($right - $left);
+                $gap = (int) floor(($available - ($count * $barWidth)) / max(1, ($count - 1)));
+                $maxValue = max(1, max(array_map(fn ($e) => (int) ($e['count'] ?? 0), $events)));
+
+                foreach ($events as $index => $event) {
+                    [$r, $g, $b] = $this->hexToRgb($event['hex'] ?? '3B82F6');
+                    $fill = imagecolorallocate($image, $r, $g, $b);
+
+                    $x1 = $left + ($index * ($barWidth + $gap));
+                    $x2 = $x1 + $barWidth;
+
+                    $value = (int) ($event['count'] ?? 0);
+                    $barHeight = (int) round(($value / $maxValue) * $maxBarHeight);
+                    $y1 = $baseline - $barHeight;
+
+                    imagefilledrectangle($image, $x1, $y1, $x2, $baseline, $fill);
+
+                    $this->drawChartTextCenteredBold(
+                        $image,
+                        12,
+                        $x1 - 15,
+                        $y1 - 34,
+                        $x2 + 15,
+                        $y1 - 4,
+                        $text,
+                        (string) $value
+                    );
+
+                    $label = (string) ($event['label'] ?? '');
+
+                    if ($label === 'Situación de riesgo') {
+                        $this->drawChartTextCentered($image, 11, $x1 - 25, $baseline + 12, $x2 + 25, $baseline + 32, $text, 'Situación');
+                        $this->drawChartTextCentered($image, 11, $x1 - 25, $baseline + 30, $x2 + 25, $baseline + 50, $text, 'de riesgo');
+                    } elseif ($label === 'Actos violentos') {
+                        $this->drawChartTextCentered($image, 11, $x1 - 25, $baseline + 12, $x2 + 25, $baseline + 32, $text, 'Actos');
+                        $this->drawChartTextCentered($image, 11, $x1 - 25, $baseline + 30, $x2 + 25, $baseline + 50, $text, 'violentos');
+                    } else {
+                        $this->drawChartTextCentered($image, 11, $x1 - 25, $baseline + 14, $x2 + 25, $baseline + 44, $text, $label);
+                    }
+                }
+
+                imagepng($image, $outputPath);
+                imagedestroy($image);
+
+                return file_exists($outputPath) ? $outputPath : null;
+            }
 
     private function generateRiskDistributionChart(string $title, array $distribution, string $outputPath): ?string
         {
@@ -6936,6 +7273,191 @@ class ExecutiveReportDownloadController extends Controller
     private function chartText(string $text): string
         {
             return iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $text) ?: $text;
+        }
+
+    private function addConsultantInformationSection(Section $section): void
+        {
+            $profiles = [
+                [
+                    'company' => 'Training and Manufacturing Services',
+                    'name' => 'Lorena García López',
+                    'position' => 'Evaluadora',
+                    'email' => 'lorena.garcia@trainingyms.com',
+                    'phone' => '(844) 44 88 138',
+                    'lines' => [
+                        'Secretaria del Trabajo y Previsión Social / STPS 25 años',
+                        'Área de Vinculación / Inclusión / Capacitación / Seguridad y Salud',
+                        'Registro de Agente Capacitador ante STPS: TMS060511623-0013 CENTRO EVALUADOR',
+                    ],
+                    'accreditation' => 'Training and Manufacturing Services, S.C.   Cédula de acreditación CE1488-OC006-06',
+                    'certifications' => [
+                        'EC0891, “Facilitación de la implementación del programa SOLVE: promoción de la salud en el trabajo (Factores de riesgos psicosociales en el trabajo)”',
+                        'EC0217.01, “Impartición de Cursos de Formación del Capital Humano de Manera Presencial Grupal”',
+                        'EC0581, “Integración y Funcionamiento de las Comisiones Mixtas de Capacitación, Adiestramiento y Productividad”',
+                        'EC0076, “Evaluación de la Competencia de Candidatos con Base en Estándares de Competencia”',
+                        'EC0301, “Diseño de cursos de formación del capital humano de manera presencial grupal, sus instrumentos de evaluación y manuales del curso”',
+                        'EC0779, “Transversalización de la perspectiva de género en la administración pública municipal”',
+                        'EC0308, “Capacitación presencial a servidoras y servidores públicos en y desde el enfoque de Igualdad entre mujeres y hombres. Nivel básico”',
+                    ],
+                ],
+                [
+                    'company' => 'Training and Manufacturing Services',
+                    'name' => 'Alejandra Ayala Flores',
+                    'position' => 'Validación',
+                    'email' => 'alejandra.ayala@trainingyms.com',
+                    'phone' => '(844) 455 02 68',
+                    'lines' => [
+                        'Asociación de Industriales y Empresarios de Ramos Arizpe 10 años',
+                        'Área de Vinculación / Capacitación / Desarrollo de proveedores',
+                        'Registro de Agente Capacitador ante STPS: TMS060511623-0013 CENTRO EVALUADOR',
+                    ],
+                    'accreditation' => 'Training and Manufacturing Services, S.C.   Cédula de acreditación CE1488-OC006-06',
+                    'certifications' => [
+                        'EC0217.01, “Impartición de Cursos de Formación del Capital Humano de Manera Presencial Grupal”',
+                        'EC0581, “Integración y Funcionamiento de las Comisiones Mixtas de Capacitación, Adiestramiento y Productividad”',
+                        'EC0076, “Evaluación de la Competencia de Candidatos con Base en Estándares de Competencia”',
+                        'EC0301, “Diseño de cursos de formación del capital humano de manera presencial grupal, sus instrumentos de evaluación y manuales del curso”',
+                    ],
+                ],
+            ];
+
+            $section->addText(
+                'XXI. Información del equipo consultor',
+                ['bold' => true, 'size' => 14],
+                ['spaceAfter' => 180]
+            );
+
+            foreach ($profiles as $index => $profile) {
+                if ($index > 0) {
+                    $section->addPageBreak();
+                    $section->addText(
+                        'XXI. Información del equipo consultor',
+                        ['bold' => true, 'size' => 14],
+                        ['spaceAfter' => 180]
+                    );
+                }
+
+                $this->renderConsultantProfile($section, $profile);
+            }
+        }
+
+        private function renderConsultantProfile(Section $section, array $profile): void
+        {
+            $blue = '2F5597';
+            $blueBorder = 'B7C9F2';
+            $cardBg = 'F8FAFF';
+            $lineGray = 'E3E8F2';
+            $textDark = '111111';
+            $iconGray = '94A3B8';
+
+            $section->addText(
+                $this->safeValue($profile['company']),
+                ['bold' => true, 'size' => 16, 'color' => $textDark],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 160]
+            );
+
+            $outer = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 10,
+                'borderColor' => $blueBorder,
+                'cellMargin' => 0,
+            ]);
+
+            $outer->addRow();
+            $wrapper = $outer->addCell(9400, [
+                'bgColor' => $cardBg,
+                'valign' => 'center',
+            ]);
+
+            $card = $wrapper->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 0,
+                'cellMargin' => 0,
+            ]);
+
+            $rows = [
+                ['∘', 'Nombre', $profile['name']],
+                ['▭', 'Puesto', $profile['position']],
+                ['✉', 'E-mail', $profile['email']],
+                ['◔', 'Móvil', $profile['phone']],
+            ];
+
+            foreach ($rows as $i => [$icon, $label, $value]) {
+                $card->addRow(720);
+
+                $leftCell = [
+                    'bgColor' => $cardBg,
+                    'valign' => 'center',
+                    'borderBottomSize' => $i < 3 ? 6 : 0,
+                    'borderBottomColor' => $lineGray,
+                ];
+
+                $rightCell = [
+                    'bgColor' => $cardBg,
+                    'valign' => 'center',
+                    'borderBottomSize' => $i < 3 ? 6 : 0,
+                    'borderBottomColor' => $lineGray,
+                ];
+
+                $iconCell = $card->addCell(500, $leftCell);
+                $iconCell->addText(
+                    $icon,
+                    ['size' => 11, 'color' => $iconGray],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $labelCell = $card->addCell(2500, $leftCell);
+                $labelCell->addText(
+                    $label,
+                    ['size' => 11, 'color' => $blue],
+                    ['spaceAfter' => 0]
+                );
+
+                $valueCell = $card->addCell(6400, $rightCell);
+                $valueCell->addText(
+                    $this->safeValue($value),
+                    ['bold' => true, 'size' => 11, 'color' => $textDark],
+                    ['alignment' => Jc::END, 'spaceAfter' => 0]
+                );
+            }
+
+            $section->addTextBreak(2);
+
+            foreach ($profile['lines'] as $line) {
+                $section->addText(
+                    $line,
+                    ['size' => 11, 'color' => $textDark],
+                    ['spaceAfter' => 75]
+                );
+            }
+
+            $section->addText(
+                '•   ' . $profile['accreditation'],
+                ['size' => 11, 'color' => $textDark],
+                ['spaceAfter' => 120]
+            );
+
+            $section->addTextBreak(1);
+
+            $section->addText(
+                'Certificaciones ante el Consejo Nacional de Normalización y Certificación de Competencias Laborales (CONOCER)',
+                ['size' => 11, 'color' => $textDark],
+                ['spaceAfter' => 55]
+            );
+
+            $section->addText(
+                'de la Secretaría de Educación Pública (SEP):',
+                ['size' => 11, 'color' => $textDark],
+                ['spaceAfter' => 110]
+            );
+
+            foreach ($profile['certifications'] as $certification) {
+                $section->addText(
+                    $certification,
+                    ['size' => 11, 'color' => $blue],
+                    ['spaceAfter' => 55]
+                );
+            }
         }
 
     private function addInfoRow($table, string $label, ?string $value): void
