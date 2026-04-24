@@ -421,10 +421,10 @@ class ExecutiveReportDownloadController extends Controller
                     ['spaceAfter' => 120]
                 );
 
-                $section->addTOC(
-                    ['name' => 'Arial', 'size' => 10],
-                    ['tabLeader' => \PhpOffice\PhpWord\Style\TOC::TABLEADER_DOT]
-                );
+               $section->addTOC(
+                ['name' => 'Arial', 'size' => 10],
+                ['tabLeader' => 'dot']
+            );
             }
 
     private function addGeneralInformationSection(Section $section, Organization $organization, WorkCenter $workCenter): void
