@@ -4883,31 +4883,37 @@ class ExecutiveReportDownloadController extends Controller
                     $participantsConsidered++;
 
                     $normalized = $this->normalizeAtsKeysRecursive($answers);
-                    $sectionOne = $this->getAtsSectionPayload($normalized, [
-                        'seccion_i', 'section_i', 's_i', 'si',
-                    ]);
 
-                    $flags = [
-                        'accidente' => $this->extractWorkerFlag($sectionOne, [
-                            'accidente', 'accidentes',
-                        ]),
-                        'asaltos' => $this->extractWorkerFlag($sectionOne, [
-                            'asalto', 'asaltos',
-                        ]),
-                        'actos_violentos' => $this->extractWorkerFlag($sectionOne, [
-                            'acto_violento', 'actos_violentos', 'acto violento', 'actos violentos',
-                        ]),
-                        'secuestro' => $this->extractWorkerFlag($sectionOne, [
-                            'secuestro', 'secuestros',
-                        ]),
-                        'amenazas' => $this->extractWorkerFlag($sectionOne, [
-                            'amenaza', 'amenazas',
-                        ]),
-                        'situacion_riesgo' => $this->extractWorkerFlag($sectionOne, [
-                            'situacion_de_riesgo', 'situacion_riesgo', 'situacion de riesgo',
-                            'situacion_de_peligro', 'situacion de peligro',
-                        ]),
-                    ];
+                $eventPayload = $this->getAtsSectionPayload($normalized, [
+                    'seccion_i', 'section_i', 's_i', 'si',
+                    'seccion_1', 'section_1', 's1', 'section1'
+                ]);
+
+                if ($eventPayload === []) {
+                    $eventPayload = $normalized;
+                }
+
+                $flags = [
+                    'accidente' => $this->extractWorkerFlag($eventPayload, [
+                        'accidente', 'accidentes',
+                    ]),
+                    'asaltos' => $this->extractWorkerFlag($eventPayload, [
+                        'asalto', 'asaltos',
+                    ]),
+                    'actos_violentos' => $this->extractWorkerFlag($eventPayload, [
+                        'acto_violento', 'actos_violentos', 'acto violento', 'actos violentos',
+                    ]),
+                    'secuestro' => $this->extractWorkerFlag($eventPayload, [
+                        'secuestro', 'secuestros',
+                    ]),
+                    'amenazas' => $this->extractWorkerFlag($eventPayload, [
+                        'amenaza', 'amenazas',
+                    ]),
+                    'situacion_riesgo' => $this->extractWorkerFlag($eventPayload, [
+                        'situacion_de_riesgo', 'situacion_riesgo', 'situacion de riesgo',
+                        'situacion_de_peligro', 'situacion de peligro',
+                    ]),
+                ];
 
                     foreach ($flags as $key => $flag) {
                         if ($flag) {
@@ -5387,23 +5393,32 @@ class ExecutiveReportDownloadController extends Controller
         {
             $normalized = $this->normalizeAtsKeysRecursive($answers);
 
-            $s1 = $this->countTruthyRecursive($this->getAtsSectionPayload($normalized, [
+            $s1Payload = $this->getAtsSectionPayload($normalized, [
                 'seccion_i', 'section_i', 's_i', 'si',
-            ]));
+                'seccion_1', 'section_1', 's1', 'section1'
+            ]);
 
-            $s2 = $this->countTruthyRecursive($this->getAtsSectionPayload($normalized, [
+            $s2Payload = $this->getAtsSectionPayload($normalized, [
                 'seccion_ii', 'section_ii', 's_ii', 'sii',
-            ]));
+                'seccion_2', 'section_2', 's2', 'section2'
+            ]);
 
-            $s3 = $this->countTruthyRecursive($this->getAtsSectionPayload($normalized, [
+            $s3Payload = $this->getAtsSectionPayload($normalized, [
                 'seccion_iii', 'section_iii', 's_iii', 'siii',
-            ]));
+                'seccion_3', 'section_3', 's3', 'section3'
+            ]);
 
-            $s4 = $this->countTruthyRecursive($this->getAtsSectionPayload($normalized, [
+            $s4Payload = $this->getAtsSectionPayload($normalized, [
                 'seccion_iv', 'section_iv', 's_iv', 'siv',
-            ]));
+                'seccion_4', 'section_4', 's4', 'section4'
+            ]);
 
-            return compact('s1', 's2', 's3', 's4');
+            return [
+                's1' => $this->countTruthyRecursive($s1Payload),
+                's2' => $this->countTruthyRecursive($s2Payload),
+                's3' => $this->countTruthyRecursive($s3Payload),
+                's4' => $this->countTruthyRecursive($s4Payload),
+            ];
         }
 
         private function requiresAtsValuation(array $sections): bool
@@ -5418,9 +5433,28 @@ class ExecutiveReportDownloadController extends Controller
 
         private function getAtsSectionPayload(array $payload, array $aliases)
         {
-            foreach ($aliases as $alias) {
-                if (array_key_exists($alias, $payload)) {
-                    return $payload[$alias];
+            $normalizedAliases = array_map(function ($alias) {
+                return str_replace(
+                    ['-', ' '],
+                    '_',
+                    Str::lower(Str::ascii((string) $alias))
+                );
+            }, $aliases);
+
+            foreach ($payload as $key => $value) {
+                $normalizedKey = is_string($key)
+                    ? str_replace(['-', ' '], '_', Str::lower(Str::ascii($key)))
+                    : (string) $key;
+
+                if (in_array($normalizedKey, $normalizedAliases, true)) {
+                    return is_array($value) ? $value : ['value' => $value];
+                }
+
+                if (is_array($value)) {
+                    $found = $this->getAtsSectionPayload($value, $aliases);
+                    if ($found !== []) {
+                        return $found;
+                    }
                 }
             }
 
