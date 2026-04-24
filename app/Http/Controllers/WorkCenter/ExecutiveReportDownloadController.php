@@ -4761,46 +4761,104 @@ class ExecutiveReportDownloadController extends Controller
                 $participantsConsidered = 0;
 
                 foreach ($rows as $row) {
-                    $answers = [];
+                $eventPayload = [];
 
-                    foreach (['referencia_i_answers', 'citsats_s1', 'raw_data'] as $field) {
-                        $decoded = json_decode((string) ($row->{$field} ?? ''), true);
+                foreach (['referencia_i_answers', 'citsats_s1', 'raw_data'] as $field) {
+                    $decoded = json_decode((string) ($row->{$field} ?? ''), true);
 
-                        if (is_array($decoded) && $decoded !== []) {
-                            $answers = $decoded;
-                            break;
-                        }
-                    }
-
-                    if ($answers === []) {
+                    if (! is_array($decoded) || $decoded === []) {
                         continue;
                     }
 
-                    $participantsConsidered++;
-                    $normalized = $this->normalizeAtsKeysRecursive($answers);
+                    $candidate = $this->normalizeAtsKeysRecursive($decoded);
 
-                    $eventPayload = $this->getAtsSectionPayload($normalized, [
-                        'seccion_i', 'section_i', 's_i', 'si',
-                        'seccion_1', 'section_1', 's1', 'section1'
+                    // 1) Buscar bloque ATS explícito
+                    $payload = $this->getAtsSectionPayload($candidate, [
+                        'acontecimientos_traumaticos',
+                        'acontecimientos traumaticos',
+                        'evento_traumatico',
+                        'eventos_traumaticos',
+                        'eventos traumaticos',
+                        'seccion_i',
+                        'section_i',
+                        's_i',
+                        'si',
+                        'seccion_1',
+                        'section_1',
+                        's1',
+                        'section1',
                     ]);
 
-                    if ($eventPayload === []) {
-                        $eventPayload = $normalized;
+                    if ($payload !== []) {
+                        $eventPayload = $payload;
+                        break;
                     }
 
-                    $flags = [
-                        'accidente' => $this->extractWorkerFlag($eventPayload, ['accidente', 'accidentes']),
-                        'asaltos' => $this->extractWorkerFlag($eventPayload, ['asalto', 'asaltos']),
-                        'actos_violentos' => $this->extractWorkerFlag($eventPayload, [
-                            'acto_violento', 'actos_violentos', 'acto violento', 'actos violentos',
-                        ]),
-                        'secuestro' => $this->extractWorkerFlag($eventPayload, ['secuestro', 'secuestros']),
-                        'amenazas' => $this->extractWorkerFlag($eventPayload, ['amenaza', 'amenazas']),
-                        'situacion_riesgo' => $this->extractWorkerFlag($eventPayload, [
-                            'situacion_de_riesgo', 'situacion_riesgo', 'situacion de riesgo',
-                            'situacion_de_peligro', 'situacion de peligro',
-                        ]),
-                    ];
+                    // 2) Si no existe bloque formal, usar todo el payload
+                    //    solo si realmente contiene alguno de los eventos ATS
+                    $looksLikeAts =
+                        $this->extractWorkerFlag($candidate, ['accidente', 'accidentes']) ||
+                        $this->extractWorkerFlag($candidate, ['asalto', 'asaltos']) ||
+                        $this->extractWorkerFlag($candidate, ['acto_violento', 'actos_violentos', 'acto violento', 'actos violentos']) ||
+                        $this->extractWorkerFlag($candidate, ['secuestro', 'secuestros']) ||
+                        $this->extractWorkerFlag($candidate, ['amenaza', 'amenazas']) ||
+                        $this->extractWorkerFlag($candidate, [
+                            'situacion_de_riesgo',
+                            'situacion_riesgo',
+                            'situacion de riesgo',
+                            'situacion_de_peligro',
+                            'situacion de peligro',
+                            'cualquier_otro_que_ponga_en_riesgo',
+                            'cualquier otro que ponga en riesgo'
+                        ]);
+
+                    if ($looksLikeAts) {
+                        $eventPayload = $candidate;
+                        break;
+                    }
+                }
+
+                if ($eventPayload === []) {
+                    continue;
+                }
+
+                $participantsConsidered++;
+
+                $flags = [
+                    'accidente' => $this->extractWorkerFlag($eventPayload, [
+                        'accidente',
+                        'accidentes',
+                        'accidente_que_tenga_como_consecuencia_la_muerte',
+                    ]),
+                    'asaltos' => $this->extractWorkerFlag($eventPayload, [
+                        'asalto',
+                        'asaltos',
+                    ]),
+                    'actos_violentos' => $this->extractWorkerFlag($eventPayload, [
+                        'acto_violento',
+                        'actos_violentos',
+                        'acto violento',
+                        'actos violentos',
+                        'actos_violentos_que_derivaron_en_lesiones_graves',
+                    ]),
+                    'secuestro' => $this->extractWorkerFlag($eventPayload, [
+                        'secuestro',
+                        'secuestros',
+                    ]),
+                    'amenazas' => $this->extractWorkerFlag($eventPayload, [
+                        'amenaza',
+                        'amenazas',
+                    ]),
+                    'situacion_riesgo' => $this->extractWorkerFlag($eventPayload, [
+                        'situacion_de_riesgo',
+                        'situacion_riesgo',
+                        'situacion de riesgo',
+                        'situacion_de_peligro',
+                        'situacion de peligro',
+                        'cualquier_otro_que_ponga_en_riesgo',
+                        'cualquier otro que ponga en riesgo',
+                    ]),
+                ];
 
                     foreach ($flags as $key => $flag) {
                         if ($flag) {
@@ -5382,25 +5440,56 @@ class ExecutiveReportDownloadController extends Controller
 
         private function extractWorkerFlag(array $payload, array $keys): bool
         {
-            $normalizedKeys = array_map(
-                fn ($key) => mb_strtolower(trim((string) $key)),
-                $keys
-            );
+            $normalize = function ($value): string {
+                return str_replace(
+                    ['-', ' '],
+                    '_',
+                    Str::lower(Str::ascii(trim((string) $value)))
+                );
+            };
+
+            $normalizedKeys = array_map($normalize, $keys);
 
             foreach ($payload as $payloadKey => $value) {
-                $payloadKeyNormalized = mb_strtolower(trim((string) $payloadKey));
+                $payloadKeyNormalized = $normalize($payloadKey);
 
+                // Caso 1: el evento viene como KEY => true/1/"sí"
                 foreach ($normalizedKeys as $expectedKey) {
                     if (
                         $payloadKeyNormalized === $expectedKey ||
                         str_contains($payloadKeyNormalized, $expectedKey)
                     ) {
-                        if ($this->isTruthyWorkerValue($value)) {
+                        if (is_array($value)) {
+                            if ($this->countTruthyRecursive($value) > 0) {
+                                return true;
+                            }
+
+                            // o si dentro del arreglo vienen textos seleccionados
+                            if ($this->extractWorkerFlag($value, $keys)) {
+                                return true;
+                            }
+                        } elseif ($this->isTruthyWorkerValue($value)) {
                             return true;
                         }
                     }
                 }
 
+                // Caso 2: el evento viene como VALOR dentro de un array/lista
+                if (! is_array($value)) {
+                    $valueNormalized = $normalize($value);
+
+                    foreach ($normalizedKeys as $expectedKey) {
+                        if (
+                            $valueNormalized === $expectedKey ||
+                            str_contains($valueNormalized, $expectedKey) ||
+                            str_contains($expectedKey, $valueNormalized)
+                        ) {
+                            return true;
+                        }
+                    }
+                }
+
+                // Caso 3: recursión normal
                 if (is_array($value) && $this->extractWorkerFlag($value, $keys)) {
                     return true;
                 }
