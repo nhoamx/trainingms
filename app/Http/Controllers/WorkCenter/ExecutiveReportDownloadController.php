@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Models\WorkCenter;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpWord\Element\Section;
@@ -19,7 +18,6 @@ use App\Services\WorkCenter\WorkCenterNom035CalculationService;
 class ExecutiveReportDownloadController extends Controller
 {
     public function download(
-        Request $request,
         string $workCenter,
         string $organization
     ): BinaryFileResponse {
@@ -148,7 +146,7 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addPaperDemographicSection($section, $organization, $workCenter);
                 $section->addPageBreak();
 
-                $this->addReferenceThreeGlobalRiskSection($section, $organization, $workCenter);
+                $this->addReferenceThreeGlobalRiskSection($section, $workCenter);
                 $section->addPageBreak();
 
                 $this->addReferenceThreeQuestionGlobalSection($section, $organization, $workCenter);
@@ -205,7 +203,16 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addReferenceThreeDomainSection($section, $organization, $workCenter);
                 $section->addPageBreak();
 
-                $this->addReferenceThreeDimensionSection($section, $organization, $workCenter);
+                $this->addReferenceThreeDimensionSection($section, $workCenter);
+                $section->addPageBreak();
+
+                $this->addReferenceThreeQuestionRiskTableSection($section, $workCenter);
+                $section->addPageBreak();
+
+                $this->addCriticalAreasSection($section, $organization, $workCenter);
+                $section->addPageBreak();
+
+                $this->addCriticalPositionsSection($section, $organization, $workCenter);
                 $section->addPageBreak();
 
                 $this->addConsultantInformationSection($section);
@@ -598,7 +605,7 @@ class ExecutiveReportDownloadController extends Controller
             $this->addDistributionTable($section, 'Experiencia laboral', $summary['work_experience']);
         }
 
-    private function addReferenceThreeGlobalRiskSection(Section $section, Organization $organization, WorkCenter $workCenter): void
+    private function addReferenceThreeGlobalRiskSection(Section $section, WorkCenter $workCenter): void
         {
             /** @var WorkCenterNom035CalculationService $calculationService */
             $calculationService = app(WorkCenterNom035CalculationService::class);
@@ -970,7 +977,7 @@ class ExecutiveReportDownloadController extends Controller
             ['alignment' => Jc::CENTER]
         );
     }
-   private function addReferenceThreeDimensionSection(Section $section, Organization $organization, WorkCenter $workCenter): void
+   private function addReferenceThreeDimensionSection(Section $section, WorkCenter $workCenter): void
     {
         /** @var WorkCenterNom035CalculationService $calculationService */
         $calculationService = app(WorkCenterNom035CalculationService::class);
@@ -1046,6 +1053,673 @@ class ExecutiveReportDownloadController extends Controller
             ['alignment' => Jc::CENTER]
         );
     }
+
+        private function addReferenceThreeQuestionRiskTableSection(Section $section, WorkCenter $workCenter): void
+        {
+            $summary = $this->getReferenceThreeQuestionRiskTableSummary($workCenter);
+
+            $section->addTitle('XXII. Tabla de preguntas por nivel de riesgo', 1);
+
+            if (($summary['total_evaluations'] ?? 0) === 0 || empty($summary['questions'])) {
+                $section->addText(
+                    'No hay evaluaciones de Referencia III disponibles para generar la tabla de preguntas por nivel de riesgo.',
+                    ['size' => 10, 'color' => '374151']
+                );
+                return;
+            }
+
+            $table = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 6,
+                'borderColor' => '5B6472',
+                'cellMargin' => 28,
+            ]);
+
+            $titleBlue = '17365D';
+            $headerBlue = '1F3A63';
+            $headerGray = '4B5563';
+            $softGray = 'F3F4F6';
+            $questionBg = 'D9E2F3';
+
+            $table->addRow(460);
+            $table->addCell(7800, ['gridSpan' => 7, 'bgColor' => $titleBlue])->addText(
+                'TABLA DE PREGUNTAS POR NIVEL DE RIESGO  |  Encuestados: ' . (string) ($summary['total_evaluations'] ?? 0),
+                ['bold' => true, 'size' => 11, 'color' => 'FFFFFF'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            $table->addRow(420);
+
+            $table->addCell(1000, ['bgColor' => $headerBlue])->addText(
+                'PREGUNTA',
+                ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            foreach ([
+                ['key' => 'nulo', 'label' => 'NULO'],
+                ['key' => 'bajo', 'label' => 'BAJO'],
+                ['key' => 'medio', 'label' => 'MEDIO'],
+                ['key' => 'alto', 'label' => 'ALTO'],
+                ['key' => 'muy_alto', 'label' => 'MUY ALTO'],
+            ] as $header) {
+                $style = $this->getWordRiskCellStyle($header['key']);
+
+                $table->addCell(1000, ['bgColor' => $style['bg']])->addText(
+                    $header['label'],
+                    ['bold' => true, 'size' => 10, 'color' => $style['text']],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+            }
+
+            $table->addCell(1000, ['bgColor' => $headerGray])->addText(
+                'TOTAL',
+                ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            foreach ($summary['questions'] as $row) {
+                $distribution = $row['distribution'] ?? [];
+                $maxCount = max([
+                    (int) ($distribution['nulo'] ?? 0),
+                    (int) ($distribution['bajo'] ?? 0),
+                    (int) ($distribution['medio'] ?? 0),
+                    (int) ($distribution['alto'] ?? 0),
+                    (int) ($distribution['muy_alto'] ?? 0),
+                ]);
+
+                $table->addRow(300);
+
+                $table->addCell(1000, ['bgColor' => $questionBg])->addText(
+                    $row['question'],
+                    ['bold' => true, 'size' => 9, 'color' => '111111'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
+                    $value = (int) ($distribution[$levelKey] ?? 0);
+                    $style = $this->getWordRiskCellStyle($levelKey);
+                    $cellStyle = ['bgColor' => $softGray];
+                    $fontStyle = ['size' => 9, 'color' => '111111'];
+
+                    if ($value > 0 && $value === $maxCount) {
+                        $cellStyle['bgColor'] = $style['bg'];
+                        $fontStyle = ['bold' => true, 'size' => 9, 'color' => $style['text']];
+                    }
+
+                    $table->addCell(1000, $cellStyle)->addText(
+                        (string) $value,
+                        $fontStyle,
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
+                }
+
+                $table->addCell(1000, ['bgColor' => $softGray])->addText(
+                    (string) ($row['total'] ?? 0),
+                    ['bold' => true, 'size' => 9, 'color' => '111111'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+            }
+
+            $table->addRow(360);
+
+            $table->addCell(1000, ['bgColor' => $headerBlue])->addText(
+                'TOTAL',
+                ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
+                $style = $this->getWordRiskCellStyle($levelKey);
+
+                $table->addCell(1000, ['bgColor' => $style['bg']])->addText(
+                    (string) ($summary['totals'][$levelKey] ?? 0),
+                    ['bold' => true, 'size' => 10, 'color' => $style['text']],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+            }
+
+            $table->addCell(1000, ['bgColor' => $headerGray])->addText(
+                (string) ($summary['totals']['total'] ?? 0),
+                ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+        }
+
+        private function getReferenceThreeQuestionRiskTableSummary(WorkCenter $workCenter): array
+        {
+            $rows = DB::table('evaluation_answers as ea')
+                ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
+                ->where('pe.organization_id', $workCenter->organization_id)
+                ->where('pe.work_center_id', $workCenter->id)
+                ->where('pe.evaluation_type', 'referencia_iii')
+                ->where('ea.instrument', 'referencia_iii')
+                ->whereIn('pe.source', ['paper', 'online'])
+                ->where('pe.processing_status', 'completed')
+                ->whereNull('pe.deleted_at')
+                ->select(
+                    'pe.id as evaluation_id',
+                    'ea.question_key',
+                    'ea.answer_value'
+                )
+                ->orderBy('pe.id')
+                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
+                ->get();
+
+            $questions = [];
+
+            for ($i = 1; $i <= 72; $i++) {
+                $questions[$i] = [
+                    'question' => 'P' . $i,
+                    'distribution' => $this->initializeRiskLevelCounts(),
+                    'total' => 0,
+                ];
+            }
+
+            foreach ($rows as $row) {
+                $questionKey = (int) ($row->question_key ?? 0);
+
+                if ($questionKey < 1 || $questionKey > 72) {
+                    continue;
+                }
+
+                $score = $this->getReferenceThreeScore($questionKey, (string) ($row->answer_value ?? ''));
+
+                if ($score === null) {
+                    continue;
+                }
+
+                $riskLevelKey = $this->mapQuestionScoreToRiskLevelKey((int) $score);
+
+                if (isset($questions[$questionKey]['distribution'][$riskLevelKey])) {
+                    $questions[$questionKey]['distribution'][$riskLevelKey]++;
+                    $questions[$questionKey]['total']++;
+                }
+            }
+
+            $questionRows = array_values(array_filter(
+                $questions,
+                fn (array $row): bool => (int) ($row['total'] ?? 0) > 0
+            ));
+
+            usort($questionRows, function (array $a, array $b): int {
+                return (int) str_replace('P', '', $a['question']) <=> (int) str_replace('P', '', $b['question']);
+            });
+
+            $totals = $this->initializeRiskLevelCounts();
+            $totals['total'] = 0;
+
+            foreach ($questionRows as $row) {
+                foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
+                    $totals[$levelKey] += (int) ($row['distribution'][$levelKey] ?? 0);
+                }
+
+                $totals['total'] += (int) ($row['total'] ?? 0);
+            }
+
+            return [
+                'total_evaluations' => $rows->pluck('evaluation_id')->unique()->count(),
+                'questions' => $questionRows,
+                'totals' => $totals,
+            ];
+        }
+
+            private function addCriticalAreasSection(
+            Section $section,
+            Organization $organization,
+            WorkCenter $workCenter
+        ): void {
+            $summary = $this->getCriticalGroupingSummary($organization->id, $workCenter->id, 'area');
+
+            $this->renderCriticalGroupingSection(
+                $section,
+                'XXIII. Áreas críticas (agrupación)',
+                'Área',
+                $summary,
+                $workCenter
+            );
+        }
+
+        private function addCriticalPositionsSection(
+            Section $section,
+            Organization $organization,
+            WorkCenter $workCenter
+        ): void {
+            $summary = $this->getCriticalGroupingSummary($organization->id, $workCenter->id, 'position');
+
+            $this->renderCriticalGroupingSection(
+                $section,
+                'XXIV. Puestos críticos (agrupación)',
+                'Puesto',
+                $summary,
+                $workCenter
+            );
+        }
+
+        private function renderCriticalGroupingSection(
+            Section $section,
+            string $title,
+            string $groupLabel,
+            array $summary,
+            WorkCenter $workCenter
+        ): void {
+            $section->addTitle($title, 1);
+
+            if (($summary['total_evaluations'] ?? 0) === 0 || empty($summary['rows'])) {
+                $section->addText(
+                    'No se encontraron ' . strtolower($groupLabel) . 's críticas(os) para este centro de trabajo.',
+                    ['size' => 10, 'color' => '374151']
+                );
+                return;
+            }
+
+            $topBarColor = '0E5F4C';
+            $subBarColor = '169A86';
+            $headerBlue = '324A64';
+            $rowBlue = 'DCE6F1';
+            $rowGray = 'F3F4F6';
+            $borderColor = '5B6472';
+
+            $mainTitle = mb_strtoupper($this->safeValue($workCenter->name)) . ' — ' .
+                mb_strtoupper($groupLabel === 'Área' ? 'ÁREAS CRÍTICAS (AGRUPACIÓN)' : 'PUESTOS CRÍTICOS (AGRUPACIÓN)');
+
+            $headerTable = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 0,
+                'cellMargin' => 0,
+            ]);
+
+            $headerTable->addRow(560);
+            $headerTable->addCell(9800, ['bgColor' => $topBarColor])->addText(
+                $mainTitle,
+                ['bold' => true, 'size' => 18, 'color' => 'FFFFFF'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            $headerTable->addRow(520);
+            $headerTable->addCell(9800, ['bgColor' => $subBarColor])->addText(
+                'Ordenadas de mayor a menor calificación · Nivel ALTO = prioridad de intervención',
+                ['bold' => true, 'size' => 16, 'color' => 'FFFFFF'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            $section->addTextBreak(1);
+
+            $table = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 6,
+                'borderColor' => $borderColor,
+                'cellMargin' => 28,
+            ]);
+
+            $table->addRow(460);
+
+            foreach ([
+                [450, '#'],
+                [1700, $groupLabel],
+                [900, 'Participantes'],
+                [1050, 'Calif. (/288)'],
+                [950, '% Promedio'],
+                [1300, 'Nivel de riesgo'],
+                [2200, 'Principal dominio afectado'],
+                [1300, 'Priorización'],
+            ] as [$width, $label]) {
+                $table->addCell($width, ['bgColor' => $headerBlue])->addText(
+                    $label,
+                    ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+            }
+
+            foreach ($summary['rows'] as $index => $row) {
+                $rowBg = $index % 2 === 0 ? $rowBlue : $rowGray;
+                $levelStyle = $this->getWordRiskCellStyle((string) ($row['global_level_key'] ?? 'nulo'));
+                $priorityMeta = $this->resolveCriticalPriorityMeta($row);
+
+                $scoreValue = (float) ($row['average_score'] ?? 0);
+                $scoreText = abs($scoreValue - round($scoreValue)) < 0.01
+                    ? number_format($scoreValue, 0)
+                    : number_format($scoreValue, 2);
+
+                $domainText = ! empty($row['top_domains'])
+                    ? implode(' · ', $row['top_domains'])
+                    : 'N/D';
+
+                $table->addRow(440);
+
+                $table->addCell(450, ['bgColor' => $rowBg])->addText(
+                    (string) ($index + 1),
+                    ['size' => 10],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $table->addCell(1700, ['bgColor' => $rowBg])->addText(
+                    $this->safeValue($row['name'] ?? 'N/D'),
+                    ['size' => 10],
+                    ['spaceAfter' => 0]
+                );
+
+                $table->addCell(900, ['bgColor' => $rowBg])->addText(
+                    (string) ($row['participants'] ?? 0),
+                    ['size' => 10],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $table->addCell(1050, ['bgColor' => $rowBg])->addText(
+                    $scoreText,
+                    ['size' => 10],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $table->addCell(950, ['bgColor' => $rowBg])->addText(
+                    number_format((float) ($row['average_percentage'] ?? 0), 2) . '%',
+                    ['size' => 10],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $table->addCell(1300, ['bgColor' => $levelStyle['bg']])->addText(
+                    $this->safeValue($row['global_level_label'] ?? ucfirst((string) ($row['global_level_key'] ?? 'nulo'))),
+                    ['bold' => true, 'size' => 10, 'color' => $levelStyle['text']],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $table->addCell(2200, ['bgColor' => $rowBg])->addText(
+                    $domainText,
+                    ['size' => 10],
+                    ['spaceAfter' => 0]
+                );
+
+                $table->addCell(1300, ['bgColor' => $priorityMeta['bg']])->addText(
+                    $priorityMeta['label'],
+                    ['bold' => true, 'size' => 10, 'color' => $priorityMeta['text']],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+            }
+
+            $center = $summary['center'] ?? [];
+            $centerStyle = $this->getWordRiskCellStyle((string) ($center['global_level_key'] ?? 'nulo'));
+
+            $centerScoreValue = (float) ($center['average_score'] ?? 0);
+            $centerScoreText = abs($centerScoreValue - round($centerScoreValue)) < 0.01
+                ? number_format($centerScoreValue, 0)
+                : number_format($centerScoreValue, 2);
+
+            $table->addRow(420);
+
+            $table->addCell(450, ['bgColor' => $rowGray])->addText(
+                'TOTAL',
+                ['bold' => true, 'size' => 10],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            $table->addCell(1700, ['bgColor' => $rowGray])->addText(
+                'Centro completo',
+                ['bold' => true, 'size' => 10],
+                ['spaceAfter' => 0]
+            );
+
+            $table->addCell(900, ['bgColor' => $rowGray])->addText(
+                (string) ($center['participants'] ?? 0),
+                ['bold' => true, 'size' => 10],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            $table->addCell(1050, ['bgColor' => $rowGray])->addText(
+                $centerScoreText,
+                ['bold' => true, 'size' => 10],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            $table->addCell(950, ['bgColor' => $rowGray])->addText(
+                number_format((float) ($center['average_percentage'] ?? 0), 2) . '%',
+                ['bold' => true, 'size' => 10],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            $table->addCell(1300, ['bgColor' => $centerStyle['bg']])->addText(
+                $this->safeValue($center['global_level_label'] ?? ucfirst((string) ($center['global_level_key'] ?? 'nulo'))),
+                ['bold' => true, 'size' => 10, 'color' => $centerStyle['text']],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            $table->addCell(2200, ['bgColor' => $rowGray])->addText(
+                '',
+                ['size' => 10],
+                ['spaceAfter' => 0]
+            );
+
+            $table->addCell(1300, ['bgColor' => $rowGray])->addText(
+                '',
+                ['size' => 10],
+                ['spaceAfter' => 0]
+            );
+        }
+
+        private function getCriticalGroupingSummary(
+            string $organizationId,
+            string $workCenterId,
+            string $groupField
+        ): array {
+            $rows = DB::table('evaluation_answers as ea')
+                ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
+                ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
+                ->where('pe.organization_id', $organizationId)
+                ->where('pe.work_center_id', $workCenterId)
+                ->where('pe.evaluation_type', 'referencia_iii')
+                ->where('ea.instrument', 'referencia_iii')
+                ->whereIn('pe.source', ['paper', 'online'])
+                ->where('pe.processing_status', 'completed')
+                ->whereNull('pe.deleted_at')
+                ->select(
+                    'pe.id as evaluation_id',
+                    'pe.source',
+                    'pe.personal_folio',
+                    'pe.evaluee_name',
+                    'ea.question_key',
+                    'ea.answer_value',
+                    'dd.department',
+                    'dd.position',
+                    'dd.extra_fields'
+                )
+                ->orderBy('pe.id')
+                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
+                ->get();
+
+            $evaluations = $rows
+                ->groupBy('evaluation_id')
+                ->map(function ($items, $evaluationId) {
+                    $first = $items->first();
+
+                    $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
+                    if (! is_array($extra)) {
+                        $extra = [];
+                    }
+
+                    $isBoss = $this->extractWorkerFlag($extra, [
+                        'jefe',
+                        'soy_jefe',
+                        'is_boss',
+                        'is_manager',
+                        'supervises_people',
+                        'supervisa_personal',
+                        'jefe_trabajadores',
+                    ]);
+
+                    $attendsPublic = $this->extractWorkerFlag($extra, [
+                        'atiende',
+                        'atiende_clientes',
+                        'atencion_clientes',
+                        'servicio_clientes',
+                        'servicio_usuarios',
+                        'client_service',
+                        'attends_public',
+                    ]);
+
+                    $result = $this->buildReferenceThreeEvaluationResult(
+                        (string) $evaluationId,
+                        (string) ($first->source ?? 'paper'),
+                        $items,
+                        $attendsPublic,
+                        $isBoss
+                    );
+
+                    $result['folio'] = $this->safeValue($first->personal_folio);
+                    $result['name'] = $this->safeValue($first->evaluee_name);
+                    $result['area'] = $this->safeValue($first->department);
+                    $result['position'] = $this->safeValue($first->position);
+
+                    return $result;
+                })
+                ->values()
+                ->all();
+
+            $totalEvaluations = count($evaluations);
+
+            $centerAverageScore = $totalEvaluations > 0
+                ? round(collect($evaluations)->sum(fn ($row) => (int) ($row['global_score'] ?? 0)) / $totalEvaluations, 2)
+                : 0;
+
+            $centerLevel = $this->classifyNom035Score('global', null, (int) round($centerAverageScore));
+
+            $groups = collect($evaluations)
+                ->groupBy(function ($row) use ($groupField) {
+                    $label = trim((string) ($row[$groupField] ?? ''));
+                    return $label !== '' ? $label : 'N/D';
+                })
+                ->map(function ($items, $groupName) {
+                    $participants = count($items);
+
+                    $averageScore = $participants > 0
+                        ? round(collect($items)->sum(fn ($row) => (int) ($row['global_score'] ?? 0)) / $participants, 2)
+                        : 0;
+
+                    $averagePercentage = round(($averageScore / 288) * 100, 2);
+                    $globalLevel = $this->classifyNom035Score('global', null, (int) round($averageScore));
+
+                    $domainAverages = [];
+
+                    foreach ($this->getReferenceThreeDomainMaxScores() as $domainName => $maxScore) {
+                        $domainAverage = $participants > 0
+                            ? round(
+                                collect($items)->sum(fn ($row) => (int) (($row['domain_scores'][$domainName] ?? 0))) / $participants,
+                                2
+                            )
+                            : 0;
+
+                        $domainAverages[$domainName] = $domainAverage;
+                    }
+
+                    uasort($domainAverages, function ($a, $b) {
+                        return $b <=> $a;
+                    });
+
+                    $topDomains = [];
+                    foreach ($domainAverages as $domainName => $score) {
+                        if ($score <= 0) {
+                            continue;
+                        }
+
+                        $scoreLabel = abs($score - round($score)) < 0.01
+                            ? number_format($score, 0)
+                            : number_format($score, 2);
+
+                        $topDomains[] = $domainName . ' (' . $scoreLabel . ')';
+
+                        if (count($topDomains) === 2) {
+                            break;
+                        }
+                    }
+
+                    return [
+                        'name' => $groupName,
+                        'participants' => $participants,
+                        'average_score' => $averageScore,
+                        'average_percentage' => $averagePercentage,
+                        'global_level_key' => (string) ($globalLevel['key'] ?? 'nulo'),
+                        'global_level_label' => (string) ($globalLevel['label'] ?? 'Nulo'),
+                        'top_domains' => $topDomains,
+                    ];
+                })
+                ->filter(function ($row) {
+                    return $this->riskLevelWeight((string) ($row['global_level_key'] ?? 'nulo'))
+                        >= $this->riskLevelWeight('medio');
+                })
+                ->values()
+                ->all();
+
+            usort($groups, function ($a, $b) {
+                $riskCompare = $this->riskLevelWeight((string) ($b['global_level_key'] ?? 'nulo'))
+                    <=> $this->riskLevelWeight((string) ($a['global_level_key'] ?? 'nulo'));
+
+                if ($riskCompare !== 0) {
+                    return $riskCompare;
+                }
+
+                $scoreCompare = ((float) ($b['average_score'] ?? 0))
+                    <=> ((float) ($a['average_score'] ?? 0));
+
+                if ($scoreCompare !== 0) {
+                    return $scoreCompare;
+                }
+
+                $participantCompare = ((int) ($b['participants'] ?? 0))
+                    <=> ((int) ($a['participants'] ?? 0));
+
+                if ($participantCompare !== 0) {
+                    return $participantCompare;
+                }
+
+                return strnatcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+            });
+
+            $priorityRank = 0;
+
+            foreach ($groups as &$row) {
+                if (in_array((string) ($row['global_level_key'] ?? 'nulo'), ['alto', 'muy_alto'], true)) {
+                    $priorityRank++;
+                    $row['priority_rank'] = $priorityRank;
+                } else {
+                    $row['priority_rank'] = 0;
+                }
+            }
+            unset($row);
+
+            return [
+                'total_evaluations' => $totalEvaluations,
+                'rows' => $groups,
+                'center' => [
+                    'participants' => $totalEvaluations,
+                    'average_score' => $centerAverageScore,
+                    'average_percentage' => round(($centerAverageScore / 288) * 100, 2),
+                    'global_level_key' => (string) ($centerLevel['key'] ?? 'nulo'),
+                    'global_level_label' => (string) ($centerLevel['label'] ?? 'Nulo'),
+                ],
+            ];
+        }
+
+        private function resolveCriticalPriorityMeta(array $row): array
+        {
+            $levelKey = (string) ($row['global_level_key'] ?? 'nulo');
+            $priorityRank = (int) ($row['priority_rank'] ?? 0);
+
+            if (in_array($levelKey, ['alto', 'muy_alto'], true)) {
+                if ($priorityRank === 1) {
+                    return ['label' => 'PRIORIDAD 1', 'bg' => 'EF4B3A', 'text' => 'FFFFFF'];
+                }
+
+                if ($priorityRank === 2) {
+                    return ['label' => 'PRIORIDAD 2', 'bg' => 'F2B441', 'text' => '111111'];
+                }
+
+                if ($priorityRank === 3) {
+                    return ['label' => 'PRIORIDAD 3', 'bg' => 'F2B441', 'text' => '111111'];
+                }
+
+                return ['label' => 'PRIORIDAD ' . $priorityRank, 'bg' => 'F2B441', 'text' => '111111'];
+            }
+
+            return ['label' => 'SEGUIMIENTO', 'bg' => 'E9D46A', 'text' => '111111'];
+        }
 
     private function addReferenceThreeQuestionGlobalSection(
         Section $section,
@@ -1320,7 +1994,7 @@ class ExecutiveReportDownloadController extends Controller
 
             $printed = false;
 
-            foreach ($levels as $index => $level) {
+            foreach ($levels as $level) {
                 $summary = $this->getQuestionAverageMatrixSummaryByGlobalLevel(
                     $organization->id,
                     $workCenter->id,
@@ -2012,46 +2686,68 @@ class ExecutiveReportDownloadController extends Controller
             $this->addWorkerHeaderCell($table, 500, 'S-IV');
             $this->addWorkerHeaderCell($table, 1000, 'Valoración');
 
-            foreach ($summary['rows'] as $row) {
+                        foreach ($summary['rows'] as $row) {
                 $table->addRow();
 
-                $rowBg = ! empty($row['requires_valuation']) ? 'D9D9D9' : null;
+                $atsTotal = (int) ($row['s1'] ?? 0)
+                    + (int) ($row['s2'] ?? 0)
+                    + (int) ($row['s3'] ?? 0)
+                    + (int) ($row['s4'] ?? 0);
 
-                $table->addCell(700, $rowBg ? ['bgColor' => $rowBg] : [])->addText(
+                $atsLevelKey = match (true) {
+                    $atsTotal >= 6 => 'muy_alto',
+                    $atsTotal >= 4 => 'alto',
+                    $atsTotal >= 2 => 'medio',
+                    $atsTotal >= 1 => 'bajo',
+                    default => 'nulo',
+                };
+
+                $atsStyle = $this->getWordRiskCellStyle($atsLevelKey);
+                $neutralCell = ['bgColor' => ! empty($row['requires_valuation']) ? 'F3F4F6' : 'FFFFFF'];
+                $highlightCell = ['bgColor' => $atsStyle['bg']];
+
+                $table->addCell(700, $highlightCell)->addText(
                     $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
-                    ['size' => 10],
+                    ['bold' => true, 'size' => 10, 'color' => $atsStyle['text']],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
-                $table->addCell(4000, $rowBg ? ['bgColor' => $rowBg] : [])->addText(
+                $table->addCell(4000, $highlightCell)->addText(
                     $this->safeValue($row['name']),
-                    ['size' => 10],
+                    ['bold' => true, 'size' => 10, 'color' => $atsStyle['text']],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
-                $table->addCell(1300, $rowBg ? ['bgColor' => $rowBg] : [])->addText(
+                $table->addCell(1300, $neutralCell)->addText(
                     $this->safeValue($row['gender']),
                     ['size' => 10],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
-                $table->addCell(1800, $rowBg ? ['bgColor' => $rowBg] : [])->addText(
+                $table->addCell(1800, $neutralCell)->addText(
                     $this->safeValue($row['position']),
                     ['size' => 10],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
 
                 foreach (['s1', 's2', 's3', 's4'] as $key) {
-                    $table->addCell(500, $rowBg ? ['bgColor' => $rowBg] : [])->addText(
-                        (string) ($row[$key] ?? 0),
-                        ['size' => 10],
+                    $value = (int) ($row[$key] ?? 0);
+
+                    $cellStyle = $value > 0 ? $highlightCell : $neutralCell;
+                    $fontStyle = $value > 0
+                        ? ['bold' => true, 'size' => 10, 'color' => $atsStyle['text']]
+                        : ['size' => 10, 'color' => '111111'];
+
+                    $table->addCell(500, $cellStyle)->addText(
+                        (string) $value,
+                        $fontStyle,
                         ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
                 }
 
-                $table->addCell(1000, $rowBg ? ['bgColor' => $rowBg] : [])->addText(
+                $table->addCell(1000, $highlightCell)->addText(
                     ! empty($row['requires_valuation']) ? 'Sí' : 'No',
-                    ['bold' => ! empty($row['requires_valuation']), 'size' => 10],
+                    ['bold' => true, 'size' => 10, 'color' => $atsStyle['text']],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
             }
@@ -3153,17 +3849,6 @@ class ExecutiveReportDownloadController extends Controller
             };
         }
 
-        private function getRiskHexByLevel(string $levelKey): string
-        {
-            return match ($levelKey) {
-                'muy_alto' => 'EF4444',
-                'alto' => 'F59E0B',
-                'medio' => 'F8FF03',
-                'bajo' => '16A34A',
-                default => '3B82F6',
-            };
-        }
-
         private function addWorkerHeaderCell($table, int $width, string $label): void
         {
             $table->addCell($width, [
@@ -3174,63 +3859,6 @@ class ExecutiveReportDownloadController extends Controller
                 ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'],
                 ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
             );
-        }
-
-        private function workerFlagMark(bool $value): string
-        {
-            return $value ? '✓' : '';
-        }
-
-    private function addQuestionGlobalHeaderCell($table, int $width, string $label, string $bgColor, string $textColor): void
-        {
-            $table->addCell($width, ['bgColor' => $bgColor])->addText(
-                $label,
-                ['bold' => true, 'size' => 10, 'color' => $textColor],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-        }
-
-        private function addQuestionGlobalValueCell($table, int $width, string $value, string $bgColor, string $textColor): void
-        {
-            $table->addCell($width, ['bgColor' => $bgColor])->addText(
-                $value,
-                ['bold' => true, 'size' => 10, 'color' => $textColor],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-        }
-
-        private function addQuestionGlobalRiskLegend(Section $section): void
-        {
-            $section->addText(
-                'Nivel de riesgo',
-                ['size' => 10],
-                ['spaceAfter' => 40]
-            );
-
-            $legend = $section->addTable([
-                'alignment' => JcTable::START,
-                'borderSize' => 6,
-                'borderColor' => '000000',
-                'cellMargin' => 20,
-            ]);
-
-            $legend->addRow();
-
-            $items = [
-                ['Nulo', '3B82F6', 'FFFFFF'],
-                ['Bajo', '16A34A', 'FFFFFF'],
-                ['Medio', 'F8FF03', '111111'],
-                ['Alto', 'F59E0B', 'FFFFFF'],
-                ['Muy Alto', 'EF4444', 'FFFFFF'],
-            ];
-
-            foreach ($items as [$label, $bg, $text]) {
-                $legend->addCell(1400, ['bgColor' => $bg])->addText(
-                    $label,
-                    ['bold' => true, 'size' => 10, 'color' => $text],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-            }
         }
 
     private function addQuestionAverageItemsToCell($cell, array $items, ?string $note = null): void
@@ -3269,70 +3897,6 @@ class ExecutiveReportDownloadController extends Controller
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
             }
-        }
-
-        private function addQuestionAverageMatrixLegends(Section $section): void
-        {
-            $section->addText(
-                'Nivel de riesgo',
-                ['size' => 9],
-                ['spaceAfter' => 20]
-            );
-
-            $riskLegend = $section->addTable([
-                'alignment' => JcTable::START,
-                'borderSize' => 6,
-                'borderColor' => '000000',
-                'cellMargin' => 15,
-            ]);
-
-            $riskLegend->addRow(300, ['cantSplit' => true]);
-
-            foreach ([
-                ['Nulo', '3B82F6', 'FFFFFF'],
-                ['Bajo', '16A34A', 'FFFFFF'],
-                ['Medio', 'F8FF03', '111111'],
-                ['Alto', 'F59E0B', 'FFFFFF'],
-                ['Muy Alto', 'EF4444', 'FFFFFF'],
-            ] as [$label, $bg, $text]) {
-                $riskLegend->addCell(1120, ['bgColor' => $bg])->addText(
-                    $label,
-                    ['bold' => true, 'size' => 9, 'color' => $text],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-            }
-
-            $section->addText(
-                'Valor de la pregunta según el color',
-                ['size' => 9],
-                ['spaceBefore' => 40, 'spaceAfter' => 20]
-            );
-
-            $valueLegend = $section->addTable([
-                'alignment' => JcTable::START,
-                'borderSize' => 6,
-                'borderColor' => '000000',
-                'cellMargin' => 15,
-            ]);
-
-            $valueLegend->addRow(300, ['cantSplit' => true]);
-
-            foreach ([
-                ['0', '3B82F6', 'FFFFFF'],
-                ['1', '16A34A', 'FFFFFF'],
-                ['2', 'F8FF03', '111111'],
-                ['3', 'F59E0B', 'FFFFFF'],
-                ['4', 'EF4444', 'FFFFFF'],
-            ] as [$label, $bg, $text]) {
-                $valueLegend->addCell(520, ['bgColor' => $bg])->addText(
-                    $label,
-                    ['bold' => true, 'size' => 9, 'color' => $text],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-            }
-
-            $section->addText('*a  Servicio a clientes o usuarios', ['size' => 9], ['spaceBefore' => 30, 'spaceAfter' => 15]);
-            $section->addText('*b  Soy jefe de otros trabajadores', ['size' => 9], ['spaceAfter' => 15]);
         }
 
     private function addDistributionTable(Section $section, string $title, array $rows): void
@@ -3901,15 +4465,6 @@ class ExecutiveReportDownloadController extends Controller
         return (int) ($distribution['alto'] ?? 0) + (int) ($distribution['muy_alto'] ?? 0);
     }
 
-    private function getAttentionPercentage(array $distribution, int $totalEvaluations): float
-        {
-            if ($totalEvaluations <= 0) {
-                return 0;
-            }
-
-            return round(($this->getAttentionCount($distribution) / $totalEvaluations) * 100, 2);
-        }
-
     private function getQuestionGlobalAttentionCount(array $distribution): int
         {
             return (int) ($distribution['medio'] ?? 0)
@@ -4228,65 +4783,6 @@ class ExecutiveReportDownloadController extends Controller
             'Violencia' => 32,
             'Reconocimiento del desempeño' => 24,
             'Insuficiente sentido de pertenencia e inestabilidad' => 16,
-        ];
-    }
-
-    private function getReferenceThreeDimensionSummary(string $organizationId, string $workCenterId): array
-    {
-        $globalSummary = $this->getReferenceThreeGlobalSummary($organizationId, $workCenterId);
-        $evaluations = $globalSummary['evaluations'] ?? [];
-        $totalEvaluations = (int) ($globalSummary['total_evaluations'] ?? 0);
-
-        $dimensions = [];
-
-        foreach ($this->getReferenceThreeDimensionMaxScores() as $dimensionName => $maxScore) {
-            $distribution = $this->initializeRiskLevelCounts();
-            $scoreSum = 0;
-
-            foreach ($evaluations as $evaluation) {
-                $score = (int) ($evaluation['dimension_scores'][$dimensionName] ?? 0);
-                $scoreSum += $score;
-
-                $levelKey = $evaluation['dimension_levels'][$dimensionName]['key']
-                    ?? $this->classifyNom035Score('dimensions', $dimensionName, $score)['key'];
-
-                if (array_key_exists($levelKey, $distribution)) {
-                    $distribution[$levelKey]++;
-                }
-            }
-
-            $averageScore = $totalEvaluations > 0
-                ? round($scoreSum / $totalEvaluations, 2)
-                : 0;
-
-            $averagePercentage = $maxScore > 0
-                ? round(($averageScore / $maxScore) * 100, 2)
-                : 0;
-
-            $dominantLevelKey = 'nulo';
-            $dominantCount = -1;
-
-            foreach ($distribution as $levelKey => $count) {
-                if ($count > $dominantCount) {
-                    $dominantCount = $count;
-                    $dominantLevelKey = $levelKey;
-                }
-            }
-
-            $dimensions[] = [
-                'name' => $dimensionName,
-                'max_score' => $maxScore,
-                'average_score' => $averageScore,
-                'average_percentage' => $averagePercentage,
-                'distribution' => $distribution,
-                'dominant_level_key' => $dominantLevelKey,
-                'dominant_level_label' => config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey)),
-            ];
-        }
-        $dimensions = $this->sortDimensionSummariesByRisk($dimensions);
-        return [
-            'total_evaluations' => $totalEvaluations,
-            'dimensions' => $dimensions,
         ];
     }
 
@@ -5052,7 +5548,7 @@ class ExecutiveReportDownloadController extends Controller
                     $distribution[$levelKey]++;
                 }
 
-                foreach ($questionLabels as $item => $label) {
+                foreach (array_keys($questionLabels) as $item) {
                     $score = (int) ($row['items'][$item] ?? 0);
                     $scoreLevelKey = $this->mapQuestionScoreToRiskLevelKey($score);
 
@@ -5370,233 +5866,6 @@ class ExecutiveReportDownloadController extends Controller
             ->all();
         }
 
-        private function parseAtsSectionsFromAnswers(array $answers): array
-        {
-            $normalized = $this->normalizeAtsKeysRecursive($answers);
-
-            $s1Payload = $this->findAtsEventPayload($normalized);
-
-            $s2Payload = $this->getAtsSectionPayload($normalized, [
-                'seccion_ii', 'section_ii', 's_ii', 'sii',
-                'seccion_2', 'section_2', 's2', 'section2',
-                'recuerdos persistentes sobre el acontecimiento (durante el ultimo mes)',
-            ]);
-
-            $s3Payload = $this->getAtsSectionPayload($normalized, [
-                'seccion_iii', 'section_iii', 's_iii', 'siii',
-                'seccion_3', 'section_3', 's3', 'section3',
-                'esfuerzo por evitar circunstancias parecidas o asociadas al acontecimiento (durante el ultimo mes)',
-            ]);
-
-            $s4Payload = $this->getAtsSectionPayload($normalized, [
-                'seccion_iv', 'section_iv', 's_iv', 'siv',
-                'seccion_4', 'section_4', 's4', 'section4',
-                'afectacion (durante el ultimo mes)',
-            ]);
-
-            return [
-                's1' => $this->countTruthyRecursive($s1Payload),
-                's2' => $this->countTruthyRecursive($s2Payload),
-                's3' => $this->countTruthyRecursive($s3Payload),
-                's4' => $this->countTruthyRecursive($s4Payload),
-            ];
-        }
-
-        private function requiresAtsValuation(array $sections): bool
-        {
-            return (int) ($sections['s1'] ?? 0) > 0
-                && (
-                    (int) ($sections['s2'] ?? 0) > 0
-                    || (int) ($sections['s3'] ?? 0) >= 3
-                    || (int) ($sections['s4'] ?? 0) >= 2
-                );
-        }
-
-        private function getMergedAtsAnswersFromRow($row): array
-        {
-            $merged = [];
-
-            foreach (['referencia_i_answers', 'citsats_s1', 'raw_data'] as $field) {
-                $decoded = json_decode((string) ($row->{$field} ?? ''), true);
-
-                if (is_array($decoded) && $decoded !== []) {
-                    $merged = $this->mergeAtsArrays($merged, $decoded);
-                }
-            }
-
-            return $this->normalizeAtsKeysRecursive($merged);
-        }
-
-        private function mergeAtsArrays(array $base, array $append): array
-        {
-            foreach ($append as $key => $value) {
-                if (
-                    array_key_exists($key, $base) &&
-                    is_array($base[$key]) &&
-                    is_array($value)
-                ) {
-                    $base[$key] = $this->mergeAtsArrays($base[$key], $value);
-                } else {
-                    $base[$key] = $value;
-                }
-            }
-
-            return $base;
-        }
-
-        private function getAtsSectionPayload(array $payload, array $aliases)
-        {
-            $normalizedAliases = array_map(function ($alias) {
-                return str_replace(
-                    ['-', ' '],
-                    '_',
-                    Str::lower(Str::ascii((string) $alias))
-                );
-            }, $aliases);
-
-            foreach ($payload as $key => $value) {
-                $normalizedKey = is_string($key)
-                    ? str_replace(['-', ' '], '_', Str::lower(Str::ascii($key)))
-                    : (string) $key;
-
-                if (in_array($normalizedKey, $normalizedAliases, true)) {
-                    return is_array($value) ? $value : ['value' => $value];
-                }
-
-                if (is_array($value)) {
-                    $found = $this->getAtsSectionPayload($value, $aliases);
-
-                    if ($found !== []) {
-                        return $found;
-                    }
-                }
-            }
-
-            return [];
-        }
-
-        private function findAtsEventPayload(array $payload): array
-        {
-            if ($this->countAtsEventAliases($payload) >= 3) {
-                return $payload;
-            }
-
-            foreach ($payload as $value) {
-                if (is_array($value)) {
-                    $found = $this->findAtsEventPayload($value);
-
-                    if ($found !== []) {
-                        return $found;
-                    }
-                }
-            }
-
-            return [];
-        }
-
-        private function countAtsEventAliases(array $payload): int
-        {
-            $normalize = function ($value): string {
-                return str_replace(
-                    ['-', ' '],
-                    '_',
-                    Str::lower(Str::ascii(trim((string) $value)))
-                );
-            };
-
-            $aliases = array_map($normalize, [
-                'accidente',
-                'asalto',
-                'asaltos',
-                'acto violento',
-                'actos violentos',
-                'secuestro',
-                'amenaza',
-                'amenazas',
-                'situacion de riesgo',
-                'cualquier otro que ponga en riesgo',
-            ]);
-
-            $found = [];
-
-            $walker = function ($node) use (&$walker, &$found, $aliases, $normalize) {
-                if (! is_array($node)) {
-                    return;
-                }
-
-                foreach ($node as $key => $value) {
-                    if (is_string($key)) {
-                        $keyNormalized = $normalize($key);
-
-                        foreach ($aliases as $alias) {
-                            if (
-                                $keyNormalized === $alias ||
-                                str_contains($keyNormalized, $alias) ||
-                                str_contains($alias, $keyNormalized)
-                            ) {
-                                $found[$alias] = true;
-                            }
-                        }
-                    }
-
-                    if (! is_array($value)) {
-                        $valueNormalized = $normalize($value);
-
-                        foreach ($aliases as $alias) {
-                            if (
-                                $valueNormalized !== '' &&
-                                (
-                                    $valueNormalized === $alias ||
-                                    str_contains($valueNormalized, $alias) ||
-                                    str_contains($alias, $valueNormalized)
-                                )
-                            ) {
-                                $found[$alias] = true;
-                            }
-                        }
-                    } else {
-                        $walker($value);
-                    }
-                }
-            };
-
-            $walker($payload);
-
-            return count($found);
-        }
-
-        private function normalizeAtsKeysRecursive($value)
-        {
-            if (! is_array($value)) {
-                return $value;
-            }
-
-            $normalized = [];
-
-            foreach ($value as $key => $item) {
-                $normalizedKey = is_string($key)
-                    ? str_replace(['-', ' '], '_', Str::lower(Str::ascii($key)))
-                    : $key;
-
-                $normalized[$normalizedKey] = $this->normalizeAtsKeysRecursive($item);
-            }
-
-            return $normalized;
-        }
-
-        private function countTruthyRecursive($value): int
-        {
-            if (is_array($value)) {
-                $count = 0;
-                foreach ($value as $item) {
-                    $count += $this->countTruthyRecursive($item);
-                }
-                return $count;
-            }
-
-            return $this->isTruthyWorkerValue($value) ? 1 : 0;
-        }
-
         private function extractWorkerFlag(array $payload, array $keys): bool
         {
             $normalize = function ($value): string {
@@ -5820,7 +6089,6 @@ class ExecutiveReportDownloadController extends Controller
 
                 $left = 70;
                 $right = $width - 70;
-                $top = 70;
                 $baseline = 420;
                 $maxBarHeight = 240;
 
@@ -5914,7 +6182,6 @@ class ExecutiveReportDownloadController extends Controller
             $white = imagecolorallocate($image, 255, 255, 255);
             $border = imagecolorallocate($image, 203, 213, 225);
             $titleColor = imagecolorallocate($image, 15, 23, 42);
-            $textColor = imagecolorallocate($image, 51, 65, 85);
             $headerBg = imagecolorallocate($image, 234, 242, 255);
             $darkRed = imagecolorallocate($image, 153, 27, 27);
 
@@ -6125,19 +6392,6 @@ class ExecutiveReportDownloadController extends Controller
 
             return $outputPath;
         }
-
-    private function generateAveragePercentageChart(string $title, array $items, string $outputPath): ?string
-    {
-        $labels = [];
-        $values = [];
-
-        foreach ($items as $item) {
-            $labels[] = (string) ($item['label'] ?? 'N/D');
-            $values[] = (float) ($item['value'] ?? 0);
-        }
-
-        return $this->renderHorizontalBarChart($title, $labels, $values, $outputPath, 100, '%');
-    }
 
     private function generateCategoryDashboardChart(array $categories, int $totalEvaluations, string $outputPath): ?string
         {
@@ -6926,512 +7180,6 @@ class ExecutiveReportDownloadController extends Controller
             }
         }
 
-    private function generateQuestionGlobalDashboardChart(array $summary, string $outputPath): ?string
-        {
-            if (! function_exists('imagecreatetruecolor')) {
-                return null;
-            }
-
-            $chartDir = dirname($outputPath);
-
-            if (! is_dir($chartDir)) {
-                mkdir($chartDir, 0755, true);
-            }
-
-            $blueHex = '3B82F6';
-            $greenHex = '16A34A';
-            $yellowHex = 'F8FF03';
-            $orangeHex = 'F59E0B';
-            $redHex = 'EF4444';
-
-            $rows = [];
-            foreach ($summary['categories'] as $category) {
-                foreach ($category['domains'] as $domain) {
-                    foreach ($domain['dimensions'] as $dimension) {
-                        $rows[] = [
-                            'category' => $category['name'],
-                            'category_score' => $category['score'],
-                            'domain' => $domain['name'],
-                            'domain_score' => $domain['score'],
-                            'dimension' => $dimension['name'],
-                            'dimension_score' => $dimension['score'],
-                            'items' => $dimension['items'],
-                            'note' => $dimension['note'] ?? null,
-                        ];
-                    }
-                }
-            }
-
-            $rowCount = count($rows);
-            $rowH = 54;
-            $headerH = 66;
-
-            $width = 1900;
-            $height = 220 + ($rowCount * $rowH) + 260;
-
-            $image = imagecreatetruecolor($width, $height);
-
-            if (function_exists('imageantialias')) {
-                imageantialias($image, true);
-            }
-
-            $white = imagecolorallocate($image, 255, 255, 255);
-            $panel = imagecolorallocate($image, 248, 250, 252);
-            $border = imagecolorallocate($image, 60, 60, 60);
-            $text = imagecolorallocate($image, 17, 17, 17);
-            $gray = imagecolorallocate($image, 217, 217, 217);
-
-            [$br, $bg, $bb] = $this->hexToRgb($blueHex);
-            [$gr, $gg, $gb] = $this->hexToRgb($greenHex);
-            [$yr, $yg, $yb] = $this->hexToRgb($yellowHex);
-            [$or, $og, $ob] = $this->hexToRgb($orangeHex);
-            [$rr, $rg, $rb] = $this->hexToRgb($redHex);
-
-            $blue = imagecolorallocate($image, $br, $bg, $bb);
-            $green = imagecolorallocate($image, $gr, $gg, $gb);
-            $yellow = imagecolorallocate($image, $yr, $yg, $yb);
-            $orange = imagecolorallocate($image, $or, $og, $ob);
-            $red = imagecolorallocate($image, $rr, $rg, $rb);
-
-            imagefill($image, 0, 0, $white);
-
-            imagefilledrectangle($image, 20, 20, $width - 20, $height - 20, $panel);
-            imagerectangle($image, 20, 20, $width - 20, $height - 20, $border);
-
-            $this->drawChartTextBold($image, 20, 36, 46, $text, 'a) Promedio General por Pregunta');
-
-            $xCat = 40;
-            $wCatName = 190;
-            $wCatScore = 70;
-
-            $xDom = $xCat + $wCatName + $wCatScore;
-            $wDomName = 230;
-            $wDomScore = 70;
-
-            $xDim = $xDom + $wDomName + $wDomScore;
-            $wDimName = 560;
-            $wDimScore = 70;
-
-            $xItems = $xDim + $wDimName + $wDimScore;
-            $itemBoxW = 56;
-            $itemGap = 6;
-
-            $tableY = 90;
-
-            // encabezados
-            imagefilledrectangle($image, $xCat, $tableY, $xCat + $wCatName + $wCatScore, $tableY + $headerH, $gray);
-            imagerectangle($image, $xCat, $tableY, $xCat + $wCatName + $wCatScore, $tableY + $headerH, $border);
-            $this->drawChartTextCenteredBold($image, 16, $xCat, $tableY, $xCat + $wCatName + $wCatScore, $tableY + $headerH, $text, 'Categorías');
-
-            imagefilledrectangle($image, $xDom, $tableY, $xDom + $wDomName + $wDomScore, $tableY + $headerH, $gray);
-            imagerectangle($image, $xDom, $tableY, $xDom + $wDomName + $wDomScore, $tableY + $headerH, $border);
-            $this->drawChartTextCenteredBold($image, 16, $xDom, $tableY, $xDom + $wDomName + $wDomScore, $tableY + $headerH, $text, 'Dominios');
-
-            imagefilledrectangle($image, $xDim, $tableY, $xDim + $wDimName + $wDimScore, $tableY + $headerH, $gray);
-            imagerectangle($image, $xDim, $tableY, $xDim + $wDimName + $wDimScore, $tableY + $headerH, $border);
-            $this->drawChartTextCenteredBold($image, 16, $xDim, $tableY, $xDim + $wDimName + $wDimScore, $tableY + $headerH, $text, 'Factores de Riesgo Psicosocial');
-
-            imagefilledrectangle($image, $xItems, $tableY, $width - 60, $tableY + $headerH, $gray);
-            imagerectangle($image, $xItems, $tableY, $width - 60, $tableY + $headerH, $border);
-            $this->drawChartTextCenteredBold($image, 16, $xItems, $tableY, $width - 60, $tableY + $headerH, $text, 'Preguntas (items)');
-
-            $currentY = $tableY + $headerH;
-
-            $rowIndex = 0;
-            foreach ($summary['categories'] as $category) {
-                $categoryRows = 0;
-                foreach ($category['domains'] as $domain) {
-                    $categoryRows += count($domain['dimensions']);
-                }
-
-                $categoryHeight = $categoryRows * $rowH;
-                $categoryLevel = $this->classifyNom035Score('categories', $category['name'], (int) $category['score']);
-                $categoryHex = $this->getRiskHexByLevel($categoryLevel['key']);
-                [$cr, $cg, $cb] = $this->hexToRgb($categoryHex);
-                $categoryColor = imagecolorallocate($image, $cr, $cg, $cb);
-
-                imagefilledrectangle($image, $xCat, $currentY + ($rowIndex * $rowH), $xCat + $wCatName, $currentY + ($rowIndex * $rowH) + $categoryHeight, $white);
-                imagerectangle($image, $xCat, $currentY + ($rowIndex * $rowH), $xCat + $wCatName, $currentY + ($rowIndex * $rowH) + $categoryHeight, $border);
-
-                imagefilledrectangle($image, $xCat + $wCatName, $currentY + ($rowIndex * $rowH), $xCat + $wCatName + $wCatScore, $currentY + ($rowIndex * $rowH) + $categoryHeight, $categoryColor);
-                imagerectangle($image, $xCat + $wCatName, $currentY + ($rowIndex * $rowH), $xCat + $wCatName + $wCatScore, $currentY + ($rowIndex * $rowH) + $categoryHeight, $border);
-
-                $this->drawChartTextCenteredBold(
-                    $image,
-                    14,
-                    $xCat,
-                    $currentY + ($rowIndex * $rowH),
-                    $xCat + $wCatName,
-                    $currentY + ($rowIndex * $rowH) + $categoryHeight,
-                    $text,
-                    $category['name']
-                );
-
-                $this->drawChartTextCenteredBold(
-                    $image,
-                    14,
-                    $xCat + $wCatName,
-                    $currentY + ($rowIndex * $rowH),
-                    $xCat + $wCatName + $wCatScore,
-                    $currentY + ($rowIndex * $rowH) + $categoryHeight,
-                    $categoryHex === $yellowHex ? $text : $white,
-                    (string) $category['score']
-                );
-
-                $domainRowIndex = $rowIndex;
-
-                foreach ($category['domains'] as $domain) {
-                    $domainRows = count($domain['dimensions']);
-                    $domainHeight = $domainRows * $rowH;
-                    $domainLevel = $this->classifyNom035Score('domains', $domain['name'], (int) $domain['score']);
-                    $domainHex = $this->getRiskHexByLevel($domainLevel['key']);
-                    [$dr, $dg, $db] = $this->hexToRgb($domainHex);
-                    $domainColor = imagecolorallocate($image, $dr, $dg, $db);
-
-                    imagefilledrectangle($image, $xDom, $currentY + ($domainRowIndex * $rowH), $xDom + $wDomName, $currentY + ($domainRowIndex * $rowH) + $domainHeight, $white);
-                    imagerectangle($image, $xDom, $currentY + ($domainRowIndex * $rowH), $xDom + $wDomName, $currentY + ($domainRowIndex * $rowH) + $domainHeight, $border);
-
-                    imagefilledrectangle($image, $xDom + $wDomName, $currentY + ($domainRowIndex * $rowH), $xDom + $wDomName + $wDomScore, $currentY + ($domainRowIndex * $rowH) + $domainHeight, $domainColor);
-                    imagerectangle($image, $xDom + $wDomName, $currentY + ($domainRowIndex * $rowH), $xDom + $wDomName + $wDomScore, $currentY + ($domainRowIndex * $rowH) + $domainHeight, $border);
-
-                    $this->drawChartTextCenteredBold(
-                        $image,
-                        14,
-                        $xDom,
-                        $currentY + ($domainRowIndex * $rowH),
-                        $xDom + $wDomName,
-                        $currentY + ($domainRowIndex * $rowH) + $domainHeight,
-                        $text,
-                        $domain['name']
-                    );
-
-                    $this->drawChartTextCenteredBold(
-                        $image,
-                        14,
-                        $xDom + $wDomName,
-                        $currentY + ($domainRowIndex * $rowH),
-                        $xDom + $wDomName + $wDomScore,
-                        $currentY + ($domainRowIndex * $rowH) + $domainHeight,
-                        $domainHex === $yellowHex ? $text : $white,
-                        (string) $domain['score']
-                    );
-
-                    foreach ($domain['dimensions'] as $dimension) {
-                        $y1 = $currentY + ($rowIndex * $rowH);
-                        $y2 = $y1 + $rowH;
-
-                        $dimensionLevel = $this->classifyNom035Score('dimensions', $dimension['name'], (int) $dimension['score']);
-                        $dimensionHex = $this->getRiskHexByLevel($dimensionLevel['key']);
-                        [$ir, $ig, $ib] = $this->hexToRgb($dimensionHex);
-                        $dimensionColor = imagecolorallocate($image, $ir, $ig, $ib);
-
-                        imagefilledrectangle($image, $xDim, $y1, $xDim + $wDimName, $y2, $white);
-                        imagerectangle($image, $xDim, $y1, $xDim + $wDimName, $y2, $border);
-
-                        imagefilledrectangle($image, $xDim + $wDimName, $y1, $xDim + $wDimName + $wDimScore, $y2, $dimensionColor);
-                        imagerectangle($image, $xDim + $wDimName, $y1, $xDim + $wDimName + $wDimScore, $y2, $border);
-
-                        $this->drawChartText($image, 12, $xDim + 10, $y1 + 34, $text, $dimension['name']);
-                        $this->drawChartTextCenteredBold(
-                            $image,
-                            13,
-                            $xDim + $wDimName,
-                            $y1,
-                            $xDim + $wDimName + $wDimScore,
-                            $y2,
-                            $dimensionHex === $yellowHex ? $text : $white,
-                            (string) $dimension['score']
-                        );
-
-                        $itemX = $xItems + 10;
-                        foreach ($dimension['items'] as $item) {
-                            $itemHex = $this->getQuestionValueHex((int) $item['score']);
-                            [$qr, $qg, $qb] = $this->hexToRgb($itemHex);
-                            $itemColor = imagecolorallocate($image, $qr, $qg, $qb);
-
-                            imagefilledrectangle($image, $itemX, $y1 + 6, $itemX + $itemBoxW, $y2 - 6, $itemColor);
-                            imagerectangle($image, $itemX, $y1 + 6, $itemX + $itemBoxW, $y2 - 6, $border);
-
-                            $itemTextColor = $itemHex === $yellowHex ? $text : $white;
-                            $this->drawChartTextCenteredBold(
-                                $image,
-                                12,
-                                $itemX,
-                                $y1 + 6,
-                                $itemX + $itemBoxW,
-                                $y2 - 6,
-                                $itemTextColor,
-                                (string) $item['number']
-                            );
-
-                            $itemX += $itemBoxW + $itemGap;
-                        }
-
-                        if (! empty($dimension['note'])) {
-                            imagefilledrectangle($image, $itemX + 8, $y1 + 8, $itemX + 150, $y2 - 8, $gray);
-                            imagerectangle($image, $itemX + 8, $y1 + 8, $itemX + 150, $y2 - 8, $border);
-                            $this->drawChartText($image, 12, $itemX + 18, $y1 + 34, $text, $dimension['note']);
-                        }
-
-                        $rowIndex++;
-                    }
-
-                    $domainRowIndex += $domainRows;
-                }
-            }
-
-            $bottomY = $currentY + ($rowCount * $rowH) + 60;
-
-            $globalLevel = $this->classifyNom035Score('global', null, (int) $summary['final_total']);
-            $globalHex = $this->getRiskHexByLevel($globalLevel['key']);
-            [$fr, $fg, $fb] = $this->hexToRgb($globalHex);
-            $finalColor = imagecolorallocate($image, $fr, $fg, $fb);
-
-            imagefilledrectangle($image, 60, $bottomY, 650, $bottomY + 90, $finalColor);
-            imagerectangle($image, 60, $bottomY, 650, $bottomY + 90, $border);
-            $finalTextColor = $globalHex === $yellowHex ? $text : $white;
-            $this->drawChartTextCenteredBold(
-                $image,
-                16,
-                60,
-                $bottomY,
-                650,
-                $bottomY + 90,
-                $finalTextColor,
-                'Calificación Final Total'
-            );
-            $this->drawChartTextCenteredBold(
-                $image,
-                15,
-                60,
-                $bottomY + 30,
-                650,
-                $bottomY + 90,
-                $finalTextColor,
-                $summary['final_total'] . ' / 288 - ' . number_format($summary['final_percentage'], 2) . ' %'
-            );
-
-            imagefilledrectangle($image, 700, $bottomY, 1260, $bottomY + 90, $gray);
-            imagerectangle($image, 700, $bottomY, 1260, $bottomY + 90, $border);
-            $this->drawChartTextCenteredBold(
-                $image,
-                16,
-                700,
-                $bottomY,
-                1260,
-                $bottomY + 90,
-                $text,
-                $summary['participants'] . ' Participantes'
-            );
-
-            $legendY = $bottomY + 130;
-            $this->drawChartText($image, 13, 60, $legendY - 14, $text, 'Nivel de riesgo');
-
-            $riskLegend = [
-                ['Nulo', $blue],
-                ['Bajo', $green],
-                ['Medio', $yellow],
-                ['Alto', $orange],
-                ['Muy Alto', $red],
-            ];
-
-            $legendX = 60;
-            foreach ($riskLegend as $i => [$label, $fill]) {
-                $x1 = $legendX + ($i * 165);
-                $x2 = $x1 + 155;
-
-                imagefilledrectangle($image, $x1, $legendY, $x2, $legendY + 40, $fill);
-                imagerectangle($image, $x1, $legendY, $x2, $legendY + 40, $border);
-
-                $textColor = $label === 'Medio' ? $text : $white;
-                $this->drawChartTextCenteredBold($image, 13, $x1, $legendY, $x2, $legendY + 40, $textColor, $label);
-            }
-
-            $valueLegendX = 1320;
-            $this->drawChartText($image, 13, $valueLegendX, $legendY - 14, $text, 'Valor de la pregunta según el color');
-
-            $valueLegend = [
-                [0, $blue],
-                [1, $green],
-                [2, $yellow],
-                [3, $orange],
-                [4, $red],
-            ];
-
-            foreach ($valueLegend as $i => [$value, $fill]) {
-                $x1 = $valueLegendX + ($i * 58);
-                $x2 = $x1 + 52;
-
-                imagefilledrectangle($image, $x1, $legendY, $x2, $legendY + 40, $fill);
-                imagerectangle($image, $x1, $legendY, $x2, $legendY + 40, $border);
-
-                $textColor = $value === 2 ? $text : $white;
-                $this->drawChartTextCenteredBold($image, 13, $x1, $legendY, $x2, $legendY + 40, $textColor, (string) $value);
-            }
-
-            imagefilledrectangle($image, $valueLegendX, $legendY + 60, $valueLegendX + 88, $legendY + 100, $gray);
-            imagerectangle($image, $valueLegendX, $legendY + 60, $valueLegendX + 88, $legendY + 100, $border);
-            $this->drawChartTextCenteredBold($image, 12, $valueLegendX, $legendY + 60, $valueLegendX + 88, $legendY + 100, $text, '*a');
-
-            $this->drawChartText($image, 12, $valueLegendX + 105, $legendY + 87, $text, 'Servicio a clientes o usuarios');
-
-            imagefilledrectangle($image, $valueLegendX, $legendY + 115, $valueLegendX + 88, $legendY + 155, $gray);
-            imagerectangle($image, $valueLegendX, $legendY + 115, $valueLegendX + 88, $legendY + 155, $border);
-            $this->drawChartTextCenteredBold($image, 12, $valueLegendX, $legendY + 115, $valueLegendX + 88, $legendY + 155, $text, '*b');
-
-            $this->drawChartText($image, 12, $valueLegendX + 105, $legendY + 142, $text, 'Soy jefe de otros trabajadores');
-
-            imagepng($image, $outputPath);
-            imagedestroy($image);
-
-            return $outputPath;
-        }
-
-    private function renderHorizontalBarChart(
-        string $title,
-        array $labels,
-        array $values,
-        string $outputPath,
-        ?float $forcedMaxValue = null,
-        string $suffix = '',
-        ?array $hexColors = null
-    ): ?string {
-        if (! function_exists('imagecreatetruecolor')) {
-            return null;
-        }
-
-        $count = count($labels);
-
-        if ($count === 0) {
-            return null;
-        }
-
-        $chartDir = dirname($outputPath);
-
-        if (! is_dir($chartDir)) {
-            mkdir($chartDir, 0755, true);
-        }
-
-        $width = 1280;
-        $rowHeight = 72;
-        $topPadding = 130;
-        $bottomPadding = 80;
-        $leftPadding = 430;
-        $rightPadding = 130;
-        $height = $topPadding + ($count * $rowHeight) + $bottomPadding;
-
-        $image = imagecreatetruecolor($width, $height);
-
-        if (function_exists('imageantialias')) {
-            imageantialias($image, true);
-        }
-
-        $pageBg = imagecolorallocate($image, 245, 247, 251);
-        $panelBg = imagecolorallocate($image, 255, 255, 255);
-        $panelBorder = imagecolorallocate($image, 226, 232, 240);
-        $titleColor = imagecolorallocate($image, 15, 23, 42);
-        $textColor = imagecolorallocate($image, 51, 65, 85);
-        $mutedColor = imagecolorallocate($image, 100, 116, 139);
-        $gridColor = imagecolorallocate($image, 226, 232, 240);
-        $trackColor = imagecolorallocate($image, 241, 245, 249);
-        $defaultBarColor = imagecolorallocate($image, 37, 99, 235);
-
-        imagefill($image, 0, 0, $pageBg);
-
-        imagefilledrectangle($image, 18, 18, $width - 18, $height - 18, $panelBg);
-        imagerectangle($image, 18, 18, $width - 18, $height - 18, $panelBorder);
-
-        $this->drawChartText($image, 18, 36, 46, $titleColor, $title);
-
-        $subtitle = $forcedMaxValue === 100
-            ? 'Promedio porcentual por apartado'
-            : 'Distribución acumulada por nivel';
-
-        $this->drawChartText($image, 11, 36, 74, $mutedColor, $subtitle);
-
-        $maxValue = $forcedMaxValue ?? max($values);
-        $maxValue = $maxValue > 0 ? $maxValue : 1;
-
-        $barAreaWidth = $width - $leftPadding - $rightPadding;
-        $tickCount = 4;
-
-        for ($i = 0; $i <= $tickCount; $i++) {
-            $x = $leftPadding + (int) round(($i / $tickCount) * $barAreaWidth);
-
-            imageline($image, $x, $topPadding - 8, $x, $height - $bottomPadding + 8, $gridColor);
-
-            $tickValue = ($maxValue / $tickCount) * $i;
-            $tickLabel = rtrim(rtrim(number_format($tickValue, 0, '.', ''), '0'), '.');
-            if ($tickLabel === '') {
-                $tickLabel = '0';
-            }
-
-            $this->drawChartText($image, 9, max($x - 8, $leftPadding - 8), $height - $bottomPadding + 28, $mutedColor, $tickLabel . $suffix);
-        }
-
-        $palette = [
-            '2563EB',
-            '14B8A6',
-            'EAB308',
-            'F97316',
-            '8B5CF6',
-            '06B6D4',
-            '10B981',
-            'EF4444',
-            '6366F1',
-            '84CC16',
-        ];
-
-        for ($i = 0; $i < $count; $i++) {
-            $rowY = $topPadding + ($i * $rowHeight);
-            $barTop = $rowY + 18;
-            $barBottom = $barTop + 24;
-
-            $wrapped = explode("\n", wordwrap((string) $labels[$i], 26, "\n", true));
-            $labelLine1 = mb_substr($wrapped[0] ?? '', 0, 34);
-            $labelLine2 = mb_substr($wrapped[1] ?? '', 0, 34);
-
-            $this->drawChartText($image, 10, 36, $barTop + 4, $textColor, $labelLine1);
-
-            if ($labelLine2 !== '') {
-                $this->drawChartText($image, 9, 36, $barTop + 22, $mutedColor, $labelLine2);
-            }
-
-            imagefilledrectangle($image, $leftPadding, $barTop, $width - $rightPadding, $barBottom, $trackColor);
-            imagerectangle($image, $leftPadding, $barTop, $width - $rightPadding, $barBottom, $gridColor);
-
-            $value = (float) $values[$i];
-            $barWidth = (int) round(($value / $maxValue) * $barAreaWidth);
-
-            if (is_array($hexColors) && isset($hexColors[$i])) {
-                [$r, $g, $b] = $this->hexToRgb($hexColors[$i]);
-            } else {
-                [$r, $g, $b] = $this->hexToRgb($palette[$i % count($palette)]);
-            }
-
-            $barColor = imagecolorallocate($image, $r, $g, $b);
-
-            imagefilledrectangle(
-                $image,
-                $leftPadding,
-                $barTop,
-                $leftPadding + max($barWidth, 2),
-                $barBottom,
-                $barColor
-            );
-
-            $displayValue = rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
-            $valueX = min($leftPadding + $barWidth + 12, $width - 100);
-
-            $this->drawChartText($image, 9, $valueX, $barTop + 16, $mutedColor, $displayValue . $suffix);
-        }
-
-        imagepng($image, $outputPath);
-        imagedestroy($image);
-
-        return $outputPath;
-    }
-
     private function getChartFontPath(): ?string
         {
             $candidates = [
@@ -7577,11 +7325,6 @@ class ExecutiveReportDownloadController extends Controller
         ];
     }
 
-    private function chartText(string $text): string
-        {
-            return iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $text) ?: $text;
-        }
-
     private function addConsultantInformationSection(Section $section): void
         {
             $profiles = [
@@ -7628,16 +7371,16 @@ class ExecutiveReportDownloadController extends Controller
                 ],
             ];
 
-            $section->addTitle('XXII. Información del equipo consultor', 1);
+                                $section->addTitle('XXV. Información del equipo consultor', 1);
 
-            foreach ($profiles as $index => $profile) {
-                if ($index > 0) {
-                    $section->addPageBreak();
-                    $section->addText(
-                        'XXII. Información del equipo consultor',
-                        ['bold' => true, 'size' => 14],
-                        ['spaceAfter' => 180]
-                    );
+                foreach ($profiles as $index => $profile) {
+                    if ($index > 0) {
+                        $section->addPageBreak();
+                        $section->addText(
+                            'XXV. Información del equipo consultor',
+                            ['bold' => true, 'size' => 14],
+                            ['spaceAfter' => 180]
+                        );
                 }
 
                 $this->renderConsultantProfile($section, $profile);
