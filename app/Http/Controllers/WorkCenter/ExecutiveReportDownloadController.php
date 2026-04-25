@@ -2705,10 +2705,10 @@ class ExecutiveReportDownloadController extends Controller
                                 'score' => $itemScore,
                             ];
 
-                            $dimensionScore += $avgRaw;
+                            $dimensionScore += $itemScore;
                         }
 
-                        $dimensionDisplayScore = (int) round($dimensionScore, 0, PHP_ROUND_HALF_UP);
+                        $dimensionDisplayScore = (int) $dimensionScore;
 
                         $dimensions[] = [
                             'name' => $dimension['name'],
@@ -2719,10 +2719,10 @@ class ExecutiveReportDownloadController extends Controller
                                 : null,
                         ];
 
-                        $domainScore += $dimensionScore;
+                        $domainScore += $dimensionDisplayScore;
                     }
 
-                    $domainDisplayScore = (int) round($domainScore, 0, PHP_ROUND_HALF_UP);
+                    $domainDisplayScore = (int) $domainScore;
 
                     $domains[] = [
                         'name' => $domain['name'],
@@ -2730,10 +2730,10 @@ class ExecutiveReportDownloadController extends Controller
                         'dimensions' => $dimensions,
                     ];
 
-                    $categoryScore += $domainScore;
+                    $categoryScore += $domainDisplayScore;
                 }
 
-                $categoryDisplayScore = (int) round($categoryScore, 0, PHP_ROUND_HALF_UP);
+                $categoryDisplayScore = (int) $categoryScore;
 
                 $categories[] = [
                     'name' => $category['name'],
@@ -2744,7 +2744,7 @@ class ExecutiveReportDownloadController extends Controller
                 $finalTotal += $categoryDisplayScore;
             }
 
-            $finalTotal = (int) round($finalTotal, 0, PHP_ROUND_HALF_UP);
+            $finalTotal = (int) $finalTotal;
 
             return [
                 'participants' => $participants,
@@ -2815,12 +2815,12 @@ class ExecutiveReportDownloadController extends Controller
             $attendsPublic = $this->extractWorkerFlag($extra, [
                 'atiende', 'atiende_clientes', 'atencion_clientes',
                 'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
-            ]);
+            ]) || in_array($key, [65, 66, 67, 68], true);
 
             $isBoss = $this->extractWorkerFlag($extra, [
                 'jefe', 'soy_jefe', 'is_boss', 'is_manager',
                 'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
-            ]);
+            ]) || in_array($key, [69, 70, 71, 72], true);
 
             if ($attendsPublic) {
                 $noteEvaluations['a'][$row->evaluation_id] = true;
@@ -5716,8 +5716,16 @@ class ExecutiveReportDownloadController extends Controller
                 $this->drawChartTextCenteredBold($image, 12, $x1, 78, $x2, 122, $white, (string) $level['count']);
             }
 
+                        $percentages = [];
+
+            foreach ($levels as $level) {
+                $percentages[$level['key']] = $total > 0
+                    ? round(($level['count'] / $total) * 100, 1)
+                    : 0.0;
+            }
+
             $attention = (int) ($distribution['alto'] ?? 0) + (int) ($distribution['muy_alto'] ?? 0);
-            $attentionPct = round(($attention / $total) * 100, 2);
+            $attentionPct = $total > 0 ? round(($attention / $total) * 100, 1) : 0.0;
 
             imagefilledrectangle($image, 1000, 78, 1135, 122, $darkRed);
             imagerectangle($image, 1000, 78, 1135, 122, $border);
@@ -5759,18 +5767,20 @@ class ExecutiveReportDownloadController extends Controller
                     IMG_ARC_PIE
                 );
 
-                if ($angle >= 20) {
+                if ($angle >= 18) {
                     $mid = deg2rad($start + ($angle / 2));
                     $labelX = (int) round($cx + cos($mid) * ($radius * 0.58));
                     $labelY = (int) round($cy + sin($mid) * ($radius * 0.58));
-                    $pct = number_format(($level['count'] / $total) * 100, 2);
+                    $pct = number_format($percentages[$level['key']] ?? 0, 1);
+
+                    $labelColor = in_array($level['key'], ['medio'], true) ? $titleColor : $white;
 
                     $this->drawChartTextBold(
                         $image,
                         9,
                         $labelX - 28,
                         $labelY,
-                        $titleColor,
+                        $labelColor,
                         $pct . '% ' . $level['label']
                     );
                 }
@@ -5787,7 +5797,7 @@ class ExecutiveReportDownloadController extends Controller
             foreach ($levels as $index => $level) {
                 [$r, $g, $b] = $this->hexToRgb($level['hex']);
                 $legendColor = imagecolorallocate($image, $r, $g, $b);
-                $pct = number_format(($level['count'] / $total) * 100, 2);
+                $pct = number_format($percentages[$level['key']] ?? 0, 1);
 
                 imagefilledrectangle($image, $legendX, $legendY + ($index * $legendStep), $legendX + 22, $legendY + 16 + ($index * $legendStep), $legendColor);
                 imagerectangle($image, $legendX, $legendY + ($index * $legendStep), $legendX + 22, $legendY + 16 + ($index * $legendStep), $border);
@@ -5811,7 +5821,7 @@ class ExecutiveReportDownloadController extends Controller
 
             imagefilledrectangle($image, 860, 490, 1100, 548, $darkRed);
             imagerectangle($image, 860, 490, 1100, 548, $border);
-            $this->drawChartTextCenteredBold($image, 14, 860, 490, 1100, 548, $white, number_format($attentionPct, 2) . '%');
+            $this->drawChartTextCenteredBold($image, 14, 860, 490, 1100, 548, $white, number_format($attentionPct, 1) . '%');
 
             // ===== tabla inferior integrada =====
                 $tableX = 80;
