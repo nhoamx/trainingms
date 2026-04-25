@@ -2815,12 +2815,12 @@ class ExecutiveReportDownloadController extends Controller
             $attendsPublic = $this->extractWorkerFlag($extra, [
                 'atiende', 'atiende_clientes', 'atencion_clientes',
                 'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
-            ]) || in_array($key, [65, 66, 67, 68], true);
+            ]);
 
             $isBoss = $this->extractWorkerFlag($extra, [
                 'jefe', 'soy_jefe', 'is_boss', 'is_manager',
                 'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
-            ]) || in_array($key, [69, 70, 71, 72], true);
+            ]);
 
             if ($attendsPublic) {
                 $noteEvaluations['a'][$row->evaluation_id] = true;
@@ -2890,10 +2890,10 @@ class ExecutiveReportDownloadController extends Controller
                                 'score' => $itemScore,
                             ];
 
-                            $dimensionScore += $avgRaw;
+                            $dimensionScore += $itemScore;
                         }
 
-                        $dimensionDisplayScore = (int) round($dimensionScore, 0, PHP_ROUND_HALF_UP);
+                        $dimensionDisplayScore = (int) $dimensionScore;
 
                         $dimensions[] = [
                             'name' => $dimension['name'],
@@ -2904,10 +2904,10 @@ class ExecutiveReportDownloadController extends Controller
                                 : null,
                         ];
 
-                        $domainScore += $dimensionScore;
+                        $domainScore += $dimensionDisplayScore;
                     }
 
-                    $domainDisplayScore = (int) round($domainScore, 0, PHP_ROUND_HALF_UP);
+                    $domainDisplayScore = (int) $domainScore;
 
                     $domains[] = [
                         'name' => $domain['name'],
@@ -2915,10 +2915,10 @@ class ExecutiveReportDownloadController extends Controller
                         'dimensions' => $dimensions,
                     ];
 
-                    $categoryScore += $domainScore;
+                    $categoryScore += $domainDisplayScore;
                 }
 
-                $categoryDisplayScore = (int) round($categoryScore, 0, PHP_ROUND_HALF_UP);
+                $categoryDisplayScore = (int) $categoryScore;
 
                 $categories[] = [
                     'name' => $category['name'],
@@ -3576,16 +3576,12 @@ class ExecutiveReportDownloadController extends Controller
                     $isBoss = $this->extractWorkerFlag($extra, [
                         'jefe', 'soy_jefe', 'is_boss', 'is_manager',
                         'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
-                    ]) || $items->contains(function ($answer) {
-                        return in_array((int) $answer->question_key, [69, 70, 71, 72], true);
-                    });
+                    ]);
 
                     $attendsPublic = $this->extractWorkerFlag($extra, [
                         'atiende', 'atiende_clientes', 'atencion_clientes',
                         'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
-                    ]) || $items->contains(function ($answer) {
-                        return in_array((int) $answer->question_key, [65, 66, 67, 68], true);
-                    });
+                    ]);
 
                     return $this->buildReferenceThreeEvaluationResult(
                         (string) $evaluationId,
