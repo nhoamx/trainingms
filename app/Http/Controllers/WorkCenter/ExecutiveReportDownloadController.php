@@ -72,6 +72,7 @@ class ExecutiveReportDownloadController extends Controller
         $phpWord = new PhpWord();
         $phpWord->setDefaultFontName('Arial');
         $phpWord->setDefaultFontSize(10);
+        $phpWord->getSettings()->setUpdateFields(true);
 
         $phpWord->addTitleStyle(
             1,
@@ -423,19 +424,67 @@ class ExecutiveReportDownloadController extends Controller
                 $section->addTextBreak(2);
             }
 
-           private function addIndexSection(Section $section): void
-            {
-                $section->addText(
-                    'Índice',
-                    ['bold' => true, 'size' => 14, 'color' => '111111'],
-                    ['spaceAfter' => 120]
-                );
+            private function addIndexSection(Section $section): void
+                {
+                    $titleBlue = '17365D';
+                    $lineGray = 'D9DEE5';
+                    $textDark = '111111';
 
-               $section->addTOC(
-                ['name' => 'Arial', 'size' => 10],
-                ['tabLeader' => 'dot']
-            );
-            }
+                    $section->addText(
+                        'Índice',
+                        ['bold' => true, 'size' => 14, 'color' => $textDark],
+                        ['alignment' => Jc::LEFT, 'spaceAfter' => 80]
+                    );
+
+                    $headerTable = $section->addTable([
+                        'alignment' => JcTable::CENTER,
+                        'borderSize' => 0,
+                        'cellMargin' => 0,
+                    ]);
+
+                    $headerTable->addRow(280);
+                    $headerTable->addCell(8100, ['bgColor' => $titleBlue])->addText(
+                        'Contenido',
+                        ['bold' => true, 'size' => 11, 'color' => 'FFFFFF'],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
+                    $headerTable->addCell(1300, ['bgColor' => $titleBlue])->addText(
+                        'Pág.',
+                        ['bold' => true, 'size' => 11, 'color' => 'FFFFFF'],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
+
+                    $section->addTextBreak(1);
+
+                    $section->addTOC(
+                        [
+                            'name' => 'Arial',
+                            'size' => 10,
+                            'color' => '111111',
+                        ],
+                        [
+                            'tabLeader' => 'dot',
+                            'tabPos' => 9400,
+                            'indent' => 60,
+                        ],
+                        1,
+                        1
+                    );
+
+                    $section->addTextBreak(1);
+
+                    $lineTable = $section->addTable([
+                        'alignment' => JcTable::CENTER,
+                        'borderSize' => 0,
+                        'cellMargin' => 0,
+                    ]);
+                    $lineTable->addRow(40);
+                    $lineTable->addCell(9400, ['bgColor' => $lineGray])->addText(
+                        ' ',
+                        ['size' => 1],
+                        ['spaceAfter' => 0]
+                    );
+                }
 
     private function addGeneralInformationSection(Section $section, Organization $organization, WorkCenter $workCenter): void
         {
@@ -892,13 +941,6 @@ class ExecutiveReportDownloadController extends Controller
                     );
                 }
             }
-
-            $section->addTextBreak(1);
-            $section->addText(
-                '*Referencia: NORMA Oficial Mexicana NOM-035-STPS-2018. Índice de contenido 7.2. Inciso g). Página 6',
-                ['size' => 9, 'color' => '374151'],
-                ['alignment' => Jc::CENTER]
-            );
         }
 
     private function addReferenceThreeCategorySection(Section $section, Organization $organization, WorkCenter $workCenter): void
@@ -933,14 +975,7 @@ class ExecutiveReportDownloadController extends Controller
                 $this->makeUniqueChartPath('category_dashboard')
             );
 
-            $this->addChartImageIfExists($section, $chartPath, 500);
-
-            $section->addTextBreak(1);
-            $section->addText(
-                '*Referencia: NORMA Oficial Mexicana NOM-035-STPS-2018. Índice de contenido 4.6. Página 3 NORMA Oficial Mexicana NOM-035-STPS-2018. Índice de contenido 7.3. Página 6',
-                ['size' => 9, 'color' => '374151'],
-                ['alignment' => Jc::CENTER]
-            );
+            $this->addChartImageIfExists($section, $chartPath, 570);
         }
 
         private function addReferenceThreeDomainSection(Section $section, Organization $organization, WorkCenter $workCenter): void
@@ -969,13 +1004,8 @@ class ExecutiveReportDownloadController extends Controller
             $this->makeUniqueChartPath('domain_dashboard')
         );
 
-        $this->addChartImageIfExists($section, $chartPath, 460);
+        $this->addChartImageIfExists($section, $chartPath, 520);
 
-        $section->addText(
-            '*Referencia: NORMA Oficial Mexicana NOM-035-STPS-2018. Índice de contenido 7.3. Página 6',
-            ['size' => 9, 'color' => '374151'],
-            ['alignment' => Jc::CENTER]
-        );
     }
    private function addReferenceThreeDimensionSection(Section $section, WorkCenter $workCenter): void
     {
@@ -1023,7 +1053,7 @@ class ExecutiveReportDownloadController extends Controller
             return;
         }
 
-                $dimensionChunks = collect($dimensions)->chunk(13)->values();
+                $dimensionChunks = collect($dimensions)->chunk(10)->values();
 
         foreach ($dimensionChunks as $index => $chunk) {
             if ($index > 0) {
@@ -1043,15 +1073,8 @@ class ExecutiveReportDownloadController extends Controller
                 $dimensionChunks->count()
             );
 
-                        $this->addChartImageIfExists($section, $chartPath, 500);
+                        $this->addChartImageIfExists($section, $chartPath, 570);
         }
-
-        $section->addTextBreak(1);
-        $section->addText(
-            '*Referencia: NORMA Oficial Mexicana NOM-035-STPS-2018. Índice de contenido 7.3. Página 6',
-            ['size' => 9, 'color' => '374151'],
-            ['alignment' => Jc::CENTER]
-        );
     }
 
         private function addReferenceThreeQuestionRiskTableSection(Section $section, WorkCenter $workCenter): void
@@ -1296,204 +1319,204 @@ class ExecutiveReportDownloadController extends Controller
             );
         }
 
-        private function renderCriticalGroupingSection(
-            Section $section,
-            string $title,
-            string $groupLabel,
-            array $summary,
-            WorkCenter $workCenter
-        ): void {
-            $section->addTitle($title, 1);
+            private function renderCriticalGroupingSection(
+                Section $section,
+                string $title,
+                string $groupLabel,
+                array $summary,
+                WorkCenter $workCenter
+            ): void {
+                $section->addTitle($title, 1);
 
-            if (($summary['total_evaluations'] ?? 0) === 0 || empty($summary['rows'])) {
-                $section->addText(
-                    'No se encontraron ' . strtolower($groupLabel) . 's críticas(os) para este centro de trabajo.',
-                    ['size' => 10, 'color' => '374151']
+                if (($summary['total_evaluations'] ?? 0) === 0 || empty($summary['rows'])) {
+                    $section->addText(
+                        'No se encontraron ' . strtolower($groupLabel) . 's críticas(os) para este centro de trabajo.',
+                        ['size' => 10, 'color' => '374151']
+                    );
+                    return;
+                }
+
+                $topBarColor = '0E5F4C';
+                $subBarColor = '169A86';
+                $headerBlue = '324A64';
+                $rowBlue = 'DCE6F1';
+                $rowGray = 'F3F4F6';
+                $borderColor = '5B6472';
+
+                $mainTitle = mb_strtoupper($this->safeValue($workCenter->name)) . ' — ' .
+                    mb_strtoupper($groupLabel === 'Área' ? 'ÁREAS CRÍTICAS (AGRUPACIÓN)' : 'PUESTOS CRÍTICOS (AGRUPACIÓN)');
+
+                $headerTable = $section->addTable([
+                    'alignment' => JcTable::CENTER,
+                    'borderSize' => 0,
+                    'cellMargin' => 0,
+                ]);
+
+                $headerTable->addRow(560);
+                $headerTable->addCell(9800, $this->centeredCellStyle(['bgColor' => $topBarColor]))->addText(
+                    $mainTitle,
+                    ['bold' => true, 'size' => 18, 'color' => 'FFFFFF'],
+                    $this->centeredTextStyle()
                 );
-                return;
+
+                $headerTable->addRow(520);
+                $headerTable->addCell(9800, $this->centeredCellStyle(['bgColor' => $subBarColor]))->addText(
+                    'Ordenadas de mayor a menor calificación · Nivel ALTO = prioridad de intervención',
+                    ['bold' => true, 'size' => 16, 'color' => 'FFFFFF'],
+                    $this->centeredTextStyle()
+                );
+
+                $section->addTextBreak(1);
+
+                $table = $section->addTable([
+                    'alignment' => JcTable::CENTER,
+                    'borderSize' => 6,
+                    'borderColor' => $borderColor,
+                    'cellMargin' => 28,
+                ]);
+
+                $table->addRow(460);
+
+                foreach ([
+                    [450, '#'],
+                    [1700, $groupLabel],
+                    [900, 'Participantes'],
+                    [1050, 'Calif. (/288)'],
+                    [950, '% Promedio'],
+                    [1300, 'Nivel de riesgo'],
+                    [2200, 'Principal dominio afectado'],
+                    [1300, 'Priorización'],
+                ] as [$width, $label]) {
+                    $table->addCell($width, $this->centeredCellStyle(['bgColor' => $headerBlue]))->addText(
+                        $label,
+                        ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
+                        $this->centeredTextStyle()
+                    );
+                }
+
+                foreach ($summary['rows'] as $index => $row) {
+                    $rowBg = $index % 2 === 0 ? $rowBlue : $rowGray;
+                    $levelStyle = $this->getWordRiskCellStyle((string) ($row['global_level_key'] ?? 'nulo'));
+                    $priorityMeta = $this->resolveCriticalPriorityMeta($row);
+
+                    $scoreValue = (float) ($row['average_score'] ?? 0);
+                    $scoreText = abs($scoreValue - round($scoreValue)) < 0.01
+                        ? number_format($scoreValue, 0)
+                        : number_format($scoreValue, 2);
+
+                    $domainText = ! empty($row['top_domains'])
+                        ? implode(' · ', $row['top_domains'])
+                        : 'N/D';
+
+                    $table->addRow(440);
+
+                    $table->addCell(450, $this->centeredCellStyle(['bgColor' => $rowBg]))->addText(
+                        (string) ($index + 1),
+                        ['size' => 10],
+                        $this->centeredTextStyle()
+                    );
+
+                    $table->addCell(1700, $this->centeredCellStyle(['bgColor' => $rowBg]))->addText(
+                        $this->safeValue($row['name'] ?? 'N/D'),
+                        ['size' => 10],
+                        $this->centeredTextStyle()
+                    );
+
+                    $table->addCell(900, $this->centeredCellStyle(['bgColor' => $rowBg]))->addText(
+                        (string) ($row['participants'] ?? 0),
+                        ['size' => 10],
+                        $this->centeredTextStyle()
+                    );
+
+                    $table->addCell(1050, $this->centeredCellStyle(['bgColor' => $rowBg]))->addText(
+                        $scoreText,
+                        ['size' => 10],
+                        $this->centeredTextStyle()
+                    );
+
+                    $table->addCell(950, $this->centeredCellStyle(['bgColor' => $rowBg]))->addText(
+                        number_format((float) ($row['average_percentage'] ?? 0), 2) . '%',
+                        ['size' => 10],
+                        $this->centeredTextStyle()
+                    );
+
+                    $table->addCell(1300, $this->centeredCellStyle(['bgColor' => $levelStyle['bg']]))->addText(
+                        $this->safeValue($row['global_level_label'] ?? ucfirst((string) ($row['global_level_key'] ?? 'nulo'))),
+                        ['bold' => true, 'size' => 10, 'color' => $levelStyle['text']],
+                        $this->centeredTextStyle()
+                    );
+
+                    $table->addCell(2200, $this->centeredCellStyle(['bgColor' => $rowBg]))->addText(
+                        $domainText,
+                        ['size' => 10],
+                        $this->centeredTextStyle()
+                    );
+
+                    $table->addCell(1300, $this->centeredCellStyle(['bgColor' => $priorityMeta['bg']]))->addText(
+                        $priorityMeta['label'],
+                        ['bold' => true, 'size' => 10, 'color' => $priorityMeta['text']],
+                        $this->centeredTextStyle()
+                    );
+                }
+
+                $center = $summary['center'] ?? [];
+                $centerStyle = $this->getWordRiskCellStyle((string) ($center['global_level_key'] ?? 'nulo'));
+
+                $centerScoreValue = (float) ($center['average_score'] ?? 0);
+                $centerScoreText = abs($centerScoreValue - round($centerScoreValue)) < 0.01
+                    ? number_format($centerScoreValue, 0)
+                    : number_format($centerScoreValue, 2);
+
+                $table->addRow(420);
+
+                $table->addCell(450, $this->centeredCellStyle(['bgColor' => $rowGray]))->addText(
+                    'TOTAL',
+                    ['bold' => true, 'size' => 10],
+                    $this->centeredTextStyle()
+                );
+
+                $table->addCell(1700, $this->centeredCellStyle(['bgColor' => $rowGray]))->addText(
+                    'Centro completo',
+                    ['bold' => true, 'size' => 10],
+                    $this->centeredTextStyle()
+                );
+
+                $table->addCell(900, $this->centeredCellStyle(['bgColor' => $rowGray]))->addText(
+                    (string) ($center['participants'] ?? 0),
+                    ['bold' => true, 'size' => 10],
+                    $this->centeredTextStyle()
+                );
+
+                $table->addCell(1050, $this->centeredCellStyle(['bgColor' => $rowGray]))->addText(
+                    $centerScoreText,
+                    ['bold' => true, 'size' => 10],
+                    $this->centeredTextStyle()
+                );
+
+                $table->addCell(950, $this->centeredCellStyle(['bgColor' => $rowGray]))->addText(
+                    number_format((float) ($center['average_percentage'] ?? 0), 2) . '%',
+                    ['bold' => true, 'size' => 10],
+                    $this->centeredTextStyle()
+                );
+
+                $table->addCell(1300, $this->centeredCellStyle(['bgColor' => $centerStyle['bg']]))->addText(
+                    $this->safeValue($center['global_level_label'] ?? ucfirst((string) ($center['global_level_key'] ?? 'nulo'))),
+                    ['bold' => true, 'size' => 10, 'color' => $centerStyle['text']],
+                    $this->centeredTextStyle()
+                );
+
+                $table->addCell(2200, $this->centeredCellStyle(['bgColor' => $rowGray]))->addText(
+                    '',
+                    ['size' => 10],
+                    $this->centeredTextStyle()
+                );
+
+                $table->addCell(1300, $this->centeredCellStyle(['bgColor' => $rowGray]))->addText(
+                    '',
+                    ['size' => 10],
+                    $this->centeredTextStyle()
+                );
             }
-
-            $topBarColor = '0E5F4C';
-            $subBarColor = '169A86';
-            $headerBlue = '324A64';
-            $rowBlue = 'DCE6F1';
-            $rowGray = 'F3F4F6';
-            $borderColor = '5B6472';
-
-            $mainTitle = mb_strtoupper($this->safeValue($workCenter->name)) . ' — ' .
-                mb_strtoupper($groupLabel === 'Área' ? 'ÁREAS CRÍTICAS (AGRUPACIÓN)' : 'PUESTOS CRÍTICOS (AGRUPACIÓN)');
-
-            $headerTable = $section->addTable([
-                'alignment' => JcTable::CENTER,
-                'borderSize' => 0,
-                'cellMargin' => 0,
-            ]);
-
-            $headerTable->addRow(560);
-            $headerTable->addCell(9800, ['bgColor' => $topBarColor])->addText(
-                $mainTitle,
-                ['bold' => true, 'size' => 18, 'color' => 'FFFFFF'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $headerTable->addRow(520);
-            $headerTable->addCell(9800, ['bgColor' => $subBarColor])->addText(
-                'Ordenadas de mayor a menor calificación · Nivel ALTO = prioridad de intervención',
-                ['bold' => true, 'size' => 16, 'color' => 'FFFFFF'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $section->addTextBreak(1);
-
-            $table = $section->addTable([
-                'alignment' => JcTable::CENTER,
-                'borderSize' => 6,
-                'borderColor' => $borderColor,
-                'cellMargin' => 28,
-            ]);
-
-            $table->addRow(460);
-
-            foreach ([
-                [450, '#'],
-                [1700, $groupLabel],
-                [900, 'Participantes'],
-                [1050, 'Calif. (/288)'],
-                [950, '% Promedio'],
-                [1300, 'Nivel de riesgo'],
-                [2200, 'Principal dominio afectado'],
-                [1300, 'Priorización'],
-            ] as [$width, $label]) {
-                $table->addCell($width, ['bgColor' => $headerBlue])->addText(
-                    $label,
-                    ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-            }
-
-            foreach ($summary['rows'] as $index => $row) {
-                $rowBg = $index % 2 === 0 ? $rowBlue : $rowGray;
-                $levelStyle = $this->getWordRiskCellStyle((string) ($row['global_level_key'] ?? 'nulo'));
-                $priorityMeta = $this->resolveCriticalPriorityMeta($row);
-
-                $scoreValue = (float) ($row['average_score'] ?? 0);
-                $scoreText = abs($scoreValue - round($scoreValue)) < 0.01
-                    ? number_format($scoreValue, 0)
-                    : number_format($scoreValue, 2);
-
-                $domainText = ! empty($row['top_domains'])
-                    ? implode(' · ', $row['top_domains'])
-                    : 'N/D';
-
-                $table->addRow(440);
-
-                $table->addCell(450, ['bgColor' => $rowBg])->addText(
-                    (string) ($index + 1),
-                    ['size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(1700, ['bgColor' => $rowBg])->addText(
-                    $this->safeValue($row['name'] ?? 'N/D'),
-                    ['size' => 10],
-                    ['spaceAfter' => 0]
-                );
-
-                $table->addCell(900, ['bgColor' => $rowBg])->addText(
-                    (string) ($row['participants'] ?? 0),
-                    ['size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(1050, ['bgColor' => $rowBg])->addText(
-                    $scoreText,
-                    ['size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(950, ['bgColor' => $rowBg])->addText(
-                    number_format((float) ($row['average_percentage'] ?? 0), 2) . '%',
-                    ['size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(1300, ['bgColor' => $levelStyle['bg']])->addText(
-                    $this->safeValue($row['global_level_label'] ?? ucfirst((string) ($row['global_level_key'] ?? 'nulo'))),
-                    ['bold' => true, 'size' => 10, 'color' => $levelStyle['text']],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(2200, ['bgColor' => $rowBg])->addText(
-                    $domainText,
-                    ['size' => 10],
-                    ['spaceAfter' => 0]
-                );
-
-                $table->addCell(1300, ['bgColor' => $priorityMeta['bg']])->addText(
-                    $priorityMeta['label'],
-                    ['bold' => true, 'size' => 10, 'color' => $priorityMeta['text']],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-            }
-
-            $center = $summary['center'] ?? [];
-            $centerStyle = $this->getWordRiskCellStyle((string) ($center['global_level_key'] ?? 'nulo'));
-
-            $centerScoreValue = (float) ($center['average_score'] ?? 0);
-            $centerScoreText = abs($centerScoreValue - round($centerScoreValue)) < 0.01
-                ? number_format($centerScoreValue, 0)
-                : number_format($centerScoreValue, 2);
-
-            $table->addRow(420);
-
-            $table->addCell(450, ['bgColor' => $rowGray])->addText(
-                'TOTAL',
-                ['bold' => true, 'size' => 10],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $table->addCell(1700, ['bgColor' => $rowGray])->addText(
-                'Centro completo',
-                ['bold' => true, 'size' => 10],
-                ['spaceAfter' => 0]
-            );
-
-            $table->addCell(900, ['bgColor' => $rowGray])->addText(
-                (string) ($center['participants'] ?? 0),
-                ['bold' => true, 'size' => 10],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $table->addCell(1050, ['bgColor' => $rowGray])->addText(
-                $centerScoreText,
-                ['bold' => true, 'size' => 10],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $table->addCell(950, ['bgColor' => $rowGray])->addText(
-                number_format((float) ($center['average_percentage'] ?? 0), 2) . '%',
-                ['bold' => true, 'size' => 10],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $table->addCell(1300, ['bgColor' => $centerStyle['bg']])->addText(
-                $this->safeValue($center['global_level_label'] ?? ucfirst((string) ($center['global_level_key'] ?? 'nulo'))),
-                ['bold' => true, 'size' => 10, 'color' => $centerStyle['text']],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $table->addCell(2200, ['bgColor' => $rowGray])->addText(
-                '',
-                ['size' => 10],
-                ['spaceAfter' => 0]
-            );
-
-            $table->addCell(1300, ['bgColor' => $rowGray])->addText(
-                '',
-                ['size' => 10],
-                ['spaceAfter' => 0]
-            );
-        }
 
         private function getCriticalGroupingSummary(
             string $organizationId,
@@ -2056,145 +2079,169 @@ class ExecutiveReportDownloadController extends Controller
         );
         }
 
-        private function renderQuestionAverageMatrixTable(Section $section, array $summary): void
-            {
-                $table = $section->addTable([
-                    'alignment' => JcTable::CENTER,
-                    'borderSize' => 6,
-                    'borderColor' => '808080',
-                    'cellMargin' => 8,
-                ]);
+    private function renderQuestionAverageMatrixTable(Section $section, array $summary): void
+        {
+            $table = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 6,
+                'borderColor' => '808080',
+                'cellMargin' => 8,
+            ]);
 
-                $table->addRow(420, ['cantSplit' => true]);
+            $table->addRow(420, ['cantSplit' => true]);
 
-                $table->addCell(1700, ['gridSpan' => 2, 'bgColor' => '062A78'])->addText(
-                    'Categorías',
-                    ['bold' => true, 'size' => 8, 'color' => 'FFFFFF'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
+            $table->addCell(1700, $this->centeredCellStyle(['gridSpan' => 2, 'bgColor' => '062A78']))->addText(
+                'Categorías',
+                ['bold' => true, 'size' => 8, 'color' => 'FFFFFF'],
+                $this->centeredTextStyle()
+            );
 
-                $table->addCell(1800, ['gridSpan' => 2, 'bgColor' => '062A78'])->addText(
-                    'Dominios',
-                    ['bold' => true, 'size' => 8, 'color' => 'FFFFFF'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
+            $table->addCell(1800, $this->centeredCellStyle(['gridSpan' => 2, 'bgColor' => '062A78']))->addText(
+                'Dominios',
+                ['bold' => true, 'size' => 8, 'color' => 'FFFFFF'],
+                $this->centeredTextStyle()
+            );
 
-                $table->addCell(2950, ['gridSpan' => 2, 'bgColor' => '062A78'])->addText(
-                    'Dimensiones',
-                    ['bold' => true, 'size' => 8, 'color' => 'FFFFFF'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
+            $table->addCell(2950, $this->centeredCellStyle(['gridSpan' => 2, 'bgColor' => '062A78']))->addText(
+                'Dimensiones',
+                ['bold' => true, 'size' => 8, 'color' => 'FFFFFF'],
+                $this->centeredTextStyle()
+            );
 
-                $table->addCell(2750, ['bgColor' => '062A78'])->addText(
-                    'Preguntas (ítems)',
-                    ['bold' => true, 'size' => 8, 'color' => 'FFFFFF'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
+            $table->addCell(2750, $this->centeredCellStyle(['bgColor' => '062A78']))->addText(
+                'Preguntas (ítems)',
+                ['bold' => true, 'size' => 8, 'color' => 'FFFFFF'],
+                $this->centeredTextStyle()
+            );
 
-                foreach ($summary['categories'] as $category) {
-                    $categoryStarted = false;
+            foreach ($summary['categories'] as $category) {
+                $categoryStarted = false;
 
-                    $categoryLevel = $this->classifyNom035Score('categories', $category['name'], (int) $category['score']);
-                    $categoryStyle = $this->getWordRiskCellStyle($categoryLevel['key']);
+                $categoryLevel = $this->classifyNom035Score('categories', $category['name'], (int) $category['score']);
+                $categoryStyle = $this->getWordRiskCellStyle($categoryLevel['key']);
 
-                    foreach ($category['domains'] as $domain) {
-                        $domainStarted = false;
+                foreach ($category['domains'] as $domain) {
+                    $domainStarted = false;
 
-                        $domainLevel = $this->classifyNom035Score('domains', $domain['name'], (int) $domain['score']);
-                        $domainStyle = $this->getWordRiskCellStyle($domainLevel['key']);
+                    $domainLevel = $this->classifyNom035Score('domains', $domain['name'], (int) $domain['score']);
+                    $domainStyle = $this->getWordRiskCellStyle($domainLevel['key']);
 
-                        foreach ($domain['dimensions'] as $dimension) {
-                            $dimensionLevel = $this->classifyNom035Score('dimensions', $dimension['name'], (int) $dimension['score']);
-                            $dimensionStyle = $this->getWordRiskCellStyle($dimensionLevel['key']);
+                    foreach ($domain['dimensions'] as $dimension) {
+                        $dimensionLevel = $this->classifyNom035Score('dimensions', $dimension['name'], (int) $dimension['score']);
+                        $dimensionStyle = $this->getWordRiskCellStyle($dimensionLevel['key']);
 
-                            $table->addRow(300, ['cantSplit' => true]);
+                        $table->addRow(300, ['cantSplit' => true]);
 
-                            if (! $categoryStarted) {
-                                $table->addCell(1400, ['vMerge' => 'restart'])->addText(
-                                    $category['name'],
-                                    ['bold' => true, 'size' => 7],
-                                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                                );
-
-                                $table->addCell(300, ['vMerge' => 'restart', 'bgColor' => $categoryStyle['bg']])->addText(
-                                    (string) $category['score'],
-                                    ['bold' => true, 'size' => 7, 'color' => $categoryStyle['text']],
-                                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                                );
-
-                                $categoryStarted = true;
-                            } else {
-                                $table->addCell(1400, ['vMerge' => 'continue'])->addText('', ['size' => 1], ['spaceAfter' => 0]);
-                                $table->addCell(300, ['vMerge' => 'continue'])->addText('', ['size' => 1], ['spaceAfter' => 0]);
-                            }
-
-                            if (! $domainStarted) {
-                                $table->addCell(1500, ['vMerge' => 'restart'])->addText(
-                                    $domain['name'],
-                                    ['bold' => true, 'size' => 7],
-                                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                                );
-
-                                $table->addCell(300, ['vMerge' => 'restart', 'bgColor' => $domainStyle['bg']])->addText(
-                                    (string) $domain['score'],
-                                    ['bold' => true, 'size' => 7, 'color' => $domainStyle['text']],
-                                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                                );
-
-                                $domainStarted = true;
-                            } else {
-                                $table->addCell(1500, ['vMerge' => 'continue'])->addText('', ['size' => 1], ['spaceAfter' => 0]);
-                                $table->addCell(300, ['vMerge' => 'continue'])->addText('', ['size' => 1], ['spaceAfter' => 0]);
-                            }
-
-                            $table->addCell(2600)->addText(
-                                $dimension['name'],
-                                ['size' => 7],
-                                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                        if (! $categoryStarted) {
+                            $table->addCell(1400, $this->centeredCellStyle(['vMerge' => 'restart']))->addText(
+                                $category['name'],
+                                ['bold' => true, 'size' => 7],
+                                $this->centeredTextStyle()
                             );
 
-                            $table->addCell(350, ['bgColor' => $dimensionStyle['bg']])->addText(
-                                (string) $dimension['score'],
-                                ['bold' => true, 'size' => 7, 'color' => $dimensionStyle['text']],
-                                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                            $table->addCell(300, $this->centeredCellStyle([
+                                'vMerge' => 'restart',
+                                'bgColor' => $categoryStyle['bg'],
+                            ]))->addText(
+                                (string) $category['score'],
+                                ['bold' => true, 'size' => 7, 'color' => $categoryStyle['text']],
+                                $this->centeredTextStyle()
                             );
 
-                            $itemsCell = $table->addCell(2750);
-                            $this->addQuestionAverageItemsToCell($itemsCell, $dimension['items'], $dimension['note'] ?? null);
+                            $categoryStarted = true;
+                        } else {
+                            $table->addCell(1400, $this->centeredCellStyle(['vMerge' => 'continue']))->addText(
+                                '',
+                                ['size' => 1],
+                                $this->centeredTextStyle()
+                            );
+
+                            $table->addCell(300, $this->centeredCellStyle(['vMerge' => 'continue']))->addText(
+                                '',
+                                ['size' => 1],
+                                $this->centeredTextStyle()
+                            );
                         }
+
+                        if (! $domainStarted) {
+                            $table->addCell(1500, $this->centeredCellStyle(['vMerge' => 'restart']))->addText(
+                                $domain['name'],
+                                ['bold' => true, 'size' => 7],
+                                $this->centeredTextStyle()
+                            );
+
+                            $table->addCell(300, $this->centeredCellStyle([
+                                'vMerge' => 'restart',
+                                'bgColor' => $domainStyle['bg'],
+                            ]))->addText(
+                                (string) $domain['score'],
+                                ['bold' => true, 'size' => 7, 'color' => $domainStyle['text']],
+                                $this->centeredTextStyle()
+                            );
+
+                            $domainStarted = true;
+                        } else {
+                            $table->addCell(1500, $this->centeredCellStyle(['vMerge' => 'continue']))->addText(
+                                '',
+                                ['size' => 1],
+                                $this->centeredTextStyle()
+                            );
+
+                            $table->addCell(300, $this->centeredCellStyle(['vMerge' => 'continue']))->addText(
+                                '',
+                                ['size' => 1],
+                                $this->centeredTextStyle()
+                            );
+                        }
+
+                        $table->addCell(2600, $this->centeredCellStyle())->addText(
+                            $dimension['name'],
+                            ['size' => 7],
+                            $this->centeredTextStyle()
+                        );
+
+                        $table->addCell(350, $this->centeredCellStyle(['bgColor' => $dimensionStyle['bg']]))->addText(
+                            (string) $dimension['score'],
+                            ['bold' => true, 'size' => 7, 'color' => $dimensionStyle['text']],
+                            $this->centeredTextStyle()
+                        );
+
+                        $itemsCell = $table->addCell(2750, $this->centeredCellStyle());
+                        $this->addQuestionAverageItemsToCell($itemsCell, $dimension['items'], $dimension['note'] ?? null);
                     }
                 }
-
-                $footer = $section->addTable([
-                    'alignment' => JcTable::CENTER,
-                    'borderSize' => 6,
-                    'borderColor' => '808080',
-                    'cellMargin' => 8,
-                ]);
-
-                $footer->addRow(320, ['cantSplit' => true]);
-
-                $globalLevel = $this->classifyNom035Score('global', null, (int) $summary['final_total']);
-                $globalStyle = $this->getWordRiskCellStyle($globalLevel['key']);
-
-                $footerCell = $footer->addCell(4600, ['bgColor' => $globalStyle['bg']]);
-                $footerRun = $footerCell->addTextRun(['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-                $footerRun->addText(
-                    'Calificación Total Final',
-                    ['bold' => true, 'size' => 8, 'color' => $globalStyle['text']]
-                );
-                $footerRun->addTextBreak();
-                $footerRun->addText(
-                    $summary['final_total'] . ' / 288 - ' . number_format($summary['final_percentage'], 2) . ' %',
-                    ['bold' => true, 'size' => 8, 'color' => $globalStyle['text']]
-                );
-
-                $footer->addCell(4600, ['bgColor' => 'D9D9D9'])->addText(
-                    $summary['participants'] . ' Participantes',
-                    ['bold' => true, 'size' => 8, 'color' => '111111'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
             }
+
+            $footer = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 6,
+                'borderColor' => '808080',
+                'cellMargin' => 8,
+            ]);
+
+            $footer->addRow(320, ['cantSplit' => true]);
+
+            $globalLevel = $this->classifyNom035Score('global', null, (int) $summary['final_total']);
+            $globalStyle = $this->getWordRiskCellStyle($globalLevel['key']);
+
+            $footerCell = $footer->addCell(4600, $this->centeredCellStyle(['bgColor' => $globalStyle['bg']]));
+            $footerRun = $footerCell->addTextRun($this->centeredTextStyle());
+            $footerRun->addText(
+                'Calificación Total Final',
+                ['bold' => true, 'size' => 8, 'color' => $globalStyle['text']]
+            );
+            $footerRun->addTextBreak();
+            $footerRun->addText(
+                $summary['final_total'] . ' / 288 - ' . number_format($summary['final_percentage'], 2) . ' %',
+                ['bold' => true, 'size' => 8, 'color' => $globalStyle['text']]
+            );
+
+            $footer->addCell(4600, $this->centeredCellStyle(['bgColor' => 'D9D9D9']))->addText(
+                $summary['participants'] . ' Participantes',
+                ['bold' => true, 'size' => 8, 'color' => '111111'],
+                $this->centeredTextStyle()
+            );
+        }
 
         private function stripFirstTwoLeadingZeros(?string $value): string
         {
@@ -3054,82 +3101,82 @@ class ExecutiveReportDownloadController extends Controller
             );
         }
 
-        private function addWorkerIdentificationByCategorySection(
-            Section $section,
-            Organization $organization,
-            WorkCenter $workCenter
-        ): void {
-            $rows = $this->getWorkerIdentificationByCategorySummary($organization->id, $workCenter->id);
+            private function addWorkerIdentificationByCategorySection(
+                Section $section,
+                Organization $organization,
+                WorkCenter $workCenter
+            ): void {
+                $rows = $this->getWorkerIdentificationByCategorySummary($organization->id, $workCenter->id);
 
-            $section->addTitle('XVIII. Análisis de trabajadores referencia nivel de riesgo por categoría', 1);
+                $section->addTitle('XVIII. Análisis de trabajadores referencia nivel de riesgo por categoría', 1);
 
-        $section->addText(
-            '1. Ambiente de trabajo   2. Factores propios de la actividad   3. Organización del tiempo de trabajo   4. Liderazgo y relaciones en el trabajo   5. Entorno organizacional',
-            ['size' => 10],
-            ['spaceAfter' => 120]
-        );
-
-            if (empty($rows)) {
                 $section->addText(
-                    'No se encontraron trabajadores con nivel Medio, Alto o Muy Alto para la identificación por categoría.',
-                    ['size' => 10, 'color' => '374151']
-                );
-                return;
-            }
-
-            $this->addWorkerIdentificationRiskLegend($section);
-
-            $table = $section->addTable([
-                'alignment' => JcTable::CENTER,
-                'borderSize' => 6,
-                'borderColor' => '808080',
-                'cellMargin' => 45,
-            ]);
-
-            $table->addRow();
-            $this->addWorkerHeaderCell($table, 800, 'Folio');
-            $this->addWorkerHeaderCell($table, 900, 'Calif.');
-            $this->addWorkerHeaderCell($table, 4700, 'Nombre');
-            $this->addWorkerHeaderCell($table, 1200, 'Categoría 1');
-            $this->addWorkerHeaderCell($table, 1200, 'Categoría 2');
-            $this->addWorkerHeaderCell($table, 1200, 'Categoría 3');
-            $this->addWorkerHeaderCell($table, 1200, 'Categoría 4');
-            $this->addWorkerHeaderCell($table, 1200, 'Categoría 5');
-
-            foreach ($rows as $row) {
-                $table->addRow();
-
-                $globalStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
-
-                $table->addCell(800)->addText(
-                    $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
+                    '1. Ambiente de trabajo   2. Factores propios de la actividad   3. Organización del tiempo de trabajo   4. Liderazgo y relaciones en el trabajo   5. Entorno organizacional',
                     ['size' => 10],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    ['spaceAfter' => 120]
                 );
 
-                $table->addCell(900, ['bgColor' => $globalStyle['bg']])->addText(
-                    (string) ($row['global_score'] ?? 0),
-                    ['bold' => true, 'size' => 10, 'color' => $globalStyle['text']],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $table->addCell(4700)->addText(
-                    $this->safeValue($row['name']),
-                    ['size' => 10],
-                    ['spaceAfter' => 0]
-                );
-
-                foreach ($row['categories'] as $category) {
-                    $categoryStyle = $this->getWordRiskCellStyle($category['level_key'] ?? 'nulo');
-
-                    $table->addCell(1200, ['bgColor' => $categoryStyle['bg']])->addText(
-                        (string) ($category['score'] ?? 0),
-                        ['bold' => true, 'size' => 10, 'color' => $categoryStyle['text']],
-                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                if (empty($rows)) {
+                    $section->addText(
+                        'No se encontraron trabajadores con nivel Medio, Alto o Muy Alto para la identificación por categoría.',
+                        ['size' => 10, 'color' => '374151']
                     );
+                    return;
+                }
+
+                $this->addWorkerIdentificationRiskLegend($section);
+
+                $table = $section->addTable([
+                    'alignment' => JcTable::CENTER,
+                    'borderSize' => 6,
+                    'borderColor' => '808080',
+                    'cellMargin' => 45,
+                ]);
+
+                $table->addRow();
+                $this->addWorkerHeaderCell($table, 800, 'Folio');
+                $this->addWorkerHeaderCell($table, 900, 'Calif.');
+                $this->addWorkerHeaderCell($table, 4700, 'Nombre');
+                $this->addWorkerHeaderCell($table, 1200, 'Categoría 1');
+                $this->addWorkerHeaderCell($table, 1200, 'Categoría 2');
+                $this->addWorkerHeaderCell($table, 1200, 'Categoría 3');
+                $this->addWorkerHeaderCell($table, 1200, 'Categoría 4');
+                $this->addWorkerHeaderCell($table, 1200, 'Categoría 5');
+
+                foreach ($rows as $row) {
+                    $table->addRow();
+
+                    $globalStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
+
+                    $table->addCell(800, $this->centeredCellStyle())->addText(
+                        $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
+                        ['size' => 10],
+                        $this->centeredTextStyle()
+                    );
+
+                    $table->addCell(900, $this->centeredCellStyle(['bgColor' => $globalStyle['bg']]))->addText(
+                        (string) ($row['global_score'] ?? 0),
+                        ['bold' => true, 'size' => 10, 'color' => $globalStyle['text']],
+                        $this->centeredTextStyle()
+                    );
+
+                    $table->addCell(4700, $this->centeredCellStyle())->addText(
+                        $this->safeValue($row['name']),
+                        ['size' => 10],
+                        $this->centeredTextStyle()
+                    );
+
+                    foreach ($row['categories'] as $category) {
+                        $categoryStyle = $this->getWordRiskCellStyle($category['level_key'] ?? 'nulo');
+
+                        $table->addCell(1200, $this->centeredCellStyle(['bgColor' => $categoryStyle['bg']]))->addText(
+                            (string) ($category['score'] ?? 0),
+                            ['bold' => true, 'size' => 10, 'color' => $categoryStyle['text']],
+                            $this->centeredTextStyle()
+                        );
+                    }
                 }
             }
-        }
 
         private function addWorkerIdentificationRiskLegend(Section $section): void
         {
@@ -3861,96 +3908,103 @@ class ExecutiveReportDownloadController extends Controller
             );
         }
 
-    private function addQuestionAverageItemsToCell($cell, array $items, ?string $note = null): void
-        {
-            $itemsTable = $cell->addTable([
-                'alignment' => JcTable::CENTER,
-                'borderSize' => 0,
-                'cellMargin' => 4,
-            ]);
+        private function addQuestionAverageItemsToCell($cell, array $items, ?string $note = null): void
+            {
+                $itemsTable = $cell->addTable([
+                    'alignment' => JcTable::CENTER,
+                    'borderSize' => 0,
+                    'cellMargin' => 4,
+                ]);
 
-            $itemsTable->addRow(220, ['cantSplit' => true]);
+                $itemsTable->addRow(220, ['cantSplit' => true]);
 
-            foreach ($items as $item) {
-                $hex = $this->getQuestionValueHex((int) $item['score']);
-                $textColor = ((int) $item['score'] === 2) ? '111111' : 'FFFFFF';
+                foreach ($items as $item) {
+                    $hex = $this->getQuestionValueHex((int) $item['score']);
+                    $textColor = ((int) $item['score'] === 2) ? '111111' : 'FFFFFF';
 
-                $itemsTable->addCell(280, [
-                    'bgColor' => $hex,
+                    $itemsTable->addCell(280, [
+                        'bgColor' => $hex,
+                        'borderSize' => 6,
+                        'borderColor' => '333333',
+                        'valign' => 'center',
+                    ])->addText(
+                        (string) $item['number'],
+                        ['bold' => true, 'size' => 7, 'color' => $textColor],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
+                }
+
+                if ($note) {
+                    $itemsTable->addCell(600, [
+                        'bgColor' => 'D9D9D9',
+                        'borderSize' => 6,
+                        'borderColor' => '333333',
+                        'valign' => 'center',
+                    ])->addText(
+                        $note,
+                        ['size' => 7, 'color' => '111111'],
+                        ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                    );
+                }
+            }
+
+        private function addDistributionTable(Section $section, string $title, array $rows): void
+            {
+                $table = $section->addTable([
+                    'alignment' => JcTable::CENTER,
                     'borderSize' => 6,
-                    'borderColor' => '333333',
-                ])->addText(
-                    (string) $item['number'],
-                    ['bold' => true, 'size' => 7, 'color' => $textColor],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-            }
+                    'borderColor' => '808080',
+                    'cellMargin' => 45,
+                ]);
 
-            if ($note) {
-                $itemsTable->addCell(600, [
-                    'bgColor' => 'D9D9D9',
-                    'borderSize' => 6,
-                    'borderColor' => '333333',
-                ])->addText(
-                    $note,
-                    ['size' => 7, 'color' => '111111'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-            }
-        }
-
-    private function addDistributionTable(Section $section, string $title, array $rows): void
-        {
-
-            $table = $section->addTable([
-                'alignment' => JcTable::CENTER,
-                'borderSize' => 6,
-                'borderColor' => '808080',
-                'cellMargin' => 45,
-            ]);
-
-            $table->addRow();
-            $table->addCell(7000, ['bgColor' => '062A78'])->addText(
-                $title,
-                ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-            $table->addCell(1800, ['bgColor' => '062A78'])->addText(
-                'Total',
-                ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            if (empty($rows)) {
                 $table->addRow();
-                $table->addCell(7000)->addText(
-                    'N/D',
-                    ['size' => 10, 'color' => '374151'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-                $table->addCell(1800)->addText(
-                    '0',
-                    ['bold' => true, 'size' => 10, 'color' => '374151'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-                return;
-            }
 
-            foreach ($rows as $row) {
-                $table->addRow();
-                $table->addCell(7000)->addText(
-                    $this->safeValue($row['label'] ?? 'N/D'),
-                    ['size' => 10, 'color' => '111827'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                $table->addCell(7000, $this->centeredCellStyle(['bgColor' => '062A78']))->addText(
+                    $title,
+                    ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
+                    $this->centeredTextStyle()
                 );
-                $table->addCell(1800)->addText(
-                    (string) ($row['total'] ?? 0),
-                    ['bold' => true, 'size' => 10, 'color' => '111827'],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+
+                $table->addCell(1800, $this->centeredCellStyle(['bgColor' => '062A78']))->addText(
+                    'Total',
+                    ['bold' => true, 'size' => 10, 'color' => 'FFFFFF'],
+                    $this->centeredTextStyle()
                 );
+
+                if (empty($rows)) {
+                    $table->addRow();
+
+                    $table->addCell(7000, $this->centeredCellStyle())->addText(
+                        'N/D',
+                        ['size' => 10, 'color' => '374151'],
+                        $this->centeredTextStyle()
+                    );
+
+                    $table->addCell(1800, $this->centeredCellStyle())->addText(
+                        '0',
+                        ['bold' => true, 'size' => 10, 'color' => '374151'],
+                        $this->centeredTextStyle()
+                    );
+
+                    return;
+                }
+
+                foreach ($rows as $row) {
+                    $table->addRow();
+
+                    $table->addCell(7000, $this->centeredCellStyle())->addText(
+                        $this->safeValue($row['label'] ?? 'N/D'),
+                        ['size' => 10, 'color' => '111827'],
+                        $this->centeredTextStyle()
+                    );
+
+                    $table->addCell(1800, $this->centeredCellStyle())->addText(
+                        (string) ($row['total'] ?? 0),
+                        ['bold' => true, 'size' => 10, 'color' => '111827'],
+                        $this->centeredTextStyle()
+                    );
+                }
             }
-            
-        }
 
     private function getParticipantSummary(string $organizationId, string $workCenterId): array
     {
@@ -4597,7 +4651,7 @@ class ExecutiveReportDownloadController extends Controller
             return $dimensions;
         }
 
-    private function addRiskLevelDistributionTable(Section $section, string $title, array $distribution, int $totalEvaluations): void
+        private function addRiskLevelDistributionTable(Section $section, string $title, array $distribution, int $totalEvaluations): void
     {
         $section->addText(
             $title,
@@ -4608,20 +4662,20 @@ class ExecutiveReportDownloadController extends Controller
         $table = $section->addTable('StatsTable');
 
         $table->addRow();
-        $table->addCell(3200, ['bgColor' => 'EAF2FF'])->addText(
+        $table->addCell(3200, $this->centeredCellStyle(['bgColor' => 'EAF2FF']))->addText(
             'Nivel',
             ['bold' => true, 'size' => 10],
-            ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            $this->centeredTextStyle()
         );
-        $table->addCell(1600, ['bgColor' => 'EAF2FF'])->addText(
+        $table->addCell(1600, $this->centeredCellStyle(['bgColor' => 'EAF2FF']))->addText(
             'Total',
             ['bold' => true, 'size' => 10],
-            ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            $this->centeredTextStyle()
         );
-        $table->addCell(1600, ['bgColor' => 'EAF2FF'])->addText(
+        $table->addCell(1600, $this->centeredCellStyle(['bgColor' => 'EAF2FF']))->addText(
             '%',
             ['bold' => true, 'size' => 10],
-            ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            $this->centeredTextStyle()
         );
 
         foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
@@ -4631,23 +4685,22 @@ class ExecutiveReportDownloadController extends Controller
                 : 0;
 
             $table->addRow();
-            $table->addCell(3200)->addText(
+            $table->addCell(3200, $this->centeredCellStyle())->addText(
                 config("nom035_risk_levels.labels.$levelKey", ucfirst($levelKey)),
                 ['size' => 10, 'color' => '374151'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                $this->centeredTextStyle()
             );
-            $table->addCell(1600)->addText(
+            $table->addCell(1600, $this->centeredCellStyle())->addText(
                 (string) $total,
                 ['size' => 10, 'color' => '374151'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                $this->centeredTextStyle()
             );
-            $table->addCell(1600)->addText(
+            $table->addCell(1600, $this->centeredCellStyle())->addText(
                 $percentage . '%',
                 ['size' => 10, 'color' => '374151'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                $this->centeredTextStyle()
             );
         }
-        
     }
 
     private function getReferenceThreeDomainSummary(string $organizationId, string $workCenterId): array
@@ -6410,7 +6463,7 @@ class ExecutiveReportDownloadController extends Controller
             }
 
             $width = 1680;
-            $height = 1320;
+            $height = 1540;
 
             $image = imagecreatetruecolor($width, $height);
 
@@ -6520,11 +6573,11 @@ class ExecutiveReportDownloadController extends Controller
 
             $slots = [
                 [75, 615],
-                [600, 615],
-                [1125, 615],
-                [75, 955],
-                [600, 955],
-                [1125, 955],
+                [895, 615],
+                [75, 905],
+                [895, 905],
+                [75, 1195],
+                [895, 1195],
             ];
 
             foreach ($categories as $i => $category) {
@@ -6538,8 +6591,8 @@ class ExecutiveReportDownloadController extends Controller
                     $image,
                     $baseX,
                     $baseY,
-                    390,
-                    250,
+                    620,
+                    230,
                     (string) $category['name'],
                     $category['distribution'] ?? [],
                     $totalEvaluations,
@@ -6600,9 +6653,9 @@ class ExecutiveReportDownloadController extends Controller
             $colors = [$blue, $green, $yellow, $orange, $red];
             $keys = ['nulo', 'bajo', 'medio', 'alto', 'muy_alto'];
 
-            $barW = 56;
-            $gap = 16;
-            $startX = $chartX + 28;
+            $barW = 82;
+            $gap = 22;
+            $startX = $chartX + 36;
             $maxH = $chartH - 28;
 
             foreach ($keys as $i => $key) {
@@ -6641,8 +6694,8 @@ class ExecutiveReportDownloadController extends Controller
                 mkdir($chartDir, 0755, true);
             }
 
-            $width = 1720;
-            $height = 2280;
+            $width = 1380;
+            $height = 1820;
 
             $image = imagecreatetruecolor($width, $height);
 
@@ -6676,8 +6729,8 @@ class ExecutiveReportDownloadController extends Controller
             $tableW = $width - 70;
             $rowH = 60;
 
-            $descW = 760;
-            $cellW = 135;
+            $descW = 620;
+            $cellW = 115;
 
             imagefilledrectangle($image, $tableX, $tableY, $tableX + $tableW, $tableY + ($rowH * (count($domains) + 1)), $white);
             imagerectangle($image, $tableX, $tableY, $tableX + $tableW, $tableY + ($rowH * (count($domains) + 1)), $border);
@@ -6751,16 +6804,16 @@ class ExecutiveReportDownloadController extends Controller
             $this->drawChartTextBold($image, 22, 50, $panelY + 32, $text, 'Atención (%)');
 
             $slots = [
-                [75, 900],
-                [900, 900],
-                [75, 1185],
-                [900, 1185],
-                [75, 1470],
-                [900, 1470],
-                [75, 1755],
-                [900, 1755],
-                [75, 2040],
-                [900, 2040],
+                [75, 875],
+                [720, 875],
+                [75, 1060],
+                [720, 1060],
+                [75, 1245],
+                [720, 1245],
+                [75, 1430],
+                [720, 1430],
+                [75, 1615],
+                [720, 1615],
             ];
 
             foreach ($domains as $i => $domain) {
@@ -6774,8 +6827,8 @@ class ExecutiveReportDownloadController extends Controller
                     $image,
                     $baseX,
                     $baseY,
-                    620,
-                    210,
+                    540,
+                    125,
                     (string) $domain['name'],
                     $domain['distribution'] ?? [],
                     $totalEvaluations,
@@ -6792,6 +6845,9 @@ class ExecutiveReportDownloadController extends Controller
 
             imagepng($image, $outputPath);
             imagedestroy($image);
+            gc_collect_cycles();
+
+            return $outputPath;
 
             return $outputPath;
         }
@@ -6888,7 +6944,7 @@ class ExecutiveReportDownloadController extends Controller
                 mkdir($chartDir, 0755, true);
             }
 
-            $columns = 3;
+            $columns = 2;
             $rows = (int) ceil(count($dimensions) / $columns);
 
             $width = 1680;
@@ -6900,7 +6956,7 @@ class ExecutiveReportDownloadController extends Controller
 
             $tableHeight = $rowH * (count($dimensions) + 1);
             $panelY = $tableY + $tableHeight + 22;
-            $chartBlockHeight = ($rows * 200);
+            $chartBlockHeight = ($rows * 260);
             $height = $panelY + $chartBlockHeight + 105;
 
             $image = imagecreatetruecolor($width, $height);
@@ -7022,11 +7078,11 @@ class ExecutiveReportDownloadController extends Controller
 
             $this->drawChartTextBold($image, 22, 50, $panelY + 32, $text, 'Atención (%)');
 
-                       $slots = [];
-            $baseX = 50;
-            $baseY = $panelY + 88;
-            $colGap = 520;
-            $rowGap = 195;
+            $slots = [];
+            $baseX = 75;
+            $baseY = $panelY + 90;
+            $colGap = 820;
+            $rowGap = 250;
 
             for ($r = 0; $r < $rows; $r++) {
                 for ($c = 0; $c < $columns; $c++) {
@@ -7048,8 +7104,8 @@ class ExecutiveReportDownloadController extends Controller
                     $image,
                     $slotX,
                     $slotY,
-                    390,
-                    118,
+                    620,
+                    175,
                     (string) $dimension['name'],
                     $dimension['distribution'] ?? [],
                     $totalEvaluations,
@@ -7064,8 +7120,9 @@ class ExecutiveReportDownloadController extends Controller
                 );
             }
 
-            imagepng($image, $outputPath);
+           imagepng($image, $outputPath);
             imagedestroy($image);
+            gc_collect_cycles();
 
             return $outputPath;
         }
@@ -7088,7 +7145,7 @@ class ExecutiveReportDownloadController extends Controller
             $mutedColor,
             $borderColor
         ): void {
-            $wrapped = explode("\n", wordwrap($title, 24, "\n", true));
+            $wrapped = explode("\n", wordwrap($title, 34, "\n", true));
             $line1 = $wrapped[0] ?? '';
             $line2 = $wrapped[1] ?? '';
             $line3 = $wrapped[2] ?? '';
@@ -7155,9 +7212,9 @@ class ExecutiveReportDownloadController extends Controller
             $colors = [$blue, $green, $yellow, $orange, $red];
             $keys = ['nulo', 'bajo', 'medio', 'alto', 'muy_alto'];
 
-            $barW = 52;
-            $gap = 16;
-            $startX = $chartX + 28;
+            $barW = 82;
+            $gap = 22;
+            $startX = $chartX + 36;
             $maxH = $chartH - 24;
 
             foreach ($keys as $i => $key) {
@@ -7349,6 +7406,28 @@ class ExecutiveReportDownloadController extends Controller
                         'EC0779, “Transversalización de la perspectiva de género en la administración pública municipal”',
                         'EC0308, “Capacitación presencial a servidoras y servidores públicos en y desde el enfoque de Igualdad entre mujeres y hombres. Nivel básico”',
                     ],
+                                ],
+                [
+                    'company' => 'Training and Manufacturing Services',
+                    'name' => 'Jaime Lozano Castro',
+                    'position' => 'Proyectos',
+                    'email' => 'jaime_lozano@trainingyms.com',
+                    'phone' => '(844) 622 28 97',
+                    'lines' => [
+                        'Training and Manufacturing Services, S.C. 20 años',
+                        'Capacitación / Seguridad y Salud / Evaluador',
+                        'Registro de Agente Capacitador ante STPS: TMS060511623-0013 CENTRO EVALUADOR',
+                    ],
+                    'accreditation' => 'Training and Manufacturing Services, S.C.   Cédula de acreditación CE1488-OC006-06',
+                    'certifications' => [
+                        'EC0891, “Facilitación de la implementación del programa SOLVE: promoción de la salud en el trabajo (Factores de riesgos psicosociales en el trabajo)”',
+                        'EC0217.01, “Impartición de Cursos de Formación del Capital Humano de Manera Presencial Grupal”',
+                        'EC0581, “Integración y Funcionamiento de las Comisiones Mixtas de Capacitación, Adiestramiento y Productividad”',
+                        'EC0076, “Evaluación de la Competencia de Candidatos con Base en Estándares de Competencia”',
+                        'EC0301, “Diseño de cursos de formación del capital humano de manera presencial grupal, sus instrumentos de evaluación y manuales del curso”',
+                        'EC0779, “Transversalización de la perspectiva de género en la administración pública municipal”',
+                        'EC0308, “Capacitación presencial a servidoras y servidores públicos en y desde el enfoque de Igualdad entre mujeres y hombres. Nivel básico”',
+                    ],
                 ],
                 [
                     'company' => 'Training and Manufacturing Services',
@@ -7388,124 +7467,261 @@ class ExecutiveReportDownloadController extends Controller
         }
 
         private function renderConsultantProfile(Section $section, array $profile): void
-        {
-            $blue = '2F5597';
-            $blueBorder = 'B7C9F2';
-            $cardBg = 'F8FAFF';
-            $lineGray = 'E3E8F2';
-            $textDark = '111111';
-            $iconGray = '94A3B8';
+            {
+                $blue = '2F5597';
+                $textDark = '111111';
 
-            $section->addText(
-                $this->safeValue($profile['company']),
-                ['bold' => true, 'size' => 16, 'color' => $textDark],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 160]
-            );
-
-            $outer = $section->addTable([
-                'alignment' => JcTable::CENTER,
-                'borderSize' => 10,
-                'borderColor' => $blueBorder,
-                'cellMargin' => 0,
-            ]);
-
-            $outer->addRow();
-            $wrapper = $outer->addCell(9400, [
-                'bgColor' => $cardBg,
-                'valign' => 'center',
-            ]);
-
-            $card = $wrapper->addTable([
-                'alignment' => JcTable::CENTER,
-                'borderSize' => 0,
-                'cellMargin' => 0,
-            ]);
-
-            $rows = [
-                ['∘', 'Nombre', $profile['name']],
-                ['▭', 'Puesto', $profile['position']],
-                ['✉', 'E-mail', $profile['email']],
-                ['◔', 'Móvil', $profile['phone']],
-            ];
-
-            foreach ($rows as $i => [$icon, $label, $value]) {
-                $card->addRow(720);
-
-                $leftCell = [
-                    'bgColor' => $cardBg,
-                    'valign' => 'center',
-                    'borderBottomSize' => $i < 3 ? 6 : 0,
-                    'borderBottomColor' => $lineGray,
-                ];
-
-                $rightCell = [
-                    'bgColor' => $cardBg,
-                    'valign' => 'center',
-                    'borderBottomSize' => $i < 3 ? 6 : 0,
-                    'borderBottomColor' => $lineGray,
-                ];
-
-                $iconCell = $card->addCell(500, $leftCell);
-                $iconCell->addText(
-                    $icon,
-                    ['size' => 11, 'color' => $iconGray],
-                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-                );
-
-                $labelCell = $card->addCell(2500, $leftCell);
-                $labelCell->addText(
-                    $label,
-                    ['size' => 11, 'color' => $blue],
-                    ['spaceAfter' => 0]
-                );
-
-                $valueCell = $card->addCell(6400, $rightCell);
-                $valueCell->addText(
-                    $this->safeValue($value),
+                $section->addText(
+                    $this->safeValue($profile['company']),
                     ['bold' => true, 'size' => 11, 'color' => $textDark],
-                    ['alignment' => Jc::END, 'spaceAfter' => 0]
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 120]
                 );
-            }
 
-            $section->addTextBreak(2);
-
-            foreach ($profile['lines'] as $line) {
-                $section->addText(
-                    $line,
-                    ['size' => 11, 'color' => $textDark],
-                    ['spaceAfter' => 75]
+                $cardPath = $this->generateConsultantProfileCardImage(
+                    $profile,
+                    $this->makeUniqueChartPath('consultant_profile_card')
                 );
-            }
 
-            $section->addText(
-                '•   ' . $profile['accreditation'],
-                ['size' => 11, 'color' => $textDark],
-                ['spaceAfter' => 120]
-            );
+                if ($cardPath && file_exists($cardPath)) {
+                    $section->addImage($cardPath, [
+                    'width' => 430,
+                    'alignment' => Jc::CENTER,
+                    'spaceBefore' => 30,
+                    'spaceAfter' => 70,
+                ]);
+                } else {
+                    // Fallback sin tabla, por si GD no está disponible en el servidor.
+                    foreach ([
+                        'Nombre' => $profile['name'],
+                        'Puesto' => $profile['position'],
+                        'E-mail' => $profile['email'],
+                        'Móvil' => $profile['phone'],
+                    ] as $label => $value) {
+                        $section->addText(
+                            $label . ': ' . $this->safeValue($value),
+                            ['size' => 8, 'color' => $textDark],
+                            ['spaceAfter' => 40]
+                        );
+                    }
+                }
 
-            $section->addTextBreak(1);
+                $section->addTextBreak(2);
 
-            $section->addText(
-                'Certificaciones ante el Consejo Nacional de Normalización y Certificación de Competencias Laborales (CONOCER)',
-                ['size' => 11, 'color' => $textDark],
-                ['spaceAfter' => 55]
-            );
+                foreach ($profile['lines'] as $line) {
+                    $section->addText(
+                        $line,
+                        ['size' => 8, 'color' => $textDark],
+                        ['spaceAfter' => 75]
+                    );
+                }
 
-            $section->addText(
-                'de la Secretaría de Educación Pública (SEP):',
-                ['size' => 11, 'color' => $textDark],
-                ['spaceAfter' => 110]
-            );
-
-            foreach ($profile['certifications'] as $certification) {
                 $section->addText(
-                    $certification,
-                    ['size' => 11, 'color' => $blue],
+                    '•   ' . $profile['accreditation'],
+                    ['size' => 8, 'color' => $textDark],
+                    ['spaceAfter' => 120]
+                );
+
+                $section->addTextBreak(1);
+
+                $section->addText(
+                    'Certificaciones ante el Consejo Nacional de Normalización y Certificación de Competencias Laborales (CONOCER)',
+                    ['size' => 8, 'color' => $textDark],
                     ['spaceAfter' => 55]
                 );
-            }
-        }
 
+                $section->addText(
+                    'de la Secretaría de Educación Pública (SEP):',
+                    ['size' => 8, 'color' => $textDark],
+                    ['spaceAfter' => 110]
+                );
+
+                foreach ($profile['certifications'] as $certification) {
+                    $section->addText(
+                        $certification,
+                        ['size' => 8, 'color' => $blue],
+                        ['spaceAfter' => 55]
+                    );
+                }
+            }
+
+            private function generateConsultantProfileCardImage(array $profile, string $outputPath): ?string
+                {
+                    if (! function_exists('imagecreatetruecolor')) {
+                        return null;
+                    }
+
+                    $chartDir = dirname($outputPath);
+
+                    if (! is_dir($chartDir)) {
+                        mkdir($chartDir, 0755, true);
+                    }
+
+                    $width = 980;
+                    $height = 255;
+
+                    $image = imagecreatetruecolor($width, $height);
+
+                    if (function_exists('imageantialias')) {
+                        imageantialias($image, true);
+                    }
+
+                    $white = imagecolorallocate($image, 255, 255, 255);
+                    $cardBg = $this->allocateColor($image, 'F5F8FE');
+                    $border = $this->allocateColor($image, 'C8D7F4');
+                    $line = $this->allocateColor($image, 'E3EBF8');
+                    $blue = $this->allocateColor($image, '2F5597');
+                    $dark = $this->allocateColor($image, '111111');
+                    $icon = $this->allocateColor($image, '9AA8BD');
+
+                    imagefill($image, 0, 0, $white);
+
+                    $x1 = 18;
+                    $y1 = 18;
+                    $x2 = $width - 18;
+                    $y2 = $height - 18;
+                    $radius = 14;
+
+                    $this->drawRoundedFilledRectangle($image, $x1, $y1, $x2, $y2, $radius, $cardBg);
+                    $this->drawRoundedRectangleBorder($image, $x1, $y1, $x2, $y2, $radius, $border);
+
+                    $rows = [
+                        ['×', 'Nombre', $profile['name'] ?? ''],
+                        ['□', 'Puesto', $profile['position'] ?? ''],
+                        ['✉', 'E-mail', $profile['email'] ?? ''],
+                        [' ', 'Móvil', $profile['phone'] ?? ''],
+                    ];
+
+                    $leftX = 48;
+                    $labelX = 88;
+                    $valueRightX = 905;
+                    $topY = 42;
+                    $rowH = 48;
+
+                    foreach ($rows as $index => [$rowIcon, $label, $value]) {
+                        $rowTop = $topY + ($index * $rowH);
+                        $baseline = $rowTop + 28;
+
+                        if ($index < 3) {
+                            imageline(
+                                $image,
+                                38,
+                                $rowTop + $rowH - 2,
+                                920,
+                                $rowTop + $rowH - 2,
+                                $line
+                            );
+                        }
+
+                        $this->drawChartText(
+                            $image,
+                            11,
+                            $leftX,
+                            $baseline,
+                            $icon,
+                            $rowIcon
+                        );
+
+                        $this->drawChartText(
+                            $image,
+                            12,
+                            $labelX,
+                            $baseline,
+                            $blue,
+                            $label
+                        );
+
+                        $this->drawImageTextRightBold(
+                            $image,
+                            12,
+                            $valueRightX,
+                            $baseline,
+                            $dark,
+                            $this->safeValue($value)
+                        );
+                    }
+
+                    imagepng($image, $outputPath);
+                    imagedestroy($image);
+
+                    return $outputPath;
+                }
+
+                private function drawRoundedFilledRectangle($image, int $x1, int $y1, int $x2, int $y2, int $radius, $color): void
+                {
+                    imagefilledrectangle($image, $x1 + $radius, $y1, $x2 - $radius, $y2, $color);
+                    imagefilledrectangle($image, $x1, $y1 + $radius, $x2, $y2 - $radius, $color);
+
+                    imagefilledellipse($image, $x1 + $radius, $y1 + $radius, $radius * 2, $radius * 2, $color);
+                    imagefilledellipse($image, $x2 - $radius, $y1 + $radius, $radius * 2, $radius * 2, $color);
+                    imagefilledellipse($image, $x1 + $radius, $y2 - $radius, $radius * 2, $radius * 2, $color);
+                    imagefilledellipse($image, $x2 - $radius, $y2 - $radius, $radius * 2, $radius * 2, $color);
+                }
+
+                private function drawRoundedRectangleBorder($image, int $x1, int $y1, int $x2, int $y2, int $radius, $color): void
+                {
+                    imageline($image, $x1 + $radius, $y1, $x2 - $radius, $y1, $color);
+                    imageline($image, $x1 + $radius, $y2, $x2 - $radius, $y2, $color);
+                    imageline($image, $x1, $y1 + $radius, $x1, $y2 - $radius, $color);
+                    imageline($image, $x2, $y1 + $radius, $x2, $y2 - $radius, $color);
+
+                    imagearc($image, $x1 + $radius, $y1 + $radius, $radius * 2, $radius * 2, 180, 270, $color);
+                    imagearc($image, $x2 - $radius, $y1 + $radius, $radius * 2, $radius * 2, 270, 360, $color);
+                    imagearc($image, $x1 + $radius, $y2 - $radius, $radius * 2, $radius * 2, 90, 180, $color);
+                    imagearc($image, $x2 - $radius, $y2 - $radius, $radius * 2, $radius * 2, 0, 90, $color);
+                }
+
+            private function allocateColor($image, string $hex)
+            {
+                [$r, $g, $b] = $this->hexToRgb($hex);
+
+                return imagecolorallocate($image, $r, $g, $b);
+            }
+
+            private function drawImageTextRightBold($image, int $size, int $rightX, int $y, $color, string $text): void
+            {
+                $text = trim($text);
+
+                if ($text === '') {
+                    return;
+                }
+
+                $font = $this->getChartFontPath();
+
+                if ($font && function_exists('imagettfbbox') && function_exists('imagettftext')) {
+                    $box = imagettfbbox($size, 0, $font, $text);
+                    $textWidth = abs($box[2] - $box[0]);
+                    $x = $rightX - $textWidth;
+
+                    imagettftext($image, $size, 0, $x, $y, $color, $font, $text);
+                    imagettftext($image, $size, 0, $x + 1, $y, $color, $font, $text);
+
+                    return;
+                }
+
+                $fallback = iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $text) ?: $text;
+                $fontIndex = 5;
+                $textWidth = imagefontwidth($fontIndex) * strlen($fallback);
+                $x = $rightX - $textWidth;
+
+                imagestring($image, $fontIndex, $x, max(0, $y - 12), $fallback, $color);
+                imagestring($image, $fontIndex, $x + 1, max(0, $y - 12), $fallback, $color);
+            }
+
+        private function centeredCellStyle(array $style = []): array
+            {
+                return array_merge([
+                    'valign' => 'center',
+                ], $style);
+            }
+
+            private function centeredTextStyle(array $style = []): array
+            {
+                return array_merge([
+                    'alignment' => Jc::CENTER,
+                    'spaceAfter' => 0,
+                ], $style);
+            }
+    
     private function addInfoRow($table, string $label, ?string $value): void
         {
             $table->addRow(520);
