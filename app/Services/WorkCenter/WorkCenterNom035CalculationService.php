@@ -22,15 +22,13 @@ class WorkCenterNom035CalculationService
             ->with(['evaluationAnswers' => function ($q) use ($instrumentValue): void {
                 $q->where('instrument', $instrumentValue);
             }])
-            ->where(function (Builder $builder) use ($instrumentValue): void {
-            $builder
-                ->whereNotNull('referencia_iii_answers')
-                ->orWhereNotNull('referencia_iii_conditional')
-                ->orWhereNotNull('raw_data')
-                ->orWhereHas('evaluationAnswers', function ($q) use ($instrumentValue): void {
-                    $q->where('instrument', $instrumentValue);
-                });
-        });
+            ->where(function (Builder $builder): void {
+                $builder
+                    ->whereNotNull('referencia_iii_answers')
+                    ->orWhereNotNull('referencia_iii_conditional')
+                    ->orWhereNotNull('raw_data');
+            });
+
         if (in_array($source, ['online', 'paper'], true)) {
             $query->where('source', $source);
         } else {
@@ -41,387 +39,304 @@ class WorkCenterNom035CalculationService
     }
 
     /**
-     * Calcular estadísticas de dominios NOM-035 para un centro de trabajo
+     * Calcular estadÃ­sticas de dominios NOM-035 para un centro de trabajo
      */
     public function calculateDomainStatistics(WorkCenter $workCenter, ?string $source = null): array
-        {
-            $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
+    {
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
 
-            if ($evaluations->isEmpty()) {
-                return $this->getEmptyStatistics();
-            }
-
-            $domainConfig = config('question_dimensions');
-            $riskLevels = config('nom035_risk_levels');
-            $scoreRows = $this->buildReferenciaIIIEvaluationScoreRows($evaluations);
-
-            $result = [];
-
-            foreach ($domainConfig as $categoryName => $domains) {
-                foreach ($domains as $domainName => $dimensions) {
-                    $distribution = [
-                        'nulo' => 0,
-                        'bajo' => 0,
-                        'medio' => 0,
-                        'alto' => 0,
-                        'muy_alto' => 0,
-                    ];
-
-                    $questionNumbers = $this->flattenQuestionNumbersFromDimensions($dimensions);
-                    $scores = [];
-
-                    foreach ($scoreRows as $row) {
-                        $score = (int) ($row['domain_scores'][$domainName] ?? 0);
-                        $scores[] = $score;
-
-                        $level = $this->getRiskLevel($score, $domainName, $riskLevels);
-                        $distribution[$level]++;
-                    }
-
-                    $average = $this->calculateAverageScoreFromQuestions($scoreRows, $questionNumbers);
-                    $maxScore = (int) ($riskLevels['domains'][$domainName]['max_score'] ?? 0);
-                    $averageLevel = $this->getRiskLevel($average, $domainName, $riskLevels);
-
-                    $result[$domainName] = [
-                        'average_score' => round($average, 2),
-                        'max_score' => $maxScore,
-                        'percentage' => $maxScore > 0 ? round(($average / $maxScore) * 100, 2) : 0,
-                        'risk_level' => $averageLevel,
-                        'risk_level_label' => $riskLevels['labels'][$averageLevel],
-                        'distribution' => $distribution,
-                        'total_evaluations' => count($scores),
-                    ];
-                }
-            }
-
-            return [
-                'domains' => $result,
-                'total_evaluations' => $evaluations->count(),
-                'colors' => $riskLevels['colors'],
-                'labels' => $riskLevels['labels'],
-            ];
+        if ($evaluations->isEmpty()) {
+            return $this->getEmptyStatistics();
         }
-    /**
-     * Calcular estadísticas de categorías NOM-035 para un centro de trabajo
-     * NOTA: Calcula las 5 CATEGORÍAS REALES (Nivel 1) de NOM-035
-     */
-    public function calculateCategoryStatistics(WorkCenter $workCenter, ?string $source = null): array
-        {
-            $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
 
-            if ($evaluations->isEmpty()) {
-                return $this->getEmptyCategoryStatistics();
-            }
+        $domainConfig = config('question_dimensions');
+        $riskLevels = config('nom035_risk_levels');
 
-            $domainConfig = config('question_dimensions');
-            $riskLevels = config('nom035_risk_levels');
-            $scoreRows = $this->buildReferenciaIIIEvaluationScoreRows($evaluations);
+        $domainScores = [];
+        $domainDistributions = [];
 
-            $result = [];
-
-            foreach ($domainConfig as $categoryName => $domains) {
-                $distribution = [
+        foreach ($domainConfig as $categoryName => $domains) {
+            foreach ($domains as $domainName => $dimensions) {
+                $domainScores[$domainName] = [];
+                $domainDistributions[$domainName] = [
                     'nulo' => 0,
                     'bajo' => 0,
                     'medio' => 0,
                     'alto' => 0,
                     'muy_alto' => 0,
                 ];
-
-                $questionNumbers = [];
-                $scores = [];
-
-                foreach ($domains as $domainName => $dimensions) {
-                    $questionNumbers = array_merge(
-                        $questionNumbers,
-                        $this->flattenQuestionNumbersFromDimensions($dimensions)
-                    );
-                }
-
-                foreach ($scoreRows as $row) {
-                    $score = (int) ($row['category_scores'][$categoryName] ?? 0);
-                    $scores[] = $score;
-
-                    $level = $this->getCategoryRiskLevel($score, $categoryName, $riskLevels);
-                    $distribution[$level]++;
-                }
-
-                $average = $this->calculateAverageScoreFromQuestions($scoreRows, $questionNumbers);
-                $maxScore = $this->getCategoryMaxScore($categoryName, $riskLevels);
-                $averageLevel = $this->getCategoryRiskLevel($average, $categoryName, $riskLevels);
-
-                $result[$categoryName] = [
-                    'average_score' => round($average, 2),
-                    'max_score' => $maxScore,
-                    'percentage' => $maxScore > 0 ? round(($average / $maxScore) * 100, 2) : 0,
-                    'risk_level' => $averageLevel,
-                    'risk_level_label' => $riskLevels['labels'][$averageLevel],
-                    'distribution' => $distribution,
-                    'total_evaluations' => count($scores),
-                    'domain_count' => count($domains),
-                ];
             }
-
-            return [
-                'categories' => $result,
-                'total_evaluations' => $evaluations->count(),
-                'colors' => $riskLevels['colors'],
-                'labels' => $riskLevels['labels'],
-            ];
         }
 
-    /**
-     * Calcular estadísticas de dimensiones NOM-035 para un centro de trabajo
-     */
-    public function calculateDimensionStatistics(WorkCenter $workCenter, ?string $source = null): array
-        {
-            $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
-
-            if ($evaluations->isEmpty()) {
-                return $this->getEmptyDimensionStatistics();
-            }
-
-            $domainConfig = config('question_dimensions');
-            $riskLevels = config('nom035_risk_levels');
-            $scoreRows = $this->buildReferenciaIIIEvaluationScoreRows($evaluations);
-
-            $result = [];
+        foreach ($evaluations as $evaluation) {
+            $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
 
             foreach ($domainConfig as $categoryName => $domains) {
                 foreach ($domains as $domainName => $dimensions) {
-                    foreach ($dimensions as $dimensionName => $questions) {
-                        $distribution = [
-                            'nulo' => 0,
-                            'bajo' => 0,
-                            'medio' => 0,
-                            'alto' => 0,
-                            'muy_alto' => 0,
-                        ];
+                    $score = $this->calculateDomainScore($answers, [$domainName => $dimensions]);
+                    $domainScores[$domainName][] = $score;
 
-                        $scores = [];
-
-                        foreach ($scoreRows as $row) {
-                            $score = (int) ($row['dimension_scores'][$dimensionName] ?? 0);
-                            $scores[] = $score;
-
-                            $level = $this->getDimensionRiskLevel($score, $dimensionName, $riskLevels);
-                            $distribution[$level]++;
-                        }
-
-                        $average = $this->calculateAverageScoreFromQuestions($scoreRows, $questions);
-                        $maxScore = count($questions) * 4;
-                        $averageLevel = $this->getDimensionRiskLevel($average, $dimensionName, $riskLevels);
-
-                        $result[$dimensionName] = [
-                            'average_score' => round($average, 2),
-                            'max_score' => $maxScore,
-                            'percentage' => $maxScore > 0 ? round(($average / $maxScore) * 100, 2) : 0,
-                            'risk_level' => $averageLevel,
-                            'risk_level_label' => $riskLevels['labels'][$averageLevel],
-                            'distribution' => $distribution,
-                            'total_evaluations' => count($scores),
-                            'domain' => $domainName,
-                            'category' => $categoryName,
-                        ];
-                    }
+                    $level = $this->getRiskLevel($score, $domainName, $riskLevels);
+                    $domainDistributions[$domainName][$level]++;
                 }
             }
+        }
 
-            return [
-                'dimensions' => $result,
-                'total_evaluations' => $evaluations->count(),
-                'colors' => $riskLevels['colors'],
-                'labels' => $riskLevels['labels'],
+        $result = [];
+        foreach ($domainScores as $domainName => $scores) {
+            $average = count($scores) > 0 ? array_sum($scores) / count($scores) : 0;
+            $maxScore = $riskLevels['domains'][$domainName]['max_score'] ?? 0;
+            $averageLevel = $this->getRiskLevel($average, $domainName, $riskLevels);
+
+            $result[$domainName] = [
+                'average_score' => round($average, 2),
+                'max_score' => $maxScore,
+                'percentage' => $maxScore > 0 ? round(($average / $maxScore) * 100, 2) : 0,
+                'risk_level' => $averageLevel,
+                'risk_level_label' => $riskLevels['labels'][$averageLevel],
+                'distribution' => $domainDistributions[$domainName],
+                'total_evaluations' => count($scores),
             ];
         }
 
+        return [
+            'domains' => $result,
+            'total_evaluations' => $evaluations->count(),
+            'colors' => $riskLevels['colors'],
+            'labels' => $riskLevels['labels'],
+        ];
+    }
+
     /**
-     * Calcular estadísticas globales NOM-035 para un centro de trabajo
+     * Calcular estadÃ­sticas de categorÃ­as NOM-035 para un centro de trabajo
+     * NOTA: Calcula las 5 CATEGORÃAS REALES (Nivel 1) de NOM-035
      */
-    public function calculateGlobalStatistics(WorkCenter $workCenter, ?string $source = null): array
-        {
-            $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
+    public function calculateCategoryStatistics(WorkCenter $workCenter, ?string $source = null): array
+    {
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
 
-            if ($evaluations->isEmpty()) {
-                return $this->getEmptyGlobalStatistics();
-            }
+        if ($evaluations->isEmpty()) {
+            return $this->getEmptyCategoryStatistics();
+        }
 
-            $riskLevels = config('nom035_risk_levels');
-            $scoreRows = $this->buildReferenciaIIIEvaluationScoreRows($evaluations);
+        $domainConfig = config('question_dimensions');
+        $riskLevels = config('nom035_risk_levels');
 
-            $globalDistribution = [
+        $categoryScores = [];
+        $categoryDistributions = [];
+        $categoryDomainCount = [];
+
+        // Preparar estructura para cada CATEGORÃA REAL (las 5 grandes)
+        foreach ($domainConfig as $categoryName => $domains) {
+            $categoryScores[$categoryName] = [];
+            $categoryDistributions[$categoryName] = [
                 'nulo' => 0,
                 'bajo' => 0,
                 'medio' => 0,
                 'alto' => 0,
                 'muy_alto' => 0,
             ];
+            $categoryDomainCount[$categoryName] = count($domains);
+        }
 
-            foreach ($scoreRows as $row) {
-                $level = $this->getGlobalRiskLevel((int) ($row['global_score'] ?? 0), $riskLevels);
-                $globalDistribution[$level]++;
-            }
+        // Calcular puntajes por evaluaciÃ³n
+        foreach ($evaluations as $evaluation) {
+            $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
 
-            $allQuestions = range(1, 72);
-            $average = round($this->calculateAverageScoreFromQuestions($scoreRows, $allQuestions), 0, PHP_ROUND_HALF_UP);
-            $maxScore = (int) ($riskLevels['global']['max_score'] ?? 288);
+            // Iterar por cada CATEGORÃA REAL (las 5)
+            foreach ($domainConfig as $categoryName => $domains) {
+                $categoryScore = 0;
 
-            $dominantLevelKey = 'nulo';
-            $dominantCount = -1;
-
-            foreach ($globalDistribution as $levelKey => $count) {
-                if ($count > $dominantCount) {
-                    $dominantCount = $count;
-                    $dominantLevelKey = $levelKey;
+                // Sumar puntajes de todos los dominios dentro de esta categorÃ­a
+                foreach ($domains as $domainName => $dimensions) {
+                    $domainScore = $this->calculateDomainScore($answers, [$domainName => $dimensions]);
+                    $categoryScore += $domainScore;
                 }
-            }
 
-            return [
-                'global' => [
-                    'average_score' => round($average, 2),
-                    'max_score' => $maxScore,
-                    'percentage' => $maxScore > 0 ? round(($average / $maxScore) * 100, 2) : 0,
-                    'risk_level' => $dominantLevelKey,
-                    'risk_level_label' => $riskLevels['labels'][$dominantLevelKey],
-                    'levels' => $riskLevels['global']['levels'] ?? [],
-                    'distribution' => $globalDistribution,
-                    'total_evaluations' => count($scoreRows),
-                ],
-                'total_evaluations' => $evaluations->count(),
-                'colors' => $riskLevels['colors'],
-                'labels' => $riskLevels['labels'],
+                $categoryScores[$categoryName][] = $categoryScore;
+
+                // Clasificar en nivel de riesgo usando los niveles de categorÃ­a
+                $level = $this->getCategoryRiskLevel($categoryScore, $categoryName, $riskLevels);
+                $categoryDistributions[$categoryName][$level]++;
+            }
+        }
+
+        // Calcular promedios y preparar respuesta
+        $result = [];
+        foreach ($categoryScores as $categoryName => $scores) {
+            $average = count($scores) > 0 ? array_sum($scores) / count($scores) : 0;
+
+            // Obtener max_score de la configuraciÃ³n de categorÃ­as
+            $maxScore = $this->getCategoryMaxScore($categoryName, $riskLevels);
+            $averageLevel = $this->getCategoryRiskLevel($average, $categoryName, $riskLevels);
+
+            $result[$categoryName] = [
+                'average_score' => round($average, 2),
+                'max_score' => $maxScore,
+                'percentage' => $maxScore > 0 ? round(($average / $maxScore) * 100, 2) : 0,
+                'risk_level' => $averageLevel,
+                'risk_level_label' => $riskLevels['labels'][$averageLevel],
+                'distribution' => $categoryDistributions[$categoryName],
+                'total_evaluations' => count($scores),
+                'domain_count' => $categoryDomainCount[$categoryName],
             ];
-        
-    }
-
-    private function buildReferenciaIIIEvaluationScoreRows(Collection $evaluations): array
-        {
-            $domainConfig = config('question_dimensions');
-            $answerValues = config('answer_values');
-            $rows = [];
-
-            foreach ($evaluations as $evaluation) {
-                $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
-
-                $questionScores = [];
-                $globalScore = 0;
-
-                foreach ($answers as $questionNumber => $answer) {
-                    if ($answer === null || is_array($answer)) {
-                        continue;
-                    }
-
-                    $questionKey = $this->normalizeQuestionKey($questionNumber);
-
-            if ((int) $questionKey < 1 || (int) $questionKey > 72) {
-                continue;
-            }
-
-            if (! in_array($answer, ['A', 'B', 'C', 'D', 'E'], true)) {
-                continue;
-            }
-
-            $group = in_array($questionKey, $answerValues['group1']['questions'], true)
-                ? 'group1'
-                : 'group2';
-
-            $score = (int) ($answerValues[$group]['values'][$answer] ?? 0);
-
-            $questionScores[$questionKey] = $score;
-            $globalScore += $score;
         }
 
-        $domainScores = [];
-        $categoryScores = [];
-        $dimensionScores = [];
-
-        foreach ($domainConfig as $categoryName => $domains) {
-            $categoryScore = 0;
-
-            foreach ($domains as $domainName => $dimensions) {
-                $domainScore = 0;
-
-                foreach ($dimensions as $dimensionName => $questions) {
-                    $dimensionScore = 0;
-
-                    foreach ($questions as $questionNumber) {
-                        $questionKey = $this->normalizeQuestionKey($questionNumber);
-                        $dimensionScore += (int) ($questionScores[$questionKey] ?? 0);
-                    }
-
-                    $dimensionScores[$dimensionName] = $dimensionScore;
-                    $domainScore += $dimensionScore;
-                }
-
-                $domainScores[$domainName] = $domainScore;
-                $categoryScore += $domainScore;
-            }
-
-            $categoryScores[$categoryName] = $categoryScore;
-        }
-
-        $rows[] = [
-            'evaluation_id' => $evaluation->id,
-            'question_scores' => $questionScores,
-            'global_score' => $globalScore,
-            'category_scores' => $categoryScores,
-            'domain_scores' => $domainScores,
-            'dimension_scores' => $dimensionScores,
+        return [
+            'categories' => $result,
+            'total_evaluations' => $evaluations->count(),
+            'colors' => $riskLevels['colors'],
+            'labels' => $riskLevels['labels'],
         ];
     }
 
-    return $rows;
-}
+    /**
+     * Calcular estadÃ­sticas de dimensiones NOM-035 para un centro de trabajo
+     */
+    public function calculateDimensionStatistics(WorkCenter $workCenter, ?string $source = null): array
+    {
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
 
-private function calculateAverageScoreFromQuestions(array $scoreRows, array $questionNumbers): float
-{
-    $total = 0.0;
+        if ($evaluations->isEmpty()) {
+            return $this->getEmptyDimensionStatistics();
+        }
 
-    foreach ($questionNumbers as $questionNumber) {
-        $questionKey = $this->normalizeQuestionKey($questionNumber);
-        $sum = 0;
-        $count = 0;
+        $domainConfig = config('question_dimensions');
+        $riskLevels = config('nom035_risk_levels');
 
-        foreach ($scoreRows as $row) {
-            $questionScores = $row['question_scores'] ?? [];
+        $dimensionScores = [];
+        $dimensionDistributions = [];
+        $dimensionDomains = [];
+        $dimensionCategories = [];
 
-            if (! is_array($questionScores) || ! array_key_exists($questionKey, $questionScores)) {
-                continue;
+        foreach ($domainConfig as $categoryName => $domains) {
+            foreach ($domains as $domainName => $dimensions) {
+                foreach ($dimensions as $dimensionName => $questions) {
+                    $dimensionScores[$dimensionName] = [];
+                    $dimensionDistributions[$dimensionName] = [
+                        'nulo' => 0,
+                        'bajo' => 0,
+                        'medio' => 0,
+                        'alto' => 0,
+                        'muy_alto' => 0,
+                    ];
+                    $dimensionDomains[$dimensionName] = $domainName;
+                    $dimensionCategories[$dimensionName] = $categoryName;
+                }
             }
-
-            $sum += (int) $questionScores[$questionKey];
-            $count++;
         }
 
-        if ($count === 0) {
-            continue;
+        foreach ($evaluations as $evaluation) {
+            $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
+
+            foreach ($domainConfig as $categoryName => $domains) {
+                foreach ($domains as $domainName => $dimensions) {
+                    foreach ($dimensions as $dimensionName => $questions) {
+                        $score = $this->calculateDimensionScore($answers, $questions);
+                        $dimensionScores[$dimensionName][] = $score;
+
+                        $level = $this->getDimensionRiskLevel($score, $dimensionName, $riskLevels);
+                        $dimensionDistributions[$dimensionName][$level]++;
+                    }
+                }
+            }
         }
 
-        $total += $sum / $count;
+        $result = [];
+        foreach ($dimensionScores as $dimensionName => $scores) {
+            $average = count($scores) > 0 ? array_sum($scores) / count($scores) : 0;
+
+            $categoryName = $dimensionCategories[$dimensionName];
+            $domainName = $dimensionDomains[$dimensionName];
+            $questionCount = isset($domainConfig[$categoryName][$domainName][$dimensionName])
+                ? count($domainConfig[$categoryName][$domainName][$dimensionName])
+                : 0;
+            $maxScore = $questionCount * 4;
+
+            $averageLevel = $this->getDimensionRiskLevel($average, $dimensionName, $riskLevels);
+
+            $result[$dimensionName] = [
+                'average_score' => round($average, 2),
+                'max_score' => $maxScore,
+                'percentage' => $maxScore > 0 ? round(($average / $maxScore) * 100, 2) : 0,
+                'risk_level' => $averageLevel,
+                'risk_level_label' => $riskLevels['labels'][$averageLevel],
+                'distribution' => $dimensionDistributions[$dimensionName],
+                'total_evaluations' => count($scores),
+                'domain' => $dimensionDomains[$dimensionName],
+                'category' => $dimensionCategories[$dimensionName],
+            ];
+        }
+
+        return [
+            'dimensions' => $result,
+            'total_evaluations' => $evaluations->count(),
+            'colors' => $riskLevels['colors'],
+            'labels' => $riskLevels['labels'],
+        ];
     }
-
-    return $total;
-}
-
-private function flattenQuestionNumbersFromDimensions(array $dimensions): array
-{
-    $questionNumbers = [];
-
-    foreach ($dimensions as $questions) {
-        if (! is_array($questions)) {
-            continue;
-        }
-
-        foreach ($questions as $questionNumber) {
-            $questionNumbers[] = (int) $questionNumber;
-        }
-    }
-
-    return array_values(array_unique($questionNumbers));
-}
 
     /**
-     * Calcular estadísticas por pregunta individual NOM-035 para un centro de trabajo
+     * Calcular estadÃ­sticas globales NOM-035 para un centro de trabajo
+     */
+    public function calculateGlobalStatistics(WorkCenter $workCenter, ?string $source = null): array
+    {
+        $evaluations = $this->baseRefIIIQuery($workCenter, $source)->get();
+
+        if ($evaluations->isEmpty()) {
+            return $this->getEmptyGlobalStatistics();
+        }
+
+        $riskLevels = config('nom035_risk_levels');
+        $globalScores = [];
+        $globalDistribution = [
+            'nulo' => 0,
+            'bajo' => 0,
+            'medio' => 0,
+            'alto' => 0,
+            'muy_alto' => 0,
+        ];
+
+        foreach ($evaluations as $evaluation) {
+            $totalScore = $this->calculateTotalScore($evaluation);
+            $globalScores[] = $totalScore;
+
+            $level = $this->getGlobalRiskLevel($totalScore, $riskLevels);
+            $globalDistribution[$level]++;
+        }
+
+        $average = count($globalScores) > 0 ? array_sum($globalScores) / count($globalScores) : 0;
+        $maxScore = $riskLevels['global']['max_score'];
+
+        $dominantLevelKey = 'nulo';
+        $dominantCount = -1;
+
+        foreach ($globalDistribution as $levelKey => $count) {
+            if ($count > $dominantCount) {
+                $dominantCount = $count;
+                $dominantLevelKey = $levelKey;
+            }
+        }
+
+        return [
+            'global' => [
+                'average_score' => round($average, 2),
+                'max_score' => $maxScore,
+                'percentage' => $maxScore > 0 ? round(($average / $maxScore) * 100, 2) : 0,
+                'risk_level' => $dominantLevelKey,
+                'risk_level_label' => $riskLevels['labels'][$dominantLevelKey],
+                'levels' => $riskLevels['global']['levels'] ?? [],
+                'distribution' => $globalDistribution,
+                'total_evaluations' => count($globalScores),
+            ],
+            'total_evaluations' => $evaluations->count(),
+            'colors' => $riskLevels['colors'],
+            'labels' => $riskLevels['labels'],
+        ];
+    }
+
+    /**
+     * Calcular estadÃ­sticas por pregunta individual NOM-035 para un centro de trabajo
      */
     public function calculateQuestionStatistics(WorkCenter $workCenter, ?string $source = null): array
     {
@@ -1086,69 +1001,60 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
      * @return array<int|string, mixed>
      */
     private function getMergedReferenciaIIIAnswers(PaperEvaluation $evaluation): array
-        {
-            $conditionalAnswers = $this->normalizeReferenciaIIIConditionalAnswers(
-                $evaluation->referencia_iii_conditional ?? []
-            );
+    {
+        $dbAnswers = $this->getRefIIIAnswersFromTable($evaluation);
 
-            $dbAnswers = $this->getRefIIIAnswersFromTable($evaluation);
+        if ($dbAnswers->isNotEmpty()) {
+            $answers = [];
 
-            if ($dbAnswers->isNotEmpty()) {
-                $answers = [];
-
-                foreach ($dbAnswers as $row) {
-                    if (! is_numeric($row->question_key) || $row->answer_value === null) {
-                        continue;
-                    }
-
-                    $normalizedValue = strtoupper(trim((string) $row->answer_value));
-
-                    if (! in_array($normalizedValue, ['A', 'B', 'C', 'D', 'E'], true)) {
-                        continue;
-                    }
-
-                    $answers[$this->normalizeQuestionKey((int) $row->question_key)] = $normalizedValue;
-                }
-
-                $this->removeDisabledConditionalQuestions($answers, $conditionalAnswers);
-
-                return $answers;
-            }
-
-            // Fallback: read from legacy JSON columns.
-            $answers = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
-            $rawAnswers = $this->getRawReferenciaIIIAnswers($evaluation);
-
-            if ($answers === [] && $rawAnswers !== []) {
-                $answers = $rawAnswers;
-            } elseif ($rawAnswers !== []) {
-                foreach ($rawAnswers as $questionNumber => $answer) {
-                    $key = $this->normalizeQuestionKey($questionNumber);
-                    $current = $answers[$key]
-                        ?? $answers[(string) ((int) $questionNumber)]
-                        ?? $answers[(int) $questionNumber]
-                        ?? null;
-
-                    if ($current === null || $current === '') {
-                        $answers[$key] = $answer;
-                    }
-                }
-            }
-
-            $this->removeDisabledConditionalQuestions($answers, $conditionalAnswers);
-
-            foreach ($this->getEnabledConditionalQuestionAnswers($conditionalAnswers) as $questionNumber => $answer) {
-                if ($answer === null || is_array($answer)) {
+            foreach ($dbAnswers as $row) {
+                if (! is_numeric($row->question_key) || $row->answer_value === null) {
                     continue;
                 }
 
-                $answers[$this->normalizeQuestionKey($questionNumber)] = strtoupper(trim((string) $answer));
-            }
+                $normalizedValue = strtoupper(trim($row->answer_value));
 
-            $this->removeDisabledConditionalQuestions($answers, $conditionalAnswers);
+                if (! in_array($normalizedValue, ['A', 'B', 'C', 'D', 'E'], true)) {
+                    continue;
+                }
+
+                $answers[$this->normalizeQuestionKey((int) $row->question_key)] = $normalizedValue;
+            }
 
             return $answers;
         }
+
+        // Fallback: read from legacy JSON columns.
+        $answers = is_array($evaluation->referencia_iii_answers) ? $evaluation->referencia_iii_answers : [];
+        $rawAnswers = $this->getRawReferenciaIIIAnswers($evaluation);
+        $conditionalAnswers = is_array($evaluation->referencia_iii_conditional) ? $evaluation->referencia_iii_conditional : [];
+
+        if ($answers === [] && $rawAnswers !== []) {
+            $answers = $rawAnswers;
+        } elseif ($rawAnswers !== []) {
+            foreach ($rawAnswers as $questionNumber => $answer) {
+                $key = $this->normalizeQuestionKey($questionNumber);
+                $current = $answers[$key]
+                    ?? $answers[(string) ((int) $questionNumber)]
+                    ?? $answers[(int) $questionNumber]
+                    ?? null;
+
+                if ($current === null || $current === '') {
+                    $answers[$key] = $answer;
+                }
+            }
+        }
+
+        foreach ($this->getEnabledConditionalQuestionAnswers($conditionalAnswers) as $questionNumber => $answer) {
+            if ($answer === null || is_array($answer)) {
+                continue;
+            }
+
+            $answers[$this->normalizeQuestionKey($questionNumber)] = $answer;
+        }
+
+        return $answers;
+    }
 
     /**
      * Read Referencia III rows from the `evaluation_answers` table for a single evaluation.
@@ -1159,65 +1065,41 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
      * @return Collection<int, \App\Models\EvaluationAnswer>
      */
     private function getRefIIIAnswersFromTable(PaperEvaluation $evaluation): Collection
-        {
-            if ($evaluation->relationLoaded('evaluationAnswers')) {
-                return $evaluation->evaluationAnswers->filter(
-                    fn ($a): bool => $a->instrument === EvaluationInstrument::ReferenciaIII
-                )->values();
-            }
-
-            return $evaluation->evaluationAnswers()
-                ->where('instrument', EvaluationInstrument::ReferenciaIII->value)
-                ->get();
-        }
-
-        /**
-         * @param  array<int|string, mixed>  $answers
-         * @param  array<string, mixed>  $conditionalAnswers
-         */
-        private function normalizeReferenciaIIIConditionalAnswers(mixed $conditionalAnswers): array
     {
-        if (is_string($conditionalAnswers)) {
-            $decoded = json_decode($conditionalAnswers, true);
-
-            return is_array($decoded) ? $decoded : [];
+        if ($evaluation->relationLoaded('evaluationAnswers')) {
+            return $evaluation->evaluationAnswers->filter(
+                fn ($a): bool => $a->instrument === EvaluationInstrument::ReferenciaIII
+            )->values();
         }
 
-        return is_array($conditionalAnswers) ? $conditionalAnswers : [];
+        return $evaluation->evaluationAnswers()
+            ->where('instrument', EvaluationInstrument::ReferenciaIII->value)
+            ->get();
     }
 
+    /**
+     * @param  array<int|string, mixed>  $answers
+     * @param  array<string, mixed>  $conditionalAnswers
+     */
     private function removeDisabledConditionalQuestions(array &$answers, array $conditionalAnswers): void
-        {
-            if ($conditionalAnswers === []) {
-                return;
+    {
+        $conditionalRanges = [
+            'customer_service' => [65, 68],
+            'management' => [69, 72],
+        ];
+
+        foreach ($conditionalRanges as $section => [$start, $end]) {
+            $condition = $conditionalAnswers[$section]['condition'] ?? null;
+
+            if (! is_string($condition) || strtoupper(trim($condition)) !== 'NO') {
+                continue;
             }
 
-            $enabledConditionalQuestions = [];
-
-            foreach ($this->getEnabledConditionalQuestionAnswers($conditionalAnswers) as $questionNumber => $answer) {
-                $numericQuestion = (int) $questionNumber;
-
-                if ($numericQuestion < 65 || $numericQuestion > 72) {
-                    continue;
-                }
-
-                $enabledConditionalQuestions[$this->normalizeQuestionKey($numericQuestion)] = true;
-            }
-
-            for ($questionNumber = 65; $questionNumber <= 72; $questionNumber++) {
-                $normalizedKey = $this->normalizeQuestionKey($questionNumber);
-
-                if (isset($enabledConditionalQuestions[$normalizedKey])) {
-                    continue;
-                }
-
-                unset(
-                    $answers[$normalizedKey],
-                    $answers[(string) $questionNumber],
-                    $answers[$questionNumber]
-                );
+            for ($questionNumber = $start; $questionNumber <= $end; $questionNumber++) {
+                unset($answers[$this->normalizeQuestionKey($questionNumber)]);
             }
         }
+    }
 
     /**
      * @return array<int|string, mixed>
@@ -1370,7 +1252,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Calcular puntaje para un dominio específico
+     * Calcular puntaje para un dominio especÃ­fico
      */
     private function calculateDomainScore(array $answers, array $categories): int
     {
@@ -1400,7 +1282,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Calcular puntaje para una categoría específica
+     * Calcular puntaje para una categorÃ­a especÃ­fica
      */
     private function calculateCategoryScore(array $answers, array $subcategories): int
     {
@@ -1428,7 +1310,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Calcular puntaje para una dimensión específica
+     * Calcular puntaje para una dimensiÃ³n especÃ­fica
      */
     private function calculateDimensionScore(array $answers, array $questions): int
     {
@@ -1457,60 +1339,54 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
      * Calculate total score by summing all answer values (including conditional questions)
      */
     private function calculateTotalScore(PaperEvaluation $evaluation): int
-        {
-            $rows = $this->buildReferenciaIIIEvaluationScoreRows(collect([$evaluation]));
-            $row = $rows[0] ?? [];
+    {
+        $answers = $this->getMergedReferenciaIIIAnswers($evaluation);
+        $answerValues = config('answer_values');
+        $totalScore = 0;
 
-            return (int) ($row['global_score'] ?? 0);
+        foreach ($answers as $questionNumber => $answer) {
+            if ($answer === null || is_array($answer)) {
+                continue;
+            }
+
+            $questionKey = str_pad($questionNumber, 2, '0', STR_PAD_LEFT);
+            $group = in_array($questionKey, $answerValues['group1']['questions'], true)
+                ? 'group1'
+                : 'group2';
+
+            $totalScore += $answerValues[$group]['values'][$answer] ?? 0;
         }
+
+        return $totalScore;
+    }
 
     /**
      * @param  array<string, mixed>  $conditionalAnswers
      * @return array<int|string, mixed>
      */
     private function getEnabledConditionalQuestionAnswers(array $conditionalAnswers): array
-        {
-            $enabledQuestions = [];
+    {
+        $enabledQuestions = [];
 
-            foreach ($conditionalAnswers as $section) {
-                if (! is_array($section)) {
-                    continue;
-                }
-
-                $condition = mb_strtoupper(trim((string) ($section['condition'] ?? '')));
-
-                $condition = strtr($condition, [
-                    'Á' => 'A',
-                    'É' => 'E',
-                    'Í' => 'I',
-                    'Ó' => 'O',
-                    'Ú' => 'U',
-                ]);
-
-                $isEnabled = in_array($condition, ['SI', 'YES', 'TRUE', '1'], true);
-                $questions = $section['questions'] ?? null;
-
-                if (! $isEnabled || ! is_array($questions)) {
-                    continue;
-                }
-
-                foreach ($questions as $questionNumber => $answer) {
-                    $numericQuestion = (int) $questionNumber;
-
-                    if ($numericQuestion < 65 || $numericQuestion > 72) {
-                        continue;
-                    }
-
-                    if ($answer === null || is_array($answer)) {
-                        continue;
-                    }
-
-                    $enabledQuestions[$numericQuestion] = strtoupper(trim((string) $answer));
-                }
+        foreach ($conditionalAnswers as $section) {
+            if (! is_array($section)) {
+                continue;
             }
 
-            return $enabledQuestions;
+            $isEnabled = isset($section['condition']) && $section['condition'] === 'SI';
+            $questions = $section['questions'] ?? null;
+
+            if (! $isEnabled || ! is_array($questions)) {
+                continue;
+            }
+
+            foreach ($questions as $questionNumber => $answer) {
+                $enabledQuestions[$questionNumber] = $answer;
+            }
         }
+
+        return $enabledQuestions;
+    }
 
     /**
      * @return array<int|string, string>
@@ -1562,7 +1438,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Determinar nivel de riesgo según puntaje
+     * Determinar nivel de riesgo segÃºn puntaje
      */
     private function getRiskLevel(float $score, string $domainName, array $riskLevels): string
     {
@@ -1579,7 +1455,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Obtener nivel de riesgo para una categoría
+     * Obtener nivel de riesgo para una categorÃ­a
      */
     private function getCategoryRiskLevel(float $score, string $categoryName, array $riskLevels): string
     {
@@ -1601,13 +1477,13 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Obtener el max_score de una categoría desde la configuración
+     * Obtener el max_score de una categorÃ­a desde la configuraciÃ³n
      */
     private function getCategoryMaxScore(string $categoryName, array $riskLevels): int
     {
-        // Buscar en la configuración de categorías
+        // Buscar en la configuraciÃ³n de categorÃ­as
         if (isset($riskLevels['categories'][$categoryName])) {
-            // Si no hay max_score explícito, calcular desde los dominios
+            // Si no hay max_score explÃ­cito, calcular desde los dominios
             $domainConfig = config('question_dimensions');
             $totalQuestions = 0;
 
@@ -1619,14 +1495,14 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
                 }
             }
 
-            return $totalQuestions * 4; // 4 puntos máximo por pregunta
+            return $totalQuestions * 4; // 4 puntos mÃ¡ximo por pregunta
         }
 
         return 0;
     }
 
     /**
-     * Obtener nivel de riesgo para una dimensión
+     * Obtener nivel de riesgo para una dimensiÃ³n
      */
     private function getDimensionRiskLevel(float $score, string $dimensionName, array $riskLevels): string
     {
@@ -1643,7 +1519,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
 
         $levels = $dimensions[$normalizedName]['levels'];
 
-        $score = round($score); // 👈 importante
+        $score = round($score); // ðŸ‘ˆ importante
 
         foreach ($levels as $levelName => $range) {
             if ($score >= $range['min'] && $score <= $range['max']) {
@@ -1671,7 +1547,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Calcular el max_score de una categoría sumando preguntas de sus dimensiones
+     * Calcular el max_score de una categorÃ­a sumando preguntas de sus dimensiones
      */
     private function calculateCategoryMaxScore(string $categoryName, array $domainConfig): int
     {
@@ -1689,7 +1565,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Retornar estructura vacía cuando no hay evaluaciones
+     * Retornar estructura vacÃ­a cuando no hay evaluaciones
      */
     private function getEmptyStatistics(): array
     {
@@ -1726,7 +1602,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Retornar estructura vacía de categorías cuando no hay evaluaciones
+     * Retornar estructura vacÃ­a de categorÃ­as cuando no hay evaluaciones
      */
     private function getEmptyCategoryStatistics(): array
     {
@@ -1766,7 +1642,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Retornar estructura vacía para dimensiones cuando no hay evaluaciones
+     * Retornar estructura vacÃ­a para dimensiones cuando no hay evaluaciones
      */
     private function getEmptyDimensionStatistics(): array
     {
@@ -1807,7 +1683,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Retornar estructura vacía para global cuando no hay evaluaciones
+     * Retornar estructura vacÃ­a para global cuando no hay evaluaciones
      */
     private function getEmptyGlobalStatistics(): array
     {
@@ -1837,7 +1713,7 @@ private function flattenQuestionNumbersFromDimensions(array $dimensions): array
     }
 
     /**
-     * Retornar estructura vacía para preguntas cuando no hay evaluaciones
+     * Retornar estructura vacÃ­a para preguntas cuando no hay evaluaciones
      */
     private function getEmptyQuestionStatistics(): array
     {
