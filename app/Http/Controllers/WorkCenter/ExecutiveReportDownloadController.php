@@ -658,138 +658,131 @@ class ExecutiveReportDownloadController extends Controller
         {
             /** @var WorkCenterNom035CalculationService $calculationService */
             $calculationService = app(WorkCenterNom035CalculationService::class);
-            $stats = $calculationService->calculateGlobalStatistics($workCenter);
 
+            $stats = $calculationService->calculateGlobalStatistics($workCenter);
             $global = $stats['global'] ?? [];
-            $distribution = $global['distribution'] ?? [
-                'nulo' => 0,
-                'bajo' => 0,
-                'medio' => 0,
-                'alto' => 0,
-                'muy_alto' => 0,
-            ];
+
+            $distribution = $global['distribution'] ?? $this->initializeRiskLevelCounts();
+
+            foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
+                $distribution[$levelKey] = (int) ($distribution[$levelKey] ?? 0);
+            }
 
             $totalEvaluations = (int) ($stats['total_evaluations'] ?? 0);
             $averageGlobalScore = (float) ($global['average_score'] ?? 0);
-            $maxGlobalScore = (int) ($global['max_score'] ?? 288);
+            $maxGlobalScore = (int) ($global['max_score'] ?? config('nom035_risk_levels.global.max_score', 288));
             $averageGlobalPercentage = (float) ($global['percentage'] ?? 0);
 
-            $dominantLevelKey = 'nulo';
-            $dominantCount = -1;
-
-            foreach ($distribution as $levelKey => $count) {
-                if ((int) $count > $dominantCount) {
-                    $dominantCount = (int) $count;
-                    $dominantLevelKey = $levelKey;
-                }
-            }
-
-            $dominantLevelLabel = $stats['labels'][$dominantLevelKey]
-                ?? config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey));
-
-            $section->addTitle('III. Análisis general referencia nivel de riesgo', 1);
-
-            $section->addText(
-                'Referencia: Calificación Total',
-                ['bold' => true, 'size' => 12],
-                ['spaceAfter' => 180]
+            $dominantLevelKey = (string) ($global['risk_level'] ?? 'nulo');
+            $dominantLevelLabel = (string) (
+                $global['risk_level_label']
+                ?? config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey))
             );
 
-            if ($totalEvaluations === 0) {
+                $section->addTitle('III. Análisis general referencia nivel de riesgo', 1);
+
                 $section->addText(
-                    'No hay evaluaciones de Referencia III disponibles para este centro de trabajo.',
-                    ['size' => 10, 'color' => '374151']
+                    'Referencia: Calificación Total',
+                    ['bold' => true, 'size' => 12],
+                    ['spaceAfter' => 180]
                 );
-                return;
+
+                if ($totalEvaluations === 0) {
+                    $this->addNoDataNotice(
+                        $section,
+                        'No hay evaluaciones de Referencia III disponibles para este centro de trabajo.'
+                    );
+
+                    return;
+                }
+
+                $cards = $section->addTable([
+                    'alignment' => JcTable::CENTER,
+                    'borderSize' => 0,
+                    'cellMargin' => 40,
+                ]);
+
+                $cards->addRow();
+
+                $c1 = $cards->addCell(2350, ['bgColor' => '062A78']);
+                $c1->addText(
+                    'Evaluaciones',
+                    ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 40]
+                );
+                $c1->addText(
+                    (string) $totalEvaluations,
+                    ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $c2 = $cards->addCell(2350, ['bgColor' => '1F4E78']);
+                $c2->addText(
+                    'Promedio',
+                    ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 40]
+                );
+                $c2->addText(
+                    number_format($averageGlobalScore, 1) . ' / ' . $maxGlobalScore,
+                    ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $c3 = $cards->addCell(2350, ['bgColor' => '374151']);
+                $c3->addText(
+                    '% Promedio',
+                    ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 40]
+                );
+                $c3->addText(
+                    number_format($averageGlobalPercentage, 2) . '%',
+                    ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $levelStyle = $this->getWordRiskCellStyle($dominantLevelKey);
+                $c4 = $cards->addCell(2350, ['bgColor' => $levelStyle['bg']]);
+                $c4->addText(
+                    'Nivel predominante',
+                    ['bold' => true, 'size' => 9, 'color' => $levelStyle['text']],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 40]
+                );
+                $c4->addText(
+                    $dominantLevelLabel,
+                    ['bold' => true, 'size' => 13, 'color' => $levelStyle['text']],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
+
+                $section->addTextBreak(1);
+
+                $this->addRiskLevelDistributionTable(
+                    $section,
+                    'Nivel de riesgo',
+                    $distribution,
+                    $totalEvaluations
+                );
+
+                $globalChartPath = $this->generateRiskDistributionChart(
+                    'Distribución Global de Niveles de Riesgo',
+                    $distribution,
+                    $this->makeUniqueChartPath('global')
+                );
+
+                $this->addChartImageIfExists($section, $globalChartPath, 500);
+
+                $section->addText(
+                    '*Referencia: NORMA Oficial Mexicana NOM-035-STPS-2018. Guía de Referencia III.3 inciso a) Tabla 5. Pág. 39. inciso c) Pág. 40',
+                    ['size' => 8, 'color' => '374151'],
+                    ['alignment' => Jc::CENTER, 'spaceBefore' => 40, 'spaceAfter' => 0]
+                );
             }
-
-            $cards = $section->addTable([
-                'alignment' => JcTable::CENTER,
-                'borderSize' => 0,
-                'cellMargin' => 40,
-            ]);
-
-            $cards->addRow();
-
-            $c1 = $cards->addCell(2350, ['bgColor' => '062A78']);
-            $c1->addText(
-                'Evaluaciones',
-                ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 40]
-            );
-            $c1->addText(
-                (string) $totalEvaluations,
-                ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $c2 = $cards->addCell(2350, ['bgColor' => '1F4E78']);
-            $c2->addText(
-                'Promedio',
-                ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 40]
-            );
-            $c2->addText(
-                number_format($averageGlobalScore, 1) . ' / ' . $maxGlobalScore,
-                ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $c3 = $cards->addCell(2350, ['bgColor' => '374151']);
-            $c3->addText(
-                '% Promedio',
-                ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 40]
-            );
-            $c3->addText(
-                number_format($averageGlobalPercentage, 2) . '%',
-                ['bold' => true, 'size' => 15, 'color' => 'FFFFFF'],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $levelStyle = $this->getWordRiskCellStyle($dominantLevelKey);
-            $c4 = $cards->addCell(2350, ['bgColor' => $levelStyle['bg']]);
-            $c4->addText(
-                'Nivel predominante',
-                ['bold' => true, 'size' => 9, 'color' => $levelStyle['text']],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 40]
-            );
-            $c4->addText(
-                $dominantLevelLabel,
-                ['bold' => true, 'size' => 13, 'color' => $levelStyle['text']],
-                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
-            );
-
-            $section->addTextBreak(1);
-
-            $this->addRiskLevelDistributionTable(
-                $section,
-                'Nivel de riesgo',
-                $distribution,
-                $totalEvaluations
-            );
-
-            $globalChartPath = $this->generateRiskDistributionChart(
-                'Distribución Global de Niveles de Riesgo',
-                $distribution,
-                $this->makeUniqueChartPath('global')
-            );
-
-            $this->addChartImageIfExists($section, $globalChartPath, 500);
-
-            $section->addText(
-                '*Referencia: NORMA Oficial Mexicana NOM-035-STPS-2018. Guía de Referencia III.3 inciso a) Tabla 5. Pág. 39. inciso c) Pág. 40',
-                ['size' => 8, 'color' => '374151'],
-                ['alignment' => Jc::CENTER, 'spaceBefore' => 40, 'spaceAfter' => 0]
-            );
-        }
 
     private function addWorkplaceViolenceQuantitativeSection(
             Section $section,
             Organization $organization,
             WorkCenter $workCenter
         ): void {
-            $summary = $this->getWorkplaceViolenceQuantitativeSummary($organization->id, $workCenter->id);
+            $summary = $this->getWorkplaceViolenceQuantitativeSummaryFromService($workCenter);
 
             $section->addTitle('XV. Análisis de trabajadores referencia violencia laboral', 1);
 
@@ -812,10 +805,11 @@ class ExecutiveReportDownloadController extends Controller
             $section->addTextBreak(1);
 
             if (($summary['total_participants'] ?? 0) === 0) {
-                $section->addText(
-                    'No se encontraron evaluaciones con datos de violencia laboral.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No se encontraron evaluaciones con datos de violencia laboral.'
                 );
+
                 return;
             }
 
@@ -945,7 +939,7 @@ class ExecutiveReportDownloadController extends Controller
 
     private function addReferenceThreeCategorySection(Section $section, Organization $organization, WorkCenter $workCenter): void
         {
-            $summary = $this->getReferenceThreeCategorySummary($organization->id, $workCenter->id);
+            $summary = $this->getReferenceThreeCategorySummaryFromService($workCenter);
 
             $section->addTitle('XIX. Evaluación del Entorno Organizacional.', 1);
 
@@ -961,26 +955,42 @@ class ExecutiveReportDownloadController extends Controller
                 ['spaceAfter' => 180]
             );
 
-            if (($summary['total_evaluations'] ?? 0) === 0) {
-                $section->addText(
-                    'No hay evaluaciones de Referencia III disponibles para este centro de trabajo.',
-                    ['size' => 10, 'color' => '374151']
+            if (($summary['total_evaluations'] ?? 0) === 0 || empty($summary['categories'])) {
+                $this->addNoDataNotice(
+                    $section,
+                    'No hay categorías aplicables de Referencia III para este centro de trabajo.'
                 );
+
                 return;
             }
 
-            $chartPath = $this->generateCategoryDashboardChart(
-                $summary['categories'],
-                (int) $summary['total_evaluations'],
-                $this->makeUniqueChartPath('category_dashboard')
-            );
+            $categoryChunks = collect($summary['categories'])->chunk(4)->values();
 
-            $this->addChartImageIfExists($section, $chartPath, 570);
+            foreach ($categoryChunks as $index => $chunk) {
+                if ($index > 0) {
+                    $section->addPageBreak();
+                    $section->addText(
+                        'XIX. Evaluación del Entorno Organizacional. (continuación)',
+                        ['bold' => true, 'size' => 14],
+                        ['spaceAfter' => 30]
+                    );
+                }
+
+                $chartPath = $this->generateCategoryDashboardChart(
+                    $chunk->values()->all(),
+                    (int) $summary['total_evaluations'],
+                    $this->makeUniqueChartPath('category_dashboard_' . ($index + 1)),
+                    $index + 1,
+                    $categoryChunks->count()
+                );
+
+                $this->addChartImageIfExists($section, $chartPath, 640);
+            }
         }
 
         private function addReferenceThreeDomainSection(Section $section, Organization $organization, WorkCenter $workCenter): void
     {
-        $summary = $this->getReferenceThreeDomainSummaryV2($organization->id, $workCenter->id);
+        $summary = $this->getReferenceThreeDomainSummaryFromService($workCenter);
 
         $section->addTitle('XX. Análisis cuantitativo referencia nivel de riesgo por dominio', 1);
 
@@ -990,92 +1000,87 @@ class ExecutiveReportDownloadController extends Controller
             ['spaceAfter' => 120]
         );
 
-        if (($summary['total_evaluations'] ?? 0) === 0) {
-            $section->addText(
-                'No hay evaluaciones de Referencia III disponibles para este centro de trabajo.',
-                ['size' => 10, 'color' => '374151']
+        if (($summary['total_evaluations'] ?? 0) === 0 || empty($summary['domains'])) {
+            $this->addNoDataNotice(
+                $section,
+                'No hay dominios aplicables de Referencia III para este centro de trabajo.'
             );
+
             return;
         }
 
-        $chartPath = $this->generateDomainDashboardChart(
-            $summary['domains'],
-            (int) $summary['total_evaluations'],
-            $this->makeUniqueChartPath('domain_dashboard')
-        );
+        $domainChunks = collect($summary['domains'])->chunk(4)->values();
 
-        $this->addChartImageIfExists($section, $chartPath, 520);
-
-    }
-   private function addReferenceThreeDimensionSection(Section $section, WorkCenter $workCenter): void
-    {
-        /** @var WorkCenterNom035CalculationService $calculationService */
-        $calculationService = app(WorkCenterNom035CalculationService::class);
-        $stats = $calculationService->calculateDimensionStatistics($workCenter);
-
-        $rawDimensions = $stats['dimensions'] ?? [];
-        $totalEvaluations = (int) ($stats['total_evaluations'] ?? 0);
-
-        $dimensions = [];
-
-        foreach ($rawDimensions as $dimensionName => $row) {
-            $distribution = $row['distribution'] ?? $this->initializeRiskLevelCounts();
-            $riskLevel = (string) ($row['risk_level'] ?? 'nulo');
-
-            $dimensions[] = [
-                'name' => $dimensionName,
-                'max_score' => (int) ($row['max_score'] ?? 0),
-                'average_score' => (float) ($row['average_score'] ?? 0),
-                'average_percentage' => (float) ($row['percentage'] ?? 0),
-                'distribution' => $distribution,
-                'dominant_level_key' => $riskLevel,
-                'dominant_level_label' => (string) ($row['risk_level_label'] ?? config("nom035_risk_levels.labels.$riskLevel", ucfirst($riskLevel))),
-                'domain' => (string) ($row['domain'] ?? ''),
-                'category' => (string) ($row['category'] ?? ''),
-            ];
-        }
-
-        $dimensions = $this->sortDimensionSummariesByRisk($dimensions);
-
-        $section->addTitle('XXI. Análisis cuantitativo referencia nivel de riesgo por dimensión', 1);
-
-                $section->addText(
-            'Distribución consolidada por dimensión con conteos por nivel y gráficas de atención.',
-            ['size' => 10, 'color' => '4B5563'],
-            ['spaceAfter' => 10]
-        );
-
-        if ($totalEvaluations === 0 || empty($dimensions)) {
-            $section->addText(
-                'No hay evaluaciones de Referencia III disponibles para este centro de trabajo.',
-                ['size' => 10, 'color' => '374151']
-            );
-            return;
-        }
-
-                $dimensionChunks = collect($dimensions)->chunk(10)->values();
-
-        foreach ($dimensionChunks as $index => $chunk) {
+        foreach ($domainChunks as $index => $chunk) {
             if ($index > 0) {
                 $section->addPageBreak();
                 $section->addText(
-                    'XXI. Análisis cuantitativo referencia nivel de riesgo por dimensión (continuación)',
+                    'XX. Análisis cuantitativo referencia nivel de riesgo por dominio (continuación)',
                     ['bold' => true, 'size' => 14],
                     ['spaceAfter' => 30]
                 );
             }
 
-            $chartPath = $this->generateDimensionDashboardChart(
+            $chartPath = $this->generateDomainDashboardChart(
                 $chunk->values()->all(),
-                $totalEvaluations,
-                $this->makeUniqueChartPath('dimension_dashboard_' . ($index + 1)),
+                (int) $summary['total_evaluations'],
+                $this->makeUniqueChartPath('domain_dashboard_' . ($index + 1)),
                 $index + 1,
-                $dimensionChunks->count()
+                $domainChunks->count()
             );
 
-                        $this->addChartImageIfExists($section, $chartPath, 570);
+            $this->addChartImageIfExists($section, $chartPath, 640);
         }
+
     }
+
+   private function addReferenceThreeDimensionSection(Section $section, WorkCenter $workCenter): void
+        {
+            $summary = $this->getReferenceThreeDimensionSummaryFromService($workCenter);
+
+            $dimensions = $summary['dimensions'] ?? [];
+            $totalEvaluations = (int) ($summary['total_evaluations'] ?? 0);
+
+            $section->addTitle('XXI. Análisis cuantitativo referencia nivel de riesgo por dimensión', 1);
+
+            $section->addText(
+                'Distribución consolidada por dimensión con conteos por nivel y gráficas de atención.',
+                ['size' => 10, 'color' => '4B5563'],
+                ['spaceAfter' => 10]
+            );
+
+            if ($totalEvaluations === 0 || empty($dimensions)) {
+                $this->addNoDataNotice(
+                    $section,
+                    'No hay dimensiones aplicables de Referencia III con datos para este centro de trabajo.'
+                );
+
+                return;
+            }
+
+            $dimensionChunks = collect($dimensions)->chunk(4)->values();
+
+            foreach ($dimensionChunks as $index => $chunk) {
+                if ($index > 0) {
+                    $section->addPageBreak();
+                    $section->addText(
+                        'XXI. Análisis cuantitativo referencia nivel de riesgo por dimensión (continuación)',
+                        ['bold' => true, 'size' => 14],
+                        ['spaceAfter' => 30]
+                    );
+                }
+
+                $chartPath = $this->generateDimensionDashboardChart(
+                    $chunk->values()->all(),
+                    $totalEvaluations,
+                    $this->makeUniqueChartPath('dimension_dashboard_' . ($index + 1)),
+                    $index + 1,
+                    $dimensionChunks->count()
+                );
+
+                $this->addChartImageIfExists($section, $chartPath, 520);
+            }
+        }
 
         private function addReferenceThreeQuestionRiskTableSection(Section $section, WorkCenter $workCenter): void
         {
@@ -1084,10 +1089,11 @@ class ExecutiveReportDownloadController extends Controller
             $section->addTitle('XXII. Tabla de preguntas por nivel de riesgo', 1);
 
             if (($summary['total_evaluations'] ?? 0) === 0 || empty($summary['questions'])) {
-                $section->addText(
-                    'No hay evaluaciones de Referencia III disponibles para generar la tabla de preguntas por nivel de riesgo.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No hay evaluaciones de Referencia III disponibles para generar la tabla de preguntas por nivel de riesgo.'
                 );
+
                 return;
             }
 
@@ -1329,10 +1335,15 @@ class ExecutiveReportDownloadController extends Controller
                 $section->addTitle($title, 1);
 
                 if (($summary['total_evaluations'] ?? 0) === 0 || empty($summary['rows'])) {
-                    $section->addText(
-                        'No se encontraron ' . strtolower($groupLabel) . 's críticas(os) para este centro de trabajo.',
-                        ['size' => 10, 'color' => '374151']
+                    $emptyLabel = $groupLabel === 'Área'
+                        ? 'áreas críticas'
+                        : 'puestos críticos';
+
+                    $this->addNoDataNotice(
+                        $section,
+                        'No se encontraron ' . $emptyLabel . ' para este centro de trabajo.'
                     );
+
                     return;
                 }
 
@@ -1622,12 +1633,22 @@ class ExecutiveReportDownloadController extends Controller
                     $domainAverages = [];
 
                     foreach ($this->getReferenceThreeDomainMaxScores() as $domainName => $maxScore) {
-                        $domainAverage = $participants > 0
-                            ? round(
-                                collect($items)->sum(fn ($row) => (int) (($row['domain_scores'][$domainName] ?? 0))) / $participants,
-                                2
-                            )
-                            : 0;
+                        $applicableItems = collect($items)->filter(function ($row) use ($domainName) {
+                            $domainScores = $row['domain_scores'] ?? [];
+
+                            return is_array($domainScores) && array_key_exists($domainName, $domainScores);
+                        });
+
+                        $applicableCount = $applicableItems->count();
+
+                        if ($applicableCount === 0) {
+                            continue;
+                        }
+
+                        $domainAverage = round(
+                            $applicableItems->sum(fn ($row) => (int) ($row['domain_scores'][$domainName] ?? 0)) / $applicableCount,
+                            2
+                        );
 
                         $domainAverages[$domainName] = $domainAverage;
                     }
@@ -1753,11 +1774,12 @@ class ExecutiveReportDownloadController extends Controller
 
         $section->addTitle('IV. Análisis general referencia (categoría / dominio / dimensiones / pregunta)', 1);
 
-        if (($summary['participants'] ?? 0) === 0) {
-            $section->addText(
-                'No hay evaluaciones de Referencia III disponibles para este centro de trabajo.',
-                ['size' => 10, 'color' => '374151']
+       if (($summary['participants'] ?? 0) === 0) {
+            $this->addNoDataNotice(
+                $section,
+                'No hay evaluaciones de Referencia III disponibles para este centro de trabajo.'
             );
+
             return;
         }
 
@@ -1803,9 +1825,10 @@ class ExecutiveReportDownloadController extends Controller
 
         if (! $printed) {
             $this->addQuestionAverageGenderBand($section, 'Sin información');
-            $section->addText(
-                'No hay información de género disponible para generar las tablas de Femenino y Masculino.',
-                ['size' => 10, 'color' => '374151']
+
+            $this->addNoDataNotice(
+                $section,
+                'No hay información de género disponible para generar las tablas de Femenino y Masculino.'
             );
         }
     }
@@ -1851,10 +1874,11 @@ class ExecutiveReportDownloadController extends Controller
             if (empty($blocks)) {
                 $this->addQuestionAverageGenderBand($section, 'Sin información');
 
-                $section->addText(
-                    'No hay información de puestos disponible para generar esta sección.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No hay información de puestos disponible para generar esta sección.'
                 );
+
                 return;
             }
 
@@ -1915,10 +1939,11 @@ class ExecutiveReportDownloadController extends Controller
             if (empty($blocks)) {
                 $this->addQuestionAverageGenderBand($section, 'Sin información');
 
-                $section->addText(
-                    'No hay información de áreas disponible para generar esta sección.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No hay información de áreas disponible para generar esta sección.'
                 );
+
                 return;
             }
 
@@ -1979,10 +2004,11 @@ class ExecutiveReportDownloadController extends Controller
             if (empty($blocks)) {
                 $this->addQuestionAverageGenderBand($section, 'Sin información');
 
-                $section->addText(
-                    'No hay información de jornada laboral disponible para generar esta sección.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No hay información de jornada laboral disponible para generar esta sección.'
                 );
+
                 return;
             }
 
@@ -2056,9 +2082,9 @@ class ExecutiveReportDownloadController extends Controller
 
                 $this->addQuestionAverageGenderBand($section, 'Sin información');
 
-                $section->addText(
-                    'No hay información de nivel de riesgo disponible para generar esta sección.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No hay información de nivel de riesgo disponible para generar esta sección.'
                 );
             }
         }
@@ -2258,6 +2284,27 @@ class ExecutiveReportDownloadController extends Controller
             return preg_replace('/^00/', '', $value) ?: $value;
         }
 
+    private function formatFolioWithSource(?string $folio, ?string $source = null): string
+        {
+            $folio = $this->stripFirstTwoLeadingZeros($folio);
+
+            if ($folio === 'N/D') {
+                return $folio;
+            }
+
+            if (preg_match('/^[LP][-\s]?\d+$/i', $folio)) {
+                return strtoupper(substr($folio, 0, 1)) . substr($folio, 1);
+            }
+
+            $prefix = match ($source) {
+                'online' => 'L',
+                'paper' => 'P',
+                default => '',
+            };
+
+            return $prefix !== '' ? $prefix . $folio : $folio;
+        }
+
     private function addWorkerIdentificationByDimensionSection(
             Section $section,
             Organization $organization,
@@ -2268,12 +2315,13 @@ class ExecutiveReportDownloadController extends Controller
             $section->addTitle('X. Análisis de trabajadores referencia dimensión', 1);
 
             if (empty($groups)) {
-                $section->addText(
-                    'No se encontraron trabajadores con nivel Medio, Alto o Muy Alto por dimensión para el centro de trabajo seleccionado.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No se encontraron trabajadores con nivel Medio, Alto o Muy Alto por dimensión para el centro de trabajo seleccionado.'
                 );
+
                 return;
-            }
+}
 
             $this->addWorkerIdentificationRiskLegend($section);
 
@@ -2311,7 +2359,7 @@ class ExecutiveReportDownloadController extends Controller
                     $globalStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
                     $riskCode = 'D' . str_pad((string) ($group['number'] ?? 0), 2, '0', STR_PAD_LEFT);
-                    $folioValue = $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? ''));
+                    $folioValue = $this->formatFolioWithSource((string) ($row['folio'] ?? ''), $row['source'] ?? null);
 
                     $table->addCell(900, [
                         'bgColor' => $dimensionStyle['bg'],
@@ -2406,10 +2454,11 @@ class ExecutiveReportDownloadController extends Controller
             $section->addTitle('XII. Análisis de trabajadores nivel de riesgo referencia puesto', 1);
 
             if (empty($groups)) {
-                $section->addText(
-                    'No se encontraron trabajadores para generar la identificación por puestos.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No se encontraron trabajadores para generar la identificación por puestos.'
                 );
+
                 return;
             }
 
@@ -2433,7 +2482,7 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addWorkerHeaderCell($table, 900, 'Folio');
                 $this->addWorkerHeaderCell($table, 900, 'Calif.');
                 $this->addWorkerHeaderCell($table, 5200, 'Nombre');
-                $this->addWorkerHeaderCell($table, 2200, 'Area');
+                $this->addWorkerHeaderCell($table, 2200, 'Área');
                 $this->addWorkerHeaderCell($table, 1700, 'Jornada');
 
                 foreach ($group['rows'] as $row) {
@@ -2442,7 +2491,7 @@ class ExecutiveReportDownloadController extends Controller
                     $riskStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
                     $table->addCell(900)->addText(
-                        $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
+                        $this->formatFolioWithSource((string) ($row['folio'] ?? ''), $row['source'] ?? null),
                         ['size' => 10],
                         ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
@@ -2484,10 +2533,11 @@ class ExecutiveReportDownloadController extends Controller
             $section->addTitle('XI. Análisis de trabajadores nivel de riesgo referencia área', 1);
 
             if (empty($groups)) {
-                $section->addText(
-                    'No se encontraron trabajadores para generar la identificación por áreas.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No se encontraron trabajadores para generar la identificación por áreas.'
                 );
+
                 return;
             }
 
@@ -2522,7 +2572,7 @@ class ExecutiveReportDownloadController extends Controller
                     $table->addCell(1200, [
                         'valign' => 'center',
                     ])->addText(
-                        $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
+                        $this->formatFolioWithSource((string) ($row['folio'] ?? ''), $row['source'] ?? null),
                         ['size' => 10],
                         ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
@@ -2573,10 +2623,11 @@ class ExecutiveReportDownloadController extends Controller
            $section->addTitle('XIII. Análisis de trabajadores nivel de riesgo referencia jornada laboral', 1);
 
             if (empty($groups)) {
-                $section->addText(
-                    'No se encontraron trabajadores para generar la identificación por jornada laboral.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No se encontraron trabajadores para generar la identificación por jornada laboral.'
                 );
+
                 return;
             }
 
@@ -2600,7 +2651,7 @@ class ExecutiveReportDownloadController extends Controller
                 $this->addWorkerHeaderCell($table, 900, 'Folio');
                 $this->addWorkerHeaderCell($table, 900, 'Calif.');
                 $this->addWorkerHeaderCell($table, 5200, 'Nombre');
-                $this->addWorkerHeaderCell($table, 2200, 'Area');
+                $this->addWorkerHeaderCell($table, 2200, 'Área');
                 $this->addWorkerHeaderCell($table, 2200, 'Puesto');
 
                 foreach ($group['rows'] as $row) {
@@ -2609,7 +2660,7 @@ class ExecutiveReportDownloadController extends Controller
                     $riskStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
                     $table->addCell(900)->addText(
-                        $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
+                        $this->formatFolioWithSource((string) ($row['folio'] ?? ''), $row['source'] ?? null),
                         ['size' => 10],
                         ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                     );
@@ -2707,11 +2758,11 @@ class ExecutiveReportDownloadController extends Controller
             );
 
             if (empty($summary['rows'])) {
-                $section->addText(
-                    'No se encontraron trabajadores con registro de acontecimientos traumáticos severos.',
-                    ['size' => 10, 'color' => '374151'],
-                    ['alignment' => Jc::CENTER]
+                $this->addNoDataNotice(
+                    $section,
+                    'No se encontraron trabajadores con registro de acontecimientos traumáticos severos.'
                 );
+
                 return;
             }
 
@@ -2754,7 +2805,7 @@ class ExecutiveReportDownloadController extends Controller
                 $highlightCell = ['bgColor' => $atsStyle['bg']];
 
                 $table->addCell(700, $highlightCell)->addText(
-                    $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
+                    $this->formatFolioWithSource((string) ($row['folio'] ?? ''), $row['source'] ?? null),
                     ['bold' => true, 'size' => 10, 'color' => $atsStyle['text']],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
@@ -2848,15 +2899,19 @@ class ExecutiveReportDownloadController extends Controller
             Organization $organization,
             WorkCenter $workCenter
         ): void {
-            $rows = $this->getWorkplaceViolenceWorkersSummary($organization->id, $workCenter->id);
+           $rows = $this->getWorkplaceViolenceWorkersSummaryFromService($workCenter);
 
-            $section->addTextBreak(1);
-
+            $section->addText(
+                'XV. Análisis de trabajadores referencia violencia laboral (detalle por trabajador)',
+                ['bold' => true, 'size' => 14],
+                ['spaceAfter' => 120]
+            );
             if (empty($rows)) {
-                $section->addText(
-                    'No se encontraron trabajadores con respuestas asociadas a violencia laboral.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No se encontraron trabajadores con respuestas asociadas a violencia laboral.'
                 );
+
                 return;
             }
 
@@ -2881,11 +2936,11 @@ class ExecutiveReportDownloadController extends Controller
             foreach ($rows as $row) {
                 $table->addRow();
 
-                $pointsLevel = $this->classifyNom035Score('dimensions', 'Violencia laboral', (int) $row['points']);
-                $pointsStyle = $this->getWordRiskCellStyle($pointsLevel['key']);
+                $pointsStyle = $this->getWordRiskCellStyle((string) ($row['risk_level'] ?? 'nulo'));
+                
 
                 $table->addCell(650)->addText(
-                    $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
+                    $this->formatFolioWithSource((string) ($row['folio'] ?? ''), $row['source'] ?? null),
                     ['size' => 10],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
@@ -2933,15 +2988,16 @@ class ExecutiveReportDownloadController extends Controller
             Organization $organization,
             WorkCenter $workCenter
         ): void {
+            $section->addTitle('XVI. Análisis de trabajadores con nivel de riesgo final', 1);
+
             $rows = $this->getFinalRiskWorkersSummary($organization->id, $workCenter->id);
 
-            $section->addTitle('XVI. Análisis de trabajadores referencia factores de riesgo psicosocial altos y muy altos', 1);
-
             if (empty($rows)) {
-                $section->addText(
-                    'No se encontraron trabajadores con nivel Medio, Alto o Muy Alto en la calificación final.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No se encontraron trabajadores con nivel Medio, Alto o Muy Alto en la calificación final.'
                 );
+
                 return;
             }
 
@@ -2958,7 +3014,7 @@ class ExecutiveReportDownloadController extends Controller
             $this->addWorkerHeaderCell($table, 900, 'Folio');
             $this->addWorkerHeaderCell($table, 900, 'Calif.');
             $this->addWorkerHeaderCell($table, 5200, 'Nombre');
-            $this->addWorkerHeaderCell($table, 2200, 'Area');
+            $this->addWorkerHeaderCell($table, 2200, 'Área');
             $this->addWorkerHeaderCell($table, 1700, 'Puesto');
 
             foreach ($rows as $row) {
@@ -2967,7 +3023,7 @@ class ExecutiveReportDownloadController extends Controller
                 $riskStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
                 $table->addCell(900)->addText(
-                    $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
+                    $this->formatFolioWithSource((string) ($row['folio'] ?? ''), $row['source'] ?? null),
                     ['size' => 10],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
                 );
@@ -3008,10 +3064,11 @@ class ExecutiveReportDownloadController extends Controller
             $section->addTitle('XVII. Análisis cuantitativo referencia nivel de riesgo por dominio y puesto', 1);
 
             if (empty($groups)) {
-                $section->addText(
-                    'No se encontraron datos para generar el análisis cuantitativo de dominios.',
-                    ['size' => 10, 'color' => '374151']
+                $this->addNoDataNotice(
+                    $section,
+                    'No se encontraron datos para generar el análisis cuantitativo de dominios.'
                 );
+
                 return;
             }
 
@@ -3101,82 +3158,105 @@ class ExecutiveReportDownloadController extends Controller
             );
         }
 
-            private function addWorkerIdentificationByCategorySection(
-                Section $section,
-                Organization $organization,
-                WorkCenter $workCenter
-            ): void {
-                $rows = $this->getWorkerIdentificationByCategorySummary($organization->id, $workCenter->id);
+        private function addWorkerIdentificationByCategorySection(
+            Section $section,
+            Organization $organization,
+            WorkCenter $workCenter
+        ): void {
+            $summary = $this->getWorkerIdentificationByCategorySummary($organization->id, $workCenter->id);
 
-                $section->addTitle('XVIII. Análisis de trabajadores referencia nivel de riesgo por categoría', 1);
+            $rows = $summary['rows'] ?? [];
+            $categoryNames = $summary['categories'] ?? [];
 
-                $section->addText(
-                    '1. Ambiente de trabajo   2. Factores propios de la actividad   3. Organización del tiempo de trabajo   4. Liderazgo y relaciones en el trabajo   5. Entorno organizacional',
-                    ['size' => 10],
-                    ['spaceAfter' => 120]
+            $section->addTitle('XVIII. Análisis de trabajadores referencia nivel de riesgo por categoría', 1);
+
+            if (empty($rows) || empty($categoryNames)) {
+                $this->addNoDataNotice(
+                    $section,
+                    'No se encontraron trabajadores con nivel Medio, Alto o Muy Alto para la identificación por categoría aplicable.'
                 );
 
-                if (empty($rows)) {
-                    $section->addText(
-                        'No se encontraron trabajadores con nivel Medio, Alto o Muy Alto para la identificación por categoría.',
-                        ['size' => 10, 'color' => '374151']
-                    );
-                    return;
-                }
+                return;
+            }
+            $categoryLegendText = collect($categoryNames)
+                ->values()
+                ->map(fn ($name, $index): string => ((int) $index + 1) . '. ' . $this->safeValue($name))
+                ->implode('   ');
 
-                $this->addWorkerIdentificationRiskLegend($section);
+            $section->addText(
+                $categoryLegendText,
+                ['size' => 10],
+                ['spaceAfter' => 120]
+            );
 
-                $table = $section->addTable([
-                    'alignment' => JcTable::CENTER,
-                    'borderSize' => 6,
-                    'borderColor' => '808080',
-                    'cellMargin' => 45,
-                ]);
+            $this->addWorkerIdentificationRiskLegend($section);
 
+            $table = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 6,
+                'borderColor' => '808080',
+                'cellMargin' => 45,
+            ]);
+
+            $categoryCount = max(count($categoryNames), 1);
+            $categoryWidth = (int) floor((9800 - 4950) / $categoryCount);
+            $categoryWidth = max(850, min(1450, $categoryWidth));
+
+            $table->addRow();
+            $this->addWorkerHeaderCell($table, 800, 'Folio');
+            $this->addWorkerHeaderCell($table, 750, 'Calif.');
+            $this->addWorkerHeaderCell($table, 3400, 'Nombre');
+
+            foreach ($categoryNames as $index => $categoryName) {
+                $this->addWorkerHeaderCell($table, $categoryWidth, 'Cat. ' . ((int) $index + 1));
+            }
+
+            foreach ($rows as $row) {
                 $table->addRow();
-                $this->addWorkerHeaderCell($table, 800, 'Folio');
-                $this->addWorkerHeaderCell($table, 900, 'Calif.');
-                $this->addWorkerHeaderCell($table, 4700, 'Nombre');
-                $this->addWorkerHeaderCell($table, 1200, 'Categoría 1');
-                $this->addWorkerHeaderCell($table, 1200, 'Categoría 2');
-                $this->addWorkerHeaderCell($table, 1200, 'Categoría 3');
-                $this->addWorkerHeaderCell($table, 1200, 'Categoría 4');
-                $this->addWorkerHeaderCell($table, 1200, 'Categoría 5');
 
-                foreach ($rows as $row) {
-                    $table->addRow();
+                $globalStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
 
-                    $globalStyle = $this->getWordRiskCellStyle($row['global_level_key'] ?? 'nulo');
+                $table->addCell(800, $this->centeredCellStyle())->addText(
+                    $this->formatFolioWithSource((string) ($row['folio'] ?? ''), $row['source'] ?? null),
+                    ['size' => 10],
+                    $this->centeredTextStyle()
+                );
 
-                    $table->addCell(800, $this->centeredCellStyle())->addText(
-                        $this->stripFirstTwoLeadingZeros((string) ($row['folio'] ?? '')),
-                        ['size' => 10],
-                        $this->centeredTextStyle()
-                    );
+                $table->addCell(750, $this->centeredCellStyle(['bgColor' => $globalStyle['bg']]))->addText(
+                    (string) ($row['global_score'] ?? 0),
+                    ['bold' => true, 'size' => 10, 'color' => $globalStyle['text']],
+                    $this->centeredTextStyle()
+                );
 
-                    $table->addCell(900, $this->centeredCellStyle(['bgColor' => $globalStyle['bg']]))->addText(
-                        (string) ($row['global_score'] ?? 0),
-                        ['bold' => true, 'size' => 10, 'color' => $globalStyle['text']],
-                        $this->centeredTextStyle()
-                    );
+                $table->addCell(3400, $this->centeredCellStyle())->addText(
+                    $this->safeValue($row['name']),
+                    ['size' => 10],
+                    $this->centeredTextStyle()
+                );
 
-                    $table->addCell(4700, $this->centeredCellStyle())->addText(
-                        $this->safeValue($row['name']),
-                        ['size' => 10],
-                        $this->centeredTextStyle()
-                    );
+                foreach ($categoryNames as $categoryName) {
+                    $category = $row['categories'][$categoryName] ?? null;
 
-                    foreach ($row['categories'] as $category) {
-                        $categoryStyle = $this->getWordRiskCellStyle($category['level_key'] ?? 'nulo');
-
-                        $table->addCell(1200, $this->centeredCellStyle(['bgColor' => $categoryStyle['bg']]))->addText(
-                            (string) ($category['score'] ?? 0),
-                            ['bold' => true, 'size' => 10, 'color' => $categoryStyle['text']],
+                    if (! $category) {
+                        $table->addCell($categoryWidth, $this->centeredCellStyle(['bgColor' => 'E5E7EB']))->addText(
+                            'N/A',
+                            ['bold' => true, 'size' => 9, 'color' => '6B7280'],
                             $this->centeredTextStyle()
                         );
+
+                        continue;
                     }
+
+                    $categoryStyle = $this->getWordRiskCellStyle($category['level_key'] ?? 'nulo');
+
+                    $table->addCell($categoryWidth, $this->centeredCellStyle(['bgColor' => $categoryStyle['bg']]))->addText(
+                        (string) ($category['score'] ?? 0),
+                        ['bold' => true, 'size' => 10, 'color' => $categoryStyle['text']],
+                        $this->centeredTextStyle()
+                    );
                 }
             }
+        }
 
         private function addWorkerIdentificationRiskLegend(Section $section): void
         {
@@ -3950,6 +4030,19 @@ class ExecutiveReportDownloadController extends Controller
 
         private function addDistributionTable(Section $section, string $title, array $rows): void
             {
+                $rows = collect($rows)
+                    ->map(function ($row) {
+                        return [
+                            'label' => trim((string) ($row['label'] ?? '')),
+                            'total' => (int) ($row['total'] ?? 0),
+                        ];
+                    })
+                    ->filter(function ($row) {
+                        return $row['total'] > 0 && $row['label'] !== '';
+                    })
+                    ->values()
+                    ->all();
+
                 $table = $section->addTable([
                     'alignment' => JcTable::CENTER,
                     'borderSize' => 6,
@@ -3974,17 +4067,19 @@ class ExecutiveReportDownloadController extends Controller
                 if (empty($rows)) {
                     $table->addRow();
 
-                    $table->addCell(7000, $this->centeredCellStyle())->addText(
-                        'N/D',
-                        ['size' => 10, 'color' => '374151'],
+                    $table->addCell(7000, $this->centeredCellStyle(['bgColor' => 'F3F4F6']))->addText(
+                        'Sin datos registrados',
+                        ['italic' => true, 'size' => 10, 'color' => '6B7280'],
                         $this->centeredTextStyle()
                     );
 
-                    $table->addCell(1800, $this->centeredCellStyle())->addText(
-                        '0',
-                        ['bold' => true, 'size' => 10, 'color' => '374151'],
+                    $table->addCell(1800, $this->centeredCellStyle(['bgColor' => 'F3F4F6']))->addText(
+                        '—',
+                        ['bold' => true, 'size' => 10, 'color' => '6B7280'],
                         $this->centeredTextStyle()
                     );
+
+                    $section->addTextBreak(1);
 
                     return;
                 }
@@ -3993,18 +4088,43 @@ class ExecutiveReportDownloadController extends Controller
                     $table->addRow();
 
                     $table->addCell(7000, $this->centeredCellStyle())->addText(
-                        $this->safeValue($row['label'] ?? 'N/D'),
+                        $this->safeValue($row['label']),
                         ['size' => 10, 'color' => '111827'],
                         $this->centeredTextStyle()
                     );
 
                     $table->addCell(1800, $this->centeredCellStyle())->addText(
-                        (string) ($row['total'] ?? 0),
+                        (string) $row['total'],
                         ['bold' => true, 'size' => 10, 'color' => '111827'],
                         $this->centeredTextStyle()
                     );
                 }
+
+                $section->addTextBreak(1);
             }
+
+    private function addNoDataNotice(Section $section, string $message): void
+        {
+            $table = $section->addTable([
+                'alignment' => JcTable::CENTER,
+                'borderSize' => 6,
+                'borderColor' => 'CBD5E1',
+                'cellMargin' => 80,
+            ]);
+
+            $table->addRow(460);
+
+            $table->addCell(9400, [
+                'bgColor' => 'F3F4F6',
+                'valign' => 'center',
+            ])->addText(
+                $message,
+                ['italic' => true, 'size' => 10, 'color' => '4B5563'],
+                ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+            );
+
+            $section->addTextBreak(1);
+        }
 
     private function getParticipantSummary(string $organizationId, string $workCenterId): array
     {
@@ -4130,7 +4250,7 @@ class ExecutiveReportDownloadController extends Controller
         $result = [];
 
         foreach ($buckets as $label => $total) {
-            if ($total > 0 || $label === 'N/D') {
+            if ($total > 0) {
                 $result[] = [
                     'label' => $label,
                     'total' => $total,
@@ -4219,6 +4339,7 @@ class ExecutiveReportDownloadController extends Controller
             ->select(
                 'pe.id as evaluation_id',
                 'pe.source',
+                'pe.referencia_iii_conditional',
                 'ea.question_key',
                 'ea.answer_value',
                 'dd.extra_fields'
@@ -4244,9 +4365,7 @@ class ExecutiveReportDownloadController extends Controller
         $onlineEvaluations = count(array_filter($evaluations, fn ($row) => ($row['source'] ?? null) === 'online'));
 
         $maxGlobalScore = (int) config('nom035_risk_levels.global.max_score', 288);
-        $averageGlobalScore = $totalEvaluations > 0
-            ? round(array_sum(array_column($evaluations, 'global_score')) / $totalEvaluations, 2)
-            : 0;
+        $averageGlobalScore = $this->calculateReferenceThreeAverageScoreFromQuestionScores($evaluations);
 
         $averageGlobalPercentage = $maxGlobalScore > 0
             ? round(($averageGlobalScore / $maxGlobalScore) * 100, 2)
@@ -4276,6 +4395,244 @@ class ExecutiveReportDownloadController extends Controller
         ];
     }
 
+        private function getReferenceThreeGlobalDashboardSummary(string $organizationId, string $workCenterId): array
+            {
+                $rows = DB::table('evaluation_answers as ea')
+                    ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
+                    ->where('pe.organization_id', $organizationId)
+                    ->where('pe.work_center_id', $workCenterId)
+                    ->where('pe.evaluation_type', 'referencia_iii')
+                    ->where('ea.instrument', 'referencia_iii')
+                    ->whereIn('pe.source', ['paper', 'online'])
+                    ->where('pe.processing_status', 'completed')
+                    ->whereNull('pe.deleted_at')
+                    ->select(
+                        'pe.id as evaluation_id',
+                        'pe.source',
+                        'ea.question_key',
+                        'ea.answer_value'
+                    )
+                    ->orderBy('pe.id')
+                    ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
+                    ->get();
+
+                $evaluations = $rows
+                    ->groupBy('evaluation_id')
+                    ->map(function ($items, $evaluationId) {
+                        $globalScore = 0;
+                        $questionScores = [];
+                        $source = 'paper';
+
+                        foreach ($items as $row) {
+                            $source = (string) ($row->source ?? $source);
+                            $questionKey = (int) ($row->question_key ?? 0);
+
+                            if ($questionKey < 1 || $questionKey > 72) {
+                                continue;
+                            }
+
+                            $score = $this->getReferenceThreeScore(
+                                (string) $questionKey,
+                                (string) ($row->answer_value ?? '')
+                            );
+
+                            if ($score === null) {
+                                continue;
+                            }
+
+                            $globalScore += (int) $score;
+                            $questionScores[$questionKey] = (int) $score;
+                        }
+
+                        if ($questionScores === []) {
+                            return null;
+                        }
+
+                        $globalLevel = $this->classifyNom035Score('global', null, $globalScore);
+
+                        return [
+                            'evaluation_id' => (string) $evaluationId,
+                            'source' => $source,
+                            'global_score' => $globalScore,
+                            'global_level_key' => $globalLevel['key'],
+                            'global_level_label' => $globalLevel['label'],
+                            'question_scores' => $questionScores,
+                        ];
+                    })
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                $distribution = $this->initializeRiskLevelCounts();
+
+                foreach ($evaluations as $evaluation) {
+                    $levelKey = (string) ($evaluation['global_level_key'] ?? 'nulo');
+
+                    if (array_key_exists($levelKey, $distribution)) {
+                        $distribution[$levelKey]++;
+                    }
+                }
+
+                $totalEvaluations = count($evaluations);
+                $paperEvaluations = count(array_filter($evaluations, fn ($row) => ($row['source'] ?? null) === 'paper'));
+                $onlineEvaluations = count(array_filter($evaluations, fn ($row) => ($row['source'] ?? null) === 'online'));
+
+                $maxGlobalScore = (int) config('nom035_risk_levels.global.max_score', 288);
+                $averageGlobalScore = $this->calculateReferenceThreeAverageScoreFromQuestionScores($evaluations);
+
+                $averageGlobalPercentage = $maxGlobalScore > 0
+                    ? round(($averageGlobalScore / $maxGlobalScore) * 100, 2)
+                    : 0;
+
+                $dominantLevelKey = 'nulo';
+                $dominantCount = -1;
+
+                foreach ($distribution as $levelKey => $count) {
+                    if ((int) $count > $dominantCount) {
+                        $dominantCount = (int) $count;
+                        $dominantLevelKey = (string) $levelKey;
+                    }
+                }
+
+                return [
+                    'total_evaluations' => $totalEvaluations,
+                    'paper_evaluations' => $paperEvaluations,
+                    'online_evaluations' => $onlineEvaluations,
+                    'max_global_score' => $maxGlobalScore,
+                    'average_global_score' => $averageGlobalScore,
+                    'average_global_percentage' => $averageGlobalPercentage,
+                    'distribution' => $distribution,
+                    'dominant_level_key' => $dominantLevelKey,
+                    'dominant_level_label' => config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey)),
+                    'evaluations' => $evaluations,
+                ];
+            }
+
+        private function calculateReferenceThreeAverageScoreFromQuestionScores(array $evaluations): float
+            {
+                $questionTotals = [];
+
+                foreach ($evaluations as $evaluation) {
+                    $questionScores = $evaluation['question_scores'] ?? [];
+
+                    if (! is_array($questionScores)) {
+                        continue;
+                    }
+
+                    foreach ($questionScores as $questionKey => $score) {
+                        $questionKey = (int) $questionKey;
+
+                        if ($questionKey < 1 || $questionKey > 72) {
+                            continue;
+                        }
+
+                        if (! isset($questionTotals[$questionKey])) {
+                            $questionTotals[$questionKey] = [
+                                'sum' => 0,
+                                'count' => 0,
+                            ];
+                        }
+
+                        $questionTotals[$questionKey]['sum'] += (int) $score;
+                        $questionTotals[$questionKey]['count']++;
+                    }
+                }
+
+                $finalTotal = 0;
+
+                for ($questionKey = 1; $questionKey <= 72; $questionKey++) {
+                    $avgRaw = 0.0;
+
+                    if (! empty($questionTotals[$questionKey]['count'])) {
+                        $avgRaw = $questionTotals[$questionKey]['sum'] / $questionTotals[$questionKey]['count'];
+                    }
+
+                    $finalTotal += max(0, min(4, (int) round($avgRaw, 0, PHP_ROUND_HALF_UP)));
+                }
+
+                return (float) $finalTotal;
+            }
+
+        private function getEnabledReferenceThreeConditionalQuestionKeys(array $conditionalAnswers): array
+            {
+                $enabledQuestions = [];
+
+                foreach ($conditionalAnswers as $section) {
+                    if (! is_array($section)) {
+                        continue;
+                    }
+
+                    $condition = mb_strtoupper(trim((string) ($section['condition'] ?? '')));
+                    $isEnabled = in_array($condition, ['SI', 'SÍ', 'YES', 'TRUE', '1'], true);
+
+                    if (! $isEnabled) {
+                        continue;
+                    }
+
+                    $questions = $section['questions'] ?? null;
+
+                    if (! is_array($questions)) {
+                        continue;
+                    }
+
+                    foreach ($questions as $questionNumber => $answer) {
+                        $numericQuestion = (int) $questionNumber;
+
+                        if ($numericQuestion >= 65 && $numericQuestion <= 72) {
+                            $enabledQuestions[] = $numericQuestion;
+                        }
+                    }
+                }
+
+                return array_values(array_unique($enabledQuestions));
+            }
+
+    private function getEnabledReferenceThreeConditionalQuestionScores(array $conditionalAnswers): array
+        {
+            $scores = [];
+
+            foreach ($conditionalAnswers as $section) {
+                if (! is_array($section)) {
+                    continue;
+                }
+
+                $condition = mb_strtoupper(trim((string) ($section['condition'] ?? '')));
+                $isEnabled = in_array($condition, ['SI', 'SÍ', 'YES', 'TRUE', '1'], true);
+
+                if (! $isEnabled) {
+                    continue;
+                }
+
+                $questions = $section['questions'] ?? null;
+
+                if (! is_array($questions)) {
+                    continue;
+                }
+
+                foreach ($questions as $questionNumber => $answer) {
+                    $numericQuestion = (int) $questionNumber;
+
+                    if ($numericQuestion < 65 || $numericQuestion > 72) {
+                        continue;
+                    }
+
+                    if ($answer === null || is_array($answer)) {
+                        continue;
+                    }
+
+                    $score = $this->getReferenceThreeScore((string) $numericQuestion, (string) $answer);
+
+                    if ($score === null) {
+                        continue;
+                    }
+
+                    $scores[$numericQuestion] = (int) $score;
+                }
+            }
+
+            return $scores;
+        }
+
     private function getReferenceThreeEvaluations($rows): array
         {
             return $rows
@@ -4284,9 +4641,23 @@ class ExecutiveReportDownloadController extends Controller
                     $first = $items->first();
 
                     $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
+
                     if (! is_array($extra)) {
                         $extra = [];
                     }
+
+                    $conditionalRaw = $first->referencia_iii_conditional ?? null;
+                    $conditionalData = is_string($conditionalRaw)
+                        ? json_decode($conditionalRaw, true)
+                        : $conditionalRaw;
+
+                    $enabledConditionalQuestionKeys = is_array($conditionalData) && $conditionalData !== []
+                        ? $this->getEnabledReferenceThreeConditionalQuestionKeys($conditionalData)
+                        : null;
+
+                    $conditionalQuestionScores = is_array($conditionalData) && $conditionalData !== []
+                        ? $this->getEnabledReferenceThreeConditionalQuestionScores($conditionalData)
+                        : [];
 
                                         $isBoss = $this->extractWorkerFlag($extra, [
                         'jefe',
@@ -4333,34 +4704,47 @@ class ExecutiveReportDownloadController extends Controller
                         (string) ($first->source ?? 'paper'),
                         $items,
                         $attendsPublic,
-                        $isBoss
+                        $isBoss,
+                        $enabledConditionalQuestionKeys,
+                        $conditionalQuestionScores
                     );
                 })
                 ->values()
                 ->all();
         }
 
-    private function buildReferenceThreeEvaluationResult(
-            string $evaluationId,
-            string $source,
-            $answers,
-            bool $attendsPublic = false,
-            bool $isBoss = false
-        ): array {
+        private function buildReferenceThreeEvaluationResult(
+                string $evaluationId,
+                string $source,
+                $answers,
+                bool $attendsPublic = false,
+                bool $isBoss = false,
+                ?array $enabledConditionalQuestionKeys = null,
+                array $conditionalQuestionScores = []
+            ): array {
             $globalScore = 0;
             $dimensionScores = [];
             $domainScores = [];
             $categoryScores = [];
+            $questionScores = [];
 
-                        foreach ($answers as $answer) {
+            foreach ($answers as $answer) {
                 $questionKey = (int) $answer->question_key;
 
-                if (in_array($questionKey, [65, 66, 67, 68], true) && ! $attendsPublic) {
-                    continue;
-                }
+                if ($questionKey >= 65 && $questionKey <= 72) {
+                    if (is_array($enabledConditionalQuestionKeys)) {
+                        if (! in_array($questionKey, $enabledConditionalQuestionKeys, true)) {
+                            continue;
+                        }
+                    } else {
+                        if (in_array($questionKey, [65, 66, 67, 68], true) && ! $attendsPublic) {
+                            continue;
+                        }
 
-                if (in_array($questionKey, [69, 70, 71, 72], true) && ! $isBoss) {
-                    continue;
+                        if (in_array($questionKey, [69, 70, 71, 72], true) && ! $isBoss) {
+                            continue;
+                        }
+                    }
                 }
 
                 $score = $this->getReferenceThreeScore($answer->question_key, $answer->answer_value);
@@ -4371,11 +4755,39 @@ class ExecutiveReportDownloadController extends Controller
                 }
 
                 $globalScore += $score;
+                $questionScores[$questionKey] = (int) $score;
 
                 $dimensionScores[$meta['dimension']] = ($dimensionScores[$meta['dimension']] ?? 0) + $score;
                 $domainScores[$meta['domain']] = ($domainScores[$meta['domain']] ?? 0) + $score;
                 $categoryScores[$meta['category']] = ($categoryScores[$meta['category']] ?? 0) + $score;
             }
+
+            foreach ($conditionalQuestionScores as $conditionalQuestionKey => $conditionalScore) {
+            $conditionalQuestionKey = (int) $conditionalQuestionKey;
+
+            if ($conditionalQuestionKey < 65 || $conditionalQuestionKey > 72) {
+                continue;
+            }
+
+            if (array_key_exists($conditionalQuestionKey, $questionScores)) {
+                continue;
+            }
+
+            $meta = $this->getReferenceThreeQuestionMeta($conditionalQuestionKey);
+
+            if ($meta === null) {
+                continue;
+            }
+
+            $conditionalScore = (int) $conditionalScore;
+
+            $globalScore += $conditionalScore;
+            $questionScores[$conditionalQuestionKey] = $conditionalScore;
+
+            $dimensionScores[$meta['dimension']] = ($dimensionScores[$meta['dimension']] ?? 0) + $conditionalScore;
+            $domainScores[$meta['domain']] = ($domainScores[$meta['domain']] ?? 0) + $conditionalScore;
+            $categoryScores[$meta['category']] = ($categoryScores[$meta['category']] ?? 0) + $conditionalScore;
+        }
 
             $dimensionLevels = [];
             foreach ($dimensionScores as $name => $score) {
@@ -4400,6 +4812,8 @@ class ExecutiveReportDownloadController extends Controller
                 'global_score' => $globalScore,
                 'global_level_key' => $globalLevel['key'],
                 'global_level_label' => $globalLevel['label'],
+                'question_scores' => $questionScores,
+                'conditional_question_scores' => $conditionalQuestionScores,
                 'dimension_scores' => $dimensionScores,
                 'dimension_levels' => $dimensionLevels,
                 'domain_scores' => $domainScores,
@@ -4433,86 +4847,302 @@ class ExecutiveReportDownloadController extends Controller
         ];
     }
 
-    private function initializeRiskLevelCounts(): array
-    {
-        return [
-            'nulo' => 0,
-            'bajo' => 0,
-            'medio' => 0,
-            'alto' => 0,
-            'muy_alto' => 0,
-        ];
-    }
-
-    private function getReferenceThreeCategorySummary(string $organizationId, string $workCenterId): array
-    {
-        $globalSummary = $this->getReferenceThreeGlobalSummary($organizationId, $workCenterId);
-        $evaluations = $globalSummary['evaluations'] ?? [];
-        $totalEvaluations = (int) ($globalSummary['total_evaluations'] ?? 0);
-
-        $categories = [];
-
-        foreach ($this->getReferenceThreeCategoryMaxScores() as $categoryName => $maxScore) {
-            $distribution = $this->initializeRiskLevelCounts();
-            $scoreSum = 0;
-
-            foreach ($evaluations as $evaluation) {
-                $score = (int) ($evaluation['category_scores'][$categoryName] ?? 0);
-                $scoreSum += $score;
-
-                $levelKey = $evaluation['category_levels'][$categoryName]['key']
-                    ?? $this->classifyNom035Score('categories', $categoryName, $score)['key'];
-
-                if (array_key_exists($levelKey, $distribution)) {
-                    $distribution[$levelKey]++;
-                }
-            }
-
-            $averageScore = $totalEvaluations > 0
-                ? round($scoreSum / $totalEvaluations, 2)
-                : 0;
-
-            $averagePercentage = $maxScore > 0
-                ? round(($averageScore / $maxScore) * 100, 2)
-                : 0;
-
-            $dominantLevelKey = 'nulo';
-            $dominantCount = -1;
-
-            foreach ($distribution as $levelKey => $count) {
-                if ($count > $dominantCount) {
-                    $dominantCount = $count;
-                    $dominantLevelKey = $levelKey;
-                }
-            }
-
-            $categories[] = [
-                'name' => $categoryName,
-                'max_score' => $maxScore,
-                'average_score' => $averageScore,
-                'average_percentage' => $averagePercentage,
-                'distribution' => $distribution,
-                'dominant_level_key' => $dominantLevelKey,
-                'dominant_level_label' => config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey)),
-            ];
-        }
-
-        return [
-            'total_evaluations' => $totalEvaluations,
-            'categories' => $categories,
-        ];
-    }
-
-    private function getReferenceThreeCategoryMaxScores(): array
+        private function initializeRiskLevelCounts(): array
         {
             return [
-                'Ambiente de trabajo' => 20,
-                'Factores propios de la actividad' => 100,
-                'Organización del tiempo de trabajo' => 24,
-                'Liderazgo y relaciones en el trabajo' => 104,
-                'Entorno organizacional' => 40,
+                'nulo' => 0,
+                'bajo' => 0,
+                'medio' => 0,
+                'alto' => 0,
+                'muy_alto' => 0,
             ];
         }
+
+        private function getReferenceThreeCategorySummaryFromService(WorkCenter $workCenter): array
+            {
+                /** @var WorkCenterNom035CalculationService $calculationService */
+                $calculationService = app(WorkCenterNom035CalculationService::class);
+
+                $stats = $calculationService->calculateCategoryStatistics($workCenter);
+
+                $categories = [];
+
+                foreach (($stats['categories'] ?? []) as $categoryName => $row) {
+                    $distribution = $row['distribution'] ?? $this->initializeRiskLevelCounts();
+
+                    foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
+                        $distribution[$levelKey] = (int) ($distribution[$levelKey] ?? 0);
+                    }
+
+                    $riskLevel = (string) ($row['risk_level'] ?? 'nulo');
+
+                    $categories[] = [
+                        'name' => $categoryName,
+                        'max_score' => (int) ($row['max_score'] ?? 0),
+                        'average_score' => (float) ($row['average_score'] ?? 0),
+                        'average_percentage' => (float) ($row['percentage'] ?? 0),
+                        'distribution' => $distribution,
+                        'applicable_evaluations' => (int) ($row['total_evaluations'] ?? array_sum($distribution)),
+                        'dominant_level_key' => $riskLevel,
+                        'dominant_level_label' => (string) ($row['risk_level_label'] ?? config("nom035_risk_levels.labels.$riskLevel", ucfirst($riskLevel))),
+                    ];
+                }
+
+                return [
+                    'total_evaluations' => (int) ($stats['total_evaluations'] ?? 0),
+                    'categories' => $categories,
+                ];
+            }
+
+            private function getReferenceThreeDomainSummaryFromService(WorkCenter $workCenter): array
+            {
+                /** @var WorkCenterNom035CalculationService $calculationService */
+                $calculationService = app(WorkCenterNom035CalculationService::class);
+
+                $stats = $calculationService->calculateDomainStatistics($workCenter);
+
+                $domains = [];
+
+                foreach (($stats['domains'] ?? []) as $domainName => $row) {
+                    $distribution = $row['distribution'] ?? $this->initializeRiskLevelCounts();
+
+                    foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
+                        $distribution[$levelKey] = (int) ($distribution[$levelKey] ?? 0);
+                    }
+
+                    $riskLevel = (string) ($row['risk_level'] ?? 'nulo');
+
+                    $domains[] = [
+                        'name' => $domainName,
+                        'max_score' => (int) ($row['max_score'] ?? 0),
+                        'average_score' => (float) ($row['average_score'] ?? 0),
+                        'average_percentage' => (float) ($row['percentage'] ?? 0),
+                        'distribution' => $distribution,
+                        'applicable_evaluations' => (int) ($row['total_evaluations'] ?? array_sum($distribution)),
+                        'dominant_level_key' => $riskLevel,
+                        'dominant_level_label' => (string) ($row['risk_level_label'] ?? config("nom035_risk_levels.labels.$riskLevel", ucfirst($riskLevel))),
+                    ];
+                }
+
+                return [
+                    'total_evaluations' => (int) ($stats['total_evaluations'] ?? 0),
+                    'domains' => $domains,
+                ];
+            }
+
+            private function getReferenceThreeDimensionSummaryFromService(WorkCenter $workCenter): array
+            {
+                /** @var WorkCenterNom035CalculationService $calculationService */
+                $calculationService = app(WorkCenterNom035CalculationService::class);
+
+                $stats = $calculationService->calculateDimensionStatistics($workCenter);
+
+                $dimensions = [];
+
+                foreach (($stats['dimensions'] ?? []) as $dimensionName => $row) {
+                    $distribution = $row['distribution'] ?? $this->initializeRiskLevelCounts();
+
+                    foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
+                        $distribution[$levelKey] = (int) ($distribution[$levelKey] ?? 0);
+                    }
+
+                    $riskLevel = (string) ($row['risk_level'] ?? 'nulo');
+
+                    $dimensions[] = [
+                        'name' => $dimensionName,
+                        'max_score' => (int) ($row['max_score'] ?? 0),
+                        'average_score' => (float) ($row['average_score'] ?? 0),
+                        'average_percentage' => (float) ($row['percentage'] ?? 0),
+                        'distribution' => $distribution,
+                        'applicable_evaluations' => (int) ($row['total_evaluations'] ?? array_sum($distribution)),
+                        'dominant_level_key' => $riskLevel,
+                        'dominant_level_label' => (string) ($row['risk_level_label'] ?? config("nom035_risk_levels.labels.$riskLevel", ucfirst($riskLevel))),
+                        'domain' => (string) ($row['domain'] ?? ''),
+                        'category' => (string) ($row['category'] ?? ''),
+                    ];
+                }
+
+                return [
+                    'total_evaluations' => (int) ($stats['total_evaluations'] ?? 0),
+                    'dimensions' => $dimensions,
+                ];
+            }
+
+        private function getReferenceThreeCategorySummary(string $organizationId, string $workCenterId): array
+        {
+            $rows = DB::table('evaluation_answers as ea')
+                ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
+                ->where('pe.organization_id', $organizationId)
+                ->where('pe.work_center_id', $workCenterId)
+                ->where('pe.evaluation_type', 'referencia_iii')
+                ->where('ea.instrument', 'referencia_iii')
+                ->whereIn('pe.source', ['paper', 'online'])
+                ->where('pe.processing_status', 'completed')
+                ->whereNull('pe.deleted_at')
+                ->select(
+                    'pe.id as evaluation_id',
+                    'ea.question_key',
+                    'ea.answer_value'
+                )
+                ->orderBy('pe.id')
+                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
+                ->get();
+
+            $evaluations = $rows
+                ->groupBy('evaluation_id')
+                ->map(function ($items) {
+                    $answers = [];
+
+                    foreach ($items as $row) {
+                        $questionKey = (int) ($row->question_key ?? 0);
+
+                        if ($questionKey < 1 || $questionKey > 72) {
+                            continue;
+                        }
+
+                        $answerValue = strtoupper(trim((string) ($row->answer_value ?? '')));
+
+                        if (! in_array($answerValue, ['A', 'B', 'C', 'D', 'E'], true)) {
+                            continue;
+                        }
+
+                        $answers[$questionKey] = $answerValue;
+                    }
+
+                    return $answers;
+                })
+                ->filter(fn (array $answers): bool => $answers !== [])
+                ->values();
+
+            $totalEvaluations = $evaluations->count();
+            $categories = [];
+
+            $domainQuestionKeys = $this->getReferenceThreeDomainQuestionKeys();
+            $categoryDomainNames = $this->getReferenceThreeCategoryDomainNames();
+
+            foreach ($this->getReferenceThreeCategoryMaxScores() as $categoryName => $maxScore) {
+                $distribution = $this->initializeRiskLevelCounts();
+                $scoreSum = 0;
+                $applicableEvaluations = 0;
+                $domainNames = $categoryDomainNames[$categoryName] ?? [];
+
+                foreach ($evaluations as $answers) {
+                    $score = 0;
+                    $hasCategoryScore = false;
+
+                    foreach ($domainNames as $domainName) {
+                        $questionKeys = $domainQuestionKeys[$domainName] ?? [];
+
+                        foreach ($questionKeys as $questionKey) {
+                            $questionKey = (int) $questionKey;
+
+                            if (! array_key_exists($questionKey, $answers)) {
+                                continue;
+                            }
+
+                            $questionScore = $this->getReferenceThreeScore(
+                                (string) $questionKey,
+                                (string) $answers[$questionKey]
+                            );
+
+                            if ($questionScore === null) {
+                                continue;
+                            }
+
+                            $score += (int) $questionScore;
+                            $hasCategoryScore = true;
+                        }
+                    }
+
+                    if (! $hasCategoryScore) {
+                        continue;
+                    }
+
+                    $scoreSum += $score;
+                    $applicableEvaluations++;
+
+                    $levelKey = $this->classifyNom035Score('categories', $categoryName, $score)['key'];
+
+                    if (array_key_exists($levelKey, $distribution)) {
+                        $distribution[$levelKey]++;
+                    }
+                }
+
+                if ($applicableEvaluations === 0) {
+                    continue;
+                }
+
+                $averageRaw = $scoreSum / $applicableEvaluations;
+                $averageScore = round($averageRaw, 2);
+
+                $averagePercentage = $maxScore > 0
+                    ? round(($averageRaw / $maxScore) * 100, 2)
+                    : 0;
+
+                $dominantLevelKey = 'nulo';
+                $dominantCount = -1;
+
+                foreach ($distribution as $levelKey => $count) {
+                    if ((int) $count > $dominantCount) {
+                        $dominantCount = (int) $count;
+                        $dominantLevelKey = (string) $levelKey;
+                    }
+                }
+
+                $categories[] = [
+                    'name' => $categoryName,
+                    'max_score' => $maxScore,
+                    'average_score' => $averageScore,
+                    'average_percentage' => $averagePercentage,
+                    'distribution' => $distribution,
+                    'applicable_evaluations' => $applicableEvaluations,
+                    'dominant_level_key' => $dominantLevelKey,
+                    'dominant_level_label' => config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey)),
+                ];
+            }
+
+            return [
+                'total_evaluations' => $totalEvaluations,
+                'categories' => $categories,
+            ];
+        }
+
+        private function getReferenceThreeCategoryMaxScores(): array
+            {
+                return [
+                    'Ambiente de trabajo' => 20,
+                    'Factores propios de la actividad' => 100,
+                    'Organización del tiempo de trabajo' => 24,
+                    'Liderazgo y relaciones en el trabajo' => 104,
+                    'Entorno organizacional' => 40,
+                ];
+            }
+
+        private function getReferenceThreeCategoryDomainNames(): array
+            {
+                return [
+                    'Ambiente de trabajo' => [
+                        'Condiciones en el ambiente de trabajo',
+                    ],
+                    'Factores propios de la actividad' => [
+                        'Carga de trabajo',
+                        'Falta de control sobre el trabajo',
+                    ],
+                    'Organización del tiempo de trabajo' => [
+                        'Jornada de trabajo',
+                        'Interferencia en la relación trabajo-familia',
+                    ],
+                    'Liderazgo y relaciones en el trabajo' => [
+                        'Liderazgo',
+                        'Relaciones en el trabajo',
+                        'Violencia',
+                    ],
+                    'Entorno organizacional' => [
+                        'Reconocimiento del desempeño',
+                        'Insuficiente sentido de pertenencia e inestabilidad',
+                    ],
+                ];
+            }
 
         private function getAttentionCount(array $distribution): int
     {
@@ -4704,63 +5334,136 @@ class ExecutiveReportDownloadController extends Controller
     }
 
     private function getReferenceThreeDomainSummary(string $organizationId, string $workCenterId): array
-    {
-        $globalSummary = $this->getReferenceThreeGlobalSummary($organizationId, $workCenterId);
-        $evaluations = $globalSummary['evaluations'] ?? [];
-        $totalEvaluations = (int) ($globalSummary['total_evaluations'] ?? 0);
+        {
+            $rows = DB::table('evaluation_answers as ea')
+                ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
+                ->where('pe.organization_id', $organizationId)
+                ->where('pe.work_center_id', $workCenterId)
+                ->where('pe.evaluation_type', 'referencia_iii')
+                ->where('ea.instrument', 'referencia_iii')
+                ->whereIn('pe.source', ['paper', 'online'])
+                ->where('pe.processing_status', 'completed')
+                ->whereNull('pe.deleted_at')
+                ->select(
+                    'pe.id as evaluation_id',
+                    'ea.question_key',
+                    'ea.answer_value'
+                )
+                ->orderBy('pe.id')
+                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
+                ->get();
 
-        $domains = [];
+            $evaluations = $rows
+                ->groupBy('evaluation_id')
+                ->map(function ($items) {
+                    $answers = [];
 
-        foreach ($this->getReferenceThreeDomainMaxScores() as $domainName => $maxScore) {
-            $distribution = $this->initializeRiskLevelCounts();
-            $scoreSum = 0;
+                    foreach ($items as $row) {
+                        $questionKey = (int) ($row->question_key ?? 0);
 
-            foreach ($evaluations as $evaluation) {
-                $score = (int) ($evaluation['domain_scores'][$domainName] ?? 0);
-                $scoreSum += $score;
+                        if ($questionKey < 1 || $questionKey > 72) {
+                            continue;
+                        }
 
-                $levelKey = $evaluation['domain_levels'][$domainName]['key']
-                    ?? $this->classifyNom035Score('domains', $domainName, $score)['key'];
+                        $answerValue = strtoupper(trim((string) ($row->answer_value ?? '')));
 
-                if (array_key_exists($levelKey, $distribution)) {
-                    $distribution[$levelKey]++;
+                        if (! in_array($answerValue, ['A', 'B', 'C', 'D', 'E'], true)) {
+                            continue;
+                        }
+
+                        $answers[$questionKey] = $answerValue;
+                    }
+
+                    return $answers;
+                })
+                ->filter(fn (array $answers): bool => $answers !== [])
+                ->values();
+
+            $totalEvaluations = $evaluations->count();
+            $domains = [];
+            $domainQuestionKeys = $this->getReferenceThreeDomainQuestionKeys();
+
+            foreach ($this->getReferenceThreeDomainMaxScores() as $domainName => $maxScore) {
+                $distribution = $this->initializeRiskLevelCounts();
+                $scoreSum = 0;
+                $applicableEvaluations = 0;
+                $questionKeys = $domainQuestionKeys[$domainName] ?? [];
+
+                foreach ($evaluations as $answers) {
+                    $score = 0;
+                    $hasDomainScore = false;
+
+                    foreach ($questionKeys as $questionKey) {
+                        $questionKey = (int) $questionKey;
+
+                        if (! array_key_exists($questionKey, $answers)) {
+                            continue;
+                        }
+
+                        $questionScore = $this->getReferenceThreeScore(
+                            (string) $questionKey,
+                            (string) $answers[$questionKey]
+                        );
+
+                        if ($questionScore === null) {
+                            continue;
+                        }
+
+                        $score += (int) $questionScore;
+                        $hasDomainScore = true;
+                    }
+
+                    if (! $hasDomainScore) {
+                        continue;
+                    }
+
+                    $scoreSum += $score;
+                    $applicableEvaluations++;
+
+                    $levelKey = $this->classifyNom035Score('domains', $domainName, $score)['key'];
+
+                    if (array_key_exists($levelKey, $distribution)) {
+                        $distribution[$levelKey]++;
+                    }
                 }
+
+                if ($applicableEvaluations === 0) {
+                    continue;
+                }
+
+                $averageScore = round($scoreSum / $applicableEvaluations, 2);
+
+                $averagePercentage = $maxScore > 0
+                    ? round(($averageScore / $maxScore) * 100, 2)
+                    : 0;
+
+                $dominantLevelKey = 'nulo';
+                $dominantCount = -1;
+
+                foreach ($distribution as $levelKey => $count) {
+                    if ((int) $count > $dominantCount) {
+                        $dominantCount = (int) $count;
+                        $dominantLevelKey = (string) $levelKey;
+                    }
+                }
+
+                $domains[] = [
+                    'name' => $domainName,
+                    'max_score' => $maxScore,
+                    'average_score' => $averageScore,
+                    'average_percentage' => $averagePercentage,
+                    'distribution' => $distribution,
+                    'applicable_evaluations' => $applicableEvaluations,
+                    'dominant_level_key' => $dominantLevelKey,
+                    'dominant_level_label' => config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey)),
+                ];
             }
 
-            $averageScore = $totalEvaluations > 0
-                ? round($scoreSum / $totalEvaluations, 2)
-                : 0;
-
-            $averagePercentage = $maxScore > 0
-                ? round(($averageScore / $maxScore) * 100, 2)
-                : 0;
-
-            $dominantLevelKey = 'nulo';
-            $dominantCount = -1;
-
-            foreach ($distribution as $levelKey => $count) {
-                if ($count > $dominantCount) {
-                    $dominantCount = $count;
-                    $dominantLevelKey = $levelKey;
-                }
-            }
-
-            $domains[] = [
-                'name' => $domainName,
-                'max_score' => $maxScore,
-                'average_score' => $averageScore,
-                'average_percentage' => $averagePercentage,
-                'distribution' => $distribution,
-                'dominant_level_key' => $dominantLevelKey,
-                'dominant_level_label' => config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey)),
+            return [
+                'total_evaluations' => $totalEvaluations,
+                'domains' => $domains,
             ];
         }
-
-        return [
-            'total_evaluations' => $totalEvaluations,
-            'domains' => $domains,
-        ];
-    }
 
         private function getReferenceThreeDomainSummaryV2(string $organizationId, string $workCenterId): array
     {
@@ -4798,6 +5501,7 @@ class ExecutiveReportDownloadController extends Controller
                 'average_score' => (float) ($row['average_score'] ?? 0),
                 'average_percentage' => (float) ($row['average_percentage'] ?? 0),
                 'distribution' => $distribution,
+                'applicable_evaluations' => (int) ($row['applicable_evaluations'] ?? 0),
                 'dominant_level_key' => $dominantLevelKey,
                 'dominant_level_label' => (string) (
                     $row['dominant_level_label']
@@ -4838,6 +5542,122 @@ class ExecutiveReportDownloadController extends Controller
             'Insuficiente sentido de pertenencia e inestabilidad' => 16,
         ];
     }
+
+    private function getReferenceThreeDomainQuestionKeys(): array
+        {
+            return [
+                'Condiciones en el ambiente de trabajo' => [1, 2, 3, 4, 5],
+                'Carga de trabajo' => [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 65, 66, 67, 68],
+                'Falta de control sobre el trabajo' => [23, 24, 25, 26, 27, 28, 29, 30, 35, 36],
+                'Jornada de trabajo' => [17, 18],
+                'Interferencia en la relación trabajo-familia' => [19, 20, 21, 22],
+                'Liderazgo' => [31, 32, 33, 34, 37, 38, 39, 40, 41],
+                'Relaciones en el trabajo' => [42, 43, 44, 45, 46, 69, 70, 71, 72],
+                'Violencia' => [57, 58, 59, 60, 61, 62, 63, 64],
+                'Reconocimiento del desempeño' => [47, 48, 49, 50, 51, 52],
+                'Insuficiente sentido de pertenencia e inestabilidad' => [53, 54, 55, 56],
+            ];
+        }
+
+    private function getReferenceThreeDimensionSummary(string $organizationId, string $workCenterId): array
+        {
+            $globalSummary = $this->getReferenceThreeGlobalSummary($organizationId, $workCenterId);
+            $evaluations = $globalSummary['evaluations'] ?? [];
+            $totalEvaluations = (int) ($globalSummary['total_evaluations'] ?? 0);
+
+            $dimensions = [];
+
+            foreach ($this->getReferenceThreeDimensionMaxScores() as $dimensionName => $maxScore) {
+                $distribution = $this->initializeRiskLevelCounts();
+                $scoreSum = 0;
+                $applicableEvaluations = 0;
+
+                foreach ($evaluations as $evaluation) {
+                    $dimensionScores = $evaluation['dimension_scores'] ?? [];
+                    $score = null;
+
+                    if (is_array($dimensionScores) && array_key_exists($dimensionName, $dimensionScores)) {
+                        $score = (int) $dimensionScores[$dimensionName];
+                    } elseif ($dimensionName === 'Deficiente relación con los colaboradores que supervisa') {
+                        $conditionalScores = $evaluation['conditional_question_scores'] ?? [];
+
+                        if (! is_array($conditionalScores)) {
+                            continue;
+                        }
+
+                        $conditionalScore = 0;
+                        $hasConditionalDimension = false;
+
+                        foreach ([69, 70, 71, 72] as $conditionalQuestionKey) {
+                            if (! array_key_exists($conditionalQuestionKey, $conditionalScores)) {
+                                continue;
+                            }
+
+                            $conditionalScore += (int) $conditionalScores[$conditionalQuestionKey];
+                            $hasConditionalDimension = true;
+                        }
+
+                        if (! $hasConditionalDimension) {
+                            continue;
+                        }
+
+                        $score = $conditionalScore;
+                    }
+
+                    if ($score === null) {
+                        continue;
+                    }
+
+                    $scoreSum += $score;
+                    $applicableEvaluations++;
+
+                    $levelKey = $evaluation['dimension_levels'][$dimensionName]['key']
+                        ?? $this->classifyNom035Score('dimensions', $dimensionName, $score)['key'];
+
+                    if (array_key_exists($levelKey, $distribution)) {
+                        $distribution[$levelKey]++;
+                    }
+                }
+
+                if ($applicableEvaluations === 0) {
+                    continue;
+                }
+
+                $averageScore = round($scoreSum / $applicableEvaluations, 2);
+
+                $averagePercentage = $maxScore > 0
+                    ? round(($averageScore / $maxScore) * 100, 2)
+                    : 0;
+
+                $dominantLevelKey = 'nulo';
+                $dominantCount = -1;
+
+                foreach ($distribution as $levelKey => $count) {
+                    if ($count > $dominantCount) {
+                        $dominantCount = $count;
+                        $dominantLevelKey = $levelKey;
+                    }
+                }
+
+                $dimensions[] = [
+                    'name' => $dimensionName,
+                    'max_score' => $maxScore,
+                    'average_score' => $averageScore,
+                    'average_percentage' => $averagePercentage,
+                    'distribution' => $distribution,
+                    'applicable_evaluations' => $applicableEvaluations,
+                    'dominant_level_key' => $dominantLevelKey,
+                    'dominant_level_label' => config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey)),
+                    'domain' => '',
+                    'category' => '',
+                ];
+            }
+
+            return [
+                'total_evaluations' => $totalEvaluations,
+                'dimensions' => $dimensions,
+            ];
+        }
 
     private function getReferenceThreeDimensionMaxScores(): array
     {
@@ -4969,6 +5789,7 @@ class ExecutiveReportDownloadController extends Controller
 
                     $dimensionRows[] = [
                         'folio' => $evaluation['folio'] ?? 'N/D',
+                        'source' => $evaluation['source'] ?? null,
                         'dimension_score' => (int) ($evaluation['dimension_scores'][$dimensionName] ?? 0),
                         'dimension_level_key' => $dimensionLevel,
                         'global_score' => (int) ($evaluation['global_score'] ?? 0),
@@ -5090,6 +5911,7 @@ class ExecutiveReportDownloadController extends Controller
                         ->map(function ($evaluation) {
                             return [
                                 'folio' => $evaluation['folio'] ?? 'N/D',
+                                'source' => $evaluation['source'] ?? null,
                                 'global_score' => (int) ($evaluation['global_score'] ?? 0),
                                 'global_level_key' => $evaluation['global_level_key'] ?? 'nulo',
                                 'name' => $evaluation['name'] ?? 'N/D',
@@ -5208,6 +6030,7 @@ class ExecutiveReportDownloadController extends Controller
                         ->map(function ($evaluation) {
                             return [
                                 'folio' => $evaluation['folio'] ?? 'N/D',
+                                'source' => $evaluation['source'] ?? null,
                                 'global_score' => (int) ($evaluation['global_score'] ?? 0),
                                 'global_level_key' => $evaluation['global_level_key'] ?? 'nulo',
                                 'name' => $evaluation['name'] ?? 'N/D',
@@ -5326,6 +6149,7 @@ class ExecutiveReportDownloadController extends Controller
                         ->map(function ($evaluation) {
                             return [
                                 'folio' => $evaluation['folio'] ?? 'N/D',
+                                'source' => $evaluation['source'] ?? null,
                                 'global_score' => (int) ($evaluation['global_score'] ?? 0),
                                 'global_level_key' => $evaluation['global_level_key'] ?? 'nulo',
                                 'name' => $evaluation['name'] ?? 'N/D',
@@ -5405,6 +6229,7 @@ class ExecutiveReportDownloadController extends Controller
                     $resultRows[] = [
                         'evaluation_id' => $evaluationId,
                         'folio' => $this->safeValue($participant['personal_folio'] ?? null),
+                        'source' => (string) ($participant['source'] ?? ''),
                         'name' => $this->safeValue($participant['name'] ?? null),
                         'gender' => $genderLabel,
                         'position' => $this->safeValue($demographics['puesto'] ?? null),
@@ -5470,6 +6295,7 @@ class ExecutiveReportDownloadController extends Controller
                         return [
                             'evaluation_id' => (string) ($participant['id'] ?? ''),
                             'folio' => $this->safeValue($participant['personal_folio'] ?? null),
+                            'source' => (string) ($participant['source'] ?? ''),
                             'name' => $this->safeValue($participant['name'] ?? null),
                             'presented_at' => $presentedAt,
                             'gender' => $genderLabel,
@@ -5618,6 +6444,83 @@ class ExecutiveReportDownloadController extends Controller
             ];
         }
 
+        private function getWorkplaceViolenceQuantitativeSummaryFromService(WorkCenter $workCenter): array
+            {
+                /** @var WorkCenterNom035CalculationService $calculationService */
+                $calculationService = app(WorkCenterNom035CalculationService::class);
+
+                $stats = $calculationService->calculateViolenceLaborStatistics($workCenter);
+
+                $questions = [];
+
+                foreach (($stats['questions'] ?? []) as $question) {
+                    $questions[] = [
+                        'item' => (int) ($question['number'] ?? 0),
+                        'label' => (string) ($question['text'] ?? ''),
+                        'distribution' => [
+                            'nulo' => (int) ($question['distribution']['nulo'] ?? 0),
+                            'bajo' => (int) ($question['distribution']['bajo'] ?? 0),
+                            'medio' => (int) ($question['distribution']['medio'] ?? 0),
+                            'alto' => (int) ($question['distribution']['alto'] ?? 0),
+                            'muy_alto' => (int) ($question['distribution']['muy_alto'] ?? 0),
+                        ],
+                    ];
+                }
+
+                return [
+                    'total_participants' => (int) ($stats['total_evaluated'] ?? 0),
+                    'distribution' => [
+                        'nulo' => (int) ($stats['total_by_level']['nulo'] ?? 0),
+                        'bajo' => (int) ($stats['total_by_level']['bajo'] ?? 0),
+                        'medio' => (int) ($stats['total_by_level']['medio'] ?? 0),
+                        'alto' => (int) ($stats['total_by_level']['alto'] ?? 0),
+                        'muy_alto' => (int) ($stats['total_by_level']['muy_alto'] ?? 0),
+                    ],
+                    'questions' => $questions,
+                    'high_risk_total' => (int) ($stats['high_risk_total'] ?? 0),
+                ];
+            }
+
+            private function getWorkplaceViolenceWorkersSummaryFromService(WorkCenter $workCenter): array
+            {
+                /** @var WorkCenterNom035CalculationService $calculationService */
+                $calculationService = app(WorkCenterNom035CalculationService::class);
+
+                $stats = $calculationService->calculateViolenceLaborStatistics($workCenter);
+
+                $levelToScore = [
+                    'nulo' => 0,
+                    'bajo' => 1,
+                    'medio' => 2,
+                    'alto' => 3,
+                    'muy_alto' => 4,
+                ];
+
+                $rows = [];
+
+                foreach (($stats['participants'] ?? []) as $participant) {
+                    $items = [];
+
+                    foreach ([57, 58, 59, 60, 61, 62, 63, 64] as $questionNumber) {
+                        $level = (string) ($participant['question_levels'][$questionNumber] ?? 'nulo');
+                        $items[$questionNumber] = (int) ($levelToScore[$level] ?? 0);
+                    }
+
+                    $rows[] = [
+                        'folio' => (string) ($participant['personal_folio'] ?? ''),
+                        'source' => (string) ($participant['source'] ?? ''),
+                        'name' => '',
+                        'gender' => (string) ($participant['demographics']['genero'] ?? 'No especificado'),
+                        'ats' => false,
+                        'points' => (int) ($participant['violence_score'] ?? 0),
+                        'risk_level' => (string) ($participant['risk_level'] ?? 'nulo'),
+                        'items' => $items,
+                    ];
+                }
+
+                return $rows;
+            }
+
         private function getWorkplaceViolenceQuestionLabels(): array
         {
             return [
@@ -5717,6 +6620,7 @@ class ExecutiveReportDownloadController extends Controller
                 ->map(function ($evaluation) {
                     return [
                         'folio' => $evaluation['folio'] ?? 'N/D',
+                        'source' => $evaluation['source'] ?? null,
                         'global_score' => (int) ($evaluation['global_score'] ?? 0),
                         'global_level_key' => $evaluation['global_level_key'] ?? 'nulo',
                         'name' => $evaluation['name'] ?? 'N/D',
@@ -5734,190 +6638,274 @@ class ExecutiveReportDownloadController extends Controller
         }
 
         private function getDomainQuantitativeAnalysisSummary(string $organizationId, string $workCenterId): array
-        {
-            $rows = DB::table('evaluation_answers as ea')
-                ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
-                ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
-                ->where('pe.organization_id', $organizationId)
-                ->where('pe.work_center_id', $workCenterId)
-                ->where('pe.evaluation_type', 'referencia_iii')
-                ->where('ea.instrument', 'referencia_iii')
-                ->whereIn('pe.source', ['paper', 'online'])
-                ->where('pe.processing_status', 'completed')
-                ->whereNull('pe.deleted_at')
-                ->select(
-                'pe.id as evaluation_id',
-                'pe.source',
-                'ea.question_key',
-                'ea.answer_value',
-                'dd.department',
-                'dd.extra_fields'
-            )
-                ->orderBy('pe.id')
-                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
-                ->get();
+            {
+                $rows = DB::table('evaluation_answers as ea')
+                    ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
+                    ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
+                    ->where('pe.organization_id', $organizationId)
+                    ->where('pe.work_center_id', $workCenterId)
+                    ->where('pe.evaluation_type', 'referencia_iii')
+                    ->where('ea.instrument', 'referencia_iii')
+                    ->whereIn('pe.source', ['paper', 'online'])
+                    ->where('pe.processing_status', 'completed')
+                    ->whereNull('pe.deleted_at')
+                    ->select(
+                        'pe.id as evaluation_id',
+                        'pe.source',
+                        'ea.question_key',
+                        'ea.answer_value',
+                        'dd.position',
+                        'dd.extra_fields'
+                    )
+                    ->orderBy('pe.id')
+                    ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
+                    ->get();
 
-            $evaluations = $rows
-                ->groupBy('evaluation_id')
-                ->map(function ($items, $evaluationId) {
-                $first = $items->first();
+                $evaluations = $rows
+                    ->groupBy('evaluation_id')
+                    ->map(function ($items, $evaluationId) {
+                        $first = $items->first();
 
-                $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
-                if (! is_array($extra)) {
-                    $extra = [];
-                }
+                        $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
 
-                $isBoss = $this->extractWorkerFlag($extra, [
-                    'jefe', 'soy_jefe', 'is_boss', 'is_manager',
-                    'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
-                ]);
-
-                $attendsPublic = $this->extractWorkerFlag($extra, [
-                    'atiende', 'atiende_clientes', 'atencion_clientes',
-                    'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
-                ]);
-
-                $result = $this->buildReferenceThreeEvaluationResult(
-                    (string) $evaluationId,
-                    (string) ($first->source ?? 'paper'),
-                    $items,
-                    $attendsPublic,
-                    $isBoss
-                );
-
-                $result['area'] = $this->safeValue($first->department);
-
-                return $result;
-            })
-                ->values()
-                ->all();
-
-            $domainNames = array_keys($this->getReferenceThreeDomainMaxScores());
-
-            return collect($evaluations)
-                ->groupBy(function ($evaluation) {
-                    $label = trim((string) ($evaluation['area'] ?? ''));
-                    return $label !== '' ? $label : 'N/D';
-                })
-                ->map(function ($items, $areaName) use ($domainNames) {
-                    $participants = count($items);
-                    $rows = [];
-
-                    foreach ($domainNames as $index => $domainName) {
-                        $distribution = $this->initializeRiskLevelCounts();
-
-                        foreach ($items as $evaluation) {
-                            $score = (int) ($evaluation['domain_scores'][$domainName] ?? 0);
-                            $levelKey = $evaluation['domain_levels'][$domainName]['key']
-                                ?? $this->classifyNom035Score('domains', $domainName, $score)['key'];
-
-                            if (array_key_exists($levelKey, $distribution)) {
-                                $distribution[$levelKey]++;
-                            }
+                        if (! is_array($extra)) {
+                            $extra = [];
                         }
 
-                        $rows[] = [
-                            'label' => str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) . '.- ' . $domainName,
-                            'distribution' => $distribution,
-                            'attention' => $this->getQuestionGlobalAttentionCount($distribution),
-                        ];
-                    }
+                        $isBoss = $this->extractWorkerFlag($extra, [
+                            'jefe',
+                            'soy_jefe',
+                            'is_boss',
+                            'is_manager',
+                            'supervises_people',
+                            'supervisa_personal',
+                            'jefe_trabajadores',
+                        ]);
 
-                    return [
-                        'name' => $areaName,
-                        'participants' => $participants,
-                        'rows' => $rows,
-                    ];
-                })
-                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
-                ->values()
-                ->all();
-        }
+                        $attendsPublic = $this->extractWorkerFlag($extra, [
+                            'atiende',
+                            'atiende_clientes',
+                            'atencion_clientes',
+                            'servicio_clientes',
+                            'servicio_usuarios',
+                            'client_service',
+                            'attends_public',
+                        ]);
+
+                        $result = $this->buildReferenceThreeEvaluationResult(
+                            (string) $evaluationId,
+                            (string) ($first->source ?? 'paper'),
+                            $items,
+                            $attendsPublic,
+                            $isBoss
+                        );
+
+                        $result['position'] = $this->safeValue($first->position);
+
+                        return $result;
+                    })
+                    ->values()
+                    ->all();
+
+                $domainNames = array_keys($this->getReferenceThreeDomainMaxScores());
+
+                return collect($evaluations)
+                    ->groupBy(function ($evaluation) {
+                        $label = trim((string) ($evaluation['position'] ?? ''));
+
+                        return $label !== '' ? $label : 'N/D';
+                    })
+                    ->map(function ($items, $positionName) use ($domainNames) {
+                        $participants = count($items);
+                        $rows = [];
+
+                        foreach ($domainNames as $domainName) {
+                            $distribution = $this->initializeRiskLevelCounts();
+                            $applicableEvaluations = 0;
+
+                            foreach ($items as $evaluation) {
+                                $domainScores = $evaluation['domain_scores'] ?? [];
+
+                                if (! is_array($domainScores) || ! array_key_exists($domainName, $domainScores)) {
+                                    continue;
+                                }
+
+                                $score = (int) $domainScores[$domainName];
+                                $applicableEvaluations++;
+
+                                $levelKey = $evaluation['domain_levels'][$domainName]['key']
+                                    ?? $this->classifyNom035Score('domains', $domainName, $score)['key'];
+
+                                if (array_key_exists($levelKey, $distribution)) {
+                                    $distribution[$levelKey]++;
+                                }
+                            }
+
+                            if ($applicableEvaluations === 0) {
+                                continue;
+                            }
+
+                            $rows[] = [
+                                'label' => str_pad((string) count($rows) + 1, 2, '0', STR_PAD_LEFT) . '.- ' . $domainName,
+                                'distribution' => $distribution,
+                                'attention' => $this->getQuestionGlobalAttentionCount($distribution),
+                                'applicable_evaluations' => $applicableEvaluations,
+                            ];
+                        }
+
+                        if (empty($rows)) {
+                            return null;
+                        }
+
+                        return [
+                            'name' => $positionName,
+                            'participants' => $participants,
+                            'rows' => $rows,
+                        ];
+                    })
+                    ->filter()
+                    ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                    ->values()
+                    ->all();
+            }
 
         private function getWorkerIdentificationByCategorySummary(string $organizationId, string $workCenterId): array
-        {
-            $rows = DB::table('evaluation_answers as ea')
-                ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
-                ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
-                ->where('pe.organization_id', $organizationId)
-                ->where('pe.work_center_id', $workCenterId)
-                ->where('pe.evaluation_type', 'referencia_iii')
-                ->where('ea.instrument', 'referencia_iii')
-                ->whereIn('pe.source', ['paper', 'online'])
-                ->where('pe.processing_status', 'completed')
-                ->whereNull('pe.deleted_at')
-                ->select(
-                'pe.id as evaluation_id',
-                'pe.source',
-                'pe.personal_folio',
-                'pe.evaluee_name',
-                'ea.question_key',
-                'ea.answer_value',
-                'dd.extra_fields'
-            )
-                ->orderBy('pe.id')
-                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
-                ->get();
+            {
+                $categorySummary = $this->getReferenceThreeCategorySummary($organizationId, $workCenterId);
 
-            $categoryNames = array_keys($this->getReferenceThreeCategoryMaxScores());
+                $categoryNames = collect($categorySummary['categories'] ?? [])
+                    ->pluck('name')
+                    ->filter(fn ($name): bool => trim((string) $name) !== '')
+                    ->values()
+                    ->all();
 
-            return $rows
-                ->groupBy('evaluation_id')
-                ->map(function ($items, $evaluationId) use ($categoryNames) {
-                $first = $items->first();
-
-                $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
-                if (! is_array($extra)) {
-                    $extra = [];
+                if (empty($categoryNames)) {
+                    return [
+                        'categories' => [],
+                        'rows' => [],
+                    ];
                 }
 
-                $isBoss = $this->extractWorkerFlag($extra, [
-                    'jefe', 'soy_jefe', 'is_boss', 'is_manager',
-                    'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
-                ]);
+                $answerRows = DB::table('evaluation_answers as ea')
+                    ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
+                    ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
+                    ->where('pe.organization_id', $organizationId)
+                    ->where('pe.work_center_id', $workCenterId)
+                    ->where('pe.evaluation_type', 'referencia_iii')
+                    ->where('ea.instrument', 'referencia_iii')
+                    ->whereIn('pe.source', ['paper', 'online'])
+                    ->where('pe.processing_status', 'completed')
+                    ->whereNull('pe.deleted_at')
+                    ->select(
+                        'pe.id as evaluation_id',
+                        'pe.source',
+                        'pe.personal_folio',
+                        'pe.evaluee_name',
+                        'ea.question_key',
+                        'ea.answer_value',
+                        'dd.extra_fields'
+                    )
+                    ->orderBy('pe.id')
+                    ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
+                    ->get();
 
-                $attendsPublic = $this->extractWorkerFlag($extra, [
-                    'atiende', 'atiende_clientes', 'atencion_clientes',
-                    'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
-                ]);
+                $workerRows = $answerRows
+                    ->groupBy('evaluation_id')
+                    ->map(function ($items, $evaluationId) use ($categoryNames) {
+                        $first = $items->first();
 
-                $result = $this->buildReferenceThreeEvaluationResult(
-                    (string) $evaluationId,
-                    (string) ($first->source ?? 'paper'),
-                    $items,
-                    $attendsPublic,
-                    $isBoss
-                );
-                    $categories = [];
-                    foreach ($categoryNames as $categoryName) {
-                        $score = (int) ($result['category_scores'][$categoryName] ?? 0);
-                        $levelKey = $result['category_levels'][$categoryName]['key']
-                            ?? $this->classifyNom035Score('categories', $categoryName, $score)['key'];
+                        $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
 
-                        $categories[] = [
-                            'name' => $categoryName,
-                            'score' => $score,
-                            'level_key' => $levelKey,
+                        if (! is_array($extra)) {
+                            $extra = [];
+                        }
+
+                        $isBoss = $this->extractWorkerFlag($extra, [
+                            'jefe',
+                            'soy_jefe',
+                            'is_boss',
+                            'is_manager',
+                            'supervises_people',
+                            'supervisa_personal',
+                            'jefe_trabajadores',
+                        ]);
+
+                        $attendsPublic = $this->extractWorkerFlag($extra, [
+                            'atiende',
+                            'atiende_clientes',
+                            'atencion_clientes',
+                            'servicio_clientes',
+                            'servicio_usuarios',
+                            'client_service',
+                            'attends_public',
+                        ]);
+
+                        $result = $this->buildReferenceThreeEvaluationResult(
+                            (string) $evaluationId,
+                            (string) ($first->source ?? 'paper'),
+                            $items,
+                            $attendsPublic,
+                            $isBoss
+                        );
+
+                        $categoryScores = $result['category_scores'] ?? [];
+                        $categoryLevels = $result['category_levels'] ?? [];
+
+                        if (! is_array($categoryScores)) {
+                            $categoryScores = [];
+                        }
+
+                        if (! is_array($categoryLevels)) {
+                            $categoryLevels = [];
+                        }
+
+                        $categories = [];
+
+                        foreach ($categoryNames as $categoryName) {
+                            if (! array_key_exists($categoryName, $categoryScores)) {
+                                continue;
+                            }
+
+                            $score = (int) $categoryScores[$categoryName];
+
+                            $levelMeta = is_array($categoryLevels[$categoryName] ?? null)
+                                ? $categoryLevels[$categoryName]
+                                : [];
+
+                            $levelKey = $levelMeta['key']
+                                ?? $this->classifyNom035Score('categories', $categoryName, $score)['key'];
+
+                            $categories[$categoryName] = [
+                                'name' => $categoryName,
+                                'score' => $score,
+                                'level_key' => $levelKey,
+                            ];
+                        }
+
+                        return [
+                            'folio' => $this->safeValue($first->personal_folio),
+                            'source' => $result['source'] ?? null,
+                            'name' => $this->safeValue($first->evaluee_name),
+                            'global_score' => (int) ($result['global_score'] ?? 0),
+                            'global_level_key' => $result['global_level_key'] ?? 'nulo',
+                            'categories' => $categories,
                         ];
-                    }
+                    })
+                    ->filter(function ($row) {
+                        return in_array($row['global_level_key'] ?? 'nulo', ['medio', 'alto', 'muy_alto'], true)
+                            && ! empty($row['categories']);
+                    })
+                    ->sort(function ($a, $b) {
+                        return $this->compareRiskRows($a, $b, 'global_level_key', 'global_score');
+                    })
+                    ->values()
+                    ->all();
 
-                    return [
-                        'folio' => $this->safeValue($first->personal_folio),
-                        'name' => $this->safeValue($first->evaluee_name),
-                        'global_score' => (int) ($result['global_score'] ?? 0),
-                        'global_level_key' => $result['global_level_key'] ?? 'nulo',
-                        'categories' => $categories,
-                    ];
-                })
-                ->filter(function ($row) {
-                    return in_array($row['global_level_key'] ?? 'nulo', ['medio', 'alto', 'muy_alto'], true);
-                })
-                ->sort(function ($a, $b) {
-                return $this->compareRiskRows($a, $b, 'global_level_key', 'global_score');
-            })
-            ->values()
-            ->all();
-        }
+                return [
+                    'categories' => $categoryNames,
+                    'rows' => $workerRows,
+                ];
+            }
 
         private function extractWorkerFlag(array $payload, array $keys): bool
         {
@@ -6446,7 +7434,13 @@ class ExecutiveReportDownloadController extends Controller
             return $outputPath;
         }
 
-    private function generateCategoryDashboardChart(array $categories, int $totalEvaluations, string $outputPath): ?string
+    private function generateCategoryDashboardChart(
+            array $categories,
+            int $totalEvaluations,
+            string $outputPath,
+            int $partNumber = 1,
+            int $totalParts = 1
+        ): ?string
         {
             if (! function_exists('imagecreatetruecolor')) {
                 return null;
@@ -6462,8 +7456,23 @@ class ExecutiveReportDownloadController extends Controller
                 mkdir($chartDir, 0755, true);
             }
 
-            $width = 1680;
-            $height = 1540;
+            $columns = 2;
+            $rows = (int) ceil(count($categories) / $columns);
+
+            $width = 1780;
+
+            $tableX = 35;
+            $tableY = 90;
+            $tableW = $width - 70;
+            $rowH = 62;
+
+            $descW = 760;
+            $cellW = 135;
+
+            $tableHeight = $rowH * (count($categories) + 1);
+            $panelY = $tableY + $tableHeight + 24;
+            $chartBlockHeight = $rows * 430;
+            $height = $panelY + $chartBlockHeight + 130;
 
             $image = imagecreatetruecolor($width, $height);
 
@@ -6489,16 +7498,14 @@ class ExecutiveReportDownloadController extends Controller
             imagefilledrectangle($image, 20, 20, $width - 20, $height - 20, $panel);
             imagerectangle($image, 20, 20, $width - 20, $height - 20, $border);
 
-            $this->drawChartTextBold($image, 24, 38, 42, $text, 'Categorías - Atención (%)');
+            $title = 'Categorías - Atención (%)';
+            if ($totalParts > 1) {
+                $title .= ' - Parte ' . $partNumber . ' de ' . $totalParts;
+            }
+
+            $this->drawChartTextBold($image, 24, 38, 42, $text, $title);
 
             // ===== Tabla superior =====
-            $tableX = 35;
-            $tableY = 90;
-            $tableW = $width - 70;
-            $rowH = 62;
-
-            $descW = 760;
-            $cellW = 135;
 
             imagefilledrectangle($image, $tableX, $tableY, $tableX + $tableW, $tableY + ($rowH * (count($categories) + 1)), $white);
             imagerectangle($image, $tableX, $tableY, $tableX + $tableW, $tableY + ($rowH * (count($categories) + 1)), $border);
@@ -6564,21 +7571,25 @@ class ExecutiveReportDownloadController extends Controller
                 $this->drawChartTextCenteredBold($image, 16, $attX1, $y1, $attX2, $y2, $white, $attention);
             }
 
-            // ===== Panel inferior =====
-            $panelY = 500;
+            // panel inferior
             imagefilledrectangle($image, 35, $panelY, $width - 35, $height - 35, $white);
             imagerectangle($image, 35, $panelY, $width - 35, $height - 35, $border);
-
             $this->drawChartTextBold($image, 22, 50, $panelY + 32, $text, 'Atención (%)');
 
-            $slots = [
-                [75, 615],
-                [895, 615],
-                [75, 905],
-                [895, 905],
-                [75, 1195],
-                [895, 1195],
-            ];
+            $slots = [];
+            $baseX = 75;
+            $baseY = $panelY + 95;
+            $colGap = 860;
+            $rowGap = 420;
+
+            for ($r = 0; $r < $rows; $r++) {
+                for ($c = 0; $c < $columns; $c++) {
+                    $slots[] = [
+                        $baseX + ($c * $colGap),
+                        $baseY + ($r * $rowGap),
+                    ];
+                }
+            }
 
             foreach ($categories as $i => $category) {
                 if (! isset($slots[$i])) {
@@ -6591,11 +7602,14 @@ class ExecutiveReportDownloadController extends Controller
                     $image,
                     $baseX,
                     $baseY,
-                    620,
-                    230,
+                    700,
+                    340,
                     (string) $category['name'],
+                    (float) ($category['average_score'] ?? 0),
+                    (int) ($category['max_score'] ?? 0),
+                    (float) ($category['average_percentage'] ?? 0),
                     $category['distribution'] ?? [],
-                    $totalEvaluations,
+                    (int) ($category['applicable_evaluations'] ?? $totalEvaluations),
                     $blue,
                     $green,
                     $yellow,
@@ -6620,6 +7634,9 @@ class ExecutiveReportDownloadController extends Controller
             int $w,
             int $h,
             string $title,
+            float $averageScore,
+            int $maxScore,
+            float $averagePercentage,
             array $distribution,
             int $totalEvaluations,
             $blue,
@@ -6631,14 +7648,24 @@ class ExecutiveReportDownloadController extends Controller
             $mutedColor,
             $borderColor
         ): void {
-            $title = mb_substr($title, 0, 34);
+            $title = mb_substr($title, 0, 40);
 
-            $this->drawChartTextBold($image, 17, $x + 8, $y - 24, $textColor, $title);
+            $this->drawChartTextBold($image, 18, $x + 8, $y - 28, $textColor, $title);
 
-            $chartX = $x + 10;
-            $chartY = $y;
-            $chartW = $w;
-            $chartH = $h;
+            $averageText = 'Promedio: ' .
+            number_format($averageScore, 2) .
+            ' / ' .
+            $maxScore .
+            ' (' .
+            number_format($averagePercentage, 2) .
+            '%)';
+
+        $this->drawChartText($image, 12, $x + 8, $y + 8, $mutedColor, $averageText);
+
+        $chartX = $x + 10;
+        $chartY = $y + 48;
+        $chartW = $w;
+        $chartH = max(185, $h - 40);
 
             imagerectangle($image, $chartX, $chartY, $chartX + $chartW, $chartY + $chartH, $borderColor);
 
@@ -6653,10 +7680,10 @@ class ExecutiveReportDownloadController extends Controller
             $colors = [$blue, $green, $yellow, $orange, $red];
             $keys = ['nulo', 'bajo', 'medio', 'alto', 'muy_alto'];
 
-            $barW = 82;
-            $gap = 22;
-            $startX = $chartX + 36;
-            $maxH = $chartH - 28;
+            $barW = 92;
+            $gap = 24;
+            $startX = $chartX + 42;
+            $maxH = $chartH - 35;
 
             foreach ($keys as $i => $key) {
                 $pct = $totalEvaluations > 0
@@ -6678,7 +7705,13 @@ class ExecutiveReportDownloadController extends Controller
             }
         }
 
-    private function generateDomainDashboardChart(array $domains, int $totalEvaluations, string $outputPath): ?string
+    private function generateDomainDashboardChart(
+            array $domains,
+            int $totalEvaluations,
+            string $outputPath,
+            int $partNumber = 1,
+            int $totalParts = 1
+        ): ?string
         {
             if (! function_exists('imagecreatetruecolor')) {
                 return null;
@@ -6694,8 +7727,23 @@ class ExecutiveReportDownloadController extends Controller
                 mkdir($chartDir, 0755, true);
             }
 
-            $width = 1380;
-            $height = 1820;
+            $columns = 2;
+            $rows = (int) ceil(count($domains) / $columns);
+
+            $width = 1780;
+
+            $tableX = 35;
+            $tableY = 90;
+            $tableW = $width - 70;
+            $rowH = 60;
+
+            $descW = 620;
+            $cellW = 115;
+
+            $tableHeight = $rowH * (count($domains) + 1);
+            $panelY = $tableY + $tableHeight + 24;
+            $chartBlockHeight = $rows * 430;
+            $height = $panelY + $chartBlockHeight + 130;
 
             $image = imagecreatetruecolor($width, $height);
 
@@ -6721,7 +7769,12 @@ class ExecutiveReportDownloadController extends Controller
             imagefilledrectangle($image, 20, 20, $width - 20, $height - 20, $panel);
             imagerectangle($image, 20, 20, $width - 20, $height - 20, $border);
 
-            $this->drawChartTextBold($image, 24, 38, 42, $text, 'Dominios - Atención (%)');
+            $title = 'Dominios - Atención (%)';
+if ($totalParts > 1) {
+    $title .= ' - Parte ' . $partNumber . ' de ' . $totalParts;
+}
+
+$this->drawChartTextBold($image, 24, 38, 42, $text, $title);
 
             // ===== Tabla superior =====
             $tableX = 35;
@@ -6796,25 +7849,25 @@ class ExecutiveReportDownloadController extends Controller
                 $this->drawChartTextCenteredBold($image, 16, $attX1, $y1, $attX2, $y2, $white, $attention);
             }
 
-            // ===== Panel inferior =====
-            $panelY = 780;
+            // panel inferior
             imagefilledrectangle($image, 35, $panelY, $width - 35, $height - 35, $white);
             imagerectangle($image, 35, $panelY, $width - 35, $height - 35, $border);
-
             $this->drawChartTextBold($image, 22, 50, $panelY + 32, $text, 'Atención (%)');
 
-            $slots = [
-                [75, 875],
-                [720, 875],
-                [75, 1060],
-                [720, 1060],
-                [75, 1245],
-                [720, 1245],
-                [75, 1430],
-                [720, 1430],
-                [75, 1615],
-                [720, 1615],
-            ];
+            $slots = [];
+            $baseX = 75;
+            $baseY = $panelY + 95;
+            $colGap = 860;
+            $rowGap = 420;
+
+            for ($r = 0; $r < $rows; $r++) {
+                for ($c = 0; $c < $columns; $c++) {
+                    $slots[] = [
+                        $baseX + ($c * $colGap),
+                        $baseY + ($r * $rowGap),
+                    ];
+                }
+            }
 
             foreach ($domains as $i => $domain) {
                 if (! isset($slots[$i])) {
@@ -6824,30 +7877,31 @@ class ExecutiveReportDownloadController extends Controller
                 [$baseX, $baseY] = $slots[$i];
 
                 $this->drawDomainMiniChart(
-                    $image,
-                    $baseX,
-                    $baseY,
-                    540,
-                    125,
-                    (string) $domain['name'],
-                    $domain['distribution'] ?? [],
-                    $totalEvaluations,
-                    $blue,
-                    $green,
-                    $yellow,
-                    $orange,
-                    $red,
-                    $text,
-                    $muted,
-                    $border
-                );
+                $image,
+                $baseX,
+                $baseY,
+                700,
+                340,
+                (string) $domain['name'],
+                (float) ($domain['average_score'] ?? 0),
+                (int) ($domain['max_score'] ?? 0),
+                (float) ($domain['average_percentage'] ?? 0),
+                $domain['distribution'] ?? [],
+                (int) ($domain['applicable_evaluations'] ?? $totalEvaluations),
+                $blue,
+                $green,
+                $yellow,
+                $orange,
+                $red,
+                $text,
+                $muted,
+                $border
+            );
             }
 
             imagepng($image, $outputPath);
             imagedestroy($image);
             gc_collect_cycles();
-
-            return $outputPath;
 
             return $outputPath;
         }
@@ -6859,6 +7913,9 @@ class ExecutiveReportDownloadController extends Controller
             int $w,
             int $h,
             string $title,
+            float $averageScore,
+            int $maxScore,
+            float $averagePercentage,
             array $distribution,
             int $totalEvaluations,
             $blue,
@@ -6874,16 +7931,26 @@ class ExecutiveReportDownloadController extends Controller
             $line1 = $wrapped[0] ?? '';
             $line2 = $wrapped[1] ?? '';
 
-            $this->drawChartTextBold($image, 16, $x + 8, $y - 28, $textColor, $line1);
+            $this->drawChartTextBold($image, 18, $x + 8, $y - 32, $textColor, $line1);
 
             if ($line2 !== '') {
-                $this->drawChartTextBold($image, 16, $x + 8, $y - 4, $textColor, $line2);
+                $this->drawChartTextBold($image, 18, $x + 8, $y - 8, $textColor, $line2);
             }
 
-            $chartX = $x + 12;
-            $chartY = $y + 8;
-            $chartW = $w;
-            $chartH = $h;
+            $averageText = 'Promedio: ' .
+            number_format($averageScore, 2) .
+            ' / ' .
+            $maxScore .
+            ' (' .
+            number_format($averagePercentage, 2) .
+            '%)';
+
+        $this->drawChartText($image, 12, $x + 8, $y + 14, $mutedColor, $averageText);
+
+        $chartX = $x + 12;
+        $chartY = $y + 48;
+        $chartW = $w;
+        $chartH = max(270, $h - 40);
 
             imagerectangle($image, $chartX, $chartY, $chartX + $chartW, $chartY + $chartH, $borderColor);
 
@@ -6898,10 +7965,10 @@ class ExecutiveReportDownloadController extends Controller
             $colors = [$blue, $green, $yellow, $orange, $red];
             $keys = ['nulo', 'bajo', 'medio', 'alto', 'muy_alto'];
 
-            $barW = 82;
-            $gap = 22;
-            $startX = $chartX + 36;
-            $maxH = $chartH - 28;
+            $barW = 92;
+            $gap = 24;
+            $startX = $chartX + 42;
+            $maxH = $chartH - 35;
 
             foreach ($keys as $i => $key) {
                 $pct = $totalEvaluations > 0
@@ -6947,7 +8014,7 @@ class ExecutiveReportDownloadController extends Controller
             $columns = 2;
             $rows = (int) ceil(count($dimensions) / $columns);
 
-            $width = 1680;
+            $width = 1560;
             $tableX = 30;
             $tableY = 82;
             $rowH = 44;
@@ -6956,8 +8023,8 @@ class ExecutiveReportDownloadController extends Controller
 
             $tableHeight = $rowH * (count($dimensions) + 1);
             $panelY = $tableY + $tableHeight + 22;
-            $chartBlockHeight = ($rows * 260);
-            $height = $panelY + $chartBlockHeight + 105;
+            $chartBlockHeight = ($rows * 520);
+            $height = $panelY + $chartBlockHeight + 160;
 
             $image = imagecreatetruecolor($width, $height);
 
@@ -7079,10 +8146,10 @@ class ExecutiveReportDownloadController extends Controller
             $this->drawChartTextBold($image, 22, 50, $panelY + 32, $text, 'Atención (%)');
 
             $slots = [];
-            $baseX = 75;
-            $baseY = $panelY + 90;
-            $colGap = 820;
-            $rowGap = 250;
+            $baseX = 50;
+            $baseY = $panelY + 100;
+            $colGap = 730;
+            $rowGap = 500;
 
             for ($r = 0; $r < $rows; $r++) {
                 for ($c = 0; $c < $columns; $c++) {
@@ -7104,11 +8171,14 @@ class ExecutiveReportDownloadController extends Controller
                     $image,
                     $slotX,
                     $slotY,
-                    620,
-                    175,
+                    700,
+                    430,
                     (string) $dimension['name'],
+                    (float) ($dimension['average_score'] ?? 0),
+                    (int) ($dimension['max_score'] ?? 0),
+                    (float) ($dimension['average_percentage'] ?? 0),
                     $dimension['distribution'] ?? [],
-                    $totalEvaluations,
+                    (int) ($dimension['applicable_evaluations'] ?? $totalEvaluations),
                     $blue,
                     $green,
                     $yellow,
@@ -7128,14 +8198,17 @@ class ExecutiveReportDownloadController extends Controller
         }
 
     private function drawDimensionMiniChart(
-            $image,
-            int $x,
-            int $y,
-            int $w,
-            int $h,
-            string $title,
-            array $distribution,
-            int $totalEvaluations,
+        $image,
+        int $x,
+        int $y,
+        int $w,
+        int $h,
+        string $title,
+        float $averageScore,
+        int $maxScore,
+        float $averagePercentage,
+        array $distribution,
+        int $totalEvaluations,
             $blue,
             $green,
             $yellow,
@@ -7145,7 +8218,7 @@ class ExecutiveReportDownloadController extends Controller
             $mutedColor,
             $borderColor
         ): void {
-            $wrapped = explode("\n", wordwrap($title, 34, "\n", true));
+            $wrapped = explode("\n", wordwrap($title, 38, "\n", true));
             $line1 = $wrapped[0] ?? '';
             $line2 = $wrapped[1] ?? '';
             $line3 = $wrapped[2] ?? '';
@@ -7158,7 +8231,7 @@ class ExecutiveReportDownloadController extends Controller
             if ($line1 !== '') {
                 $this->drawChartTextCenteredBold(
                     $image,
-                    12,
+                    14,
                     $titleLeft,
                     $titleTop,
                     $titleRight,
@@ -7171,7 +8244,7 @@ class ExecutiveReportDownloadController extends Controller
             if ($line2 !== '') {
                 $this->drawChartTextCenteredBold(
                     $image,
-                    12,
+                    14,
                     $titleLeft,
                     $titleTop + 14,
                     $titleRight,
@@ -7184,7 +8257,7 @@ class ExecutiveReportDownloadController extends Controller
             if ($line3 !== '') {
                 $this->drawChartTextCenteredBold(
                     $image,
-                    12,
+                    14,
                     $titleLeft,
                     $titleTop + 28,
                     $titleRight,
@@ -7194,10 +8267,20 @@ class ExecutiveReportDownloadController extends Controller
                 );
             }
 
-            $chartX = $x + 10;
-            $chartY = $y + 40;
-            $chartW = $w;
-            $chartH = $h;
+            $averageText = 'Promedio: ' .
+            number_format($averageScore, 2) .
+            ' / ' .
+            $maxScore .
+            ' (' .
+            number_format($averagePercentage, 2) .
+            '%)';
+
+        $this->drawChartText($image, 12, $x + 12, $y + 64, $mutedColor, $averageText);
+
+        $chartX = $x + 10;
+        $chartY = $y + 98;
+        $chartW = $w;
+        $chartH = max(270, $h - 55);
 
             imagerectangle($image, $chartX, $chartY, $chartX + $chartW, $chartY + $chartH, $borderColor);
 
@@ -7212,10 +8295,10 @@ class ExecutiveReportDownloadController extends Controller
             $colors = [$blue, $green, $yellow, $orange, $red];
             $keys = ['nulo', 'bajo', 'medio', 'alto', 'muy_alto'];
 
-            $barW = 82;
-            $gap = 22;
-            $startX = $chartX + 36;
-            $maxH = $chartH - 24;
+            $barW = 92;
+            $gap = 24;
+            $startX = $chartX + 42;
+            $maxH = $chartH - 45;
 
             foreach ($keys as $i => $key) {
                 $pct = $totalEvaluations > 0
