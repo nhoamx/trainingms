@@ -656,28 +656,27 @@ class ExecutiveReportDownloadController extends Controller
 
     private function addReferenceThreeGlobalRiskSection(Section $section, WorkCenter $workCenter): void
         {
-            /** @var WorkCenterNom035CalculationService $calculationService */
-            $calculationService = app(WorkCenterNom035CalculationService::class);
+            $summary = $this->getReferenceThreeGlobalSummary(
+            (string) $workCenter->organization_id,
+            (string) $workCenter->id
+        );
 
-            $stats = $calculationService->calculateGlobalStatistics($workCenter);
-            $global = $stats['global'] ?? [];
+        $distribution = $summary['distribution'] ?? $this->initializeRiskLevelCounts();
 
-            $distribution = $global['distribution'] ?? $this->initializeRiskLevelCounts();
+        foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
+            $distribution[$levelKey] = (int) ($distribution[$levelKey] ?? 0);
+        }
 
-            foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
-                $distribution[$levelKey] = (int) ($distribution[$levelKey] ?? 0);
-            }
+        $totalEvaluations = (int) ($summary['total_evaluations'] ?? 0);
+        $averageGlobalScore = (float) ($summary['average_global_score'] ?? 0);
+        $maxGlobalScore = (int) ($summary['max_global_score'] ?? config('nom035_risk_levels.global.max_score', 288));
+        $averageGlobalPercentage = (float) ($summary['average_global_percentage'] ?? 0);
 
-            $totalEvaluations = (int) ($stats['total_evaluations'] ?? 0);
-            $averageGlobalScore = (float) ($global['average_score'] ?? 0);
-            $maxGlobalScore = (int) ($global['max_score'] ?? config('nom035_risk_levels.global.max_score', 288));
-            $averageGlobalPercentage = (float) ($global['percentage'] ?? 0);
-
-            $dominantLevelKey = (string) ($global['risk_level'] ?? 'nulo');
-            $dominantLevelLabel = (string) (
-                $global['risk_level_label']
-                ?? config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey))
-            );
+        $dominantLevelKey = (string) ($summary['dominant_level_key'] ?? 'nulo');
+        $dominantLevelLabel = (string) (
+            $summary['dominant_level_label']
+            ?? config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey))
+        );
 
                 $section->addTitle('III. Análisis general referencia nivel de riesgo', 1);
 
@@ -754,13 +753,6 @@ class ExecutiveReportDownloadController extends Controller
                 );
 
                 $section->addTextBreak(1);
-
-                $this->addRiskLevelDistributionTable(
-                    $section,
-                    'Nivel de riesgo',
-                    $distribution,
-                    $totalEvaluations
-                );
 
                 $globalChartPath = $this->generateRiskDistributionChart(
                     'Distribución Global de Niveles de Riesgo',
@@ -939,7 +931,10 @@ class ExecutiveReportDownloadController extends Controller
 
     private function addReferenceThreeCategorySection(Section $section, Organization $organization, WorkCenter $workCenter): void
         {
-            $summary = $this->getReferenceThreeCategorySummaryFromService($workCenter);
+            $summary = $this->getReferenceThreeCategorySummary(
+            (string) $organization->id,
+            (string) $workCenter->id
+        );
 
             $section->addTitle('XIX. Evaluación del Entorno Organizacional.', 1);
 
@@ -990,7 +985,10 @@ class ExecutiveReportDownloadController extends Controller
 
         private function addReferenceThreeDomainSection(Section $section, Organization $organization, WorkCenter $workCenter): void
     {
-        $summary = $this->getReferenceThreeDomainSummaryFromService($workCenter);
+        $summary = $this->getReferenceThreeDomainSummary(
+            (string) $organization->id,
+            (string) $workCenter->id
+        );
 
         $section->addTitle('XX. Análisis cuantitativo referencia nivel de riesgo por dominio', 1);
 
@@ -1036,10 +1034,13 @@ class ExecutiveReportDownloadController extends Controller
 
    private function addReferenceThreeDimensionSection(Section $section, WorkCenter $workCenter): void
         {
-            $summary = $this->getReferenceThreeDimensionSummaryFromService($workCenter);
+            $summary = $this->getReferenceThreeDimensionSummary(
+            (string) $workCenter->organization_id,
+            (string) $workCenter->id
+        );
 
-            $dimensions = $summary['dimensions'] ?? [];
-            $totalEvaluations = (int) ($summary['total_evaluations'] ?? 0);
+        $dimensions = $summary['dimensions'] ?? [];
+        $totalEvaluations = (int) ($summary['total_evaluations'] ?? 0);
 
             $section->addTitle('XXI. Análisis cuantitativo referencia nivel de riesgo por dimensión', 1);
 
@@ -1216,82 +1217,78 @@ class ExecutiveReportDownloadController extends Controller
         }
 
         private function getReferenceThreeQuestionRiskTableSummary(WorkCenter $workCenter): array
-        {
-            $rows = DB::table('evaluation_answers as ea')
-                ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
-                ->where('pe.organization_id', $workCenter->organization_id)
-                ->where('pe.work_center_id', $workCenter->id)
-                ->where('pe.evaluation_type', 'referencia_iii')
-                ->where('ea.instrument', 'referencia_iii')
-                ->whereIn('pe.source', ['paper', 'online'])
-                ->where('pe.processing_status', 'completed')
-                ->whereNull('pe.deleted_at')
-                ->select(
-                    'pe.id as evaluation_id',
-                    'ea.question_key',
-                    'ea.answer_value'
-                )
-                ->orderBy('pe.id')
-                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
-                ->get();
+            {
+                $globalSummary = $this->getReferenceThreeGlobalSummary(
+                    (string) $workCenter->organization_id,
+                    (string) $workCenter->id
+                );
 
-            $questions = [];
+                $evaluations = $globalSummary['evaluations'] ?? [];
+                $totalEvaluations = count($evaluations);
 
-            for ($i = 1; $i <= 72; $i++) {
-                $questions[$i] = [
-                    'question' => 'P' . $i,
-                    'distribution' => $this->initializeRiskLevelCounts(),
-                    'total' => 0,
+                $questions = [];
+
+                for ($i = 1; $i <= 72; $i++) {
+                    $questions[$i] = [
+                        'question' => 'P' . $i,
+                        'distribution' => $this->initializeRiskLevelCounts(),
+                        'total' => 0,
+                    ];
+                }
+
+                foreach ($evaluations as $evaluation) {
+                    $questionScores = $evaluation['question_scores'] ?? [];
+
+                    if (! is_array($questionScores)) {
+                        continue;
+                    }
+
+                    foreach ($questionScores as $questionKey => $score) {
+                        $questionKey = (int) $questionKey;
+
+                        if ($questionKey < 1 || $questionKey > 72) {
+                            continue;
+                        }
+
+                        if (! is_numeric($score)) {
+                            continue;
+                        }
+
+                        $riskLevelKey = $this->mapQuestionScoreToRiskLevelKey((int) $score);
+
+                        if (isset($questions[$questionKey]['distribution'][$riskLevelKey])) {
+                            $questions[$questionKey]['distribution'][$riskLevelKey]++;
+                            $questions[$questionKey]['total']++;
+                        }
+                    }
+                }
+
+                $questionRows = array_values(array_filter(
+                    $questions,
+                    fn (array $row): bool => (int) ($row['total'] ?? 0) > 0
+                ));
+
+                usort($questionRows, function (array $a, array $b): int {
+                    return (int) str_replace('P', '', $a['question']) <=> (int) str_replace('P', '', $b['question']);
+                });
+
+                $totals = $this->initializeRiskLevelCounts();
+                $totals['total'] = 0;
+
+                foreach ($questionRows as $row) {
+                    foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
+                        $totals[$levelKey] += (int) ($row['distribution'][$levelKey] ?? 0);
+                    }
+
+                    $totals['total'] += (int) ($row['total'] ?? 0);
+                }
+
+                return [
+                    'total_evaluations' => $totalEvaluations,
+                    'questions' => $questionRows,
+                    'totals' => $totals,
                 ];
             }
-
-            foreach ($rows as $row) {
-                $questionKey = (int) ($row->question_key ?? 0);
-
-                if ($questionKey < 1 || $questionKey > 72) {
-                    continue;
-                }
-
-                $score = $this->getReferenceThreeScore($questionKey, (string) ($row->answer_value ?? ''));
-
-                if ($score === null) {
-                    continue;
-                }
-
-                $riskLevelKey = $this->mapQuestionScoreToRiskLevelKey((int) $score);
-
-                if (isset($questions[$questionKey]['distribution'][$riskLevelKey])) {
-                    $questions[$questionKey]['distribution'][$riskLevelKey]++;
-                    $questions[$questionKey]['total']++;
-                }
-            }
-
-            $questionRows = array_values(array_filter(
-                $questions,
-                fn (array $row): bool => (int) ($row['total'] ?? 0) > 0
-            ));
-
-            usort($questionRows, function (array $a, array $b): int {
-                return (int) str_replace('P', '', $a['question']) <=> (int) str_replace('P', '', $b['question']);
-            });
-
-            $totals = $this->initializeRiskLevelCounts();
-            $totals['total'] = 0;
-
-            foreach ($questionRows as $row) {
-                foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
-                    $totals[$levelKey] += (int) ($row['distribution'][$levelKey] ?? 0);
-                }
-
-                $totals['total'] += (int) ($row['total'] ?? 0);
-            }
-
-            return [
-                'total_evaluations' => $rows->pluck('evaluation_id')->unique()->count(),
-                'questions' => $questionRows,
-                'totals' => $totals,
-            ];
-        }
 
             private function addCriticalAreasSection(
             Section $section,
@@ -2995,7 +2992,7 @@ class ExecutiveReportDownloadController extends Controller
             if (empty($rows)) {
                 $this->addNoDataNotice(
                     $section,
-                    'No se encontraron trabajadores con nivel Medio, Alto o Muy Alto en la calificación final.'
+                    'No se encontraron trabajadores con calificación final para este centro de trabajo.'
                 );
 
                 return;
@@ -3173,7 +3170,7 @@ class ExecutiveReportDownloadController extends Controller
             if (empty($rows) || empty($categoryNames)) {
                 $this->addNoDataNotice(
                     $section,
-                    'No se encontraron trabajadores con nivel Medio, Alto o Muy Alto para la identificación por categoría aplicable.'
+                    'No se encontraron trabajadores con evaluación de Referencia III para la identificación por categoría aplicable.'
                 );
 
                 return;
@@ -4127,59 +4124,337 @@ class ExecutiveReportDownloadController extends Controller
         }
 
     private function getParticipantSummary(string $organizationId, string $workCenterId): array
-    {
-        $evaluationsBase = DB::table('paper_evaluations as pe')
-            ->where('pe.organization_id', $organizationId)
-            ->where('pe.work_center_id', $workCenterId)
-            ->whereIn('pe.source', ['paper', 'online'])
-            ->where('pe.processing_status', 'completed')
-            ->whereNull('pe.deleted_at');
+        {
+            $rows = DB::table('paper_evaluations as pe')
+                ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
+                ->where('pe.organization_id', $organizationId)
+                ->where('pe.work_center_id', $workCenterId)
+                ->whereIn('pe.source', ['paper', 'online'])
+                ->where('pe.processing_status', 'completed')
+                ->whereNull('pe.deleted_at')
+                ->select(
+                    'pe.id as evaluation_id',
+                    'pe.source',
+                    'pe.personal_folio',
+                    'pe.raw_data',
+                    'dd.gender as dd_gender',
+                    'dd.age as dd_age',
+                    'dd.marital_status as dd_marital_status',
+                    'dd.education_level as dd_education_level',
+                    'dd.department as dd_department',
+                    'dd.position as dd_position',
+                    'dd.position_type as dd_position_type',
+                    'dd.contract_type as dd_contract_type',
+                    'dd.personnel_type as dd_personnel_type',
+                    'dd.work_schedule as dd_work_schedule',
+                    'dd.shift_rotation as dd_shift_rotation',
+                    'dd.time_in_current_position as dd_time_in_current_position',
+                    'dd.work_experience as dd_work_experience',
+                    'dd.extra_fields as dd_extra_fields'
+                )
+                ->orderBy('pe.source')
+                ->orderBy('pe.personal_folio')
+                ->orderBy('pe.id')
+                ->get();
 
-        $paperParticipants = (clone $evaluationsBase)
-            ->where('pe.source', 'paper')
-            ->distinct()
-            ->count('pe.personal_folio');
+            $participants = [];
 
-        $onlineParticipants = (clone $evaluationsBase)
-            ->where('pe.source', 'online')
-            ->distinct()
-            ->count('pe.personal_folio');
+            foreach ($rows as $row) {
+                $source = trim((string) ($row->source ?? 'paper'));
+                $folio = trim((string) ($row->personal_folio ?? ''));
 
-        $totalParticipants = $paperParticipants + $onlineParticipants;
+                $participantKey = $source . '|' . (
+                    $folio !== ''
+                        ? $folio
+                        : (string) ($row->evaluation_id ?? '')
+                );
 
-        $demographicBase = DB::table('paper_evaluations as pe')
-            ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
-            ->where('pe.organization_id', $organizationId)
-            ->where('pe.work_center_id', $workCenterId)
-            ->whereIn('pe.source', ['paper', 'online'])
-            ->where('pe.processing_status', 'completed')
-            ->whereNull('pe.deleted_at');
+                if (isset($participants[$participantKey])) {
+                    continue;
+                }
 
-        $genderRows = $this->groupDemographicCounts($demographicBase, 'dd.gender');
-        $genderTotals = $this->summarizeGenderRows($genderRows);
+                $extraFields = $this->decodeDemographicPayload($row->dd_extra_fields ?? null);
+                $rawData = $this->decodeDemographicPayload($row->raw_data ?? null);
 
-        return [
-            'total_participants' => $totalParticipants,
-            'paper_participants' => $paperParticipants,
-            'online_participants' => $onlineParticipants,
-            'men_total' => $genderTotals['men'],
-            'women_total' => $genderTotals['women'],
-            'unspecified_gender_total' => $genderTotals['unspecified'],
-            'gender' => $genderRows,
-            'age' => $this->groupAgeRanges($demographicBase, 'dd.age'),
-            'marital_status' => $this->groupDemographicCounts($demographicBase, 'dd.marital_status'),
-            'education_level' => $this->groupDemographicCounts($demographicBase, 'dd.education_level'),
-            'position' => $this->groupDemographicCounts($demographicBase, 'dd.position'),
-            'department' => $this->groupDemographicCounts($demographicBase, 'dd.department'),
-            'position_type' => $this->groupDemographicCounts($demographicBase, 'dd.position_type'),
-            'contract_type' => $this->groupDemographicCounts($demographicBase, 'dd.contract_type'),
-            'personnel_type' => $this->groupDemographicCounts($demographicBase, 'dd.personnel_type'),
-            'work_schedule' => $this->groupDemographicCounts($demographicBase, 'dd.work_schedule'),
-            'shift_rotation' => $this->groupDemographicCounts($demographicBase, 'dd.shift_rotation'),
-            'time_in_current_position' => $this->groupDemographicCounts($demographicBase, 'dd.time_in_current_position'),
-            'work_experience' => $this->groupDemographicCounts($demographicBase, 'dd.work_experience'),
-        ];
-    }
+                $participants[$participantKey] = [
+                    'source' => $source,
+                    'gender' => $this->resolveParticipantDemographicValue(
+                        $row->dd_gender ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['gender', 'genero', 'género', 'sexo', 'sex']
+                    ),
+                    'age' => $this->resolveParticipantDemographicValue(
+                        $row->dd_age ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['age', 'edad']
+                    ),
+                    'marital_status' => $this->resolveParticipantDemographicValue(
+                        $row->dd_marital_status ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['marital_status', 'estado_civil', 'estado civil', 'estadoCivil']
+                    ),
+                    'education_level' => $this->resolveParticipantDemographicValue(
+                        $row->dd_education_level ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['education_level', 'nivel_estudios', 'nivel de estudios', 'escolaridad']
+                    ),
+                    'department' => $this->resolveParticipantDemographicValue(
+                        $row->dd_department ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['department', 'departamento', 'area', 'área']
+                    ),
+                    'position' => $this->resolveParticipantDemographicValue(
+                        $row->dd_position ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['position', 'puesto', 'cargo']
+                    ),
+                    'position_type' => $this->resolveParticipantDemographicValue(
+                        $row->dd_position_type ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['position_type', 'tipo_puesto', 'tipo de puesto']
+                    ),
+                    'contract_type' => $this->resolveParticipantDemographicValue(
+                        $row->dd_contract_type ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['contract_type', 'tipo_contratacion', 'tipo de contratacion', 'tipo de contratación']
+                    ),
+                    'personnel_type' => $this->resolveParticipantDemographicValue(
+                        $row->dd_personnel_type ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['personnel_type', 'tipo_personal', 'tipo de personal']
+                    ),
+                    'work_schedule' => $this->resolveParticipantDemographicValue(
+                        $row->dd_work_schedule ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['work_schedule', 'jornada_laboral', 'jornada laboral', 'turno']
+                    ),
+                    'shift_rotation' => $this->resolveParticipantDemographicValue(
+                        $row->dd_shift_rotation ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['shift_rotation', 'rotacion_turno', 'rotación de turno', 'rotacion de turno']
+                    ),
+                    'time_in_current_position' => $this->resolveParticipantDemographicValue(
+                        $row->dd_time_in_current_position ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['time_in_current_position', 'antiguedad_puesto', 'antigüedad en el puesto actual', 'antiguedad en el puesto actual']
+                    ),
+                    'work_experience' => $this->resolveParticipantDemographicValue(
+                        $row->dd_work_experience ?? null,
+                        $extraFields,
+                        $rawData,
+                        ['work_experience', 'experiencia_laboral', 'experiencia laboral']
+                    ),
+                ];
+            }
+
+            $participantRows = array_values($participants);
+
+            $paperParticipants = count(array_filter(
+                $participantRows,
+                fn (array $row): bool => ($row['source'] ?? '') === 'paper'
+            ));
+
+            $onlineParticipants = count(array_filter(
+                $participantRows,
+                fn (array $row): bool => ($row['source'] ?? '') === 'online'
+            ));
+
+            $totalParticipants = $paperParticipants + $onlineParticipants;
+
+            $genderRows = $this->groupParticipantDemographicRows($participantRows, 'gender');
+            $genderTotals = $this->summarizeGenderRows($genderRows);
+
+            return [
+                'total_participants' => $totalParticipants,
+                'paper_participants' => $paperParticipants,
+                'online_participants' => $onlineParticipants,
+                'men_total' => $genderTotals['men'],
+                'women_total' => $genderTotals['women'],
+                'unspecified_gender_total' => $genderTotals['unspecified'],
+                'gender' => $genderRows,
+                'age' => $this->groupParticipantAgeRanges($participantRows, 'age'),
+                'marital_status' => $this->groupParticipantDemographicRows($participantRows, 'marital_status'),
+                'education_level' => $this->groupParticipantDemographicRows($participantRows, 'education_level'),
+                'position' => $this->groupParticipantDemographicRows($participantRows, 'position'),
+                'department' => $this->groupParticipantDemographicRows($participantRows, 'department'),
+                'position_type' => $this->groupParticipantDemographicRows($participantRows, 'position_type'),
+                'contract_type' => $this->groupParticipantDemographicRows($participantRows, 'contract_type'),
+                'personnel_type' => $this->groupParticipantDemographicRows($participantRows, 'personnel_type'),
+                'work_schedule' => $this->groupParticipantDemographicRows($participantRows, 'work_schedule'),
+                'shift_rotation' => $this->groupParticipantDemographicRows($participantRows, 'shift_rotation'),
+                'time_in_current_position' => $this->groupParticipantDemographicRows($participantRows, 'time_in_current_position'),
+                'work_experience' => $this->groupParticipantDemographicRows($participantRows, 'work_experience'),
+            ];
+        }
+
+    private function decodeDemographicPayload($payload): array
+        {
+            if (is_array($payload)) {
+                return $payload;
+            }
+
+            if (! is_string($payload) || trim($payload) === '') {
+                return [];
+            }
+
+            $decoded = json_decode($payload, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        private function resolveParticipantDemographicValue(
+            $directValue,
+            array $extraFields,
+            array $rawData,
+            array $keys
+        ): ?string {
+            if ($directValue !== null && trim((string) $directValue) !== '') {
+                return trim((string) $directValue);
+            }
+
+            $fromExtra = $this->findDemographicPayloadValue($extraFields, $keys);
+
+            if ($fromExtra !== null && trim((string) $fromExtra) !== '') {
+                return trim((string) $fromExtra);
+            }
+
+            $fromRaw = $this->findDemographicPayloadValue($rawData, $keys);
+
+            if ($fromRaw !== null && trim((string) $fromRaw) !== '') {
+                return trim((string) $fromRaw);
+            }
+
+            return null;
+        }
+
+        private function findDemographicPayloadValue(array $payload, array $keys)
+        {
+            $normalizedKeys = array_map(
+                fn (string $key): string => $this->normalizeDemographicPayloadKey($key),
+                $keys
+            );
+
+            foreach ($payload as $key => $value) {
+                $normalizedKey = $this->normalizeDemographicPayloadKey((string) $key);
+
+                if (in_array($normalizedKey, $normalizedKeys, true)) {
+                    if (is_scalar($value) || $value === null) {
+                        return $value;
+                    }
+                }
+
+                if (is_array($value)) {
+                    $nestedValue = $this->findDemographicPayloadValue($value, $keys);
+
+                    if ($nestedValue !== null && trim((string) $nestedValue) !== '') {
+                        return $nestedValue;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private function normalizeDemographicPayloadKey(string $key): string
+        {
+            return Str::of($key)
+                ->ascii()
+                ->lower()
+                ->replace(['-', ' '], '_')
+                ->replaceMatches('/_+/', '_')
+                ->trim('_')
+                ->toString();
+        }
+
+        private function groupParticipantDemographicRows(array $participants, string $field): array
+        {
+            $counts = [];
+
+            foreach ($participants as $participant) {
+                $label = trim((string) ($participant[$field] ?? ''));
+
+                if ($label === '') {
+                    $label = 'N/D';
+                }
+
+                $counts[$label] = ($counts[$label] ?? 0) + 1;
+            }
+
+            arsort($counts);
+
+            $rows = [];
+
+            foreach ($counts as $label => $total) {
+                $rows[] = [
+                    'label' => (string) $label,
+                    'total' => (int) $total,
+                ];
+            }
+
+            return $rows;
+        }
+
+        private function groupParticipantAgeRanges(array $participants, string $field): array
+        {
+            $buckets = [
+                '18 a 24' => 0,
+                '25 a 34' => 0,
+                '35 a 44' => 0,
+                '45 a 54' => 0,
+                '55 o más' => 0,
+                'N/D' => 0,
+            ];
+
+            foreach ($participants as $participant) {
+                $value = $participant[$field] ?? null;
+
+                if ($value === null || trim((string) $value) === '') {
+                    $buckets['N/D']++;
+                    continue;
+                }
+
+                $age = (int) floor((float) $value);
+
+                if ($age < 18) {
+                    $buckets['N/D']++;
+                } elseif ($age <= 24) {
+                    $buckets['18 a 24']++;
+                } elseif ($age <= 34) {
+                    $buckets['25 a 34']++;
+                } elseif ($age <= 44) {
+                    $buckets['35 a 44']++;
+                } elseif ($age <= 54) {
+                    $buckets['45 a 54']++;
+                } else {
+                    $buckets['55 o más']++;
+                }
+            }
+
+            $rows = [];
+
+            foreach ($buckets as $label => $total) {
+                if ($total > 0) {
+                    $rows[] = [
+                        'label' => $label,
+                        'total' => $total,
+                    ];
+                }
+            }
+
+            return $rows;
+        }
 
     private function groupDemographicCounts($baseQuery, string $column): array
     {
@@ -4633,11 +4908,177 @@ class ExecutiveReportDownloadController extends Controller
             return $scores;
         }
 
+    private function emptyReferenceThreeConditionalState(): array
+        {
+            return [
+                'customer_service' => null, // null = desconocido, true = aplica, false = no aplica
+                'management' => null,       // null = desconocido, true = aplica, false = no aplica
+                'enabled_question_keys' => [],
+                'question_scores' => [],
+            ];
+        }
+
+        private function resolveReferenceThreeConditionalState(array $conditionalAnswers): array
+            {
+                $state = $this->emptyReferenceThreeConditionalState();
+
+                foreach ($conditionalAnswers as $sectionKey => $section) {
+                    if (! is_array($section)) {
+                        continue;
+                    }
+
+                    $status = $this->resolveReferenceThreeConditionalSectionStatusForStatistics($section);
+
+                    if ($status === null) {
+                        continue;
+                    }
+
+                    $normalizedSectionKey = $this->normalizeReferenceThreeConditionValueKey((string) $sectionKey);
+
+                    if (in_array($normalizedSectionKey, ['customer_service', 'servicio_clientes', 'atencion_clientes', 'atiende_clientes'], true)) {
+                        $state['customer_service'] = $status;
+                    } elseif (in_array($normalizedSectionKey, ['management', 'jefatura', 'jefe', 'supervision', 'supervisa_personal'], true)) {
+                        $state['management'] = $status;
+                    }
+
+                    $questions = $section['questions'] ?? null;
+
+                    if (! is_array($questions)) {
+                        continue;
+                    }
+
+                    foreach ($questions as $questionNumber => $answer) {
+                        if (! is_numeric((string) $questionNumber)) {
+                            continue;
+                        }
+
+                        $numericQuestion = (int) $questionNumber;
+
+                        if ($numericQuestion >= 65 && $numericQuestion <= 68) {
+                            $state['customer_service'] = $status;
+                        } elseif ($numericQuestion >= 69 && $numericQuestion <= 72) {
+                            $state['management'] = $status;
+                        } else {
+                            continue;
+                        }
+
+                        if (! $status) {
+                            continue;
+                        }
+
+                        $state['enabled_question_keys'][] = $numericQuestion;
+
+                        if ($answer === null || is_array($answer)) {
+                            continue;
+                        }
+
+                        $score = $this->getReferenceThreeScore(
+                            (string) $numericQuestion,
+                            (string) $answer
+                        );
+
+                        if ($score === null) {
+                            continue;
+                        }
+
+                        $state['question_scores'][$numericQuestion] = (int) $score;
+                    }
+                }
+
+                $state['enabled_question_keys'] = array_values(array_unique($state['enabled_question_keys']));
+                ksort($state['question_scores']);
+
+                return $state;
+            }
+
+        private function resolveReferenceThreeConditionalSectionStatusForStatistics(array $section): ?bool
+        {
+            if (! array_key_exists('condition', $section)) {
+                return null;
+            }
+
+            $condition = $section['condition'];
+
+            if (is_bool($condition)) {
+                return $condition;
+            }
+
+            if (is_numeric($condition)) {
+                return (int) $condition === 1;
+            }
+
+            if (! is_string($condition)) {
+                return null;
+            }
+
+            return $this->normalizeReferenceThreeConditionValueForStatistics($condition) === 'SI';
+        }
+
+        private function shouldUseReferenceThreeConditionalQuestion(
+            int $questionKey,
+            ?array $conditionalState,
+            ?array $enabledConditionalQuestionKeys,
+            bool $attendsPublic,
+            bool $isBoss,
+            bool $hasConditionalDataset = false
+        ): bool {
+            if ($questionKey < 65 || $questionKey > 72) {
+                return true;
+            }
+
+            if ($conditionalState !== null) {
+            $rangeKey = $questionKey <= 68
+                ? 'customer_service'
+                : 'management';
+
+            $rangeState = $conditionalState[$rangeKey] ?? null;
+
+            if ($rangeState === false) {
+                return false;
+            }
+
+            if ($rangeState === true) {
+                $enabledKeys = $conditionalState['enabled_question_keys'] ?? [];
+
+                if ($enabledKeys === []) {
+                    return true;
+                }
+
+                return in_array($questionKey, $enabledKeys, true);
+            }
+
+            /*
+            * Si el centro de trabajo sí maneja condicionales,
+            * una evaluación sin condicional explícito NO debe contar 65–72.
+            *
+            * Si el centro de trabajo NO trae condicionales en ninguna evaluación,
+            * se respeta evaluation_answers como viene.
+            */
+            return ! $hasConditionalDataset;
+        }
+
+            // Compatibilidad con llamadas viejas del mismo controller.
+            if (is_array($enabledConditionalQuestionKeys)) {
+                return in_array($questionKey, $enabledConditionalQuestionKeys, true);
+            }
+
+            if ($questionKey >= 65 && $questionKey <= 68) {
+                return $attendsPublic;
+            }
+
+            return $isBoss;
+        }
+
     private function getReferenceThreeEvaluations($rows): array
         {
+            $hasConditionalDataset = $rows->contains(function ($row): bool {
+                return $this->hasExplicitReferenceThreeConditionalDataset(
+                    $row->referencia_iii_conditional ?? null
+                );
+            });
             return $rows
                 ->groupBy('evaluation_id')
-                ->map(function ($items, $evaluationId) {
+                ->map(function ($items, $evaluationId) use ($hasConditionalDataset) {
                     $first = $items->first();
 
                     $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
@@ -4651,13 +5092,12 @@ class ExecutiveReportDownloadController extends Controller
                         ? json_decode($conditionalRaw, true)
                         : $conditionalRaw;
 
-                    $enabledConditionalQuestionKeys = is_array($conditionalData) && $conditionalData !== []
-                        ? $this->getEnabledReferenceThreeConditionalQuestionKeys($conditionalData)
-                        : null;
+                    $conditionalState = is_array($conditionalData) && $conditionalData !== []
+                    ? $this->resolveReferenceThreeConditionalState($conditionalData)
+                    : $this->emptyReferenceThreeConditionalState();
 
-                    $conditionalQuestionScores = is_array($conditionalData) && $conditionalData !== []
-                        ? $this->getEnabledReferenceThreeConditionalQuestionScores($conditionalData)
-                        : [];
+                $enabledConditionalQuestionKeys = $conditionalState['enabled_question_keys'] ?? [];
+                $conditionalQuestionScores = $conditionalState['question_scores'] ?? [];
 
                                         $isBoss = $this->extractWorkerFlag($extra, [
                         'jefe',
@@ -4700,14 +5140,16 @@ class ExecutiveReportDownloadController extends Controller
                     ]);
 
                     return $this->buildReferenceThreeEvaluationResult(
-                        (string) $evaluationId,
-                        (string) ($first->source ?? 'paper'),
-                        $items,
-                        $attendsPublic,
-                        $isBoss,
-                        $enabledConditionalQuestionKeys,
-                        $conditionalQuestionScores
-                    );
+                    (string) $evaluationId,
+                    (string) ($first->source ?? 'paper'),
+                    $items,
+                    $attendsPublic,
+                    $isBoss,
+                    $enabledConditionalQuestionKeys,
+                    $conditionalQuestionScores,
+                    $conditionalState,
+                    $hasConditionalDataset
+                );
                 })
                 ->values()
                 ->all();
@@ -4720,7 +5162,9 @@ class ExecutiveReportDownloadController extends Controller
                 bool $attendsPublic = false,
                 bool $isBoss = false,
                 ?array $enabledConditionalQuestionKeys = null,
-                array $conditionalQuestionScores = []
+                array $conditionalQuestionScores = [],
+                ?array $conditionalState = null,
+                bool $hasConditionalDataset = false
             ): array {
             $globalScore = 0;
             $dimensionScores = [];
@@ -4729,40 +5173,39 @@ class ExecutiveReportDownloadController extends Controller
             $questionScores = [];
 
             foreach ($answers as $answer) {
-                $questionKey = (int) $answer->question_key;
+            $questionKey = (int) $answer->question_key;
 
-                if ($questionKey >= 65 && $questionKey <= 72) {
-                    if (is_array($enabledConditionalQuestionKeys)) {
-                        if (! in_array($questionKey, $enabledConditionalQuestionKeys, true)) {
-                            continue;
-                        }
-                    } else {
-                        if (in_array($questionKey, [65, 66, 67, 68], true) && ! $attendsPublic) {
-                            continue;
-                        }
-
-                        if (in_array($questionKey, [69, 70, 71, 72], true) && ! $isBoss) {
-                            continue;
-                        }
-                    }
-                }
-
-                $score = $this->getReferenceThreeScore($answer->question_key, $answer->answer_value);
-                $meta = $this->getReferenceThreeQuestionMeta($answer->question_key);
-
-                if ($score === null || $meta === null) {
-                    continue;
-                }
-
-                $globalScore += $score;
-                $questionScores[$questionKey] = (int) $score;
-
-                $dimensionScores[$meta['dimension']] = ($dimensionScores[$meta['dimension']] ?? 0) + $score;
-                $domainScores[$meta['domain']] = ($domainScores[$meta['domain']] ?? 0) + $score;
-                $categoryScores[$meta['category']] = ($categoryScores[$meta['category']] ?? 0) + $score;
+            if ($questionKey < 1 || $questionKey > 72) {
+                continue;
             }
 
-            foreach ($conditionalQuestionScores as $conditionalQuestionKey => $conditionalScore) {
+            if (! $this->shouldUseReferenceThreeConditionalQuestion(
+            $questionKey,
+            $conditionalState,
+            $enabledConditionalQuestionKeys,
+            $attendsPublic,
+            $isBoss,
+            $hasConditionalDataset
+        )) {
+                continue;
+            }
+
+            $score = $this->getReferenceThreeScore($answer->question_key, $answer->answer_value);
+            $meta = $this->getReferenceThreeQuestionMeta($answer->question_key);
+
+            if ($score === null || $meta === null) {
+                continue;
+            }
+
+            $globalScore += $score;
+            $questionScores[$questionKey] = (int) $score;
+
+            $dimensionScores[$meta['dimension']] = ($dimensionScores[$meta['dimension']] ?? 0) + $score;
+            $domainScores[$meta['domain']] = ($domainScores[$meta['domain']] ?? 0) + $score;
+            $categoryScores[$meta['category']] = ($categoryScores[$meta['category']] ?? 0) + $score;
+        }
+
+        foreach ($conditionalQuestionScores as $conditionalQuestionKey => $conditionalScore) {
             $conditionalQuestionKey = (int) $conditionalQuestionKey;
 
             if ($conditionalQuestionKey < 65 || $conditionalQuestionKey > 72) {
@@ -4770,6 +5213,17 @@ class ExecutiveReportDownloadController extends Controller
             }
 
             if (array_key_exists($conditionalQuestionKey, $questionScores)) {
+                continue;
+            }
+
+            if (! $this->shouldUseReferenceThreeConditionalQuestion(
+            $conditionalQuestionKey,
+            $conditionalState,
+            $enabledConditionalQuestionKeys,
+            $attendsPublic,
+            $isBoss,
+            $hasConditionalDataset
+        )) {
                 continue;
             }
 
@@ -4809,6 +5263,7 @@ class ExecutiveReportDownloadController extends Controller
             return [
                 'evaluation_id' => $evaluationId,
                 'source' => $source,
+                'has_conditional_dataset' => $hasConditionalDataset,
                 'global_score' => $globalScore,
                 'global_level_key' => $globalLevel['key'],
                 'global_level_label' => $globalLevel['label'],
@@ -4969,143 +5424,73 @@ class ExecutiveReportDownloadController extends Controller
             }
 
         private function getReferenceThreeCategorySummary(string $organizationId, string $workCenterId): array
-        {
-            $rows = DB::table('evaluation_answers as ea')
-                ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
-                ->where('pe.organization_id', $organizationId)
-                ->where('pe.work_center_id', $workCenterId)
-                ->where('pe.evaluation_type', 'referencia_iii')
-                ->where('ea.instrument', 'referencia_iii')
-                ->whereIn('pe.source', ['paper', 'online'])
-                ->where('pe.processing_status', 'completed')
-                ->whereNull('pe.deleted_at')
-                ->select(
-                    'pe.id as evaluation_id',
-                    'ea.question_key',
-                    'ea.answer_value'
-                )
-                ->orderBy('pe.id')
-                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
-                ->get();
+            {
+                $globalSummary = $this->getReferenceThreeGlobalSummary($organizationId, $workCenterId);
+                $evaluations = $globalSummary['evaluations'] ?? [];
 
-            $evaluations = $rows
-                ->groupBy('evaluation_id')
-                ->map(function ($items) {
-                    $answers = [];
+                $totalEvaluations = count($evaluations);
+                $domainConfig = config('question_dimensions', []);
+                $categories = [];
 
-                    foreach ($items as $row) {
-                        $questionKey = (int) ($row->question_key ?? 0);
+                if ($totalEvaluations === 0 || ! is_array($domainConfig) || $domainConfig === []) {
+                    return [
+                        'total_evaluations' => 0,
+                        'categories' => [],
+                    ];
+                }
 
-                        if ($questionKey < 1 || $questionKey > 72) {
-                            continue;
-                        }
-
-                        $answerValue = strtoupper(trim((string) ($row->answer_value ?? '')));
-
-                        if (! in_array($answerValue, ['A', 'B', 'C', 'D', 'E'], true)) {
-                            continue;
-                        }
-
-                        $answers[$questionKey] = $answerValue;
-                    }
-
-                    return $answers;
-                })
-                ->filter(fn (array $answers): bool => $answers !== [])
-                ->values();
-
-            $totalEvaluations = $evaluations->count();
-            $categories = [];
-
-            $domainQuestionKeys = $this->getReferenceThreeDomainQuestionKeys();
-            $categoryDomainNames = $this->getReferenceThreeCategoryDomainNames();
-
-            foreach ($this->getReferenceThreeCategoryMaxScores() as $categoryName => $maxScore) {
-                $distribution = $this->initializeRiskLevelCounts();
-                $scoreSum = 0;
-                $applicableEvaluations = 0;
-                $domainNames = $categoryDomainNames[$categoryName] ?? [];
-
-                foreach ($evaluations as $answers) {
-                    $score = 0;
-                    $hasCategoryScore = false;
-
-                    foreach ($domainNames as $domainName) {
-                        $questionKeys = $domainQuestionKeys[$domainName] ?? [];
-
-                        foreach ($questionKeys as $questionKey) {
-                            $questionKey = (int) $questionKey;
-
-                            if (! array_key_exists($questionKey, $answers)) {
-                                continue;
-                            }
-
-                            $questionScore = $this->getReferenceThreeScore(
-                                (string) $questionKey,
-                                (string) $answers[$questionKey]
-                            );
-
-                            if ($questionScore === null) {
-                                continue;
-                            }
-
-                            $score += (int) $questionScore;
-                            $hasCategoryScore = true;
-                        }
-                    }
-
-                    if (! $hasCategoryScore) {
+                foreach ($domainConfig as $categoryName => $domains) {
+                    if (! is_array($domains)) {
                         continue;
                     }
 
-                    $scoreSum += $score;
-                    $applicableEvaluations++;
+                    $distribution = $this->initializeRiskLevelCounts();
+                    $scoreSum = 0;
 
-                    $levelKey = $this->classifyNom035Score('categories', $categoryName, $score)['key'];
+                    foreach ($evaluations as $evaluation) {
+                        $categoryScores = $evaluation['category_scores'] ?? [];
+                        $categoryLevels = $evaluation['category_levels'] ?? [];
 
-                    if (array_key_exists($levelKey, $distribution)) {
-                        $distribution[$levelKey]++;
+                        $categoryScore = (int) ($categoryScores[$categoryName] ?? 0);
+                        $scoreSum += $categoryScore;
+
+                        $levelKey = (string) (
+                            $categoryLevels[$categoryName]['key']
+                            ?? $this->classifyReferenceThreeCategoryRiskLevelFromConfig($categoryName, $categoryScore)
+                        );
+
+                        if (array_key_exists($levelKey, $distribution)) {
+                            $distribution[$levelKey]++;
+                        }
                     }
+
+                    $averageRaw = $scoreSum / $totalEvaluations;
+                    $averageScore = round($averageRaw, 2);
+                    $maxScore = $this->getReferenceThreeCategoryMaxScoreFromQuestionDimensions($categoryName, $domainConfig);
+
+                    $averagePercentage = $maxScore > 0
+                        ? round(($averageRaw / $maxScore) * 100, 2)
+                        : 0;
+
+                    $averageLevelKey = $this->classifyReferenceThreeCategoryRiskLevelFromConfig($categoryName, $averageRaw);
+
+                    $categories[] = [
+                        'name' => $categoryName,
+                        'max_score' => $maxScore,
+                        'average_score' => $averageScore,
+                        'average_percentage' => $averagePercentage,
+                        'distribution' => $distribution,
+                        'applicable_evaluations' => $totalEvaluations,
+                        'dominant_level_key' => $averageLevelKey,
+                        'dominant_level_label' => config("nom035_risk_levels.labels.$averageLevelKey", ucfirst($averageLevelKey)),
+                    ];
                 }
 
-                if ($applicableEvaluations === 0) {
-                    continue;
-                }
-
-                $averageRaw = $scoreSum / $applicableEvaluations;
-                $averageScore = round($averageRaw, 2);
-
-                $averagePercentage = $maxScore > 0
-                    ? round(($averageRaw / $maxScore) * 100, 2)
-                    : 0;
-
-                $dominantLevelKey = 'nulo';
-                $dominantCount = -1;
-
-                foreach ($distribution as $levelKey => $count) {
-                    if ((int) $count > $dominantCount) {
-                        $dominantCount = (int) $count;
-                        $dominantLevelKey = (string) $levelKey;
-                    }
-                }
-
-                $categories[] = [
-                    'name' => $categoryName,
-                    'max_score' => $maxScore,
-                    'average_score' => $averageScore,
-                    'average_percentage' => $averagePercentage,
-                    'distribution' => $distribution,
-                    'applicable_evaluations' => $applicableEvaluations,
-                    'dominant_level_key' => $dominantLevelKey,
-                    'dominant_level_label' => config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey)),
+                return [
+                    'total_evaluations' => $totalEvaluations,
+                    'categories' => $categories,
                 ];
             }
-
-            return [
-                'total_evaluations' => $totalEvaluations,
-                'categories' => $categories,
-            ];
-        }
 
         private function getReferenceThreeCategoryMaxScores(): array
             {
@@ -5335,128 +5720,91 @@ class ExecutiveReportDownloadController extends Controller
 
     private function getReferenceThreeDomainSummary(string $organizationId, string $workCenterId): array
         {
-            $rows = DB::table('evaluation_answers as ea')
-                ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
-                ->where('pe.organization_id', $organizationId)
-                ->where('pe.work_center_id', $workCenterId)
-                ->where('pe.evaluation_type', 'referencia_iii')
-                ->where('ea.instrument', 'referencia_iii')
-                ->whereIn('pe.source', ['paper', 'online'])
-                ->where('pe.processing_status', 'completed')
-                ->whereNull('pe.deleted_at')
-                ->select(
-                    'pe.id as evaluation_id',
-                    'ea.question_key',
-                    'ea.answer_value'
-                )
-                ->orderBy('pe.id')
-                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
-                ->get();
+            $globalSummary = $this->getReferenceThreeGlobalSummary($organizationId, $workCenterId);
+            $evaluations = $globalSummary['evaluations'] ?? [];
 
-            $evaluations = $rows
-                ->groupBy('evaluation_id')
-                ->map(function ($items) {
-                    $answers = [];
+            $totalEvaluations = count($evaluations);
 
-                    foreach ($items as $row) {
-                        $questionKey = (int) ($row->question_key ?? 0);
+            $hasConditionalDataset = collect($evaluations)->contains(
+                fn (array $evaluation): bool => (bool) ($evaluation['has_conditional_dataset'] ?? false)
+            );
 
-                        if ($questionKey < 1 || $questionKey > 72) {
-                            continue;
-                        }
-
-                        $answerValue = strtoupper(trim((string) ($row->answer_value ?? '')));
-
-                        if (! in_array($answerValue, ['A', 'B', 'C', 'D', 'E'], true)) {
-                            continue;
-                        }
-
-                        $answers[$questionKey] = $answerValue;
-                    }
-
-                    return $answers;
-                })
-                ->filter(fn (array $answers): bool => $answers !== [])
-                ->values();
-
-            $totalEvaluations = $evaluations->count();
+            $domainConfig = config('question_dimensions', []);
+            $riskLevels = config('nom035_risk_levels', []);
             $domains = [];
-            $domainQuestionKeys = $this->getReferenceThreeDomainQuestionKeys();
 
-            foreach ($this->getReferenceThreeDomainMaxScores() as $domainName => $maxScore) {
-                $distribution = $this->initializeRiskLevelCounts();
-                $scoreSum = 0;
-                $applicableEvaluations = 0;
-                $questionKeys = $domainQuestionKeys[$domainName] ?? [];
+            if ($totalEvaluations === 0 || ! is_array($domainConfig) || $domainConfig === []) {
+                return [
+                    'total_evaluations' => 0,
+                    'domains' => [],
+                ];
+            }
 
-                foreach ($evaluations as $answers) {
-                    $score = 0;
-                    $hasDomainScore = false;
-
-                    foreach ($questionKeys as $questionKey) {
-                        $questionKey = (int) $questionKey;
-
-                        if (! array_key_exists($questionKey, $answers)) {
-                            continue;
-                        }
-
-                        $questionScore = $this->getReferenceThreeScore(
-                            (string) $questionKey,
-                            (string) $answers[$questionKey]
-                        );
-
-                        if ($questionScore === null) {
-                            continue;
-                        }
-
-                        $score += (int) $questionScore;
-                        $hasDomainScore = true;
-                    }
-
-                    if (! $hasDomainScore) {
-                        continue;
-                    }
-
-                    $scoreSum += $score;
-                    $applicableEvaluations++;
-
-                    $levelKey = $this->classifyNom035Score('domains', $domainName, $score)['key'];
-
-                    if (array_key_exists($levelKey, $distribution)) {
-                        $distribution[$levelKey]++;
-                    }
-                }
-
-                if ($applicableEvaluations === 0) {
+            foreach ($domainConfig as $categoryName => $domainRows) {
+                if (! is_array($domainRows)) {
                     continue;
                 }
 
-                $averageScore = round($scoreSum / $applicableEvaluations, 2);
-
-                $averagePercentage = $maxScore > 0
-                    ? round(($averageScore / $maxScore) * 100, 2)
-                    : 0;
-
-                $dominantLevelKey = 'nulo';
-                $dominantCount = -1;
-
-                foreach ($distribution as $levelKey => $count) {
-                    if ((int) $count > $dominantCount) {
-                        $dominantCount = (int) $count;
-                        $dominantLevelKey = (string) $levelKey;
+                foreach ($domainRows as $domainName => $dimensionRows) {
+                    if (! is_array($dimensionRows)) {
+                        continue;
                     }
-                }
 
-                $domains[] = [
-                    'name' => $domainName,
-                    'max_score' => $maxScore,
-                    'average_score' => $averageScore,
-                    'average_percentage' => $averagePercentage,
-                    'distribution' => $distribution,
-                    'applicable_evaluations' => $applicableEvaluations,
-                    'dominant_level_key' => $dominantLevelKey,
-                    'dominant_level_label' => config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey)),
-                ];
+                    $distribution = $this->initializeRiskLevelCounts();
+                    $scoreSum = 0;
+
+                    $useCorrectedDomainLevel = $hasConditionalDataset && in_array($domainName, [
+                        'Reconocimiento del desempeño',
+                        'Insuficiente sentido de pertenencia e inestabilidad',
+                    ], true);
+
+                    foreach ($evaluations as $evaluation) {
+                        $domainScores = $evaluation['domain_scores'] ?? [];
+                        $domainLevels = $evaluation['domain_levels'] ?? [];
+
+                        $domainScore = (int) ($domainScores[$domainName] ?? 0);
+                        $scoreSum += $domainScore;
+
+                        $levelKey = $useCorrectedDomainLevel
+                            ? $this->classifyReferenceThreeDomainRiskLevelFromConfig($domainName, $domainScore)
+                            : (string) (
+                                $domainLevels[$domainName]['key']
+                                ?? $this->classifyNom035Score('domains', $domainName, $domainScore)['key']
+                            );
+
+                        if (array_key_exists($levelKey, $distribution)) {
+                            $distribution[$levelKey]++;
+                        }
+                    }
+
+                    $averageRaw = $scoreSum / $totalEvaluations;
+                    $averageScore = round($averageRaw, 2);
+
+                    $maxScore = (int) ($riskLevels['domains'][$domainName]['max_score'] ?? 0);
+
+                    if ($maxScore <= 0) {
+                        $maxScore = $this->getReferenceThreeQuestionsMaxScoreFromDimensions($dimensionRows);
+                    }
+
+                    $averagePercentage = $maxScore > 0
+                        ? round(($averageRaw / $maxScore) * 100, 2)
+                        : 0;
+
+                    $averageLevelKey = $useCorrectedDomainLevel
+                    ? $this->classifyReferenceThreeDomainRiskLevelFromConfig($domainName, $averageRaw)
+                    : $this->classifyNom035Score('domains', $domainName, (int) round($averageRaw))['key'];
+
+                    $domains[] = [
+                        'name' => $domainName,
+                        'max_score' => $maxScore,
+                        'average_score' => $averageScore,
+                        'average_percentage' => $averagePercentage,
+                        'distribution' => $distribution,
+                        'applicable_evaluations' => $totalEvaluations,
+                        'dominant_level_key' => $averageLevelKey,
+                        'dominant_level_label' => config("nom035_risk_levels.labels.$averageLevelKey", ucfirst($averageLevelKey)),
+                    ];
+                }
             }
 
             return [
@@ -5464,6 +5812,7 @@ class ExecutiveReportDownloadController extends Controller
                 'domains' => $domains,
             ];
         }
+
 
         private function getReferenceThreeDomainSummaryV2(string $organizationId, string $workCenterId): array
     {
@@ -5527,6 +5876,53 @@ class ExecutiveReportDownloadController extends Controller
 
         return $dominantLevelKey;
     }
+
+    private function classifyReferenceThreeDomainRiskLevelFromConfig(string $domainName, int|float $score): string
+        {
+            $roundedScore = (int) round((float) $score);
+
+            /*
+            * Ajuste específico para dominios de Entorno organizacional.
+            * El promedio ya coincide; aquí solo corregimos la distribución
+            * por nivel de riesgo de estos dos dominios.
+            */
+            if ($domainName === 'Reconocimiento del desempeño') {
+                return match (true) {
+                    $roundedScore <= 5 => 'nulo',
+                    $roundedScore <= 8 => 'bajo',
+                    $roundedScore <= 13 => 'medio',
+                    $roundedScore <= 17 => 'alto',
+                    default => 'muy_alto',
+                };
+            }
+
+            if ($domainName === 'Insuficiente sentido de pertenencia e inestabilidad') {
+                return match (true) {
+                    $roundedScore <= 3 => 'nulo',
+                    $roundedScore <= 6 => 'bajo',
+                    $roundedScore <= 9 => 'medio',
+                    default => 'alto',
+                };
+            }
+
+            $levels = config("nom035_risk_levels.domains.$domainName.levels", []);
+
+            if (! is_array($levels) || $levels === []) {
+                return 'nulo';
+            }
+
+            foreach ($levels as $levelKey => $range) {
+                $min = (int) ($range['min'] ?? 0);
+                $max = (int) ($range['max'] ?? 0);
+
+                if ($roundedScore >= $min && $roundedScore <= $max) {
+                    return (string) $levelKey;
+                }
+            }
+
+            return 'nulo';
+        }
+
     private function getReferenceThreeDomainMaxScores(): array
     {
         return [
@@ -5563,100 +5959,670 @@ class ExecutiveReportDownloadController extends Controller
         {
             $globalSummary = $this->getReferenceThreeGlobalSummary($organizationId, $workCenterId);
             $evaluations = $globalSummary['evaluations'] ?? [];
-            $totalEvaluations = (int) ($globalSummary['total_evaluations'] ?? 0);
 
+            $totalEvaluations = count($evaluations);
+            $domainConfig = config('question_dimensions', []);
             $dimensions = [];
 
-            foreach ($this->getReferenceThreeDimensionMaxScores() as $dimensionName => $maxScore) {
-                $distribution = $this->initializeRiskLevelCounts();
-                $scoreSum = 0;
-                $applicableEvaluations = 0;
+            if ($totalEvaluations === 0 || ! is_array($domainConfig) || $domainConfig === []) {
+                return [
+                    'total_evaluations' => 0,
+                    'dimensions' => [],
+                ];
+            }
 
-                foreach ($evaluations as $evaluation) {
-                    $dimensionScores = $evaluation['dimension_scores'] ?? [];
-                    $score = null;
-
-                    if (is_array($dimensionScores) && array_key_exists($dimensionName, $dimensionScores)) {
-                        $score = (int) $dimensionScores[$dimensionName];
-                    } elseif ($dimensionName === 'Deficiente relación con los colaboradores que supervisa') {
-                        $conditionalScores = $evaluation['conditional_question_scores'] ?? [];
-
-                        if (! is_array($conditionalScores)) {
-                            continue;
-                        }
-
-                        $conditionalScore = 0;
-                        $hasConditionalDimension = false;
-
-                        foreach ([69, 70, 71, 72] as $conditionalQuestionKey) {
-                            if (! array_key_exists($conditionalQuestionKey, $conditionalScores)) {
-                                continue;
-                            }
-
-                            $conditionalScore += (int) $conditionalScores[$conditionalQuestionKey];
-                            $hasConditionalDimension = true;
-                        }
-
-                        if (! $hasConditionalDimension) {
-                            continue;
-                        }
-
-                        $score = $conditionalScore;
-                    }
-
-                    if ($score === null) {
-                        continue;
-                    }
-
-                    $scoreSum += $score;
-                    $applicableEvaluations++;
-
-                    $levelKey = $evaluation['dimension_levels'][$dimensionName]['key']
-                        ?? $this->classifyNom035Score('dimensions', $dimensionName, $score)['key'];
-
-                    if (array_key_exists($levelKey, $distribution)) {
-                        $distribution[$levelKey]++;
-                    }
-                }
-
-                if ($applicableEvaluations === 0) {
+            foreach ($domainConfig as $categoryName => $domainRows) {
+                if (! is_array($domainRows)) {
                     continue;
                 }
 
-                $averageScore = round($scoreSum / $applicableEvaluations, 2);
+                foreach ($domainRows as $domainName => $dimensionRows) {
+                    if (! is_array($dimensionRows)) {
+                        continue;
+                    }
 
-                $averagePercentage = $maxScore > 0
-                    ? round(($averageScore / $maxScore) * 100, 2)
-                    : 0;
+                    foreach ($dimensionRows as $dimensionName => $questions) {
+                        if (! is_array($questions)) {
+                            continue;
+                        }
 
-                $dominantLevelKey = 'nulo';
-                $dominantCount = -1;
+                        $distribution = $this->initializeRiskLevelCounts();
+                        $scoreSum = 0;
+                        $maxScore = count($questions) * 4;
 
-                foreach ($distribution as $levelKey => $count) {
-                    if ($count > $dominantCount) {
-                        $dominantCount = $count;
-                        $dominantLevelKey = $levelKey;
+                        foreach ($evaluations as $evaluation) {
+                            $dimensionScores = $evaluation['dimension_scores'] ?? [];
+                            $dimensionLevels = $evaluation['dimension_levels'] ?? [];
+
+                            $dimensionScore = (int) ($dimensionScores[$dimensionName] ?? 0);
+                            $scoreSum += $dimensionScore;
+
+                            $levelKey = (string) (
+                                $dimensionLevels[$dimensionName]['key']
+                                ?? $this->classifyReferenceThreeDimensionRiskLevelFromConfig($dimensionName, $dimensionScore)
+                            );
+
+                            if (array_key_exists($levelKey, $distribution)) {
+                                $distribution[$levelKey]++;
+                            }
+                        }
+
+                        $averageRaw = $scoreSum / $totalEvaluations;
+                        $averageScore = round($averageRaw, 2);
+
+                        $averagePercentage = $maxScore > 0
+                            ? round(($averageRaw / $maxScore) * 100, 2)
+                            : 0;
+
+                        $averageLevelKey = $this->classifyReferenceThreeDimensionRiskLevelFromConfig($dimensionName, $averageRaw);
+
+                        $dimensions[] = [
+                            'name' => $dimensionName,
+                            'max_score' => $maxScore,
+                            'average_score' => $averageScore,
+                            'average_percentage' => $averagePercentage,
+                            'distribution' => $distribution,
+                            'applicable_evaluations' => $totalEvaluations,
+                            'dominant_level_key' => $averageLevelKey,
+                            'dominant_level_label' => config("nom035_risk_levels.labels.$averageLevelKey", ucfirst($averageLevelKey)),
+                            'domain' => $domainName,
+                            'category' => $categoryName,
+                        ];
                     }
                 }
-
-                $dimensions[] = [
-                    'name' => $dimensionName,
-                    'max_score' => $maxScore,
-                    'average_score' => $averageScore,
-                    'average_percentage' => $averagePercentage,
-                    'distribution' => $distribution,
-                    'applicable_evaluations' => $applicableEvaluations,
-                    'dominant_level_key' => $dominantLevelKey,
-                    'dominant_level_label' => config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey)),
-                    'domain' => '',
-                    'category' => '',
-                ];
             }
 
             return [
                 'total_evaluations' => $totalEvaluations,
                 'dimensions' => $dimensions,
             ];
+        }
+
+    private function getReferenceThreeAnswerSetsForStatistics(string $organizationId, string $workCenterId): array
+        {
+            $evaluations = DB::table('paper_evaluations as pe')
+                ->where('pe.organization_id', $organizationId)
+                ->where('pe.work_center_id', $workCenterId)
+                ->where('pe.evaluation_type', 'referencia_iii')
+                ->whereIn('pe.source', ['paper', 'online'])
+                ->where('pe.processing_status', 'completed')
+                ->whereNull('pe.deleted_at')
+                ->where(function ($query) {
+                    $query
+                        ->whereNotNull('pe.referencia_iii_answers')
+                        ->orWhereNotNull('pe.referencia_iii_conditional')
+                        ->orWhereNotNull('pe.raw_data');
+                })
+                ->select(
+                    'pe.id as evaluation_id',
+                    'pe.referencia_iii_answers',
+                    'pe.referencia_iii_conditional',
+                    'pe.raw_data'
+                )
+                ->orderBy('pe.id')
+                ->get();
+
+            if ($evaluations->isEmpty()) {
+                return [];
+            }
+
+            $evaluationIds = $evaluations
+                ->pluck('evaluation_id')
+                ->map(fn ($id) => (string) $id)
+                ->values()
+                ->all();
+
+            $answerRows = DB::table('evaluation_answers as ea')
+                ->whereIn('ea.paper_evaluation_id', $evaluationIds)
+                ->where('ea.instrument', 'referencia_iii')
+                ->select(
+                    'ea.paper_evaluation_id as evaluation_id',
+                    'ea.question_key',
+                    'ea.answer_value'
+                )
+                ->orderBy('ea.paper_evaluation_id')
+                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
+                ->get()
+                ->groupBy(fn ($row) => (string) $row->evaluation_id);
+
+            return $evaluations
+                ->map(function ($evaluation) use ($answerRows): array {
+                    $evaluationId = (string) $evaluation->evaluation_id;
+
+                    $conditionalAnswers = $this->decodeReferenceThreeJsonForStatistics(
+                        $evaluation->referencia_iii_conditional ?? null
+                    );
+
+                    $answers = $this->normalizeReferenceThreeAnswersArrayForStatistics(
+                        $this->decodeReferenceThreeJsonForStatistics($evaluation->referencia_iii_answers ?? null)
+                    );
+
+                    $rawAnswers = $this->extractRawReferenceThreeAnswersForStatistics(
+                        $evaluation->raw_data ?? null
+                    );
+
+                    if ($answers === [] && $rawAnswers !== []) {
+                        $answers = $rawAnswers;
+                    } elseif ($rawAnswers !== []) {
+                        foreach ($rawAnswers as $questionNumber => $answer) {
+                            $questionKey = $this->normalizeReferenceThreeQuestionKeyForStatistics($questionNumber);
+
+                            if (! array_key_exists($questionKey, $answers)) {
+                                $answers[$questionKey] = $answer;
+                            }
+                        }
+                    }
+
+                    $dbAnswers = [];
+
+                    foreach (($answerRows[$evaluationId] ?? collect()) as $row) {
+                        if (! is_numeric($row->question_key) || $row->answer_value === null) {
+                            continue;
+                        }
+
+                        $answer = strtoupper(trim((string) $row->answer_value));
+
+                        if (! in_array($answer, ['A', 'B', 'C', 'D', 'E'], true)) {
+                            continue;
+                        }
+
+                        $dbAnswers[$this->normalizeReferenceThreeQuestionKeyForStatistics($row->question_key)] = $answer;
+                    }
+
+                    if ($dbAnswers !== []) {
+                    $answers = $dbAnswers;
+
+                    $this->removeDisabledConditionalQuestionsForStatistics($answers, $conditionalAnswers);
+
+                    ksort($answers);
+
+                    return $answers;
+                }
+
+                $this->removeDisabledConditionalQuestionsForStatistics($answers, $conditionalAnswers);
+
+                foreach ($this->getEnabledConditionalQuestionAnswersForStatistics($conditionalAnswers) as $questionNumber => $answer) {
+                    $questionKey = $this->normalizeReferenceThreeQuestionKeyForStatistics($questionNumber);
+
+                    if (! array_key_exists($questionKey, $answers)) {
+                        $answers[$questionKey] = $answer;
+                    }
+                }
+
+                $this->removeDisabledConditionalQuestionsForStatistics($answers, $conditionalAnswers);
+
+                $this->removeDisabledConditionalQuestionsForStatistics($answers, $conditionalAnswers);
+
+                ksort($answers);
+
+                return $answers;
+                })
+                ->filter(fn (array $answers): bool => $answers !== [])
+                ->values()
+                ->all();
+        }
+
+        private function decodeReferenceThreeJsonForStatistics(mixed $value): array
+            {
+                if (is_array($value)) {
+                    return $value;
+                }
+
+                if (is_object($value)) {
+                    $encoded = json_encode($value);
+                    $decoded = is_string($encoded) ? json_decode($encoded, true) : null;
+
+                    return is_array($decoded) ? $decoded : [];
+                }
+
+                if (! is_string($value) || trim($value) === '') {
+                    return [];
+                }
+
+                $decoded = json_decode($value, true);
+
+                return is_array($decoded) ? $decoded : [];
+            }
+
+            private function normalizeReferenceThreeAnswersArrayForStatistics(array $source): array
+            {
+                $answers = [];
+
+                foreach ($source as $questionNumber => $answer) {
+                    if (! is_numeric((string) $questionNumber)) {
+                        continue;
+                    }
+
+                    $numericQuestion = (int) $questionNumber;
+
+                    if ($numericQuestion < 1 || $numericQuestion > 72) {
+                        continue;
+                    }
+
+                    $answerValue = null;
+
+                    if (is_string($answer)) {
+                        $answerValue = $answer;
+                    } elseif (is_array($answer) && is_string($answer['value'] ?? null)) {
+                        $answerValue = $answer['value'];
+                    }
+
+                    if (! is_string($answerValue)) {
+                        continue;
+                    }
+
+                    $normalizedAnswer = strtoupper(trim($answerValue));
+
+                    if (! in_array($normalizedAnswer, ['A', 'B', 'C', 'D', 'E'], true)) {
+                        continue;
+                    }
+
+                    $answers[$this->normalizeReferenceThreeQuestionKeyForStatistics($numericQuestion)] = $normalizedAnswer;
+                }
+
+                return $answers;
+            }
+
+        private function extractRawReferenceThreeAnswersForStatistics(mixed $rawData): array
+            {
+                $rawData = $this->decodeReferenceThreeJsonForStatistics($rawData);
+
+                if ($rawData === []) {
+                    return [];
+                }
+
+                $sources = [$rawData];
+
+                if (is_array($rawData['referencia_iii'] ?? null)) {
+                    $sources[] = $rawData['referencia_iii'];
+                }
+
+                if (is_array($rawData['answers'] ?? null)) {
+                    $sources[] = $rawData['answers'];
+                }
+
+                if (is_array($rawData['referencia_iii_answers'] ?? null)) {
+                    $sources[] = $rawData['referencia_iii_answers'];
+                }
+
+                $answers = [];
+
+                foreach ($sources as $source) {
+                    if (! is_array($source)) {
+                        continue;
+                    }
+
+                    foreach ($source as $questionNumber => $answer) {
+                        if (! is_numeric((string) $questionNumber)) {
+                            continue;
+                        }
+
+                        $numericQuestion = (int) $questionNumber;
+
+                        if ($numericQuestion < 1 || $numericQuestion > 72) {
+                            continue;
+                        }
+
+                        $answerValue = null;
+
+                        if (is_string($answer)) {
+                            $answerValue = $answer;
+                        } elseif (is_array($answer) && is_string($answer['value'] ?? null)) {
+                            $answerValue = $answer['value'];
+                        }
+
+                        if (! is_string($answerValue)) {
+                            continue;
+                        }
+
+                        $normalizedAnswer = strtoupper(trim($answerValue));
+
+                        if (! in_array($normalizedAnswer, ['A', 'B', 'C', 'D', 'E'], true)) {
+                            continue;
+                        }
+
+                        $answers[$this->normalizeReferenceThreeQuestionKeyForStatistics($numericQuestion)] = $normalizedAnswer;
+                    }
+                }
+
+                return $answers;
+            }
+
+        private function getEnabledConditionalQuestionAnswersForStatistics(array $conditionalAnswers): array
+            {
+                $enabledQuestions = [];
+
+                foreach ($conditionalAnswers as $section) {
+                    if (! is_array($section)) {
+                        continue;
+                    }
+
+                    if (! $this->isReferenceThreeConditionalSectionEnabledForStatistics($section)) {
+                        continue;
+                    }
+
+                    $questions = $section['questions'] ?? null;
+
+                    if (! is_array($questions)) {
+                        continue;
+                    }
+
+                    foreach ($questions as $questionNumber => $answer) {
+                        if (! is_numeric((string) $questionNumber)) {
+                            continue;
+                        }
+
+                        $numericQuestion = (int) $questionNumber;
+
+                        if ($numericQuestion < 65 || $numericQuestion > 72) {
+                            continue;
+                        }
+
+                        if (! is_string($answer)) {
+                            continue;
+                        }
+
+                        $normalizedAnswer = strtoupper(trim($answer));
+
+                        if (! in_array($normalizedAnswer, ['A', 'B', 'C', 'D', 'E'], true)) {
+                            continue;
+                        }
+
+                        $enabledQuestions[$numericQuestion] = $normalizedAnswer;
+                    }
+                }
+
+                return $enabledQuestions;
+            }
+
+        private function normalizeReferenceThreeQuestionKeyForStatistics(int|string $questionNumber): string
+        {
+            return str_pad((string) ((int) $questionNumber), 2, '0', STR_PAD_LEFT);
+        }
+
+        private function removeDisabledConditionalQuestionsForStatistics(array &$answers, array $conditionalAnswers): void
+        {
+            $customerServiceEnabled = $this->hasEnabledConditionalQuestionRangeForStatistics(
+                $conditionalAnswers,
+                65,
+                68
+            );
+
+            $managementEnabled = $this->hasEnabledConditionalQuestionRangeForStatistics(
+                $conditionalAnswers,
+                69,
+                72
+            );
+
+            if (! $customerServiceEnabled) {
+                for ($questionNumber = 65; $questionNumber <= 68; $questionNumber++) {
+                    unset(
+                        $answers[$this->normalizeReferenceThreeQuestionKeyForStatistics($questionNumber)],
+                        $answers[(string) $questionNumber],
+                        $answers[$questionNumber]
+                    );
+                }
+            }
+
+            if (! $managementEnabled) {
+                for ($questionNumber = 69; $questionNumber <= 72; $questionNumber++) {
+                    unset(
+                        $answers[$this->normalizeReferenceThreeQuestionKeyForStatistics($questionNumber)],
+                        $answers[(string) $questionNumber],
+                        $answers[$questionNumber]
+                    );
+                }
+            }
+        }
+
+        private function hasEnabledConditionalQuestionRangeForStatistics(
+            array $conditionalAnswers,
+            int $startQuestion,
+            int $endQuestion
+        ): bool {
+            foreach ($conditionalAnswers as $section) {
+                if (! is_array($section)) {
+                    continue;
+                }
+
+                if (! $this->isReferenceThreeConditionalSectionEnabledForStatistics($section)) {
+                    continue;
+                }
+
+                $questions = $section['questions'] ?? null;
+
+                if (! is_array($questions)) {
+                    continue;
+                }
+
+                foreach ($questions as $questionNumber => $answer) {
+                    if (! is_numeric((string) $questionNumber)) {
+                        continue;
+                    }
+
+                    $numericQuestion = (int) $questionNumber;
+
+                    if ($numericQuestion >= $startQuestion && $numericQuestion <= $endQuestion) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private function isReferenceThreeConditionalSectionEnabledForStatistics(array $section): bool
+        {
+            $condition = $section['condition'] ?? null;
+
+            if (is_bool($condition)) {
+                return $condition;
+            }
+
+            if (is_numeric($condition)) {
+                return (int) $condition === 1;
+            }
+
+            if (! is_string($condition)) {
+                return false;
+            }
+
+            return $this->normalizeReferenceThreeConditionValueForStatistics($condition) === 'SI';
+        }
+
+        private function hasExplicitReferenceThreeConditionalDataset($raw): bool
+            {
+                if (is_string($raw)) {
+                    $raw = json_decode($raw, true);
+                }
+
+                if (! is_array($raw) || $raw === []) {
+                    return false;
+                }
+
+                foreach ($raw as $section) {
+                    if (! is_array($section)) {
+                        continue;
+                    }
+
+                    if (! array_key_exists('condition', $section)) {
+                        continue;
+                    }
+
+                    $condition = $section['condition'];
+
+                    if (is_bool($condition) || is_numeric($condition)) {
+                        return true;
+                    }
+
+                    if (! is_string($condition)) {
+                        continue;
+                    }
+
+                    $normalized = $this->normalizeReferenceThreeConditionValueKey($condition);
+
+                    if (in_array($normalized, ['si', 'sí', 'yes', 'true', '1', 'no', 'false', '0'], true)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            private function normalizeReferenceThreeConditionValueKey(string $value): string
+            {
+                return Str::of($value)
+                    ->ascii()
+                    ->lower()
+                    ->replace(['-', ' '], '_')
+                    ->replaceMatches('/_+/', '_')
+                    ->trim('_')
+                    ->toString();
+            }
+
+        private function normalizeReferenceThreeConditionValueForStatistics(string $value): string
+        {
+            $value = mb_strtoupper(trim($value));
+
+            $value = strtr($value, [
+                'Á' => 'A',
+                'É' => 'E',
+                'Í' => 'I',
+                'Ó' => 'O',
+                'Ú' => 'U',
+            ]);
+
+            return in_array($value, ['SI', 'YES', 'TRUE', '1'], true) ? 'SI' : 'NO';
+        }
+
+        private function calculateReferenceThreeQuestionsScoreForStatistics(array $answers, array $questions): int
+        {
+            $score = 0;
+            $answerValues = config('answer_values', []);
+            $groupOneQuestions = $answerValues['group1']['questions'] ?? [];
+
+            foreach ($questions as $questionNumber) {
+                $questionKey = $this->normalizeReferenceThreeQuestionKeyForStatistics($questionNumber);
+
+                $answer = $answers[$questionKey]
+                    ?? $answers[(string) ((int) $questionNumber)]
+                    ?? $answers[(int) $questionNumber]
+                    ?? null;
+
+                if ($answer === null || is_array($answer)) {
+                    continue;
+                }
+
+                $answer = strtoupper(trim((string) $answer));
+
+                if (! in_array($answer, ['A', 'B', 'C', 'D', 'E'], true)) {
+                    continue;
+                }
+
+                $group = in_array($questionKey, $groupOneQuestions, true)
+                    ? 'group1'
+                    : 'group2';
+
+                $score += (int) ($answerValues[$group]['values'][$answer] ?? 0);
+            }
+
+            return $score;
+        }
+
+        private function getReferenceThreeCategoryMaxScoreFromQuestionDimensions(string $categoryName, array $domainConfig): int
+        {
+            $totalQuestions = 0;
+
+            foreach (($domainConfig[$categoryName] ?? []) as $domainName => $dimensions) {
+                if (! is_array($dimensions)) {
+                    continue;
+                }
+
+                foreach ($dimensions as $dimensionName => $questions) {
+                    if (is_array($questions)) {
+                        $totalQuestions += count($questions);
+                    }
+                }
+            }
+
+            return $totalQuestions * 4;
+        }
+
+        private function getReferenceThreeQuestionsMaxScoreFromDimensions(array $dimensions): int
+        {
+            $totalQuestions = 0;
+
+            foreach ($dimensions as $dimensionName => $questions) {
+                if (is_array($questions)) {
+                    $totalQuestions += count($questions);
+                }
+            }
+
+            return $totalQuestions * 4;
+        }
+
+        private function classifyReferenceThreeCategoryRiskLevelFromConfig(string $categoryName, int|float $score): string
+        {
+            $levels = config("nom035_risk_levels.categories.$categoryName.levels", []);
+
+            if (! is_array($levels) || $levels === []) {
+                return 'nulo';
+            }
+
+            $roundedScore = (int) round((float) $score);
+
+            foreach ($levels as $levelKey => $range) {
+                $min = (int) ($range['min'] ?? 0);
+                $max = (int) ($range['max'] ?? 0);
+
+                if ($roundedScore >= $min && $roundedScore <= $max) {
+                    return (string) $levelKey;
+                }
+            }
+
+            return 'nulo';
+        }
+
+        private function classifyReferenceThreeDimensionRiskLevelFromConfig(string $dimensionName, int|float $score): string
+        {
+            $riskLevels = config('nom035_risk_levels.dimensions', []);
+            $normalizedDimensionName = $this->normalizeReferenceThreeRiskNameForStatistics($dimensionName);
+
+            $levels = [];
+
+            foreach ($riskLevels as $configuredName => $configuredData) {
+                if ($this->normalizeReferenceThreeRiskNameForStatistics((string) $configuredName) !== $normalizedDimensionName) {
+                    continue;
+                }
+
+                $levels = $configuredData['levels'] ?? [];
+                break;
+            }
+
+            if (! is_array($levels) || $levels === []) {
+                return 'nulo';
+            }
+
+            $roundedScore = (int) round((float) $score);
+
+            foreach ($levels as $levelKey => $range) {
+                $min = (int) ($range['min'] ?? 0);
+                $max = (int) ($range['max'] ?? 0);
+
+                if ($roundedScore >= $min && $roundedScore <= $max) {
+                    return (string) $levelKey;
+                }
+            }
+
+            return 'nulo';
+        }
+
+        private function normalizeReferenceThreeRiskNameForStatistics(string $value): string
+        {
+            $value = str_replace("\xC2\xA0", ' ', $value);
+            $value = preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value);
+
+            return mb_strtolower($value);
         }
 
     private function getReferenceThreeDimensionMaxScores(): array
@@ -6614,23 +7580,20 @@ class ExecutiveReportDownloadController extends Controller
                 ->all();
 
             return collect($evaluations)
-                ->filter(function ($evaluation) {
-                    return in_array($evaluation['global_level_key'] ?? 'nulo', ['medio', 'alto', 'muy_alto'], true);
-                })
-                ->map(function ($evaluation) {
-                    return [
-                        'folio' => $evaluation['folio'] ?? 'N/D',
-                        'source' => $evaluation['source'] ?? null,
-                        'global_score' => (int) ($evaluation['global_score'] ?? 0),
-                        'global_level_key' => $evaluation['global_level_key'] ?? 'nulo',
-                        'name' => $evaluation['name'] ?? 'N/D',
-                        'area' => $evaluation['area'] ?? 'N/D',
-                        'position' => $evaluation['position'] ?? 'N/D',
-                        'is_boss' => (bool) ($evaluation['is_boss'] ?? false),
-                        'attends_public' => (bool) ($evaluation['attends_public'] ?? false),
-                    ];
-                })
-                ->sort(function ($a, $b) {
+            ->map(function ($evaluation) {
+                return [
+                    'folio' => $evaluation['folio'] ?? 'N/D',
+                    'source' => $evaluation['source'] ?? null,
+                    'global_score' => (int) ($evaluation['global_score'] ?? 0),
+                    'global_level_key' => $evaluation['global_level_key'] ?? 'nulo',
+                    'name' => $evaluation['name'] ?? 'N/D',
+                    'area' => $evaluation['area'] ?? 'N/D',
+                    'position' => $evaluation['position'] ?? 'N/D',
+                    'is_boss' => (bool) ($evaluation['is_boss'] ?? false),
+                    'attends_public' => (bool) ($evaluation['attends_public'] ?? false),
+                ];
+            })
+            ->sort(function ($a, $b) {
                 return $this->compareRiskRows($a, $b, 'global_level_key', 'global_score');
             })
             ->values()
@@ -6892,8 +7855,7 @@ class ExecutiveReportDownloadController extends Controller
                         ];
                     })
                     ->filter(function ($row) {
-                        return in_array($row['global_level_key'] ?? 'nulo', ['medio', 'alto', 'muy_alto'], true)
-                            && ! empty($row['categories']);
+                        return ! empty($row['categories']);
                     })
                     ->sort(function ($a, $b) {
                         return $this->compareRiskRows($a, $b, 'global_level_key', 'global_score');
