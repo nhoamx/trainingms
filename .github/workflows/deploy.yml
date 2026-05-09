@@ -1,0 +1,57 @@
+name: Deploy production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
+            BRANCH="main"
+
+            cd "$DEPLOY_PATH"
+
+            git config --global --add safe.directory "$DEPLOY_PATH"
+            git fetch origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+
+            /usr/local/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+            /usr/bin/npm ci
+            /usr/bin/npm run build
+
+            /usr/bin/php artisan migrate --force
+            /usr/bin/php artisan storage:link || true
+
+            /usr/bin/php artisan optimize:clear
+            /usr/bin/php artisan config:cache
+            /usr/bin/php artisan route:cache
+            /usr/bin/php artisan view:cache
+
+            chown -R www-data:www-data storage bootstrap/cache public/build
+            chmod -R ug+rwx storage bootstrap/cache
+
+            /usr/bin/supervisorctl restart trainingms-worker:*
+            /usr/bin/supervisorctl restart trainingms-reverb
+            /usr/bin/systemctl reload nginx
