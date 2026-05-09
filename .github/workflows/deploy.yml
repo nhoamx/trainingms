@@ -3,7 +3,7 @@ name: Deploy production
 on:
   push:
     branches:
-      - develop
+      - main
   workflow_dispatch:
 
 concurrency:
@@ -28,7 +28,7 @@ jobs:
             set -e
 
             DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
-            BRANCH="develop"
+            BRANCH="main"
 
             cd "$DEPLOY_PATH"
 
