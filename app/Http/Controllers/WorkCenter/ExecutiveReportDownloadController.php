@@ -21,12 +21,15 @@ class ExecutiveReportDownloadController extends Controller
         string $workCenter,
         string $organization
     ): BinaryFileResponse {
+        ini_set('memory_limit', '512M');
+        set_time_limit(300);
         $organizationModel = Organization::query()->findOrFail($organization);
 
         $workCenterModel = WorkCenter::query()
             ->where('organization_id', $organization)
             ->where('id', $workCenter)
             ->firstOrFail();
+            
 
         $phpWord = $this->buildReport($organizationModel, $workCenterModel);
 
@@ -1853,13 +1856,25 @@ class ExecutiveReportDownloadController extends Controller
                 );
 
                 if (($summary['participants'] ?? 0) === 0) {
+                    unset($summary);
                     continue;
                 }
 
+                /*
+                * Solo guardamos los datos mínimos que usa compareQuestionSummaryBlocks().
+                * No guardamos toda la matriz para no saturar memoria.
+                */
                 $blocks[] = [
                     'label' => $positionLabel,
-                    'summary' => $summary,
+                    'summary' => [
+                        'participants' => (int) ($summary['participants'] ?? 0),
+                        'final_total' => (int) ($summary['final_total'] ?? 0),
+                        'final_percentage' => (float) ($summary['final_percentage'] ?? 0),
+                    ],
                 ];
+
+                unset($summary);
+                gc_collect_cycles();
             }
 
             usort($blocks, function ($a, $b) {
@@ -1880,19 +1895,33 @@ class ExecutiveReportDownloadController extends Controller
             }
 
             foreach ($blocks as $index => $block) {
-                if ($index > 0) {
-                    $section->addPageBreak();
+            if ($index > 0) {
+                $section->addPageBreak();
 
-                    $section->addText(
-                        'VIII. Análisis referencia puesto',
-                        ['bold' => true, 'size' => 14],
-                        ['spaceAfter' => 120]
-                    );
-                }
-
-                $this->addQuestionAverageGenderBand($section, $block['label']);
-                $this->renderQuestionAverageMatrixTable($section, $block['summary']);
+                $section->addText(
+                    'VIII. Análisis referencia puesto',
+                    ['bold' => true, 'size' => 14],
+                    ['spaceAfter' => 120]
+                );
             }
+
+            $summary = $this->getQuestionAverageMatrixSummaryByPosition(
+                $organization->id,
+                $workCenter->id,
+                (string) ($block['label'] ?? '')
+            );
+
+            if (($summary['participants'] ?? 0) === 0) {
+                unset($summary);
+                continue;
+            }
+
+            $this->addQuestionAverageGenderBand($section, $block['label']);
+            $this->renderQuestionAverageMatrixTable($section, $summary);
+
+            unset($summary);
+            gc_collect_cycles();
+        }
         }
 
         private function addReferenceThreeQuestionDepartmentSection(
