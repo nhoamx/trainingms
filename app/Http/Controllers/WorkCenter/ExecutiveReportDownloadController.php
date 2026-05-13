@@ -31,7 +31,46 @@ class ExecutiveReportDownloadController extends Controller
             ->firstOrFail();
             
 
-        $phpWord = $this->buildReport($organizationModel, $workCenterModel);
+       $debugReport = request()->boolean('debug_report');
+        $debugLogPath = $debugReport
+            ? $this->getReportDebugLogPath($organizationModel, $workCenterModel)
+            : null;
+
+        if ($debugReport && $debugLogPath !== null) {
+            if (is_file($debugLogPath)) {
+                unlink($debugLogPath);
+            }
+
+            $this->appendReportDebugLog($debugLogPath, [
+                'event' => 'download_start',
+                'organization_id' => (string) $organizationModel->id,
+                'organization_name' => (string) ($organizationModel->name ?? ''),
+                'work_center_id' => (string) $workCenterModel->id,
+                'work_center_name' => (string) ($workCenterModel->name ?? ''),
+                'memory_limit' => ini_get('memory_limit'),
+                'memory_mb' => round(memory_get_usage(true) / 1048576, 2),
+                'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 2),
+            ]);
+        }
+
+        try {
+            $phpWord = $this->buildReport($organizationModel, $workCenterModel);
+        } catch (\Throwable $e) {
+            if ($debugReport && $debugLogPath !== null) {
+                $this->appendReportDebugLog($debugLogPath, [
+                    'event' => 'build_report_error',
+                    'error_class' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'memory_mb' => round(memory_get_usage(true) / 1048576, 2),
+                    'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 2),
+                    'trace' => array_slice(explode("\n", $e->getTraceAsString()), 0, 20),
+                ]);
+            }
+
+            throw $e;
+        }
 
         $outputDir = storage_path('app/tmp/nom035');
 
@@ -49,8 +88,45 @@ class ExecutiveReportDownloadController extends Controller
 
         $outputPath = $outputDir . DIRECTORY_SEPARATOR . $fileName;
 
-        $writer = IOFactory::createWriter($phpWord, 'Word2007');
-        $writer->save($outputPath);
+        try {
+    if ($debugReport && $debugLogPath !== null) {
+        $this->appendReportDebugLog($debugLogPath, [
+            'event' => 'save_start',
+            'output_path' => $outputPath,
+            'memory_mb' => round(memory_get_usage(true) / 1048576, 2),
+            'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 2),
+        ]);
+    }
+
+            $writer = IOFactory::createWriter($phpWord, 'Word2007');
+            $writer->save($outputPath);
+
+            if ($debugReport && $debugLogPath !== null) {
+                $this->appendReportDebugLog($debugLogPath, [
+                    'event' => 'save_ok',
+                    'output_path' => $outputPath,
+                    'file_exists' => is_file($outputPath),
+                    'file_size_bytes' => is_file($outputPath) ? filesize($outputPath) : null,
+                    'memory_mb' => round(memory_get_usage(true) / 1048576, 2),
+                    'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 2),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            if ($debugReport && $debugLogPath !== null) {
+                $this->appendReportDebugLog($debugLogPath, [
+                    'event' => 'save_error',
+                    'error_class' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'memory_mb' => round(memory_get_usage(true) / 1048576, 2),
+                    'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 2),
+                    'trace' => array_slice(explode("\n", $e->getTraceAsString()), 0, 20),
+                ]);
+            }
+
+            throw $e;
+        }
 
         return response()
             ->download($outputPath, $fileName)
