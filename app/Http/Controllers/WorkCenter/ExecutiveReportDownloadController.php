@@ -3092,7 +3092,7 @@ class ExecutiveReportDownloadController extends Controller
         ): void {
             $section->addTitle('XVI. Análisis de trabajadores con nivel de riesgo final', 1);
 
-            $rows = $this->getFinalRiskWorkersSummary($organization->id, $workCenter->id);
+            $rows = $this->getFinalRiskWorkersSummary($workCenter);
 
             if (empty($rows)) {
                 $this->addNoDataNotice(
@@ -7696,93 +7696,82 @@ class ExecutiveReportDownloadController extends Controller
             };
         }
 
-        private function getFinalRiskWorkersSummary(string $organizationId, string $workCenterId): array
-        {
-            $rows = DB::table('evaluation_answers as ea')
-                ->join('paper_evaluations as pe', 'pe.id', '=', 'ea.paper_evaluation_id')
-                ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
-                ->where('pe.organization_id', $organizationId)
-                ->where('pe.work_center_id', $workCenterId)
-                ->where('pe.evaluation_type', 'referencia_iii')
-                ->where('ea.instrument', 'referencia_iii')
-                ->whereIn('pe.source', ['paper', 'online'])
-                ->where('pe.processing_status', 'completed')
-                ->whereNull('pe.deleted_at')
-                ->select(
-                    'pe.id as evaluation_id',
-                    'pe.source',
-                    'pe.personal_folio',
-                    'pe.evaluee_name',
-                    'ea.question_key',
-                    'ea.answer_value',
-                    'dd.department',
-                    'dd.position',
-                    'dd.extra_fields'
-                )
-                ->orderBy('pe.id')
-                ->orderByRaw('CAST(ea.question_key AS UNSIGNED)')
-                ->get();
+        private function getFinalRiskWorkersSummary(WorkCenter $workCenter): array
+            {
+                /** @var WorkCenterNom035CalculationService $calculationService */
+                $calculationService = app(WorkCenterNom035CalculationService::class);
 
-            $evaluations = $rows
-                ->groupBy('evaluation_id')
-                ->map(function ($items, $evaluationId) {
-                $first = $items->first();
+                /*
+                * Este es el mismo origen que usa el sistema para el listado:
+                * folio, nombre, área, puesto y total_score.
+                */
+                $serviceSummary = $calculationService->getEvaluationsWithDemographicsAndScores($workCenter);
 
-                $extra = json_decode((string) ($first->extra_fields ?? '[]'), true);
-                if (! is_array($extra)) {
-                    $extra = [];
+                $rows = [];
+
+                foreach (($serviceSummary['evaluations'] ?? []) as $evaluation) {
+                    $demographics = is_array($evaluation['demographics'] ?? null)
+                        ? $evaluation['demographics']
+                        : [];
+
+                    $globalScore = (int) ($evaluation['total_score'] ?? 0);
+                    $globalLevel = $this->classifyNom035Score('global', null, $globalScore);
+
+                    $rows[] = [
+                        'folio' => $this->safeValue(
+                            $evaluation['personal_folio']
+                            ?? $evaluation['folio']
+                            ?? 'N/D'
+                        ),
+                        'source' => $evaluation['source'] ?? null,
+                        'global_score' => $globalScore,
+                        'global_level_key' => (string) ($globalLevel['key'] ?? 'nulo'),
+                        'global_level_label' => (string) ($globalLevel['label'] ?? 'Nulo'),
+                        'name' => $this->safeValue($evaluation['evaluee_name'] ?? 'N/D'),
+                        'area' => $this->safeValue($demographics['area'] ?? 'N/D'),
+                        'position' => $this->safeValue($demographics['puesto'] ?? 'N/D'),
+                    ];
                 }
 
-                $isBoss = $this->extractWorkerFlag($extra, [
-                    'jefe', 'soy_jefe', 'is_boss', 'is_manager',
-                    'supervises_people', 'supervisa_personal', 'jefe_trabajadores',
-                ]);
+                return collect($rows)
+                    ->sort(function (array $a, array $b): int {
+                        /*
+                        * Igual que el sistema cuando ordenas por nivel de riesgo:
+                        * 1) Nivel de riesgo descendente
+                        * 2) Puntos descendente
+                        * 3) Folio ascendente
+                        */
+                        $riskCompare = $this->riskLevelWeight((string) ($b['global_level_key'] ?? 'nulo'))
+                            <=> $this->riskLevelWeight((string) ($a['global_level_key'] ?? 'nulo'));
 
-                $attendsPublic = $this->extractWorkerFlag($extra, [
-                    'atiende', 'atiende_clientes', 'atencion_clientes',
-                    'servicio_clientes', 'servicio_usuarios', 'client_service', 'attends_public',
-                ]);
+                        if ($riskCompare !== 0) {
+                            return $riskCompare;
+                        }
 
-                $result = $this->buildReferenceThreeEvaluationResult(
-                    (string) $evaluationId,
-                    (string) ($first->source ?? 'paper'),
-                    $items,
-                    $attendsPublic,
-                    $isBoss
-                );
+                        $scoreCompare = ((int) ($b['global_score'] ?? 0))
+                            <=> ((int) ($a['global_score'] ?? 0));
 
-                $result['folio'] = $this->safeValue($first->personal_folio);
-                $result['name'] = $this->safeValue($first->evaluee_name);
-                $result['area'] = $this->safeValue($first->department);
-                $result['position'] = $this->safeValue($first->position);
-                $result['is_boss'] = $isBoss;
-                $result['attends_public'] = $attendsPublic;
+                        if ($scoreCompare !== 0) {
+                            return $scoreCompare;
+                        }
 
-                return $result;
-            })
-                ->values()
-                ->all();
+                        $folioA = $this->stripFirstTwoLeadingZeros((string) ($a['folio'] ?? ''));
+                        $folioB = $this->stripFirstTwoLeadingZeros((string) ($b['folio'] ?? ''));
 
-            return collect($evaluations)
-            ->map(function ($evaluation) {
-                return [
-                    'folio' => $evaluation['folio'] ?? 'N/D',
-                    'source' => $evaluation['source'] ?? null,
-                    'global_score' => (int) ($evaluation['global_score'] ?? 0),
-                    'global_level_key' => $evaluation['global_level_key'] ?? 'nulo',
-                    'name' => $evaluation['name'] ?? 'N/D',
-                    'area' => $evaluation['area'] ?? 'N/D',
-                    'position' => $evaluation['position'] ?? 'N/D',
-                    'is_boss' => (bool) ($evaluation['is_boss'] ?? false),
-                    'attends_public' => (bool) ($evaluation['attends_public'] ?? false),
-                ];
-            })
-            ->sort(function ($a, $b) {
-                return $this->compareRiskRows($a, $b, 'global_level_key', 'global_score');
-            })
-            ->values()
-            ->all();
-        }
+                        $folioCompare = strnatcasecmp($folioA, $folioB);
+
+                        if ($folioCompare !== 0) {
+                            return $folioCompare;
+                        }
+
+                        return strnatcasecmp(
+                            (string) ($a['name'] ?? ''),
+                            (string) ($b['name'] ?? '')
+                        );
+                    })
+                    ->values()
+                    ->all();
+            }
 
         private function getDomainQuantitativeAnalysisSummary(string $organizationId, string $workCenterId): array
             {
