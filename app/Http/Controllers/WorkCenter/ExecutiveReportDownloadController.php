@@ -7567,6 +7567,58 @@ class ExecutiveReportDownloadController extends Controller
                     'muy_alto' => 4,
                 ];
 
+                /*
+                * El servicio trae el cálculo correcto de violencia,
+                * pero no siempre trae nombre/género como lo ocupamos en Word.
+                * Por eso armamos un mapa desde paper_evaluations + demographic_data
+                * solo para completar datos visuales, sin tocar el cálculo.
+                */
+                $workerMetaRows = DB::table('paper_evaluations as pe')
+                    ->leftJoin('demographic_data as dd', 'dd.paper_evaluation_id', '=', 'pe.id')
+                    ->where('pe.organization_id', $workCenter->organization_id)
+                    ->where('pe.work_center_id', $workCenter->id)
+                    ->where('pe.evaluation_type', 'referencia_iii')
+                    ->whereIn('pe.source', ['paper', 'online'])
+                    ->where('pe.processing_status', 'completed')
+                    ->whereNull('pe.deleted_at')
+                    ->select(
+                        'pe.id as evaluation_id',
+                        'pe.source',
+                        'pe.personal_folio',
+                        'pe.evaluee_name',
+                        'dd.gender'
+                    )
+                    ->get();
+
+                $workerMetaByEvaluationId = [];
+                $workerMetaBySourceAndFolio = [];
+                $workerMetaByFolio = [];
+
+                foreach ($workerMetaRows as $metaRow) {
+                    $evaluationId = (string) ($metaRow->evaluation_id ?? '');
+                    $source = (string) ($metaRow->source ?? '');
+                    $folio = trim((string) ($metaRow->personal_folio ?? ''));
+
+                    $gender = trim((string) ($metaRow->gender ?? ''));
+                    $genderLabel = $gender !== ''
+                        ? ucfirst(mb_strtolower($gender))
+                        : 'N/D';
+
+                    $meta = [
+                        'name' => $this->safeValue($metaRow->evaluee_name),
+                        'gender' => $genderLabel,
+                    ];
+
+                    if ($evaluationId !== '') {
+                        $workerMetaByEvaluationId[$evaluationId] = $meta;
+                    }
+
+                    if ($folio !== '') {
+                        $workerMetaByFolio[$folio] = $meta;
+                        $workerMetaBySourceAndFolio[$source . '|' . $folio] = $meta;
+                    }
+                }
+
                 $rows = [];
 
                 foreach (($stats['participants'] ?? []) as $participant) {
@@ -7577,11 +7629,27 @@ class ExecutiveReportDownloadController extends Controller
                         $items[$questionNumber] = (int) ($levelToScore[$level] ?? 0);
                     }
 
+                    $evaluationId = (string) ($participant['evaluation_id'] ?? $participant['id'] ?? '');
+                    $folio = trim((string) ($participant['personal_folio'] ?? ''));
+                    $source = (string) ($participant['source'] ?? '');
+
+                    $meta = null;
+
+                    if ($evaluationId !== '' && isset($workerMetaByEvaluationId[$evaluationId])) {
+                        $meta = $workerMetaByEvaluationId[$evaluationId];
+                    } elseif ($folio !== '' && isset($workerMetaBySourceAndFolio[$source . '|' . $folio])) {
+                        $meta = $workerMetaBySourceAndFolio[$source . '|' . $folio];
+                    } elseif ($folio !== '' && isset($workerMetaByFolio[$folio])) {
+                        $meta = $workerMetaByFolio[$folio];
+                    }
+
+                    $genderFromService = trim((string) ($participant['demographics']['genero'] ?? ''));
+
                     $rows[] = [
-                        'folio' => (string) ($participant['personal_folio'] ?? ''),
-                        'source' => (string) ($participant['source'] ?? ''),
-                        'name' => '',
-                        'gender' => (string) ($participant['demographics']['genero'] ?? 'No especificado'),
+                        'folio' => $folio,
+                        'source' => $source,
+                        'name' => $meta['name'] ?? 'N/D',
+                        'gender' => $meta['gender'] ?? ($genderFromService !== '' ? ucfirst(mb_strtolower($genderFromService)) : 'N/D'),
                         'ats' => false,
                         'points' => (int) ($participant['violence_score'] ?? 0),
                         'risk_level' => (string) ($participant['risk_level'] ?? 'nulo'),
@@ -7589,7 +7657,18 @@ class ExecutiveReportDownloadController extends Controller
                     ];
                 }
 
-                return $rows;
+                return collect($rows)
+                    ->sort(function (array $a, array $b): int {
+                        $pointsCompare = ((int) ($b['points'] ?? 0)) <=> ((int) ($a['points'] ?? 0));
+
+                        if ($pointsCompare !== 0) {
+                            return $pointsCompare;
+                        }
+
+                        return strnatcasecmp((string) ($a['folio'] ?? ''), (string) ($b['folio'] ?? ''));
+                    })
+                    ->values()
+                    ->all();
             }
 
         private function getWorkplaceViolenceQuestionLabels(): array
