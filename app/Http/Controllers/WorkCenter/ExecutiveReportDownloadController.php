@@ -21,17 +21,42 @@ use App\Services\WorkCenter\WorkCenterNom035CalculationService;
 class ExecutiveReportDownloadController extends Controller
 {
     public function download(
-        string $workCenter,
-        string $organization
-    ) {
+    string $workCenter,
+    string $organization
+) {
+    $debugQueue = request()->boolean('debug_queue');
+    $reportId = null;
+
+    try {
+        $this->appendNom035QueueDebug('download_start', [
+            'work_center_param' => $workCenter,
+            'organization_param' => $organization,
+            'url' => request()->fullUrl(),
+        ]);
+
         $organizationModel = Organization::query()->findOrFail($organization);
+
+        $this->appendNom035QueueDebug('organization_ok', [
+            'organization_id' => (string) $organizationModel->id,
+            'organization_name' => (string) ($organizationModel->name ?? ''),
+        ]);
 
         $workCenterModel = WorkCenter::query()
             ->where('organization_id', $organization)
             ->where('id', $workCenter)
             ->firstOrFail();
 
+        $this->appendNom035QueueDebug('work_center_ok', [
+            'work_center_id' => (string) $workCenterModel->id,
+            'work_center_name' => (string) ($workCenterModel->name ?? ''),
+        ]);
+
         $reportId = (string) Str::uuid();
+
+        $this->appendNom035QueueDebug('status_write_start', [
+            'report_id' => $reportId,
+            'status_path' => $this->reportStatusFilePath($reportId),
+        ]);
 
         $this->writeReportStatus($reportId, [
             'status' => 'queued',
@@ -44,17 +69,53 @@ class ExecutiveReportDownloadController extends Controller
             'created_at' => now()->toDateTimeString(),
         ]);
 
+        $this->appendNom035QueueDebug('status_write_ok', [
+            'report_id' => $reportId,
+        ]);
+
+        $this->appendNom035QueueDebug('dispatch_start', [
+            'report_id' => $reportId,
+            'queue_connection' => config('queue.default'),
+        ]);
+
         GenerateExecutiveReportJob::dispatch(
             $reportId,
             (string) $workCenterModel->id,
             (string) $organizationModel->id
         );
 
+        $this->appendNom035QueueDebug('dispatch_ok', [
+            'report_id' => $reportId,
+        ]);
+
         return redirect()->route('executive-report.file', [
             'reportId' => $reportId,
             'return_url' => url()->previous(),
         ]);
+    } catch (Throwable $e) {
+        $this->appendNom035QueueDebug('download_error', [
+            'report_id' => $reportId,
+            'error_class' => get_class($e),
+            'error_message' => $e->getMessage(),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine(),
+        ]);
+
+        if ($debugQueue) {
+            return response()->json([
+                'debug' => true,
+                'stage' => 'download',
+                'report_id' => $reportId,
+                'error_class' => get_class($e),
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+            ], 500);
+        }
+
+        throw $e;
     }
+}
 
     public function status(string $reportId): JsonResponse
     {
@@ -400,22 +461,42 @@ class ExecutiveReportDownloadController extends Controller
 
         $outputDir = storage_path('app/reports/nom035');
 
-        if (! is_dir($outputDir)) {
-            mkdir($outputDir, 0755, true);
-        }
+if (! is_dir($outputDir)) {
+    $created = mkdir($outputDir, 0775, true);
 
-        $runId = $reportId ?: now()->format('Ymd_His_u') . '_' . Str::random(8);
+    if (! $created && ! is_dir($outputDir)) {
+        throw new \RuntimeException('No se pudo crear el directorio de reportes: ' . $outputDir);
+    }
+}
 
-        $fileName = 'Informe_Analitico_NOM035_' .
-            Str::slug($organizationModel->name ?? 'empresa', '_') . '_' .
-            Str::slug($workCenterModel->name ?? 'centro_trabajo', '_') . '_' .
-            $runId .
-            '.docx';
+if (! is_writable($outputDir)) {
+    throw new \RuntimeException('El directorio de reportes no tiene permisos de escritura: ' . $outputDir);
+}
 
-        $outputPath = $outputDir . DIRECTORY_SEPARATOR . $fileName;
+$runId = $reportId ?: now()->format('Ymd_His_u') . '_' . Str::random(8);
 
-        $writer = IOFactory::createWriter($phpWord, 'Word2007');
-        $writer->save($outputPath);
+$fileName = 'Informe_Analitico_NOM035_' .
+    Str::slug($organizationModel->name ?? 'empresa', '_') . '_' .
+    Str::slug($workCenterModel->name ?? 'centro_trabajo', '_') . '_' .
+    $runId .
+    '.docx';
+
+$outputPath = $outputDir . DIRECTORY_SEPARATOR . $fileName;
+
+$this->appendNom035QueueDebug('word_save_start', [
+    'report_id' => $reportId,
+    'output_path' => $outputPath,
+]);
+
+$writer = IOFactory::createWriter($phpWord, 'Word2007');
+$writer->save($outputPath);
+
+$this->appendNom035QueueDebug('word_save_ok', [
+    'report_id' => $reportId,
+    'output_path' => $outputPath,
+    'file_exists' => is_file($outputPath),
+    'file_size_bytes' => is_file($outputPath) ? filesize($outputPath) : null,
+]);
 
         return [
             'output_path' => $outputPath,
@@ -434,15 +515,23 @@ class ExecutiveReportDownloadController extends Controller
     }
 
     private function reportStatusFilePath(string $reportId): string
-    {
-        $statusDir = storage_path('app/reports/nom035/status');
+{
+    $statusDir = storage_path('app/reports/nom035/status');
 
-        if (! is_dir($statusDir)) {
-            mkdir($statusDir, 0755, true);
+    if (! is_dir($statusDir)) {
+        $created = mkdir($statusDir, 0775, true);
+
+        if (! $created && ! is_dir($statusDir)) {
+            throw new \RuntimeException('No se pudo crear el directorio de status: ' . $statusDir);
         }
-
-        return $statusDir . DIRECTORY_SEPARATOR . $reportId . '.json';
     }
+
+    if (! is_writable($statusDir)) {
+        throw new \RuntimeException('El directorio de status no tiene permisos de escritura: ' . $statusDir);
+    }
+
+    return $statusDir . DIRECTORY_SEPARATOR . $reportId . '.json';
+}
 
     private function readReportStatus(string $reportId): ?array
     {
@@ -464,19 +553,53 @@ class ExecutiveReportDownloadController extends Controller
     }
 
     private function writeReportStatus(string $reportId, array $payload): void
-    {
-        $current = $this->readReportStatus($reportId) ?? [];
+{
+    $current = $this->readReportStatus($reportId) ?? [];
 
-        $data = array_merge($current, $payload, [
-            'updated_at' => now()->toDateTimeString(),
-        ]);
+    $data = array_merge($current, $payload, [
+        'updated_at' => now()->toDateTimeString(),
+    ]);
+
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+
+    if ($json === false) {
+        throw new \RuntimeException('No se pudo codificar el status JSON del reporte.');
+    }
+
+    $statusPath = $this->reportStatusFilePath($reportId);
+
+    $written = file_put_contents($statusPath, $json, LOCK_EX);
+
+    if ($written === false) {
+        throw new \RuntimeException('No se pudo escribir el status JSON del reporte en: ' . $statusPath);
+    }
+}
+
+private function appendNom035QueueDebug(string $event, array $context = []): void
+{
+    try {
+        $logDir = storage_path('logs');
+
+        if (! is_dir($logDir)) {
+            mkdir($logDir, 0775, true);
+        }
+
+        $payload = array_merge([
+            'timestamp' => now()->toDateTimeString(),
+            'event' => $event,
+            'queue_connection' => config('queue.default'),
+            'app_env' => config('app.env'),
+        ], $context);
 
         file_put_contents(
-            $this->reportStatusFilePath($reportId),
-            json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT),
-            LOCK_EX
+            $logDir . DIRECTORY_SEPARATOR . 'nom035_queue_debug.log',
+            json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL,
+            FILE_APPEND | LOCK_EX
         );
+    } catch (Throwable $e) {
+        // No bloquear la descarga si el log de debug no se puede escribir.
     }
+}
 
     private function resolveReportReturnUrl(?array $status = null): string
         {
