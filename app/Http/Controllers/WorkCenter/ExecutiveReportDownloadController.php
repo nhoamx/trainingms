@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\WorkCenter;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\GenerateExecutiveReportJob;
 use App\Models\Organization;
 use App\Models\WorkCenter;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Http\JsonResponse;
 use PhpOffice\PhpWord\Element\Section;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
@@ -20,131 +23,522 @@ class ExecutiveReportDownloadController extends Controller
     public function download(
         string $workCenter,
         string $organization
-    ): BinaryFileResponse {
-        ini_set('memory_limit', '512M');
-        set_time_limit(300);
+    ) {
         $organizationModel = Organization::query()->findOrFail($organization);
 
         $workCenterModel = WorkCenter::query()
             ->where('organization_id', $organization)
             ->where('id', $workCenter)
             ->firstOrFail();
-            
 
-       $debugReport = request()->boolean('debug_report');
-        $debugLogPath = $debugReport
-            ? $this->getReportDebugLogPath($organizationModel, $workCenterModel)
-            : null;
+        $reportId = (string) Str::uuid();
 
-        if ($debugReport && $debugLogPath !== null) {
-            if (is_file($debugLogPath)) {
-                unlink($debugLogPath);
-            }
+        $this->writeReportStatus($reportId, [
+            'status' => 'queued',
+            'report_id' => $reportId,
+            'organization_id' => (string) $organizationModel->id,
+            'organization_name' => (string) ($organizationModel->name ?? ''),
+            'work_center_id' => (string) $workCenterModel->id,
+            'work_center_name' => (string) ($workCenterModel->name ?? ''),
+            'return_url' => url()->previous(),
+            'created_at' => now()->toDateTimeString(),
+        ]);
 
-            $this->appendReportDebugLog($debugLogPath, [
-                'event' => 'download_start',
-                'organization_id' => (string) $organizationModel->id,
-                'organization_name' => (string) ($organizationModel->name ?? ''),
-                'work_center_id' => (string) $workCenterModel->id,
-                'work_center_name' => (string) ($workCenterModel->name ?? ''),
-                'memory_limit' => ini_get('memory_limit'),
-                'memory_mb' => round(memory_get_usage(true) / 1048576, 2),
-                'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 2),
+        GenerateExecutiveReportJob::dispatch(
+            $reportId,
+            (string) $workCenterModel->id,
+            (string) $organizationModel->id
+        );
+
+        return redirect()->route('executive-report.file', [
+            'reportId' => $reportId,
+            'return_url' => url()->previous(),
+        ]);
+    }
+
+    public function status(string $reportId): JsonResponse
+    {
+        $status = $this->readReportStatus($reportId);
+
+        $generatedPath = $this->findGeneratedReportPath($reportId);
+
+        if ($generatedPath !== null && is_file($generatedPath)) {
+            $status = array_merge(is_array($status) ? $status : [], [
+                'status' => 'ready',
+                'report_id' => $reportId,
+                'output_path' => $generatedPath,
+                'file_name' => basename($generatedPath),
+                'file_size_bytes' => filesize($generatedPath),
+                'completed_at' => now()->toDateTimeString(),
             ]);
+
+            $this->writeReportStatus($reportId, $status);
         }
 
-        try {
-            $phpWord = $this->buildReport($organizationModel, $workCenterModel);
-        } catch (\Throwable $e) {
-            if ($debugReport && $debugLogPath !== null) {
-                $this->appendReportDebugLog($debugLogPath, [
-                    'event' => 'build_report_error',
-                    'error_class' => get_class($e),
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'memory_mb' => round(memory_get_usage(true) / 1048576, 2),
-                    'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 2),
-                    'trace' => array_slice(explode("\n", $e->getTraceAsString()), 0, 20),
-                ]);
+        if (! is_array($status)) {
+            return response()->json([
+                'status' => 'not_found',
+                'message' => 'No se encontró el proceso del informe o ya expiró.',
+            ], 404)
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                ->header('Pragma', 'no-cache')
+                ->header('Expires', '0');
+        }
+
+        return response()->json($status)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+    }
+
+    public function file(string $reportId)
+        {
+            $status = $this->readReportStatus($reportId);
+            $returnUrl = $this->resolveReportReturnUrl($status);
+
+            $generatedPath = $this->findGeneratedReportPath($reportId);
+
+            if ($generatedPath !== null && is_file($generatedPath)) {
+                if (request()->boolean('download')) {
+                    return response()->download($generatedPath, basename($generatedPath), [
+                        'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+                        'Pragma' => 'no-cache',
+                        'Expires' => '0',
+                    ]);
+                }
+
+                return response(
+                    $this->renderReportReadyPage($reportId, basename($generatedPath), $returnUrl),
+                    200
+                )
+                    ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                    ->header('Pragma', 'no-cache')
+                    ->header('Expires', '0');
             }
 
-            throw $e;
+            if (is_array($status) && ($status['status'] ?? null) === 'ready') {
+                $outputPath = (string) ($status['output_path'] ?? '');
+                $fileName = (string) ($status['file_name'] ?? basename($outputPath));
+
+                if ($outputPath !== '' && is_file($outputPath)) {
+                    if (request()->boolean('download')) {
+                        return response()->download($outputPath, $fileName, [
+                            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+                            'Pragma' => 'no-cache',
+                            'Expires' => '0',
+                        ]);
+                    }
+
+                    return response(
+                        $this->renderReportReadyPage($reportId, $fileName, $returnUrl),
+                        200
+                    )
+                        ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                        ->header('Pragma', 'no-cache')
+                        ->header('Expires', '0');
+                }
+            }
+
+            if (is_array($status) && ($status['status'] ?? null) === 'failed') {
+                return response(
+                    $this->renderReportErrorPage((string) ($status['error_message'] ?? 'Error desconocido al generar el informe.')),
+                    500
+                )
+                    ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                    ->header('Pragma', 'no-cache')
+                    ->header('Expires', '0');
+            }
+
+            return response(
+                $this->renderReportWaitingPage(
+                    $reportId,
+                    is_array($status) ? (string) ($status['status'] ?? 'queued') : 'queued',
+                    $returnUrl
+                ),
+                200
+            )
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                ->header('Pragma', 'no-cache')
+                ->header('Expires', '0');
         }
 
-        $outputDir = storage_path('app/tmp/nom035');
+    private function renderReportWaitingPage(string $reportId, string $status, string $returnUrl): string
+        {
+            $refreshUrl = route('executive-report.file', [
+                'reportId' => $reportId,
+                'return_url' => $returnUrl,
+            ]);
+
+            $safeStatus = htmlspecialchars($status, ENT_QUOTES, 'UTF-8');
+            $safeRefreshUrl = htmlspecialchars($refreshUrl, ENT_QUOTES, 'UTF-8');
+
+            return '<!doctype html>
+        <html lang="es">
+        <head>
+            <meta charset="utf-8">
+            <title>Generando informe</title>
+            <meta http-equiv="refresh" content="4;url=' . $safeRefreshUrl . '">
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background: #f3f4f6;
+                    color: #111827;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    margin: 0;
+                }
+                .card {
+                    background: #ffffff;
+                    border-radius: 12px;
+                    padding: 32px;
+                    width: 460px;
+                    box-shadow: 0 10px 25px rgba(0,0,0,.12);
+                    text-align: center;
+                }
+                .title {
+                    font-size: 20px;
+                    font-weight: bold;
+                    margin-bottom: 12px;
+                }
+                .message {
+                    font-size: 14px;
+                    color: #4b5563;
+                    margin-bottom: 18px;
+                }
+                .status {
+                    font-size: 13px;
+                    color: #1f2937;
+                    background: #f9fafb;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 8px;
+                    padding: 12px;
+                    word-break: break-word;
+                }
+                .spinner {
+                    width: 36px;
+                    height: 36px;
+                    border: 4px solid #d1d5db;
+                    border-top: 4px solid #2563eb;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                    margin: 0 auto 18px auto;
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="spinner"></div>
+                <div class="title">Generando informe</div>
+                <div class="message">
+                    El archivo se está generando en segundo plano. Esta pantalla se actualizará automáticamente.
+                </div>
+                <div class="status">Estado: ' . $safeStatus . '. Esperando archivo...</div>
+            </div>
+        </body>
+        </html>';
+        }
+
+    private function renderReportReadyPage(string $reportId, string $fileName, string $returnUrl): string
+        {
+            $downloadUrl = route('executive-report.file', [
+                'reportId' => $reportId,
+                'download' => 1,
+                'return_url' => $returnUrl,
+            ]);
+
+            $safeDownloadUrl = htmlspecialchars($downloadUrl, ENT_QUOTES, 'UTF-8');
+            $safeReturnUrl = htmlspecialchars($returnUrl, ENT_QUOTES, 'UTF-8');
+            $safeFileName = htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8');
+            $returnUrlJson = json_encode($returnUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            return '<!doctype html>
+        <html lang="es">
+        <head>
+            <meta charset="utf-8">
+            <title>Descargando informe</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background: #f3f4f6;
+                    color: #111827;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    margin: 0;
+                }
+                .card {
+                    background: #ffffff;
+                    border-radius: 12px;
+                    padding: 32px;
+                    width: 520px;
+                    box-shadow: 0 10px 25px rgba(0,0,0,.12);
+                    text-align: center;
+                }
+                .title {
+                    font-size: 20px;
+                    font-weight: bold;
+                    margin-bottom: 12px;
+                    color: #166534;
+                }
+                .message {
+                    font-size: 14px;
+                    color: #4b5563;
+                    margin-bottom: 18px;
+                }
+                .status {
+                    font-size: 13px;
+                    color: #1f2937;
+                    background: #f9fafb;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 8px;
+                    padding: 12px;
+                    word-break: break-word;
+                }
+                a {
+                    color: #2563eb;
+                    font-weight: bold;
+                    text-decoration: none;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="title">Informe listo</div>
+                <div class="message">
+                    La descarga del archivo iniciará automáticamente. Después regresarás a la página anterior.
+                </div>
+                <div class="status">
+                    Archivo: ' . $safeFileName . '<br>
+                    Si no descarga, <a href="' . $safeDownloadUrl . '">haz clic aquí</a>.
+                </div>
+            </div>
+
+            <iframe src="' . $safeDownloadUrl . '" style="display:none;"></iframe>
+
+            <script>
+                setTimeout(function () {
+                    window.location.href = ' . $returnUrlJson . ';
+                }, 3000);
+            </script>
+        </body>
+        </html>';
+        }
+
+        private function renderReportErrorPage(string $message): string
+        {
+            $safeMessage = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+
+            return '<!doctype html>
+        <html lang="es">
+        <head>
+            <meta charset="utf-8">
+            <title>Error al generar informe</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background: #f3f4f6;
+                    color: #111827;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    margin: 0;
+                }
+                .card {
+                    background: #ffffff;
+                    border-radius: 12px;
+                    padding: 32px;
+                    width: 520px;
+                    box-shadow: 0 10px 25px rgba(0,0,0,.12);
+                    text-align: center;
+                }
+                .title {
+                    font-size: 20px;
+                    font-weight: bold;
+                    margin-bottom: 12px;
+                    color: #b91c1c;
+                }
+                .message {
+                    font-size: 14px;
+                    color: #4b5563;
+                    word-break: break-word;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="title">Error al generar informe</div>
+                <div class="message">' . $safeMessage . '</div>
+            </div>
+        </body>
+        </html>';
+        }
+
+    public function generateReportFile(
+        string $workCenter,
+        string $organization,
+        ?string $reportId = null
+    ): array {
+        ini_set('memory_limit', '1024M');
+        set_time_limit(0);
+
+        $organizationModel = Organization::query()->findOrFail($organization);
+
+        $workCenterModel = WorkCenter::query()
+            ->where('organization_id', $organization)
+            ->where('id', $workCenter)
+            ->firstOrFail();
+
+        $phpWord = $this->buildReport($organizationModel, $workCenterModel);
+
+        $outputDir = storage_path('app/reports/nom035');
 
         if (! is_dir($outputDir)) {
             mkdir($outputDir, 0755, true);
         }
 
-                $runId = now()->format('Ymd_His_u') . '_' . Str::random(8);
+        $runId = $reportId ?: now()->format('Ymd_His_u') . '_' . Str::random(8);
 
         $fileName = 'Informe_Analitico_NOM035_' .
-        Str::slug($organizationModel->name ?? 'empresa', '_') . '_' .
-        Str::slug($workCenterModel->name ?? 'centro_trabajo', '_') . '_' .
-        $runId .
-        '.docx';
+            Str::slug($organizationModel->name ?? 'empresa', '_') . '_' .
+            Str::slug($workCenterModel->name ?? 'centro_trabajo', '_') . '_' .
+            $runId .
+            '.docx';
 
         $outputPath = $outputDir . DIRECTORY_SEPARATOR . $fileName;
 
-        try {
-    if ($debugReport && $debugLogPath !== null) {
-        $this->appendReportDebugLog($debugLogPath, [
-            'event' => 'save_start',
+        $writer = IOFactory::createWriter($phpWord, 'Word2007');
+        $writer->save($outputPath);
+
+        return [
             'output_path' => $outputPath,
-            'memory_mb' => round(memory_get_usage(true) / 1048576, 2),
-            'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 2),
-        ]);
+            'file_name' => $fileName,
+            'file_size_bytes' => is_file($outputPath) ? filesize($outputPath) : null,
+            'organization_id' => (string) $organizationModel->id,
+            'organization_name' => (string) ($organizationModel->name ?? ''),
+            'work_center_id' => (string) $workCenterModel->id,
+            'work_center_name' => (string) ($workCenterModel->name ?? ''),
+        ];
     }
 
-            $writer = IOFactory::createWriter($phpWord, 'Word2007');
-            $writer->save($outputPath);
-
-            if ($debugReport && $debugLogPath !== null) {
-                $this->appendReportDebugLog($debugLogPath, [
-                    'event' => 'save_ok',
-                    'output_path' => $outputPath,
-                    'file_exists' => is_file($outputPath),
-                    'file_size_bytes' => is_file($outputPath) ? filesize($outputPath) : null,
-                    'memory_mb' => round(memory_get_usage(true) / 1048576, 2),
-                    'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 2),
-                ]);
-            }
-        } catch (\Throwable $e) {
-            if ($debugReport && $debugLogPath !== null) {
-                $this->appendReportDebugLog($debugLogPath, [
-                    'event' => 'save_error',
-                    'error_class' => get_class($e),
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'memory_mb' => round(memory_get_usage(true) / 1048576, 2),
-                    'peak_memory_mb' => round(memory_get_peak_usage(true) / 1048576, 2),
-                    'trace' => array_slice(explode("\n", $e->getTraceAsString()), 0, 20),
-                ]);
-            }
-
-            throw $e;
-        }
-
-        return response()
-            ->download($outputPath, $fileName)
-            ->deleteFileAfterSend(true);
-    }
-
-        private function makeUniqueChartPath(string $prefix): string
+   private function reportStatusCacheKey(string $reportId): string
     {
-        $chartDir = storage_path('app/tmp/nom035/charts');
+        return 'nom035_report:' . $reportId;
+    }
 
-        if (! is_dir($chartDir)) {
-            mkdir($chartDir, 0755, true);
+    private function reportStatusFilePath(string $reportId): string
+    {
+        $statusDir = storage_path('app/reports/nom035/status');
+
+        if (! is_dir($statusDir)) {
+            mkdir($statusDir, 0755, true);
         }
 
-        $runId = now()->format('Ymd_His_u') . '_' . Str::random(8);
-
-        return $chartDir . DIRECTORY_SEPARATOR . $prefix . '_' . $runId . '.png';
+        return $statusDir . DIRECTORY_SEPARATOR . $reportId . '.json';
     }
+
+    private function readReportStatus(string $reportId): ?array
+    {
+        $statusPath = $this->reportStatusFilePath($reportId);
+
+        if (! is_file($statusPath)) {
+            return null;
+        }
+
+        $content = file_get_contents($statusPath);
+
+        if ($content === false || trim($content) === '') {
+            return null;
+        }
+
+        $decoded = json_decode($content, true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    private function writeReportStatus(string $reportId, array $payload): void
+    {
+        $current = $this->readReportStatus($reportId) ?? [];
+
+        $data = array_merge($current, $payload, [
+            'updated_at' => now()->toDateTimeString(),
+        ]);
+
+        file_put_contents(
+            $this->reportStatusFilePath($reportId),
+            json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT),
+            LOCK_EX
+        );
+    }
+
+    private function resolveReportReturnUrl(?array $status = null): string
+        {
+            $candidate = (string) request()->query('return_url', '');
+
+            if ($candidate === '' && is_array($status)) {
+                $candidate = (string) ($status['return_url'] ?? '');
+            }
+
+            if ($candidate === '') {
+                $candidate = url()->previous();
+            }
+
+            if ($candidate === '' || $candidate === url()->current()) {
+                return url('/');
+            }
+
+            $appHost = parse_url(url('/'), PHP_URL_HOST);
+            $candidateHost = parse_url($candidate, PHP_URL_HOST);
+
+            if ($candidateHost !== null && $candidateHost !== $appHost) {
+                return url('/');
+            }
+
+            return $candidate;
+        }
+
+    private function findGeneratedReportPath(string $reportId): ?string
+        {
+            $outputDir = storage_path('app/reports/nom035');
+
+            if (! is_dir($outputDir)) {
+                return null;
+            }
+
+            $matches = glob($outputDir . DIRECTORY_SEPARATOR . '*' . $reportId . '*.docx');
+
+            if (! is_array($matches) || count($matches) === 0) {
+                return null;
+            }
+
+            foreach ($matches as $path) {
+                if (is_file($path)) {
+                    return $path;
+                }
+            }
+
+            return null;
+        }
+
+            private function makeUniqueChartPath(string $prefix): string
+        {
+            $chartDir = storage_path('app/tmp/nom035/charts');
+
+            if (! is_dir($chartDir)) {
+                mkdir($chartDir, 0755, true);
+            }
+
+            $runId = now()->format('Ymd_His_u') . '_' . Str::random(8);
+
+            return $chartDir . DIRECTORY_SEPARATOR . $prefix . '_' . $runId . '.png';
+        }
 
     private function buildReport(Organization $organization, WorkCenter $workCenter): PhpWord
     {
