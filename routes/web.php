@@ -758,3 +758,13 @@ Route::get(
     '/centro-trabajo/{workCenter}/dashboard/nom-035/informe/{organization}',
     [ExecutiveReportDownloadController::class, 'download']
 )->name('work-centers.executive-report.download');
+
+Route::get(
+    '/executive-reports/{reportId}/status',
+    [ExecutiveReportDownloadController::class, 'status']
+)->name('executive-report.status');
+
+Route::get(
+    '/executive-reports/{reportId}/file',
+    [ExecutiveReportDownloadController::class, 'file']
+)->name('executive-report.file');
