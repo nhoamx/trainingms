@@ -18,6 +18,7 @@ use PhpOffice\PhpWord\SimpleType\Jc;
 use PhpOffice\PhpWord\SimpleType\JcTable;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Services\WorkCenter\WorkCenterNom035CalculationService;
+use Throwable;
 class ExecutiveReportDownloadController extends Controller
 {
     public function download(
@@ -314,9 +315,9 @@ class ExecutiveReportDownloadController extends Controller
             ]);
 
             $safeDownloadUrl = htmlspecialchars($downloadUrl, ENT_QUOTES, 'UTF-8');
-            $safeReturnUrl = htmlspecialchars($returnUrl, ENT_QUOTES, 'UTF-8');
             $safeFileName = htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8');
             $returnUrlJson = json_encode($returnUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $downloadUrlJson = json_encode($downloadUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
             return '<!doctype html>
         <html lang="es">
@@ -338,7 +339,7 @@ class ExecutiveReportDownloadController extends Controller
                     background: #ffffff;
                     border-radius: 12px;
                     padding: 32px;
-                    width: 520px;
+                    width: 540px;
                     box-shadow: 0 10px 25px rgba(0,0,0,.12);
                     text-align: center;
                 }
@@ -373,20 +374,53 @@ class ExecutiveReportDownloadController extends Controller
             <div class="card">
                 <div class="title">Informe listo</div>
                 <div class="message">
-                    La descarga del archivo iniciará automáticamente. Después regresarás a la página anterior.
+                    La descarga del archivo iniciará automáticamente. No cierres esta pantalla hasta que veas la descarga en el navegador.
                 </div>
-                <div class="status">
+                <div class="status" id="downloadStatus">
                     Archivo: ' . $safeFileName . '<br>
-                    Si no descarga, <a href="' . $safeDownloadUrl . '">haz clic aquí</a>.
+                    Preparando descarga...
+                    <br><br>
+                    Si no descarga, <a id="manualDownloadLink" href="' . $safeDownloadUrl . '">haz clic aquí</a>.
                 </div>
             </div>
 
-            <iframe src="' . $safeDownloadUrl . '" style="display:none;"></iframe>
+            <iframe id="downloadFrame" style="display:none;"></iframe>
 
             <script>
+                const downloadUrl = ' . $downloadUrlJson . ';
+                const returnUrl = ' . $returnUrlJson . ';
+                const returnDelayMs = 25000;
+                let secondsLeft = Math.ceil(returnDelayMs / 1000);
+
+                const statusBox = document.getElementById("downloadStatus");
+                const downloadFrame = document.getElementById("downloadFrame");
+
                 setTimeout(function () {
-                    window.location.href = ' . $returnUrlJson . ';
-                }, 3000);
+                    downloadFrame.src = downloadUrl;
+
+                    statusBox.innerHTML =
+                        "Descarga solicitada.<br>" +
+                        "Archivo: ' . $safeFileName . '<br><br>" +
+                        "Regresando automáticamente en " + secondsLeft + " segundos..." +
+                        "<br><br>Si no descarga, <a href=\"' . $safeDownloadUrl . '\">haz clic aquí</a>.";
+                }, 800);
+
+                const countdown = setInterval(function () {
+                    secondsLeft--;
+
+                    if (secondsLeft > 0) {
+                        statusBox.innerHTML =
+                            "Descarga solicitada.<br>" +
+                            "Archivo: ' . $safeFileName . '<br><br>" +
+                            "Regresando automáticamente en " + secondsLeft + " segundos..." +
+                            "<br><br>Si no descarga, <a href=\"' . $safeDownloadUrl . '\">haz clic aquí</a>.";
+                    }
+                }, 1000);
+
+                setTimeout(function () {
+                    clearInterval(countdown);
+                    window.location.href = returnUrl;
+                }, returnDelayMs);
             </script>
         </body>
         </html>';
