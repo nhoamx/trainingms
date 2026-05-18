@@ -1308,6 +1308,7 @@ private function appendNom035QueueDebug(string $event, array $context = []): voi
                 (int) round($averageGlobalScore, 0, PHP_ROUND_HALF_UP)
             );
 
+            
             $dominantLevelKey = (string) ($globalLevel['key'] ?? 'nulo');
             $dominantLevelLabel = (string) (
                 $globalLevel['label']
