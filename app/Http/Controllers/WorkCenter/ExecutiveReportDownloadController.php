@@ -18,46 +18,20 @@ use PhpOffice\PhpWord\SimpleType\Jc;
 use PhpOffice\PhpWord\SimpleType\JcTable;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Services\WorkCenter\WorkCenterNom035CalculationService;
-use Throwable;
 class ExecutiveReportDownloadController extends Controller
 {
     public function download(
-    string $workCenter,
-    string $organization
-) {
-    $debugQueue = request()->boolean('debug_queue');
-    $reportId = null;
-
-    try {
-        $this->appendNom035QueueDebug('download_start', [
-            'work_center_param' => $workCenter,
-            'organization_param' => $organization,
-            'url' => request()->fullUrl(),
-        ]);
-
+        string $workCenter,
+        string $organization
+    ) {
         $organizationModel = Organization::query()->findOrFail($organization);
-
-        $this->appendNom035QueueDebug('organization_ok', [
-            'organization_id' => (string) $organizationModel->id,
-            'organization_name' => (string) ($organizationModel->name ?? ''),
-        ]);
 
         $workCenterModel = WorkCenter::query()
             ->where('organization_id', $organization)
             ->where('id', $workCenter)
             ->firstOrFail();
 
-        $this->appendNom035QueueDebug('work_center_ok', [
-            'work_center_id' => (string) $workCenterModel->id,
-            'work_center_name' => (string) ($workCenterModel->name ?? ''),
-        ]);
-
         $reportId = (string) Str::uuid();
-
-        $this->appendNom035QueueDebug('status_write_start', [
-            'report_id' => $reportId,
-            'status_path' => $this->reportStatusFilePath($reportId),
-        ]);
 
         $this->writeReportStatus($reportId, [
             'status' => 'queued',
@@ -70,53 +44,17 @@ class ExecutiveReportDownloadController extends Controller
             'created_at' => now()->toDateTimeString(),
         ]);
 
-        $this->appendNom035QueueDebug('status_write_ok', [
-            'report_id' => $reportId,
-        ]);
-
-        $this->appendNom035QueueDebug('dispatch_start', [
-            'report_id' => $reportId,
-            'queue_connection' => config('queue.default'),
-        ]);
-
         GenerateExecutiveReportJob::dispatch(
             $reportId,
             (string) $workCenterModel->id,
             (string) $organizationModel->id
         );
 
-        $this->appendNom035QueueDebug('dispatch_ok', [
-            'report_id' => $reportId,
-        ]);
-
         return redirect()->route('executive-report.file', [
             'reportId' => $reportId,
             'return_url' => url()->previous(),
         ]);
-    } catch (Throwable $e) {
-        $this->appendNom035QueueDebug('download_error', [
-            'report_id' => $reportId,
-            'error_class' => get_class($e),
-            'error_message' => $e->getMessage(),
-            'error_file' => $e->getFile(),
-            'error_line' => $e->getLine(),
-        ]);
-
-        if ($debugQueue) {
-            return response()->json([
-                'debug' => true,
-                'stage' => 'download',
-                'report_id' => $reportId,
-                'error_class' => get_class($e),
-                'error_message' => $e->getMessage(),
-                'error_file' => $e->getFile(),
-                'error_line' => $e->getLine(),
-            ], 500);
-        }
-
-        throw $e;
     }
-}
 
     public function status(string $reportId): JsonResponse
     {
@@ -517,20 +455,8 @@ $fileName = 'Informe_Analitico_NOM035_' .
 
 $outputPath = $outputDir . DIRECTORY_SEPARATOR . $fileName;
 
-$this->appendNom035QueueDebug('word_save_start', [
-    'report_id' => $reportId,
-    'output_path' => $outputPath,
-]);
-
 $writer = IOFactory::createWriter($phpWord, 'Word2007');
 $writer->save($outputPath);
-
-$this->appendNom035QueueDebug('word_save_ok', [
-    'report_id' => $reportId,
-    'output_path' => $outputPath,
-    'file_exists' => is_file($outputPath),
-    'file_size_bytes' => is_file($outputPath) ? filesize($outputPath) : null,
-]);
 
         return [
             'output_path' => $outputPath,
@@ -541,11 +467,6 @@ $this->appendNom035QueueDebug('word_save_ok', [
             'work_center_id' => (string) $workCenterModel->id,
             'work_center_name' => (string) ($workCenterModel->name ?? ''),
         ];
-    }
-
-   private function reportStatusCacheKey(string $reportId): string
-    {
-        return 'nom035_report:' . $reportId;
     }
 
     private function reportStatusFilePath(string $reportId): string
@@ -606,32 +527,6 @@ $this->appendNom035QueueDebug('word_save_ok', [
 
     if ($written === false) {
         throw new \RuntimeException('No se pudo escribir el status JSON del reporte en: ' . $statusPath);
-    }
-}
-
-private function appendNom035QueueDebug(string $event, array $context = []): void
-{
-    try {
-        $logDir = storage_path('logs');
-
-        if (! is_dir($logDir)) {
-            mkdir($logDir, 0775, true);
-        }
-
-        $payload = array_merge([
-            'timestamp' => now()->toDateTimeString(),
-            'event' => $event,
-            'queue_connection' => config('queue.default'),
-            'app_env' => config('app.env'),
-        ], $context);
-
-        file_put_contents(
-            $logDir . DIRECTORY_SEPARATOR . 'nom035_queue_debug.log',
-            json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL,
-            FILE_APPEND | LOCK_EX
-        );
-    } catch (Throwable $e) {
-        // No bloquear la descarga si el log de debug no se puede escribir.
     }
 }
 
@@ -1314,7 +1209,7 @@ private function appendNom035QueueDebug(string $event, array $context = []): voi
                 ?? config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey))
             );
 
-            
+
                 $section->addTitle('III. Análisis general referencia nivel de riesgo', 1);
 
                 $section->addText(
