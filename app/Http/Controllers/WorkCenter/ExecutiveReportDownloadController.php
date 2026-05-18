@@ -1286,27 +1286,33 @@ private function appendNom035QueueDebug(string $event, array $context = []): voi
 
     private function addReferenceThreeGlobalRiskSection(Section $section, WorkCenter $workCenter): void
         {
-            $summary = $this->getReferenceThreeGlobalSummary(
-            (string) $workCenter->organization_id,
-            (string) $workCenter->id
-        );
+            $summary = $this->getReferenceThreeGlobalDashboardSummary(
+                (string) $workCenter->organization_id,
+                (string) $workCenter->id
+            );
 
-        $distribution = $summary['distribution'] ?? $this->initializeRiskLevelCounts();
+            $distribution = $summary['distribution'] ?? $this->initializeRiskLevelCounts();
 
-        foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
-            $distribution[$levelKey] = (int) ($distribution[$levelKey] ?? 0);
-        }
+            foreach (['nulo', 'bajo', 'medio', 'alto', 'muy_alto'] as $levelKey) {
+                $distribution[$levelKey] = (int) ($distribution[$levelKey] ?? 0);
+            }
 
-        $totalEvaluations = (int) ($summary['total_evaluations'] ?? 0);
-        $averageGlobalScore = (float) ($summary['average_global_score'] ?? 0);
-        $maxGlobalScore = (int) ($summary['max_global_score'] ?? config('nom035_risk_levels.global.max_score', 288));
-        $averageGlobalPercentage = (float) ($summary['average_global_percentage'] ?? 0);
+            $totalEvaluations = (int) ($summary['total_evaluations'] ?? 0);
+            $averageGlobalScore = (float) ($summary['average_global_score'] ?? 0);
+            $maxGlobalScore = (int) ($summary['max_global_score'] ?? config('nom035_risk_levels.global.max_score', 288));
+            $averageGlobalPercentage = (float) ($summary['average_global_percentage'] ?? 0);
 
-        $dominantLevelKey = (string) ($summary['dominant_level_key'] ?? 'nulo');
-        $dominantLevelLabel = (string) (
-            $summary['dominant_level_label']
-            ?? config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey))
-        );
+            $globalLevel = $this->classifyNom035Score(
+                'global',
+                null,
+                (int) round($averageGlobalScore, 0, PHP_ROUND_HALF_UP)
+            );
+
+            $dominantLevelKey = (string) ($globalLevel['key'] ?? 'nulo');
+            $dominantLevelLabel = (string) (
+                $globalLevel['label']
+                ?? config("nom035_risk_levels.labels.$dominantLevelKey", ucfirst($dominantLevelKey))
+            );
 
                 $section->addTitle('III. Análisis general referencia nivel de riesgo', 1);
 
