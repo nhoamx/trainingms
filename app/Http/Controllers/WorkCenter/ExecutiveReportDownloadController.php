@@ -44,6 +44,7 @@ class ExecutiveReportDownloadController extends Controller
             'created_at' => now()->toDateTimeString(),
         ]);
 
+
         GenerateExecutiveReportJob::dispatch(
             $reportId,
             (string) $workCenterModel->id,
@@ -56,6 +57,7 @@ class ExecutiveReportDownloadController extends Controller
         ]);
     }
 
+    
     public function status(string $reportId): JsonResponse
     {
         $status = $this->readReportStatus($reportId);
