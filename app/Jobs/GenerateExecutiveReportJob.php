@@ -28,7 +28,6 @@ class GenerateExecutiveReportJob implements ShouldQueue
 
     private string $organizationId;
 
-    
     public function __construct(
         string $reportId,
         string $workCenterId,
