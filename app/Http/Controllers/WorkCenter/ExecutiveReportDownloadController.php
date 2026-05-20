@@ -57,7 +57,7 @@ class ExecutiveReportDownloadController extends Controller
         ]);
     }
 
-    
+
     public function status(string $reportId): JsonResponse
     {
         $status = $this->readReportStatus($reportId);
@@ -1276,7 +1276,7 @@ $writer->save($outputPath);
                 $levelStyle = $this->getWordRiskCellStyle($dominantLevelKey);
                 $c4 = $cards->addCell(2350, ['bgColor' => $levelStyle['bg']]);
                 $c4->addText(
-                    'Nivel predominante',
+                    'Nivel de riesgo',
                     ['bold' => true, 'size' => 9, 'color' => $levelStyle['text']],
                     ['alignment' => Jc::CENTER, 'spaceAfter' => 40]
                 );
@@ -1706,10 +1706,14 @@ $writer->save($outputPath);
                     $cellStyle = ['bgColor' => $softGray];
                     $fontStyle = ['size' => 9, 'color' => '111111'];
 
-                    if ($value > 0 && $value === $maxCount) {
-                        $cellStyle['bgColor'] = $style['bg'];
-                        $fontStyle = ['bold' => true, 'size' => 9, 'color' => $style['text']];
-                    }
+                    if (
+                    $value > 0
+                    && $value === $maxCount
+                    && in_array($levelKey, ['alto', 'muy_alto'], true)
+                ) {
+                    $cellStyle['bgColor'] = $style['bg'];
+                    $fontStyle = ['bold' => true, 'size' => 9, 'color' => $style['text']];
+                }
 
                     $table->addCell(1000, $cellStyle)->addText(
                         (string) $value,
