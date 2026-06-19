@@ -24,6 +24,13 @@ class ExecutiveReportDownloadController extends Controller
         string $workCenter,
         string $organization
     ) {
+
+    if ($this->executiveReportSuspended()) {
+    return response($this->renderSuspendedReportPage(), 423)
+        ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
+}
         $organizationModel = Organization::query()->findOrFail($organization);
 
         $workCenterModel = WorkCenter::query()
@@ -95,6 +102,13 @@ class ExecutiveReportDownloadController extends Controller
 
     public function file(string $reportId)
         {
+
+        if ($this->executiveReportSuspended()) {
+    return response($this->renderSuspendedReportPage(), 423)
+        ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
+}
             $status = $this->readReportStatus($reportId);
             $returnUrl = $this->resolveReportReturnUrl($status);
 
@@ -163,6 +177,75 @@ class ExecutiveReportDownloadController extends Controller
                 ->header('Pragma', 'no-cache')
                 ->header('Expires', '0');
         }
+
+    private function executiveReportSuspended(): bool
+{
+    return filter_var(env('EXECUTIVE_REPORT_SUSPENDED', false), FILTER_VALIDATE_BOOLEAN);
+}
+
+private function renderSuspendedReportPage(): string
+{
+    return '<!doctype html>
+    <html lang="es">
+    <head>
+        <meta charset="utf-8">
+        <title>Documento temporalmente suspendido</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #f3f4f6;
+                color: #111827;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                margin: 0;
+            }
+            .card {
+                background: #ffffff;
+                border-radius: 14px;
+                padding: 36px;
+                width: 540px;
+                box-shadow: 0 10px 25px rgba(0,0,0,.14);
+                text-align: center;
+                border-top: 6px solid #b91c1c;
+            }
+            .title {
+                font-size: 22px;
+                font-weight: bold;
+                margin-bottom: 14px;
+                color: #b91c1c;
+            }
+            .message {
+                font-size: 15px;
+                color: #374151;
+                line-height: 1.6;
+                margin-bottom: 18px;
+            }
+            .note {
+                font-size: 13px;
+                color: #6b7280;
+                background: #f9fafb;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="title">Documento temporalmente suspendido</div>
+            <div class="message">
+                El acceso a este documento se encuentra temporalmente suspendido por motivos administrativos.
+                Una vez regularizada la situación, el documento será habilitado nuevamente.
+            </div>
+            <div class="note">
+                Para más información, favor de contactar al administrador del sistema.
+            </div>
+        </div>
+    </body>
+    </html>';
+}
 
     private function renderReportWaitingPage(string $reportId, string $status, string $returnUrl): string
         {
