@@ -99,7 +99,7 @@ class ExecutiveReportDownloadController extends Controller
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
     }
-
+//report
     public function file(string $reportId)
         {
 
@@ -178,9 +178,9 @@ class ExecutiveReportDownloadController extends Controller
                 ->header('Expires', '0');
         }
 
-    private function executiveReportSuspended(): bool
+private function executiveReportSuspended(): bool
 {
-    return filter_var(env('EXECUTIVE_REPORT_SUSPENDED', false), FILTER_VALIDATE_BOOLEAN);
+    return true;
 }
 
 private function renderSuspendedReportPage(): string
